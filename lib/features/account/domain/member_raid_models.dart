@@ -133,6 +133,88 @@ RaidCatalog memberRaidCatalog(Map<String, dynamic> json) {
 }
 
 class MemberWeeklyEntry {
+  MemberWeeklyEntry.fromSummary(Map<String, dynamic> json)
+    : wire = Map.unmodifiable(json) {
+    roleShape(
+      json,
+      'character_id raid_id target_cycle_key weekly_revision ownership_revision lifecycle_revision completion_sources participation continuation_state permissions',
+    );
+    characterId = roleId(json['character_id']);
+    raidId = raidIdentifier(json['raid_id']);
+    cycleKey = raidCycleKey(json['target_cycle_key']);
+    revision = rolePositive(json['weekly_revision']);
+    ownershipRevision = rolePositive(json['ownership_revision']);
+    lifecycleRevision = rolePositive(json['lifecycle_revision']);
+    roleCheck(
+      {
+        'not_selected',
+        'declined',
+        'legacy_intent',
+        'confirmed',
+        'blocked',
+      }.contains(json['continuation_state']),
+    );
+    final sources = <String>{};
+    for (final raw in raidList(json['completion_sources'])) {
+      final s = roleMap(raw);
+      roleShape(s, 'source completed_at difficulty_id party_id');
+      roleCheck(
+        {'manual', 'party'}.contains(s['source']) &&
+            sources.add(s['source'] as String),
+      );
+      roleUtc(s['completed_at']);
+      if (s['difficulty_id'] != null) raidIdentifier(s['difficulty_id']);
+      if (s['party_id'] != null) roleId(s['party_id']);
+      roleCheck(s['source'] != 'manual' || s['party_id'] == null);
+    }
+    roleCheck(sources.length <= 2);
+    manual = sources.contains('manual');
+    party = sources.contains('party');
+    final p = json['participation'];
+    participating = p != null;
+    if (p != null) {
+      final v = roleMap(p);
+      roleShape(
+        v,
+        'room_id round_id assignment_id difficulty_id status room_title can_view_detail',
+      );
+      roomId = roleId(v['room_id']);
+      roleId(v['round_id']);
+      roleId(v['assignment_id']);
+      raidIdentifier(v['difficulty_id']);
+      roleCheck({'confirmed', 'review_required'}.contains(v['status']));
+      reviewRequired = v['status'] == 'review_required';
+      if (v['room_title'] != null) raidText(v['room_title']);
+      canViewParticipation = raidBool(v['can_view_detail']);
+    }
+    final permissions = roleMap(json['permissions']);
+    roleShape(
+      permissions,
+      'mark_completed clear_manual_completion view_participation',
+    );
+    Map<String, dynamic> permission(String name) {
+      final v = roleMap(permissions[name]);
+      roleShape(v, 'allowed reason next_change_at');
+      raidBool(v['allowed']);
+      if (v['reason'] != null) raidText(v['reason']);
+      if (v['next_change_at'] != null) roleUtc(v['next_change_at']);
+      return v;
+    }
+
+    final mark = permission('mark_completed');
+    canMark = mark['allowed'] as bool;
+    reason = mark['reason'] as String?;
+    canClear = permission('clear_manual_completion')['allowed'] as bool;
+    final view = permission('view_participation');
+    canViewParticipation = canViewParticipation && view['allowed'] == true;
+    state = sources.isNotEmpty
+        ? 'completed'
+        : participating
+        ? 'participating'
+        : 'incomplete';
+    roleCheck(!canClear || manual);
+  }
+
   MemberWeeklyEntry.fromJson(Map<String, dynamic> json)
     : wire = Map.unmodifiable(json) {
     roleShape(
@@ -178,6 +260,7 @@ class MemberWeeklyEntry {
       reason == null ||
           {
             'CURRENT_CYCLE_REQUIRED',
+            'PLAY_NOT_STARTED',
             'RAID_INACTIVE',
             'CHARACTER_UNUSABLE',
             'PARTICIPATION_CONFIRMATION_REQUIRED',
@@ -198,6 +281,8 @@ class MemberWeeklyEntry {
     );
   }
   final Map<String, dynamic> wire;
+  String? roomId;
+  bool canViewParticipation = false, reviewRequired = false;
   late final String characterId, raidId, cycleKey, state;
   late final String? reason;
   late final int revision, ownershipRevision, lifecycleRevision;

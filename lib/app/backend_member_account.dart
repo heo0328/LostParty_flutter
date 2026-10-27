@@ -14,6 +14,9 @@ import '../features/account/presentation/viewmodels/scoped_startup_refresh_contr
 import '../shared/game_catalog/domain/repositories/game_catalog_repository.dart';
 import '../shared/lost_ark_api/client/api_cooldown.dart';
 import 'backend_account_lifecycle.dart';
+import '../features/account/data/play_availability_repository.dart';
+import '../features/account/domain/services/account_detail_access.dart';
+import '../features/account/presentation/viewmodels/play_availability_view_model.dart';
 
 /// App owns member list + runner; pages/shell only subscribe. No DB ownership.
 class BackendMemberAccount {
@@ -69,11 +72,26 @@ class BackendMemberAccount {
       gateChanges: gate,
       commandPending: pending,
     );
+    availability = PlayAvailabilityViewModel(
+      repository: BackendPlayAvailabilityRepository(runtime.api),
+      session: runtime.session,
+      accessChanges: model,
+      hasVerifiedAccount: () =>
+          model.signedIn &&
+          model.sections.any(
+            (section) => hasAccountDetailAccess(
+              ownershipStatus: section.registration.ownershipStatus,
+              accountId: section.registration.accountId,
+              ownershipRevision: section.registration.ownershipRevision,
+            ),
+          ),
+    );
     if (weeklyStore != null) {
       weekly = MemberWeeklyViewModel(
         model: model,
         client: MemberRaidClient(runtime.api),
         store: weeklyStore,
+        twoCycleEnabled: true,
       );
     }
   }
@@ -81,12 +99,14 @@ class BackendMemberAccount {
   late final RuntimeStartupRefreshSource source;
   late final ScopedStartupRefreshController runner;
   late final MemberAccountViewModel model;
+  late final PlayAvailabilityViewModel availability;
   MemberWeeklyViewModel? weekly;
   bool _disposed = false, _initialized = false, _automaticInitialized = false;
   bool _displayWasReady = false;
   void initialize() {
     if (_disposed || _initialized) return;
     _initialized = true;
+    availability.initialize();
     weekly?.initialize();
     model.initialize();
     if (automaticRefreshEnabled) {
@@ -98,6 +118,7 @@ class BackendMemberAccount {
 
   bool _automaticPresentationReady() =>
       model.initialDisplayReady &&
+      !model.characterRefreshing &&
       !model.loading &&
       (model.failure != null || weekly?.initialDisplaySettled != false);
 
@@ -121,6 +142,7 @@ class BackendMemberAccount {
     model.removeListener(_startAutomaticWhenDisplayReady);
     weekly?.removeListener(_startAutomaticWhenDisplayReady);
     weekly?.dispose();
+    availability.dispose();
     model.dispose();
     runner.dispose();
     source.dispose();

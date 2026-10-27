@@ -26,7 +26,10 @@ class ScopedRefreshAccess {
 }
 
 class RuntimeStartupRefreshSource
-    implements ScopedStartupRefreshSource, RosterRefreshingSource {
+    implements
+        ScopedStartupRefreshSource,
+        RosterRefreshingSource,
+        ScopedCharacterRefreshSource {
   RuntimeStartupRefreshSource({
     required this.runtime,
     required this.remote,
@@ -71,6 +74,68 @@ class RuntimeStartupRefreshSource
     if (keyVersion != batch.keyVersion) {
       throw const AccountReadException('KEY_CHANGED');
     }
+  }
+
+  @override
+  Future<ScopedRefreshItem> refreshCharacter(
+    ScopedRegistrationRef registration,
+    ScopedCharacterRef character,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onLocalSaved,
+  ) async {
+    guard();
+    final access = readAccess();
+    final member = accountReadScope(session), storage = runtime.scope;
+    final generation = runtime.readGeneration;
+    cacheRequire(
+      registration.scope == storage && character.scope == storage,
+      'SCOPE_CHANGED',
+    );
+    cacheRequire(!access.accountChangesPending, 'ACCOUNT_CHANGE_PENDING');
+    cacheRequire(access.keyVersion != null, 'KEY_NOT_READY');
+    cacheRequire(!cooldown.active, 'RATE_LIMITED');
+    void current() {
+      guard();
+      runtime.requireCurrent(member, storage);
+      cacheRequire(
+        generation == runtime.readGeneration &&
+            !readAccess().accountChangesPending,
+        'ACCOUNT_OBSERVATION_CHANGED',
+      );
+      cacheRequire(keyVersion == access.keyVersion, 'KEY_CHANGED');
+    }
+
+    final roster = await runtime.readRoster(registration, guard: current);
+    cacheRequire(
+      roster?.complete == true &&
+          roster!.registration.ownershipStatus == 'owned' &&
+          roster.registration.accountId == character.accountId,
+      'CHARACTER_UNUSABLE',
+    );
+    final observation = roster!.characters
+        .where((c) => c.characterId == character.characterId)
+        .firstOrNull;
+    cacheRequire(observation != null, 'CHARACTER_UNUSABLE');
+    final gameCatalog = await catalog.loadCatalog();
+    current();
+    final target = ScopedRefreshTarget(
+      roster.registration,
+      character,
+      observation!,
+    );
+    final batch = ScopedRefreshBatch(
+      scope: storage,
+      session: member,
+      keyVersion: access.keyVersion!,
+      settingsVersion: access.settingsVersion ?? 0,
+      niceGroupEnabled: access.niceGroupEnabled ?? false,
+      catalog: gameCatalog,
+      observationGeneration: generation,
+      targets: [target],
+    );
+    // Reuse guarded analysis/save/upload; do not refresh every roster or restart
+    // the app-lifetime automatic run. Explicit action includes Nice characters.
+    return refresh(batch, target, current, onLocalSaved);
   }
 
   @override

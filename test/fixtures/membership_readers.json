@@ -1,0 +1,1948 @@
+{
+  "source": "Backend15e143ae design examples; synthetic, not real member responses",
+  "examples": [
+    {
+      "name": "known_generation_null_leader_detail",
+      "schema": "DetailProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "detail"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "active",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "review_required",
+            "generation_state": "review_required",
+            "leadership": {
+              "leader_cycle_member_id": null,
+              "leader_membership_id": null,
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 3,
+            "membership_state": "active",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 5,
+            "cycle_member_state": "review_required",
+            "joined_order": "2",
+            "role": "member",
+            "mode": "participant",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "current_membership",
+            "read_only": false,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "leadership_pending",
+            "reason": "NO_ELIGIBLE_SUCCESSOR",
+            "revision": 2,
+            "remaining_review_reasons": [],
+            "menu_access": true,
+            "can_request_recovery": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "ROOM_REVIEW_REQUIRED",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "ROOM_REVIEW_REQUIRED",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": null
+        }
+      }
+    },
+    {
+      "name": "known_generation_null_leader_plan",
+      "schema": "PlanProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "plan"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "active",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "review_required",
+            "generation_state": "review_required",
+            "leadership": {
+              "leader_cycle_member_id": null,
+              "leader_membership_id": null,
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 3,
+            "membership_state": "active",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 5,
+            "cycle_member_state": "review_required",
+            "joined_order": "2",
+            "role": "member",
+            "mode": "participant",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "current_membership",
+            "read_only": false,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "leadership_pending",
+            "reason": "NO_ELIGIBLE_SUCCESSOR",
+            "revision": 2,
+            "remaining_review_reasons": [],
+            "menu_access": true,
+            "can_request_recovery": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "ROOM_REVIEW_REQUIRED",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "ROOM_REVIEW_REQUIRED",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            }
+          },
+          "content": {
+            "scope": {
+              "server_now": "2026-10-24T00:00:00Z",
+              "current_cycle_key": "2026-10-21",
+              "target_cycle_key": "2026-10-21",
+              "playable_from": "2026-10-21T01:00:00Z",
+              "phase": "current",
+              "target_revision": 10,
+              "policy_version": "two-cycle-contract-4",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_generation": 1
+            },
+            "data": {
+              "room_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 12,
+              "members_revision": 6,
+              "server_time": "2026-10-24T00:00:00Z",
+              "app_capacity": 4,
+              "game_items": [
+                {
+                  "item_id": "00000000-0000-4000-8000-000000000033",
+                  "revision": 1,
+                  "raid_id": "synthetic_raid",
+                  "difficulty_id": "normal",
+                  "catalog_version": "synthetic_catalog_v1",
+                  "game_party_size": 4,
+                  "round_id": "00000000-0000-4000-8000-000000000034",
+                  "round_revision": 1,
+                  "round_state": "active"
+                }
+              ],
+              "schedule_state": "unscheduled",
+              "schedule_groups": [],
+              "sessions": [],
+              "session_segments": [],
+              "my_membership": {
+                "membership_id": "00000000-0000-4000-8000-000000000066",
+                "revision": 3,
+                "group_member": false,
+                "target_role": "member",
+                "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                "cycle_member_revision": 5,
+                "joined_order": "2"
+              },
+              "my_assignments": [
+                {
+                  "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                  "revision": 1,
+                  "membership_id": "00000000-0000-4000-8000-000000000066",
+                  "item_id": "00000000-0000-4000-8000-000000000033",
+                  "round_id": "00000000-0000-4000-8000-000000000034",
+                  "character_id": "00000000-0000-4000-8000-00000000012e",
+                  "selected_role": "dealer",
+                  "state": "active",
+                  "ended_at": null,
+                  "raid_participation_state": "active",
+                  "completion_source": null,
+                  "completed_at": null,
+                  "target_cycle_key": "2026-10-21"
+                }
+              ],
+              "my_participations": [],
+              "proposals": [],
+              "permissions": {
+                "edit_schedule_groups": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "cancel_target_participation": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "transfer_leadership": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "open_next_cycle": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "reopen_next_cycle": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "view_common_context": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "leave_global": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "end_global": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                }
+              },
+              "leadership": {
+                "leader_cycle_member_id": null,
+                "leader_membership_id": null,
+                "leadership_revision": 4
+              },
+              "my_target_role": "member",
+              "formation_slots": [
+                {
+                  "target_cycle_key": "2026-10-21",
+                  "round_id": "00000000-0000-4000-8000-000000000034",
+                  "party_no": 1,
+                  "slot_no": 1,
+                  "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                  "status": "participating",
+                  "is_leader": false
+                },
+                {
+                  "target_cycle_key": "2026-10-21",
+                  "round_id": "00000000-0000-4000-8000-000000000034",
+                  "party_no": 1,
+                  "slot_no": 2,
+                  "assignment_id": null,
+                  "status": "empty",
+                  "is_leader": false
+                },
+                {
+                  "target_cycle_key": "2026-10-21",
+                  "round_id": "00000000-0000-4000-8000-000000000034",
+                  "party_no": 1,
+                  "slot_no": 3,
+                  "assignment_id": null,
+                  "status": "empty",
+                  "is_leader": false
+                },
+                {
+                  "target_cycle_key": "2026-10-21",
+                  "round_id": "00000000-0000-4000-8000-000000000034",
+                  "party_no": 1,
+                  "slot_no": 4,
+                  "assignment_id": null,
+                  "status": "empty",
+                  "is_leader": false
+                }
+              ],
+              "formation_history": [],
+              "unplaced_assignments": [],
+              "target_cycle_key": "2026-10-21",
+              "target_state": "review_required"
+            }
+          },
+          "record": null
+        }
+      }
+    },
+    {
+      "name": "unknown_generation_recovery_detail",
+      "schema": "DetailProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "detail"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "active",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": null,
+            "target_revision": 10,
+            "target_state": "review_required",
+            "generation_state": null,
+            "leadership": null
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 3,
+            "membership_state": "active",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 5,
+            "cycle_member_state": "review_required",
+            "joined_order": null,
+            "role": "none",
+            "mode": "recovery",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": null
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "current_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "unverified",
+            "reason": "SOURCE_GENERATION_UNVERIFIED",
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": true,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": false,
+              "reason": "ROOM_REVIEW_REQUIRED",
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "ROOM_REVIEW_REQUIRED",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "ROOM_REVIEW_REQUIRED",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": null
+        }
+      }
+    },
+    {
+      "name": "ended_cancelled_detail",
+      "schema": "DetailProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "detail"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "ended",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "closed",
+            "generation_state": "cancelled",
+            "leadership": {
+              "leader_cycle_member_id": null,
+              "leader_membership_id": null,
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 4,
+            "membership_state": "ended",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 6,
+            "cycle_member_state": "cancelled",
+            "joined_order": "2",
+            "role": "none",
+            "mode": "record",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "historical_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": {
+            "locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            },
+            "rounds": [
+              {
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "stopped_incomplete"
+              }
+            ],
+            "assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "character_id": "00000000-0000-4000-8000-00000000012e",
+                "character_name": "합성캐릭터2",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed",
+                "completion_source": "party",
+                "completed_at": "2026-10-23T12:00:00Z",
+                "ended_at": "2026-10-23T12:00:00Z"
+              }
+            ],
+            "schedule_segments": [
+              {
+                "segment_id": "00000000-0000-4000-8000-000000000035",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "session_id": "00000000-0000-4000-8000-000000000036",
+                "starts_at": "2026-10-23T10:00:00Z",
+                "ends_at": "2026-10-23T10:30:00Z",
+                "state": "released"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ended_cancelled_plan",
+      "schema": "PlanProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "plan"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "ended",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "closed",
+            "generation_state": "cancelled",
+            "leadership": {
+              "leader_cycle_member_id": null,
+              "leader_membership_id": null,
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 4,
+            "membership_state": "ended",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 6,
+            "cycle_member_state": "cancelled",
+            "joined_order": "2",
+            "role": "none",
+            "mode": "record",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "historical_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": {
+            "locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            },
+            "rounds": [
+              {
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "stopped_incomplete"
+              }
+            ],
+            "assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "character_id": "00000000-0000-4000-8000-00000000012e",
+                "character_name": "합성캐릭터2",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed",
+                "completion_source": "party",
+                "completed_at": "2026-10-23T12:00:00Z",
+                "ended_at": "2026-10-23T12:00:00Z"
+              }
+            ],
+            "schedule_segments": [
+              {
+                "segment_id": "00000000-0000-4000-8000-000000000035",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "session_id": "00000000-0000-4000-8000-000000000036",
+                "starts_at": "2026-10-23T10:00:00Z",
+                "ends_at": "2026-10-23T10:30:00Z",
+                "state": "released"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ended_removed_detail",
+      "schema": "DetailProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "detail"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "ended",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "closed",
+            "generation_state": "cancelled",
+            "leadership": {
+              "leader_cycle_member_id": null,
+              "leader_membership_id": null,
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 4,
+            "membership_state": "ended",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 6,
+            "cycle_member_state": "removed",
+            "joined_order": "2",
+            "role": "none",
+            "mode": "record",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "historical_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": {
+            "locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            },
+            "rounds": [
+              {
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "stopped_incomplete"
+              }
+            ],
+            "assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "character_id": "00000000-0000-4000-8000-00000000012e",
+                "character_name": "합성캐릭터2",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed",
+                "completion_source": "party",
+                "completed_at": "2026-10-23T12:00:00Z",
+                "ended_at": "2026-10-23T12:00:00Z"
+              }
+            ],
+            "schedule_segments": [
+              {
+                "segment_id": "00000000-0000-4000-8000-000000000035",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "session_id": "00000000-0000-4000-8000-000000000036",
+                "starts_at": "2026-10-23T10:00:00Z",
+                "ends_at": "2026-10-23T10:30:00Z",
+                "state": "released"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ended_removed_plan",
+      "schema": "PlanProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "plan"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "ended",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "closed",
+            "generation_state": "cancelled",
+            "leadership": {
+              "leader_cycle_member_id": null,
+              "leader_membership_id": null,
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 4,
+            "membership_state": "ended",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 6,
+            "cycle_member_state": "removed",
+            "joined_order": "2",
+            "role": "none",
+            "mode": "record",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "historical_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": {
+            "locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            },
+            "rounds": [
+              {
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "stopped_incomplete"
+              }
+            ],
+            "assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "character_id": "00000000-0000-4000-8000-00000000012e",
+                "character_name": "합성캐릭터2",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed",
+                "completion_source": "party",
+                "completed_at": "2026-10-23T12:00:00Z",
+                "ended_at": "2026-10-23T12:00:00Z"
+              }
+            ],
+            "schedule_segments": [
+              {
+                "segment_id": "00000000-0000-4000-8000-000000000035",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "session_id": "00000000-0000-4000-8000-000000000036",
+                "starts_at": "2026-10-23T10:00:00Z",
+                "ends_at": "2026-10-23T10:30:00Z",
+                "state": "released"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ended_completed_detail",
+      "schema": "DetailProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "detail"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "ended",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "closed",
+            "generation_state": "completed",
+            "leadership": {
+              "leader_cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "leader_membership_id": "00000000-0000-4000-8000-000000000066",
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 4,
+            "membership_state": "ended",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 6,
+            "cycle_member_state": "completed",
+            "joined_order": "2",
+            "role": "none",
+            "mode": "record",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "historical_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": {
+            "locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            },
+            "rounds": [
+              {
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed"
+              }
+            ],
+            "assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "character_id": "00000000-0000-4000-8000-00000000012e",
+                "character_name": "합성캐릭터2",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed",
+                "completion_source": "party",
+                "completed_at": "2026-10-23T12:00:00Z",
+                "ended_at": "2026-10-23T12:00:00Z"
+              }
+            ],
+            "schedule_segments": [
+              {
+                "segment_id": "00000000-0000-4000-8000-000000000035",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "session_id": "00000000-0000-4000-8000-000000000036",
+                "starts_at": "2026-10-23T10:00:00Z",
+                "ends_at": "2026-10-23T10:30:00Z",
+                "state": "released"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "ended_completed_plan",
+      "schema": "PlanProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "plan"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "ended",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "closed",
+            "generation_state": "completed",
+            "leadership": {
+              "leader_cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "leader_membership_id": "00000000-0000-4000-8000-000000000066",
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 4,
+            "membership_state": "ended",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 6,
+            "cycle_member_state": "completed",
+            "joined_order": "2",
+            "role": "none",
+            "mode": "record",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "historical_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": {
+            "locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            },
+            "rounds": [
+              {
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed"
+              }
+            ],
+            "assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "character_id": "00000000-0000-4000-8000-00000000012e",
+                "character_name": "합성캐릭터2",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed",
+                "completion_source": "party",
+                "completed_at": "2026-10-23T12:00:00Z",
+                "ended_at": "2026-10-23T12:00:00Z"
+              }
+            ],
+            "schedule_segments": [
+              {
+                "segment_id": "00000000-0000-4000-8000-000000000035",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "session_id": "00000000-0000-4000-8000-000000000036",
+                "starts_at": "2026-10-23T10:00:00Z",
+                "ends_at": "2026-10-23T10:30:00Z",
+                "state": "released"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "current_unknown_generation_page",
+      "schema": "MembershipPage",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "memberships"
+        },
+        "data": {
+          "items": [
+            {
+              "target": {
+                "room_id": "00000000-0000-4000-8000-000000000001",
+                "title": "합성 모집",
+                "room_revision": 7,
+                "room_state": "active",
+                "target_cycle_key": "2026-10-21",
+                "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+                "target_generation": null,
+                "target_revision": 10,
+                "target_state": "review_required",
+                "generation_state": null,
+                "leadership": null
+              },
+              "viewer": {
+                "membership_id": "00000000-0000-4000-8000-000000000066",
+                "membership_revision": 3,
+                "membership_state": "active",
+                "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                "cycle_member_revision": 5,
+                "cycle_member_state": "review_required",
+                "joined_order": null,
+                "role": "none",
+                "mode": "recovery",
+                "record_locator": {
+                  "membership_id": "00000000-0000-4000-8000-000000000066",
+                  "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                  "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+                  "target_cycle_key": "2026-10-21",
+                  "target_generation": null
+                }
+              },
+              "recovery": {
+                "state": "unverified",
+                "reason": "SOURCE_GENERATION_UNVERIFIED",
+                "revision": null,
+                "remaining_review_reasons": [],
+                "menu_access": true,
+                "can_request_recovery": {
+                  "allowed": false,
+                  "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+                  "next_change_at": null
+                }
+              },
+              "permissions": {
+                "view_detail": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                },
+                "view_plan": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "manage_target": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "resume_weekly": {
+                  "allowed": false,
+                  "reason": "ROOM_REVIEW_REQUIRED",
+                  "next_change_at": null
+                },
+                "read_action_menu": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                }
+              },
+              "content": null
+            }
+          ],
+          "membership_head": 8,
+          "next_cursor": null,
+          "evaluated_at": "2026-10-24T00:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "ended_records_page",
+      "schema": "MembershipPage",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "memberships"
+        },
+        "data": {
+          "items": [
+            {
+              "target": {
+                "room_id": "00000000-0000-4000-8000-000000000001",
+                "title": "합성 모집",
+                "room_revision": 7,
+                "room_state": "ended",
+                "target_cycle_key": "2026-10-21",
+                "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+                "target_generation": 1,
+                "target_revision": 10,
+                "target_state": "closed",
+                "generation_state": "cancelled",
+                "leadership": {
+                  "leader_cycle_member_id": null,
+                  "leader_membership_id": null,
+                  "leadership_revision": 4
+                }
+              },
+              "viewer": {
+                "membership_id": "00000000-0000-4000-8000-000000000066",
+                "membership_revision": 4,
+                "membership_state": "ended",
+                "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                "cycle_member_revision": 6,
+                "cycle_member_state": "cancelled",
+                "joined_order": "2",
+                "role": "none",
+                "mode": "record",
+                "record_locator": {
+                  "membership_id": "00000000-0000-4000-8000-000000000066",
+                  "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                  "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+                  "target_cycle_key": "2026-10-21",
+                  "target_generation": 1
+                }
+              },
+              "recovery": {
+                "state": "none",
+                "reason": null,
+                "revision": null,
+                "remaining_review_reasons": [],
+                "menu_access": false,
+                "can_request_recovery": {
+                  "allowed": false,
+                  "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+                  "next_change_at": null
+                }
+              },
+              "permissions": {
+                "view_detail": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                },
+                "view_plan": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                },
+                "manage_target": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                },
+                "resume_weekly": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                },
+                "read_action_menu": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                }
+              },
+              "content": null
+            },
+            {
+              "target": {
+                "room_id": "00000000-0000-4000-8000-000000000001",
+                "title": "합성 모집",
+                "room_revision": 7,
+                "room_state": "ended",
+                "target_cycle_key": "2026-10-21",
+                "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+                "target_generation": 1,
+                "target_revision": 10,
+                "target_state": "closed",
+                "generation_state": "cancelled",
+                "leadership": {
+                  "leader_cycle_member_id": null,
+                  "leader_membership_id": null,
+                  "leadership_revision": 4
+                }
+              },
+              "viewer": {
+                "membership_id": "00000000-0000-4000-8000-000000000066",
+                "membership_revision": 4,
+                "membership_state": "ended",
+                "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                "cycle_member_revision": 6,
+                "cycle_member_state": "removed",
+                "joined_order": "2",
+                "role": "none",
+                "mode": "record",
+                "record_locator": {
+                  "membership_id": "00000000-0000-4000-8000-000000000066",
+                  "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                  "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+                  "target_cycle_key": "2026-10-21",
+                  "target_generation": 1
+                }
+              },
+              "recovery": {
+                "state": "none",
+                "reason": null,
+                "revision": null,
+                "remaining_review_reasons": [],
+                "menu_access": false,
+                "can_request_recovery": {
+                  "allowed": false,
+                  "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+                  "next_change_at": null
+                }
+              },
+              "permissions": {
+                "view_detail": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                },
+                "view_plan": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                },
+                "manage_target": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                },
+                "resume_weekly": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                },
+                "read_action_menu": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                }
+              },
+              "content": null
+            },
+            {
+              "target": {
+                "room_id": "00000000-0000-4000-8000-000000000001",
+                "title": "합성 모집",
+                "room_revision": 7,
+                "room_state": "ended",
+                "target_cycle_key": "2026-10-21",
+                "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+                "target_generation": 1,
+                "target_revision": 10,
+                "target_state": "closed",
+                "generation_state": "completed",
+                "leadership": {
+                  "leader_cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                  "leader_membership_id": "00000000-0000-4000-8000-000000000066",
+                  "leadership_revision": 4
+                }
+              },
+              "viewer": {
+                "membership_id": "00000000-0000-4000-8000-000000000066",
+                "membership_revision": 4,
+                "membership_state": "ended",
+                "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                "cycle_member_revision": 6,
+                "cycle_member_state": "completed",
+                "joined_order": "2",
+                "role": "none",
+                "mode": "record",
+                "record_locator": {
+                  "membership_id": "00000000-0000-4000-8000-000000000066",
+                  "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+                  "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+                  "target_cycle_key": "2026-10-21",
+                  "target_generation": 1
+                }
+              },
+              "recovery": {
+                "state": "none",
+                "reason": null,
+                "revision": null,
+                "remaining_review_reasons": [],
+                "menu_access": false,
+                "can_request_recovery": {
+                  "allowed": false,
+                  "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+                  "next_change_at": null
+                }
+              },
+              "permissions": {
+                "view_detail": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                },
+                "view_plan": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                },
+                "manage_target": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                },
+                "resume_weekly": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                },
+                "read_action_menu": {
+                  "allowed": false,
+                  "reason": "RECORD_READ_ONLY",
+                  "next_change_at": null
+                }
+              },
+              "content": null
+            }
+          ],
+          "membership_head": 9,
+          "next_cursor": null,
+          "evaluated_at": "2026-10-24T00:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "rejoined_group_departed_old_record",
+      "schema": "DetailProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-24T00:00:00Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "detail"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-000000000001",
+            "title": "합성 모집",
+            "room_revision": 7,
+            "room_state": "ended",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+            "target_generation": 1,
+            "target_revision": 10,
+            "target_state": "closed",
+            "generation_state": "cancelled",
+            "leadership": {
+              "leader_cycle_member_id": null,
+              "leader_membership_id": null,
+              "leadership_revision": 4
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000066",
+            "membership_revision": 4,
+            "membership_state": "ended",
+            "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+            "cycle_member_revision": 6,
+            "cycle_member_state": "cancelled",
+            "joined_order": "2",
+            "role": "none",
+            "mode": "record",
+            "record_locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "historical_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-24T00:00:00Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": false,
+              "reason": "RECORD_READ_ONLY",
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": {
+            "locator": {
+              "membership_id": "00000000-0000-4000-8000-000000000066",
+              "cycle_member_id": "00000000-0000-4000-8000-0000000000ca",
+              "room_cycle_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            },
+            "rounds": [
+              {
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "stopped_incomplete"
+              }
+            ],
+            "assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-0000000001a4",
+                "item_id": "00000000-0000-4000-8000-000000000033",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "character_id": "00000000-0000-4000-8000-00000000012e",
+                "character_name": "합성캐릭터2",
+                "raid_id": "synthetic_raid",
+                "difficulty_id": "normal",
+                "catalog_version": "synthetic_catalog_v1",
+                "state": "completed",
+                "completion_source": "party",
+                "completed_at": "2026-10-23T12:00:00Z",
+                "ended_at": "2026-10-23T12:00:00Z"
+              }
+            ],
+            "schedule_segments": [
+              {
+                "segment_id": "00000000-0000-4000-8000-000000000035",
+                "round_id": "00000000-0000-4000-8000-000000000034",
+                "session_id": "00000000-0000-4000-8000-000000000036",
+                "starts_at": "2026-10-23T10:00:00Z",
+                "ends_at": "2026-10-23T10:30:00Z",
+                "state": "released"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "executed-ended-own-record-plan",
+      "schema": "PlanProfile",
+      "value": {
+        "scope": {
+          "server_now": "2026-10-23T17:42:49.651159Z",
+          "current_cycle_key": "2026-10-21",
+          "target_cycle_key": "2026-10-21",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "plan"
+        },
+        "data": {
+          "target": {
+            "room_id": "bf0b2438-07d5-4dd1-be37-827df6920b85",
+            "title": "synthetic two-cycle",
+            "room_revision": 2,
+            "room_state": "ended",
+            "target_cycle_key": "2026-10-21",
+            "room_cycle_id": "32f48e06-0614-5279-9654-2e24da5c393f",
+            "target_generation": 1,
+            "target_revision": 2,
+            "target_state": "closed",
+            "generation_state": "cancelled",
+            "leadership": {
+              "leader_cycle_member_id": null,
+              "leader_membership_id": null,
+              "leadership_revision": 2
+            }
+          },
+          "viewer": {
+            "membership_id": "3e8c766b-c611-490c-bc65-d456eafd9e9b",
+            "membership_revision": 2,
+            "membership_state": "ended",
+            "cycle_member_id": "a07c079a-173d-498d-8c96-4d6fa07d9a17",
+            "cycle_member_revision": 2,
+            "cycle_member_state": "cancelled",
+            "joined_order": "1",
+            "role": "none",
+            "mode": "record",
+            "record_locator": {
+              "membership_id": "3e8c766b-c611-490c-bc65-d456eafd9e9b",
+              "cycle_member_id": "a07c079a-173d-498d-8c96-4d6fa07d9a17",
+              "room_cycle_id": "32f48e06-0614-5279-9654-2e24da5c393f",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            }
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "historical_membership",
+            "read_only": true,
+            "evaluated_at": "2026-10-23T17:42:49.651159Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": "LEADERSHIP_RECOVERY_NOT_REQUIRED",
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "ROOM_READ_ONLY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "ROOM_READ_ONLY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": false,
+              "reason": "ROOM_READ_ONLY",
+              "next_change_at": null
+            }
+          },
+          "content": null,
+          "record": {
+            "locator": {
+              "membership_id": "3e8c766b-c611-490c-bc65-d456eafd9e9b",
+              "cycle_member_id": "a07c079a-173d-498d-8c96-4d6fa07d9a17",
+              "room_cycle_id": "32f48e06-0614-5279-9654-2e24da5c393f",
+              "target_cycle_key": "2026-10-21",
+              "target_generation": 1
+            },
+            "rounds": [
+              {
+                "item_id": "9febbee8-472a-5ca3-8993-499620ddc705",
+                "round_id": "7afa19d3-6378-515c-82a8-eeb531f294e2",
+                "raid_id": "horizon_cathedral",
+                "difficulty_id": "stage1",
+                "catalog_version": "2026.08.20",
+                "state": "stopped_incomplete"
+              },
+              {
+                "item_id": "adef603a-c194-525a-aac2-c59fcdca5cb8",
+                "round_id": "3ea345f9-69f3-5921-934a-7f25e00a82cc",
+                "raid_id": "kazeros_act4",
+                "difficulty_id": "normal",
+                "catalog_version": "2026.08.20",
+                "state": "stopped_incomplete"
+              }
+            ],
+            "assignments": [
+              {
+                "assignment_id": "0dc043f0-2d21-4088-b3be-cbc8e97b07c1",
+                "item_id": "9febbee8-472a-5ca3-8993-499620ddc705",
+                "round_id": "7afa19d3-6378-515c-82a8-eeb531f294e2",
+                "character_id": "fda522c8-6d31-4d4a-b64c-673e396eef04",
+                "character_name": "sample-0",
+                "raid_id": "horizon_cathedral",
+                "difficulty_id": "stage1",
+                "catalog_version": "2026.08.20",
+                "state": "left",
+                "completion_source": null,
+                "completed_at": null,
+                "ended_at": "2026-10-23T17:42:49.284528Z"
+              },
+              {
+                "assignment_id": "b820444b-721e-449d-ab0f-fcfe1caa751c",
+                "item_id": "adef603a-c194-525a-aac2-c59fcdca5cb8",
+                "round_id": "3ea345f9-69f3-5921-934a-7f25e00a82cc",
+                "character_id": "fda522c8-6d31-4d4a-b64c-673e396eef04",
+                "character_name": "sample-0",
+                "raid_id": "kazeros_act4",
+                "difficulty_id": "normal",
+                "catalog_version": "2026.08.20",
+                "state": "left",
+                "completion_source": null,
+                "completed_at": null,
+                "ended_at": "2026-10-23T17:42:49.284528Z"
+              }
+            ],
+            "schedule_segments": [
+              {
+                "segment_id": "c8701526-28c2-4c9b-b8a1-a54636175ad9",
+                "round_id": "3ea345f9-69f3-5921-934a-7f25e00a82cc",
+                "session_id": "39e5028d-c829-43d0-bfcd-9a9e0d6a1453",
+                "starts_at": "2026-10-23T18:45:00Z",
+                "ends_at": "2026-10-23T18:55:00Z",
+                "state": "released"
+              },
+              {
+                "segment_id": "e54aca57-f89e-4789-b5ac-7f160f0be209",
+                "round_id": "7afa19d3-6378-515c-82a8-eeb531f294e2",
+                "session_id": "39e5028d-c829-43d0-bfcd-9a9e0d6a1453",
+                "starts_at": "2026-10-23T18:55:00Z",
+                "ends_at": "2026-10-23T19:05:00Z",
+                "state": "released"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

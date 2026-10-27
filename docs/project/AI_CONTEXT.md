@@ -1,53 +1,41 @@
-# AI CONTEXT — 프로젝트 현재 상태
+# AI CONTEXT — 현재 개발 상태와 기준 문서
 
-**현재 우선 기준:** 내 계정 시간표·모집 조건·수동/조율 일정·회원시간점유·다일/다중레이드의통합목표를유지한다. 문서협의구간을dev에통합한뒤 `feature/raid-recruitment-scheduling`에서첫구간으로Penpot기준내계정시간설정UI를선행한다. 메모리기반미리보기허용이며실제API/영속복원·예약연결완료가아니다. 이전축소1차계획38은이력이다.
+## 개발·협업 기준
 
-현재제품기준은 [설계37 상단표·§19~22](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md),40번째대조는§23,최신Backend접수/Penpot·UI인계는§24다. [Backend43번째R0초안](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6271860507)35dd5f9로컬·미push보고수신,실제Router/DI/Repository·구자료대조와전체회신은미완료다. G1~G7추천을사용자확정으로승격하지않는다.
+1인 개발, Firebase 구현 제거·자체 Python Backend·단일 Google 로그인. 현재 환경에서 개발하고 관련 앱/Backend 구현 후 테스트한다. 베타 시작 전 개발자료를 비우며 베타 이후 자료는 보존한다. 실제 초기화 실행은 별도 대상/시점 지시가 필요하다. [정책09 D08](../backend-migration/09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정).
 
-Penpot ‘LostParty 앱 디자인’/‘03 변경 예정·흐름’/‘내 계정 시간 설정·변경안v2·2026-10-20’의접힘·편집·익일휠·저장실패4상태를읽기검수했다. 파일편집없음. 기존라벤더카드·계정그리드/하단탭유지,5분·복수구간/저장취소후접힘이UI기준이다. 실제신규Flutter코드는아직없으며상세범위/검증은NEXT_WORK를따른다.
+설계는 위 환경/방침과 이미 확정된 UX/제품 의도를 선행 조건으로 적용한다. 사용자의 기능 흐름 확인을 기술 조건 전체의 검수로 취급하지 않는다. 작업/문서 책임은 [AGENTS](../../AGENTS.md), 상세 [ai_rules](ai_rules.md), 현재 단일 실행 계획과 유효 후속은 [NEXT_WORK](NEXT_WORK.md)다. 브랜치는 대단원, 소분류 파트 완료에 커밋/푸시, 통합은 대단원 완료 시 별도다. 같은 브랜치에서 지침·버그기록·UI 보완도 처리한다.
 
-2026-10-19 로그인 후 내 계정 화면 재구성 수정 구현·직접 영향43PASS/변경3파일분석0 및 사용자 디바이스3항목 통과. 기존 디자인·4초 진입·앱 소유 복원 보존. fix/account-auth-screen-selection 수정분의 dev 통합/push를 마감하며 상세 근거는 DEV_LOG, 다음 독립 후보는 NEXT_WORK를 따른다. 분쟁 결과 인수는 별도 보류다.
+## 현재 작업과 실제 코드 상태
 
-기준2026-10-19. 원정대 인증·분쟁 V2 D1~D4 구현/표적 검증을 마쳤고 사용자 승인으로 현재 구현 구간을 마감하고 구현 43cd4e9를 dev에 병합·푸시했다. D4 최종68고유PASS·변경18파일분석0이다. Backend 작업으로 분쟁 실서버/디바이스 인수가 불가능해 차후 후속으로 이관했으며 통과로 확대하지 않는다. 최종 커밋/통합 상태는 DEV_LOG, 계약·후속 인수는 [설계36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), 다음 독립 후보는 [NEXT_WORK](NEXT_WORK.md)를 따른다.
+모집 1차 구현·보고된 정상 흐름 기기 인수를 마감했고 사용자 지시로 `feature/raid-recruitment-scheduling`을 dev→main에 통합한다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
 
-## 핵심 제품·자료 개념
+사용자가 안내된 모집 정상 흐름과 후속 수정을 기기로 확인했다. **현재 안내 범위에서 추가 필수 기기 시험은 없다.** 세부 인수표·정확한 Backend/협업 근거는 [설계37 현재 구현·인수 상태](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027), 당시 구현/자동검증은 각 절과 DEV_LOG를 따른다.
 
-- 앱 회원1명은 실제 LostArk 원정대 여러 개를 등록/인증한다. 원정대 소속 기본 목록은 LostArk API 기준이며 우리 서버는 이를 저장해 반복 호출을 줄이고 활동·파티·그룹에 제공한다. 인증에 사용한 캐릭터 소멸은 원정대 인증을 해제하지 않는다. [정책09 D11](../backend-migration/09-migration-decisions.md).
-- 앱 실행 중 환경+회원별1회 실제 목록 갱신→활동 캐릭터 전체 상세 검사다. 나이스단 OFF는 해당 계열 자동검사 제외·기존 빌드 보존이며 표시 숨김/count는 검사 제외가 아니다. 같은 회원 재로그인·탭/복귀는 반복하지 않는다.
-- 1700은 최초 기본 선택 기준만이다. 기존 관리 화면에서 저레벨 수동 사용/대표 변경을 허용한다. 신규/첫1700 자동 추가와 사용자 해제 영속화의 별도 후속은 NEXT_WORK.
-- 서버에는 역할별 핵심 수치/오류·확인 시각·선호/표시를 복원하고 상세 원본은 기기에 보관한다. 로컬 저장/서버 실패는 영속 대기이며 역할 불명/파싱 실패는 기존 값을 보존한다. 확정 역할의 장비 오류는 해당 역할에 경고와 저장한다.
-- 회원/환경 UUID·scoped cache와 구 기기 정수PK를 분리하고 이름 기반 자료 병합/자동 승계·기존자료 삭제를 하지 않는다. 회원/session/ownership/lifecycle/readGeneration/CAS·pending/outbox 경계를 유지한다.
-- 현재 개발환경/자료로 개발을 계속하고 베타 시작 직전에 개발자료를 비운다. 환경/기능 재구축/Firebase 자료이전은 요구하지 않는다. 베타부터 자료는 큰 문제가 없으면 운영까지 보존한다.
-
-## 완료된 연결 지도
-
-| 영역 | 현재 연결/계약 |
+| 영역 | 현재 상태 |
 |---|---|
-| 회원/세션·키·설정 | Google/Backend 로그인·세션/로그아웃, 회원 API키·나이스단 설정 저장/복원. [인증](../architecture/GOOGLE_LOGIN_CONTRACT.md)·[25](../backend-migration/25-member-lostark-key-request.md) |
-| 원정대 등록/기존 장비인증 | 검색/본·부등록/수정/제거·대소문자검색, 인증캐릭터선택·성공복귀·본인재인증차단. 미인증은기본투영만. [19](../backend-migration/19-account-registration-flutter-contract.md)·[28](../backend-migration/28-verification-client-preparation.md) |
-| 회원 내 계정/관리 | 기존 카드·2/3/4열·대표왕관/확인·이름편집·활동/표시/count/드래그 설정과 상세 진입. [27](../backend-migration/27-representative-quick-selection-ux.md)·[30](../backend-migration/30-scoped-storage-write-contract.md) |
-| 서버 복원·자동 상세 | 캐시먼저→일괄 GET→기존 요약/주간→최신 실제 목록/상세 최대2worker. 회원/권한/보류명령 보호. Backend8d03e962 bootstrap 기본true, 명시 크기/범위409·미지원404에만기존경로대체. [30](../backend-migration/30-scoped-storage-write-contract.md) |
-| 주간 체크 | 기존 추천/선택/확인 UX에 서버 카탈로그/주차·수동완료/정정·점유근거 연결. i는현재모집방참가관계이며완료근거와독립. 파티/반복방의실제API소비는해당기능후속. [33](../backend-migration/33-weekly-raid-flutter-integration.md) |
-| 시작/진단 | 정적로딩이미지·서비스초기화후4초고정전환,통신은앱수명지속. LoadTiming/UiTiming은debug한정·민감정보0. 추가성능최적화/애니메이션은사용자보류. |
+| 생성·검색·가입 | C/N 단독/동시·독립 출발, 날짜/시간 필터·후보 자격, 신청/승인/거절/철회·즉시 참가 기기 통과 |
+| 상세·관리·완료 | 편성 거절 잠금 해소·위임/자동승계·추방/주차별 관리·계정 완료/탈퇴·수동 해제·목록 복귀/갱신 기기 통과 |
+| 일정·메모·사용량 | 개인표 갱신/그래프·제안/확정·조율/기한 안내, 메모·계정 문구 공유, 현행 C/N방 합집합 사용량 기기 확인 |
+| 최근 수정 | 기록 보존/다른 캐릭터 재신청·가입, 오류 확인창 가독성, 필터 한글 시계/비활성 선택 아이콘, 비5분 입력·제안, 해산 반복 로그 해소까지 기기 통과 |
+| 원요청 복구 | v3 영속 복구·원ACK·저장/실패/수명 경계 자동검증 유지. 재현 없는 미확인 배너를 강제 기기 과제로 남기지 않음 |
+| 차후 보완·현재 착수 안 함 | 제안 정밀도의 실제 BetaSchedule.session_id 판정1건. 미수정 기록은 유지하되 현재 작업/즉시 다음 작업·현재 베타 인수 선행 조건이 아님. 별도 재착수 시 검토 |
+| 사용자 보류 | 다음주 개방 알럿 로그·제안 확인/수락 발견성, 베타 이후 개선 시 원인 조사/UX 대안 협의. 웹소켓은 별도 작업 |
+| 디자인 | 승인 Penpot03과 화면 대조/복원 이력 유지.02 실구현 최신화는 별도, 이번 문서 작업으로 보드 갱신 완료를 주장하지 않음 |
+| 계정/로그인 | 자체 Google/Backend 세션·원정대 등록/인증·캐시/복원·개별 갱신 연결 유지. BUG-025와 계정/출시 경계는 NEXT_WORK의 별도 후속 |
 
-## 사용자 관찰·검증 범위
+이번 사용자 지시는 dev/main Git 통합이며 release/tag·서비스 배포는 아니다. Backend [Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6438046779)도 사용자 승인으로 completed 종료했다. 보류한 네이티브 보완·웹소켓/디자인·그룹/통계·계정/출시 후속을 실행하거나 완료로 확대하지 않는다. 기존 코드/시험·기기 결과는 그대로 보존하며 후속 재착수 조건은 [NEXT_WORK](NEXT_WORK.md)에서 관리한다.
 
-일괄 연결의 실제 SM F956N 로그에서 계측Backend76→29요청/기본+주간4661→2883ms,사용자개선수용을받았다. 이후동일구간1443ms+61ms도관측했으나단일실행/조건변동이므로평균/첫paint수치아니다. 4초진입은사용자가수용했다. UI501ms프레임·동기분석최대56ms는관측했고추가개선은보류다. 수동완료성공·기기변경원정대/인증상태복원·실장비인증1회성공등기존사용자결과는DEV_LOG에보존하며모든조작/분쟁인수로확대하지않는다.
+## 제품·디자인 지도
 
-최종코드검증·기능브랜치/통합SHA는DEV_LOG최신마감기록을따른다. 기존완료이력은 [DEV_LOG](DEV_LOG.md), 문서정리전원문은 [기록](history/scoped-account-cache-2026-10-18.md)이다.
+- [모집·일정37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md): 두 주차와 최신 기본출발/조기조율·개인표·메모·번호 계약 및 구현 이력. C/N 생성은 한 명령으로 원자 확정하되 이후 참가·권한·탈퇴·완료는 실제 주차별 독립이다.
+- [비활성 기능](INACTIVE_FEATURES.md): IF-001 미완료 종료/같은 주차 재개는 비활성. IF-002 다일/다중후보, IF-003 미정 생성은 일반 생성에서 제외됐다. 일반 일정/개방/제안에서도 다일·미정 편집을 노출하지 않는다.
+- Penpot03은 승인된 최신 목표 흐름,02는 실제 앱 대조 후 갱신,04는 이전 시안 보관. 식별자/운영은 설계37 §37.65. 그림 존재를 앱 구현 완료로 해석하지 않는다.
+- 계정 카드3열 균등/체크 중앙·우측i, 4인1~4/8인1-1~2-4의 실제 편성번호, 기능별 상세 버튼 위치를 유지한다. 표시/정렬에 이미 받은 유효 자료를 먼저 사용하고 확정 권한/동시성은 서버에서 검증한다.
+- [품질/UX](../architecture/DEVELOPMENT_QUALITY_AND_UX_STANDARD.md)·[디자인](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md): 사용자 이해/예측 가능성, 로컬 우선, 데이터 소유·갱신·비동기 수명, 근거 있는 검증. 즉시 전면 리팩토링 지시는 아님.
 
-## 다음 독립 작업·협업
+## 기타 기준과 이력
 
-- Flutter V2의 D1~D4 구현 마감. Backend 작업으로 현재 불가능한 실서버·사용자 실기기 인수는 차후 후속으로 분리했다. 현재 GET의 최종 결과만 기존 계정/설정·주간 재조회와 성공 복귀로 연결하며 캐릭터 초기 조회/일괄 API는 변경하지 않았다. 상단 안내는 ‘제목아래작은문구,좁으면아이콘’으로 연결했고 사용자 수동 체크는 NEXT_WORK에 묶었다.
-- Backendbootstrap [시간순146번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6247620588)→Flutter연결147/실기기148/진단149/실측150/마감151 이후 [시간순153번째](https://github.com/heo0328/lostparty-backend/issues/8#issuecomment-6249286430)에V2후속Issue15를연결했다. [Issue15 최신 회신](https://github.com/heo0328/lostparty-backend/issues/15#issuecomment-6249415434) 기준 추가Backend대기없음. #8은 주제별 이관 후 보관 종료됐고 V2는 #15에서 계속한다.
-- 그룹 #12/모집·파티 #13, 한도15/5/10·통계는 [32](../backend-migration/32-backend-domain-prework-requests.md)·[34](../backend-migration/34-member-limits-and-room-restrictions.md)·[35](../backend-migration/35-weekly-member-and-group-statistics.md)를기준으로최신인계후연결한다. G1의과거미게시문구로현재상태를되돌리지않는다.
-- 실제active파티소유이전후처리adapter는서버후속이며없으면review_required로보류한다. 기존회원자리/Snapshot·경고·유효캐릭터명시변경은해당파티기능에서구현한다.
-- 개별캐릭터세팅갱신버튼복구, DB-03/QA-01/AUTH-01과새기기/재설치/OFF·계정전환실인수는NEXT_WORK의별도후속대장에남긴다.
+[계정 연결30](../backend-migration/30-scoped-storage-write-contract.md), [원정대 정책09](../backend-migration/09-migration-decisions.md), [인증36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), [한도34](../backend-migration/34-member-limits-and-room-restrictions.md), [통계35](../backend-migration/35-weekly-member-and-group-statistics.md), [버그](BUG_REPORTS.md). 별도 남은 경계/담당은 NEXT_WORK에서 관리한다.
 
-## UI·협업 공통 기준
-
-기존디자인/조작/카드·주간체크영역을보존한다. 캐릭터이름12자/최대2줄자동축소,지원4직업(바드·도화가·홀리나이트·발키리)만딜러/서포터직접선택,일반직업딜러고정. 숫자화면은소수점없이/시각은초까지,저장정밀도는유지한다. 확인알럿취소왼쪽/긍정오른쪽. 앱내문구는간결하게한다.
-
-공식협업은Backend GitHub Issues다. 보고시브랜치/이슈번호/시간순댓글번호/담당/단계를구분한다. 완료구간은통합하고다른독립기능은새목적브랜치·새이슈로분리한다. 사용자백업/tools/DevTools/플랫폼생성파일은임의커밋/삭제하지않는다. 실기기조작은사용자담당이다.
-
-[문서지도](../README.md)·[정책09](../backend-migration/09-migration-decisions.md)·[후속14](../backend-migration/14-my-account-flutter-integration-plan.md#flutter-follow-up-20261014)·[레거시출처](../../legacy/firebase/README.md).
+완료 경과·검증/커밋·실제 사용자 관찰은 [DEV_LOG](DEV_LOG.md). 정리 전 누적 원문은 [이력](history/instruction-state-before-normalization-2026-10-25.md), 감사 발견은 [보고서](INSTRUCTION_AUDIT_2026-10-25.md). 이력의 과거 대기/다음 행동은 현재 실행 지시가 아니다. [전체 문서지도](../README.md).

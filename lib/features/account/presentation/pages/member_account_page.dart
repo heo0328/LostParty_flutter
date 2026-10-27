@@ -1,7 +1,10 @@
 import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../widgets/ownership_notice_title.dart';
+import '../widgets/play_availability_card.dart';
+import '../viewmodels/play_availability_view_model.dart';
 import '../../../../shared/diagnostics/ui_timing.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
 
@@ -18,6 +21,7 @@ import '../viewmodels/member_settings_view_model.dart';
 import '../viewmodels/member_weekly_view_model.dart';
 import '../models/weekly_raid_status_item.dart';
 import '../widgets/member_weekly_display_dialog.dart';
+import '../widgets/member_cycle_selector.dart';
 import '../widgets/member_settings_controls.dart';
 import '../widgets/representative_crown.dart';
 import '../widgets/account_character_card.dart';
@@ -159,6 +163,7 @@ class MemberAccountPage extends StatelessWidget {
     required this.model,
     required this.settings,
     this.weekly,
+    this.availability,
     required this.onSettings,
     required this.onKey,
     required this.onVerify,
@@ -169,15 +174,32 @@ class MemberAccountPage extends StatelessWidget {
     this.onEdit,
     this.onVerifyRegistration,
     this.automaticRefreshAvailable = true,
+    this.onParticipation,
+    this.onCompleteParticipation,
+    this.participationChanges,
+    this.canUseParticipationCommands,
     super.key,
   });
   final MemberAccountViewModel model;
   final MemberSettingsViewModel settings;
   final MemberWeeklyViewModel? weekly;
+  final PlayAvailabilityViewModel? availability;
   final VoidCallback onSettings, onKey, onVerify, onManage, onHistory;
   final void Function(String) onServerStatus;
   final void Function(String)? onCharacters, onEdit, onVerifyRegistration;
   final bool automaticRefreshAvailable;
+  final void Function(String roomId, String target)? onParticipation;
+  final Future<void> Function(
+    BuildContext,
+    String room,
+    String target,
+    String round,
+    String character,
+    String label,
+  )?
+  onCompleteParticipation;
+  final Listenable? participationChanges;
+  final bool Function()? canUseParticipationCommands;
   @override
   Widget build(BuildContext context) => UiFrameProbe(
     child: ListenableBuilder(
@@ -185,6 +207,7 @@ class MemberAccountPage extends StatelessWidget {
         model,
         settings,
         ?weekly,
+        ?participationChanges,
         model.runner.source.cooldown,
       ]),
       builder: (context, _) => UiTiming.measure(UiWork.pageWidgets, () {
@@ -215,6 +238,13 @@ class MemberAccountPage extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               children: [
                 if (automaticRefreshAvailable) _progress(context),
+                if (weekly?.cycles case final meta?)
+                  MemberCycleSelector(
+                    cycles: meta,
+                    value: weekly!.selectedCycleKey!,
+                    enabled: !weekly!.busy && !weekly!.hasPending,
+                    onChanged: weekly!.selectCycle,
+                  ),
                 if (weekly != null) _weeklyStatus(context, weekly!),
                 if (model.failure != null)
                   Text(
@@ -232,6 +262,8 @@ class MemberAccountPage extends StatelessWidget {
                     padding: EdgeInsets.all(16),
                     child: Text('등록한 원정대가 없습니다.'),
                   ),
+                if (availability != null)
+                  PlayAvailabilityCard(model: availability!),
                 for (final section in model.sections.where(
                   (s) => s.registration.isMain,
                 ))
@@ -251,14 +283,26 @@ class MemberAccountPage extends StatelessWidget {
                           '계정 도구',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: onManage,
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.manage_accounts_outlined,
+                            size: 24,
+                          ),
+                          label: const Text('원정대 등록·관리'),
+                        ),
+                        const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
                           children: [
-                            TextButton.icon(
-                              onPressed: onManage,
-                              icon: const Icon(Icons.manage_accounts_outlined),
-                              label: const Text('원정대 등록·관리'),
-                            ),
                             TextButton(
                               onPressed: onVerify,
                               child: const Text('원정대 인증'),
@@ -298,6 +342,17 @@ class MemberAccountPage extends StatelessWidget {
   );
   Widget _progress(BuildContext context) {
     final r = model.runner, cooldown = r.source.cooldown;
+    if (model.automaticRefreshResultHidden) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          key: const ValueKey('show-automatic-refresh-result'),
+          onPressed: model.showAutomaticRefreshResult,
+          icon: const Icon(Icons.history, size: 18),
+          label: const Text('자동 갱신 결과 보기'),
+        ),
+      );
+    }
     final title = switch (r.phase) {
       ScopedRefreshPhase.preparing => '자동 갱신 준비 중',
       ScopedRefreshPhase.running => '캐릭터 자동 갱신 중',
@@ -311,7 +366,23 @@ class MemberAccountPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (model.canDismissAutomaticRefreshResult)
+                  IconButton(
+                    key: const ValueKey('dismiss-automatic-refresh-result'),
+                    onPressed: model.dismissAutomaticRefreshResult,
+                    icon: const Icon(Icons.close),
+                    tooltip: '결과 닫기',
+                  ),
+              ],
+            ),
             if (r.isBusy) const LinearProgressIndicator(),
             if (r.rosterProgress.isNotEmpty) ...[
               Text(
@@ -623,7 +694,24 @@ class MemberAccountPage extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall,
       ),
-      weeklyRaids: weekly?.items(row.ref) ?? const [],
+      weeklyRaids:
+          weekly?.items(
+            row.ref,
+            allowParticipationCompletion:
+                onCompleteParticipation != null &&
+                (canUseParticipationCommands?.call() ?? true),
+          ) ??
+          const [],
+      weeklyColumns: weekly?.twoCycleEnabled == true ? 3 : 1,
+      onWeeklyRaidInfo: (raid) {
+        final value = weekly?.entry(row.ref, raid.raidId);
+        final target = weekly?.selectedCycleKey;
+        if (value?.canViewParticipation == true &&
+            value?.roomId != null &&
+            target != null) {
+          onParticipation?.call(value!.roomId!, target);
+        }
+      },
       showWeeklyRaidEditor: weekly?.catalog != null,
       weeklyRaidHiddenByPreference:
           weekly?.preference(row.ref.characterId)?.displayCount == 0,
@@ -697,10 +785,62 @@ class MemberAccountPage extends StatelessWidget {
     bool completed,
   ) async {
     final state = weekly;
-    if (state == null || !state.canChange(ref, raid.raidId)) return;
+    if (state == null) return;
+    if (completed && state.canCompleteParticipation(ref, raid.raidId)) {
+      final action = onCompleteParticipation;
+      if (action == null || canUseParticipationCommands?.call() == false) {
+        return;
+      }
+      final entry = state.entry(ref, raid.raidId)!;
+      await action(
+        context,
+        entry.roomId!,
+        state.selectedCycleKey!,
+        entry.wire['participation']['round_id'] as String,
+        ref.characterId,
+        raid.label,
+      );
+      return;
+    }
+    if (!state.canChange(ref, raid.raidId)) return;
     final member = accountReadScope(model.runtime.session),
         before = state.entry(ref, raid.raidId);
     final name = model.character(ref)?.observation.characterName ?? '';
+    if (!completed && state.twoCycleEnabled) {
+      final correction = await state.prepareCorrection(ref, raid.raidId);
+      if (correction == null) return;
+      try {
+        if (!context.mounted || !state.correctionCurrent(correction)) return;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('레이드 완료 해제'),
+            content: Text(
+              '$name 캐릭터의 ${raid.label} 완료를 해제할까요?\n대상 주차 · ${correction.target}\n이전 모집방의 참가·자리·예약은 자동 복구되지 않습니다.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('취소'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('완료 해제'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true &&
+            context.mounted &&
+            _sameMember(model, member) &&
+            state.correctionCurrent(correction)) {
+          await state.correct(correction);
+        }
+      } finally {
+        state.cancelCorrection(correction);
+      }
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -708,7 +848,7 @@ class MemberAccountPage extends StatelessWidget {
         content: Text(
           completed
               ? '$name 캐릭터의 ${raid.label} 레이드를 완료 처리할까요?'
-              : '$name 캐릭터의 ${raid.label} 수동 완료를 해제할까요?',
+              : '$name 캐릭터의 ${raid.label} 레이드 완료를 해제할까요?',
         ),
         actions: [
           TextButton(
@@ -1081,6 +1221,13 @@ class MemberCharacterPage extends StatelessWidget {
     listenable: Listenable.merge([model, model.runner.source.cooldown]),
     builder: (context, _) {
       final row = model.character(ref);
+      final supportsMultipleRoles =
+          row != null &&
+          const CharacterBuildRolePolicy().supportsMultipleRoles(
+            (jsonDecode(row.observation.profileJson) as Map)['class_name']
+                    as String? ??
+                '',
+          );
       return Scaffold(
         appBar: AppBar(
           title: OwnershipNoticeTitle(
@@ -1096,13 +1243,35 @@ class MemberCharacterPage extends StatelessWidget {
                 children: [
                   if (row.observation.lifecycleState != 'active')
                     const Text('기존 캐릭터 확인 필요 · 새로운 사용 전에 원정대를 확인해 주세요.'),
-                  if (row.preferences != null &&
-                      const CharacterBuildRolePolicy().supportsMultipleRoles(
-                        (jsonDecode(row.observation.profileJson)
-                                    as Map)['class_name']
-                                as String? ??
-                            '',
-                      ))
+                  TextButton.icon(
+                    onPressed: model.canRefreshCharacter(ref)
+                        ? () => model.refreshCharacter(registration, ref)
+                        : null,
+                    icon: model.busy('refresh:${ref.characterId}')
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh),
+                    label: Text(
+                      model.busy('refresh:${ref.characterId}')
+                          ? '갱신 중'
+                          : '캐릭터 갱신',
+                    ),
+                  ),
+                  if (supportsMultipleRoles)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        '서포터 캐릭터의 경우 아크패시브 계열로 딜러와 서포터 계열이 자동 분류되어 저장됩니다.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  if (row.preferences != null && supportsMultipleRoles)
                     Wrap(
                       spacing: 8,
                       children: [

@@ -1,3 +1,4 @@
+import '../../features/recruitment_list/presentation/viewmodels/raid_room_usage_controller.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ class AppShell extends StatefulWidget {
     this.startupCharacterRefreshRunner,
     this.scopedStartupRefresh,
     this.onRaidStatusSelected,
+    this.raidUsage,
     super.key,
   });
 
@@ -24,6 +26,7 @@ class AppShell extends StatefulWidget {
   final StartupCharacterRefreshRunner? startupCharacterRefreshRunner;
   final ScopedStartupRefreshController? scopedStartupRefresh;
   final VoidCallback? onRaidStatusSelected;
+  final RaidRoomUsageController? raidUsage;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -103,9 +106,9 @@ class _AppShellState extends State<AppShell> {
         selectedIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: _selectBranch,
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.event_note_outlined),
-            selectedIcon: Icon(Icons.event_note),
+          NavigationDestination(
+            icon: _raidIcon(Icons.event_note_outlined),
+            selectedIcon: _raidIcon(Icons.event_note),
             label: '레이드 현황',
           ),
           NavigationDestination(
@@ -124,6 +127,26 @@ class _AppShellState extends State<AppShell> {
             label: '그룹',
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _raidIcon(IconData icon) {
+    final usage = widget.raidUsage;
+    if (usage == null) return Icon(icon);
+    return ListenableBuilder(
+      listenable: usage,
+      builder: (context, _) => Badge(
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        textColor: Theme.of(context).colorScheme.onPrimaryContainer,
+        isLabelVisible: usage.authenticated,
+        label: Text(
+          usage.label,
+          semanticsLabel: usage.label == '—/—'
+              ? '참가 모집방 사용량 미확인'
+              : '참가 모집방 ${usage.label}',
+        ),
+        child: Icon(icon),
       ),
     );
   }

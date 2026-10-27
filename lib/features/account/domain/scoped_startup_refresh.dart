@@ -182,3 +182,13 @@ abstract interface class ScopedStartupRefreshSource {
     void Function() guard,
   );
 }
+
+/// Explicit refresh of one owned character, independent of startup/Nice-group policy.
+abstract interface class ScopedCharacterRefreshSource {
+  Future<ScopedRefreshItem> refreshCharacter(
+    ScopedRegistrationRef registration,
+    ScopedCharacterRef character,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onLocalSaved,
+  );
+}

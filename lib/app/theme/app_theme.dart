@@ -30,6 +30,44 @@ abstract final class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.background,
       disabledColor: AppColors.textDisabled,
+      // Keep disabled selection marks visible without restoring interaction.
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? AppColors.textSecondary
+              : null,
+        ),
+        checkColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.disabled) ? Colors.white : null,
+        ),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? AppColors.textSecondary
+              : null,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? AppColors.textSecondary
+              : null,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? (states.contains(WidgetState.selected)
+                    ? AppColors.primarySoft
+                    : AppColors.outline)
+              : null,
+        ),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? AppColors.textSecondary
+              : null,
+        ),
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,

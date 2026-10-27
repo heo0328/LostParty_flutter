@@ -26,6 +26,21 @@ void main() {
   test('아이템 레벨이 없으면 선택 가능한 레이드가 없다', () {
     expect(policy.eligibleRaids(catalog: _catalog, itemLevel: null), isEmpty);
   });
+  test('서버의 소수 입장 레벨을 정수로 낮추지 않는다', () {
+    const difficulty = RaidDifficultyDefinition(
+      difficultyId: 'hard',
+      name: '하드',
+      displayAlias: '하드',
+      displayOrder: 1,
+      minItemLevel: 1770,
+      exactMinItemLevel: '1770.5',
+      clearGold: 0,
+      boundGold: 0,
+      isActive: true,
+    );
+    expect(policy.canEnter(itemLevel: 1770, difficulty: difficulty), false);
+    expect(policy.canEnter(itemLevel: 1770.5, difficulty: difficulty), true);
+  });
 }
 
 final _catalog = RaidCatalog(

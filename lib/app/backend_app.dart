@@ -1,4 +1,10 @@
+import '../features/recruitment_list/presentation/widgets/cycle_member_action_widgets.dart';
+import '../features/recruitment_list/data/raid_room_usage_repository.dart';
+import '../features/recruitment_list/presentation/viewmodels/raid_room_usage_controller.dart';
 import 'dart:async';
+import '../features/recruitment_list/data/beta/beta_contract.dart';
+import '../features/recruitment_list/data/beta/recruitment_command_store.dart';
+import '../features/recruitment_list/data/beta/recruitment_command_transport.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -49,6 +55,18 @@ import '../shared/lost_ark_api/auth/secure_api_token_store.dart';
 import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/recruitment_list/data/repositories/pending_backend_party_read_repository.dart';
 import '../features/recruitment_list/presentation/pages/recruitment_list_page.dart';
+import '../features/recruitment_list/data/backend_recruitment_repository.dart';
+import '../features/recruitment_list/data/cycle_interaction_repository.dart';
+import '../features/recruitment_list/presentation/pages/cycle_recruitment_list_page.dart';
+import '../features/recruitment_list/presentation/viewmodels/cycle_participation_controller.dart';
+import '../features/recruitment_list/data/cycle_read_repository.dart';
+import '../features/recruitment_list/data/membership_readers.dart';
+import '../features/recruitment_list/presentation/pages/cycle_own_rooms_page.dart';
+import '../features/recruitment_list/presentation/pages/backend_recruitment_create_page.dart';
+import '../features/recruitment_list/presentation/pages/backend_recruitment_detail_page.dart';
+import '../features/recruitment_list/presentation/viewmodels/backend_recruitment_create_view_model.dart';
+import '../features/account/data/member_raid_client.dart';
+import '../features/account/domain/services/account_detail_access.dart';
 import '../features/recruitment_list/domain/services/party_cycle_runtime.dart';
 import '../shared/game_catalog/data/datasources/asset_game_catalog_data_source.dart';
 import '../shared/game_catalog/data/repositories/game_catalog_repository_impl.dart';
@@ -80,6 +98,8 @@ bool allowedAuthBaseUrl(String value, {required bool debug}) {
 
 class BackendApp extends StatefulWidget {
   const BackendApp({super.key});
+  final RecruitmentContractMode recruitmentContractMode =
+      RecruitmentContractMode.betaWire2;
   @override
   State<BackendApp> createState() => _BackendAppState();
 }
@@ -97,6 +117,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   OwnershipDisputeController? _ownership;
   BackendAccountLifecycle? _accountLifecycle;
   BackendMemberAccount? _memberAccount;
+  BackendRecruitmentCreateViewModel? _recruitmentCreate;
+  RaidRoomUsageController? _raidUsage;
+  CycleParticipationController? _participation;
+  RecruitmentCommandTransport? _recruitmentCommands;
   final _managementGateways =
       <(String, String, int, String), ScopedCharacterManagementGateway>{};
   GoRouter? _router;
@@ -396,6 +420,89 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final raidCatalog = RaidCatalogRepositoryImpl(
       dataSource: AssetRaidCatalogDataSource(),
     );
+    final cycleReads = CycleReadRepository(
+      accountApi,
+      membershipProfile: true,
+      contractMode: widget.recruitmentContractMode,
+    );
+    final commandTransport = _recruitmentCommands = RecruitmentCommandTransport(
+      store: DriftRecruitmentCommandStore(),
+      session: readSession,
+      baseUrl: () => _dio!.options.baseUrl,
+      allowHttp: kDebugMode,
+      mode: widget.recruitmentContractMode,
+      send: DioRecruitmentCommandSender(_dio!, readSession).call,
+    );
+    final membershipReads = MembershipReadRepository(
+      accountApi,
+      contractMode: widget.recruitmentContractMode,
+    );
+    String cycleScopeKey() =>
+        '${_dio!.options.baseUrl}/${readSession.userId}/${readSession.generation}/${lifecycle.runtime?.readGeneration}';
+    final raidUsage = _raidUsage = RaidRoomUsageController(
+      repository: RaidRoomUsageRepository(accountApi),
+      session: readSession,
+      scopeKey: cycleScopeKey,
+      changes: _memberAccount?.model ?? auth,
+    );
+    final recruitmentGateway = BackendRecruitmentRepository(
+      contractMode: widget.recruitmentContractMode,
+      api: accountApi,
+      accounts: serverAccounts,
+      raids: MemberRaidClient(accountApi),
+      twoCycleEnabled: true,
+      preferredRoles: () async {
+        final model = _memberAccount?.model;
+        if (model == null) return const <String, String>{};
+        // Join an outstanding account restore; no per-character profile reads.
+        if (model.sections.isEmpty || model.loading) await model.refresh();
+        return {
+          for (final section in model.sections)
+            for (final row in section.characters)
+              if (row.preferences?.preferences.preferredRole case final role?)
+                row.ref.characterId: role.name,
+        };
+      },
+    );
+    final cycleInteractions = CycleInteractionRepository(
+      contractMode: widget.recruitmentContractMode,
+      api: accountApi,
+      recruitment: recruitmentGateway,
+    );
+    final participation = _participation = CycleParticipationController(
+      commandTransport: commandTransport,
+      onActiveRoomsChanged: raidUsage.commandApplied,
+      gateway: cycleInteractions,
+      session: readSession,
+      changes: _memberAccount?.model ?? auth,
+      scopeKey: cycleScopeKey,
+      onMutation: (t) async {
+        await _memberAccount?.weekly?.refreshTarget(t);
+      },
+      onRelationEnded: (targets) async {
+        for (final t in targets) {
+          await _memberAccount?.weekly?.refreshTarget(t);
+        }
+      },
+    );
+    final recruitmentCreate = _recruitmentCreate =
+        BackendRecruitmentCreateViewModel(
+          commandTransport: commandTransport,
+          onActiveRoomsChanged: raidUsage.commandApplied,
+          gateway: recruitmentGateway,
+          session: readSession,
+          scopeKey: cycleScopeKey,
+          accessChanges: _memberAccount?.model ?? auth,
+          hasVerifiedAccount: () =>
+              _memberAccount?.model.sections.any(
+                (s) => hasAccountDetailAccess(
+                  ownershipStatus: s.registration.ownershipStatus,
+                  accountId: s.registration.accountId,
+                  ownershipRevision: s.registration.ownershipRevision,
+                ),
+              ) ??
+              false,
+        );
     Widget pending(
       String title, {
       bool protected = true,
@@ -442,6 +549,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         StatefulShellRoute.indexedStack(
           builder: (context, state, shell) => AppShell(
             navigationShell: shell,
+            raidUsage: raidUsage,
+            onRaidStatusSelected: () => unawaited(raidUsage.refresh()),
             scopedStartupRefresh:
                 _memberAccount?.automaticRefreshEnabled == true
                 ? _memberAccount!.runner
@@ -452,7 +561,31 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               routes: [
                 GoRoute(
                   path: '/raid-status',
-                  builder: (_, _) => pending('레이드 현황'),
+                  builder: (context, state) => _memberAccount?.weekly == null
+                      ? pending('레이드 현황')
+                      : CycleOwnRoomsPage(
+                          initialTarget:
+                              state.uri.queryParameters['target_cycle_key'],
+                          returnCommandKey:
+                              state.uri.queryParameters['return_command_key'],
+                          weekly: _memberAccount!.weekly!,
+                          mutations: participation,
+                          onRefresh: () => unawaited(raidUsage.refresh()),
+                          repository: cycleReads,
+                          scopeKey: cycleScopeKey,
+                          onLogin: () => showLoginRequired(context, auth),
+                          onRoom: (id, t) =>
+                              context.push(membershipDetailLocation(id, t)),
+                          onApplicationRoom: (id, t) => context.push(
+                            Uri(
+                              path: '/recruitments/$id',
+                              queryParameters: {'target_cycle_key': t},
+                            ).toString(),
+                          ),
+                          onRecord: (id, t, anchor) => context.push(
+                            membershipDetailLocation(id, t, anchor: anchor),
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -466,7 +599,40 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                     memberBuilder: _memberAccount != null
                         ? (context) => MemberAccountPage(
                             model: _memberAccount!.model,
+                            availability: _memberAccount!.availability,
                             weekly: _memberAccount!.weekly,
+                            participationChanges: participation,
+                            canUseParticipationCommands: () =>
+                                participation.canAct,
+                            onCompleteParticipation:
+                                (
+                                  ctx,
+                                  room,
+                                  target,
+                                  round,
+                                  character,
+                                  label,
+                                ) async {
+                                  final binding = cycleScopeKey();
+                                  await showDeparture(
+                                    ctx,
+                                    participation,
+                                    room: room,
+                                    target: target,
+                                    initialRound: round,
+                                    expectedCharacter: character,
+                                    closeOnSuccess: true,
+                                    raidLabel: (_) => label,
+                                    isCurrent: () =>
+                                        binding == cycleScopeKey() &&
+                                        _memberAccount
+                                                ?.weekly
+                                                ?.selectedCycleKey ==
+                                            target,
+                                  );
+                                },
+                            onParticipation: (id, t) =>
+                                context.push(membershipDetailLocation(id, t)),
                             settings: _memberSettings!,
                             onSettings: () => context.push('/settings'),
                             onKey: () => context.push('/settings/api-token'),
@@ -590,22 +756,78 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               routes: [
                 GoRoute(
                   path: '/recruitments',
-                  builder: (_, _) => RecruitmentListPage(
-                    partyReadRepository: PendingBackendPartyReadRepository(),
-                    backendConnectionPending: true,
-                    cycleKey: _cycle!.current.key,
-                    currentPlayerId: '',
-                    accountDatabase: _database,
-                    raidCatalogRepository: raidCatalog,
-                  ),
+                  builder: (context, _) => readSession.isAuthenticated
+                      ? CycleRecruitmentListPage(
+                          gateway: cycleInteractions,
+                          session: readSession,
+                          changes: _memberAccount?.model ?? auth,
+                          scopeKey: cycleScopeKey,
+                          mutations: participation,
+                          onRoom: (id, t) => context.push(
+                            '/recruitments/$id?target_cycle_key=$t',
+                          ),
+                          onCreate: (t) => context.push(
+                            '/recruitments/create${t == null ? '' : '?target_cycle_key=$t'}',
+                          ),
+                          onLogin: () => showLoginRequired(context, auth),
+                        )
+                      : RecruitmentListPage(
+                          partyReadRepository:
+                              PendingBackendPartyReadRepository(),
+                          backendConnectionPending: true,
+                          cycleKey: _cycle!.current.key,
+                          currentPlayerId: '',
+                          accountDatabase: _database,
+                          raidCatalogRepository: raidCatalog,
+                        ),
                   routes: [
                     GoRoute(
                       path: 'create',
-                      builder: (_, _) => pending('모집 만들기', alertOnEntry: true),
+                      builder: (context, state) => BackendRecruitmentCreatePage(
+                        model: recruitmentCreate,
+                        onCreated: (id, t) =>
+                            unawaited(participation.changed(id, t)),
+                        initialTarget:
+                            state.uri.queryParameters['target_cycle_key'],
+                        onLogin: () => showLoginRequired(context, auth),
+                      ),
                     ),
                     GoRoute(
                       path: ':recruitmentId',
-                      builder: (_, _) => pending('모집 상세', protected: false),
+                      builder: (context, state) {
+                        MembershipRecordAnchor? anchor;
+                        try {
+                          anchor = MembershipRecordAnchor.fromQuery(state.uri);
+                        } on FormatException {
+                          return const Scaffold(
+                            body: Center(child: Text('기록 링크를 확인해 주세요.')),
+                          );
+                        }
+                        final memberReader =
+                            anchor != null ||
+                            state.uri.queryParameters['reader_profile'] ==
+                                membershipReaderProfile;
+                        return BackendRecruitmentDetailPage(
+                          key: ValueKey((
+                            state.pathParameters['recruitmentId'],
+                            state.uri.queryParameters['target_cycle_key'],
+                            anchor?.membership,
+                            anchor?.cycleMember,
+                            memberReader,
+                          )),
+                          target: state.uri.queryParameters['target_cycle_key'],
+                          accessChanges: _memberAccount?.model ?? auth,
+                          scopeKey: cycleScopeKey,
+                          reader: memberReader ? membershipReads : null,
+                          recordAnchor: anchor,
+                          gateway: recruitmentGateway,
+                          participation: participation,
+                          session: readSession,
+                          roomId: state.pathParameters['recruitmentId']!,
+                          onLogin: () => showLoginRequired(context, auth),
+                          onCreateAnother: recruitmentCreate.startAnother,
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -721,6 +943,9 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       unawaited(_memberKey?.reload());
       unawaited(_ownership?.resume());
+      unawaited(_memberAccount?.weekly?.refresh());
+      unawaited(_recruitmentCreate?.refreshCycles());
+      unawaited(_raidUsage?.refresh());
     }
   }
 
@@ -733,6 +958,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _router?.dispose();
     _entryGate.removeListener(_entryReady);
     _entryGate.dispose();
+    _raidUsage?.dispose();
+    _recruitmentCreate?.dispose();
+    _participation?.dispose();
+    unawaited(_recruitmentCommands?.dispose());
     _memberAccount?.dispose();
     _ownership?.dispose();
     unawaited(_accountLifecycle?.close());

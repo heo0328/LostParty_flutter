@@ -198,6 +198,16 @@ void main() {
       };
       return presentation;
     }
+    if (r.path == '/v1/me/play-availability') {
+      return {
+        'exists': false,
+        'version': 1,
+        'timezone': 'Asia/Seoul',
+        'intervals': <Object>[],
+        'normalized_intervals': <Object>[],
+        'updated_at': null,
+      };
+    }
     final id = r.path.split('/')[4];
     if (r.path.endsWith('/personal-profile')) {
       return {
@@ -442,6 +452,116 @@ void main() {
     await until(() => !model.loading && !controller.isBusy);
   }
 
+  test(
+    'explicit character refresh fetches only selected UUID and deduplicates taps',
+    () async {
+      await run();
+      final row = model.sections.single.characters.first;
+      final registration = ScopedRegistrationRef(row.ref.scope, registrationId);
+      final before = armoryCalls.length;
+      final opposite = row.support;
+      final first = model.refreshCharacter(registration, row.ref);
+      final duplicate = model.refreshCharacter(registration, row.ref);
+      await Future.wait([first, duplicate]);
+      expect(model.failure, isNull);
+      expect(armoryCalls.length - before, 1);
+      expect(model.character(row.ref)!.dealer!.hasPending, isFalse);
+      expect(model.character(row.ref)!.support, same(opposite));
+      expect(model.characterRefreshing, isFalse);
+      expect(model.canRefreshCharacter(row.ref), isTrue);
+    },
+  );
+
+  test(
+    'explicit refresh keeps locally saved result when upload fails',
+    () async {
+      await run();
+      final row = model.sections.single.characters.first;
+      failPut = true;
+      await model.refreshCharacter(
+        ScopedRegistrationRef(row.ref.scope, registrationId),
+        row.ref,
+      );
+      expect(model.character(row.ref)!.dealer!.hasPending, isTrue);
+      expect(model.character(row.ref)!.dealer!.rawJson, isNotNull);
+      failPut = false;
+      await model.resolveRole(
+        ScopedRegistrationRef(row.ref.scope, registrationId),
+        row.ref,
+        CharacterBuildRole.dealer,
+      );
+      expect(model.character(row.ref)!.dealer!.hasPending, isFalse);
+    },
+  );
+
+  test(
+    'provider failure preserves both saved roles and releases refresh state',
+    () async {
+      await run();
+      final row = model.sections.single.characters.first;
+      final original = row.dealer;
+      armoryRespond = (r) => throw failure(r);
+      await model.refreshCharacter(
+        ScopedRegistrationRef(row.ref.scope, registrationId),
+        row.ref,
+      );
+      expect(model.failure, isNotNull);
+      expect(model.character(row.ref)!.dealer, same(original));
+      expect(model.character(row.ref)!.support, same(row.support));
+      expect(model.characterRefreshing, isFalse);
+    },
+  );
+
+  test(
+    'closing a completed result is presentation only even during another API read',
+    () async {
+      failPut = true;
+      await run();
+      expect(controller.pendingServerCount, greaterThan(0));
+      expect(model.canDismissAutomaticRefreshResult, isTrue);
+      final retainedItems = controller.items;
+      final phase = controller.phase;
+      final pending = controller.pendingServerCount;
+      final retryable = controller.canRetryServer;
+      final entered = Completer<void>(), release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+      });
+      apiRespond = (r) async {
+        if (r.path == '/v1/me/game-accounts' && !entered.isCompleted) {
+          entered.complete();
+          await release.future;
+        }
+        return serve(r);
+      };
+      final reading = model.refresh();
+      await entered.future;
+      expect(model.loading, isTrue);
+      final callsBeforeClose = apiCalls.length,
+          providerBeforeClose = armoryCalls.length;
+      model.dismissAutomaticRefreshResult();
+      expect(model.automaticRefreshResultHidden, isTrue);
+      expect(controller.phase, phase);
+      expect(controller.items, retainedItems);
+      expect(controller.pendingServerCount, pending);
+      expect(controller.canRetryServer, retryable);
+      expect(apiCalls, hasLength(callsBeforeClose));
+      expect(armoryCalls, hasLength(providerBeforeClose));
+      model.showAutomaticRefreshResult();
+      expect(model.automaticRefreshResultHidden, isFalse);
+      model.dismissAutomaticRefreshResult();
+      release.complete();
+      await reading;
+      expect(model.automaticRefreshResultHidden, isTrue);
+      failPut = false;
+      await controller.retryServerSaved();
+      expect(model.automaticRefreshResultHidden, isFalse);
+      model.dismissAutomaticRefreshResult();
+      session.change(authenticated: false);
+      expect(model.automaticRefreshResultHidden, isFalse);
+    },
+  );
+
   void restorationOnly() {
     final remote = binding.source.remote;
     binding.dispose();
@@ -485,48 +605,76 @@ void main() {
         });
         final catalog = weekly_fixture.catalogWire();
         final raid = (catalog['raids'] as List).first['raid_id'] as String;
-        final cycle = {
-          'server_time': clock.toIso8601String(),
-          'cycle_key': '2026-10-14',
-          'starts_at': '2026-10-13T21:00:00Z',
-          'ends_at': '2026-10-20T21:00:00Z',
-          'timezone': 'Asia/Seoul',
-        };
         apiRespond = (r) async {
           if (r.path == '/v1/raid-catalog') return catalog;
-          if (r.path == '/v1/raid-cycle') return cycle;
-          if (r.path == '/v1/me/raid-weekly-states') {
+          Map<String, dynamic> permission(bool allowed) => {
+            'allowed': allowed,
+            'reason': allowed ? null : 'PLAY_NOT_STARTED',
+            'next_change_at': null,
+          };
+          Map<String, dynamic> cycleMeta(String key) => {
+            'cycle_key': key,
+            'starts_at': DateTime.parse(
+              '${key}T00:00:00Z',
+            ).subtract(const Duration(hours: 3)).toIso8601String(),
+            'ends_at': DateTime.parse('${key}T00:00:00Z')
+                .add(const Duration(days: 7))
+                .subtract(const Duration(hours: 3))
+                .toIso8601String(),
+            'playable_from': '${key}T01:00:00Z',
+            'permissions': {
+              for (final k in ['read', 'create', 'admit', 'complete'])
+                k: permission(k != 'complete' || key == '2026-10-14'),
+            },
+          };
+          if (r.path == '/v2/raid-cycles') {
+            return {
+              'server_now': clock.toIso8601String(),
+              'current': cycleMeta('2026-10-14'),
+              'next': cycleMeta('2026-10-21'),
+              'policy_version': 'two-cycle-contract-4',
+            };
+          }
+          if (r.path == '/v2/me/raid-weekly-summary') {
             if (!readEntered.isCompleted) readEntered.complete();
             await readRelease.future;
             if (failWeekly) throw failure(r);
+            final body = r.data as Map;
             return {
-              'current_cycle': cycle,
-              'cycle_key': '2026-10-14',
+              'server_now': clock.toIso8601String(),
+              'current_cycle_key': '2026-10-14',
+              'target_cycle_keys': body['target_cycle_keys'],
               'catalog_version': catalog['catalog_version'],
               'entries': [
-                for (final id in r.queryParameters['character_id'] as List)
-                  for (final definition in catalog['raids'] as List)
-                    {
-                      'character_id': id,
-                      'raid_id': definition['raid_id'],
-                      'cycle_key': '2026-10-14',
-                      'revision': 1,
-                      'ownership_revision': 1,
-                      'lifecycle_revision': 1,
-                      'state': 'completed',
-                      'completion_sources': [
-                        {
-                          'source': 'manual',
-                          'completed_at': clock.toIso8601String(),
-                          'difficulty_id': null,
-                          'party_id': null,
+                for (final t in body['target_cycle_keys'])
+                  for (final id in body['character_ids'])
+                    for (final definition in catalog['raids'] as List)
+                      {
+                        'character_id': id,
+                        'raid_id': definition['raid_id'],
+                        'target_cycle_key': t,
+                        'weekly_revision': 1,
+                        'ownership_revision': 1,
+                        'lifecycle_revision': 1,
+                        'completion_sources': [
+                          if (t == '2026-10-14')
+                            {
+                              'source': 'manual',
+                              'completed_at': clock.toIso8601String(),
+                              'difficulty_id': null,
+                              'party_id': null,
+                            },
+                        ],
+                        'participation': null,
+                        'continuation_state': 'not_selected',
+                        'permissions': {
+                          'mark_completed': permission(t == '2026-10-14'),
+                          'clear_manual_completion': permission(
+                            t == '2026-10-14',
+                          ),
+                          'view_participation': permission(false),
                         },
-                      ],
-                      'participation': null,
-                      'can_mark_completed': true,
-                      'can_clear_manual_completion': true,
-                      'mark_blocked_reason': null,
-                    },
+                      },
               ],
             };
           }

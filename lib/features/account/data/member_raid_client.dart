@@ -3,12 +3,76 @@ import 'package:dio/dio.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../domain/account_read_session.dart';
 import '../domain/member_raid_models.dart';
+import '../domain/member_cycle_models.dart';
+import '../domain/member_manual_completion_result.dart';
+import '../domain/member_completion_correction.dart';
 import '../domain/role_summary.dart';
 import 'backend_account_read_api.dart';
 
 class MemberRaidClient {
   MemberRaidClient(this.api);
   final DioBackendAccountReadApi api;
+  Future<MemberCompletionCorrection> correction(
+    String character,
+    String raid,
+    String target,
+  ) => _decode(() async {
+    roleId(character);
+    raidIdentifier(raid);
+    raidCycleKey(target);
+    return MemberCompletionCorrection(
+      character,
+      raid,
+      target,
+      (await api.request(
+        '/v2/me/characters/$character/raid-weekly-states/$raid/completion-correction-context',
+        query: {'target_cycle_key': target},
+      ))!,
+    );
+  });
+  Future<void> correct(
+    MemberCompletionCorrection original,
+    String key,
+    Map<String, dynamic> body,
+  ) => _decode(() async {
+    roleId(key);
+    roleCheck(
+      correctionStableJson(body) == correctionStableJson(original.body()),
+    );
+    MemberCompletionCorrectionResult(
+      (await api.request(
+        '/v2/me/characters/${original.character}/raid-weekly-states/${original.raid}/completion-corrections',
+        method: 'POST',
+        body: body,
+        idempotencyKey: key,
+      ))!,
+      original,
+      key,
+    );
+  });
+  Future<MemberCycles> cycles() => _decode(
+    () async => MemberCycles.fromJson((await api.request('/v2/raid-cycles'))!),
+  );
+  Future<MemberCycleSummary> summary(List<String> ids, List<String> targets) =>
+      _decode(() async {
+        roleCheck(
+          ids.isNotEmpty &&
+              ids.length <= 50 &&
+              ids.toSet().length == ids.length &&
+              targets.isNotEmpty &&
+              targets.length <= 2 &&
+              targets.toSet().length == targets.length,
+        );
+        ids.forEach(roleId);
+        targets.forEach(raidCycleKey);
+        return MemberCycleSummary.fromJson(
+          (await api.request(
+            '/v2/me/raid-weekly-summary',
+            method: 'POST',
+            body: {'character_ids': ids, 'target_cycle_keys': targets},
+          ))!,
+        );
+      });
   Future<T> _decode<T>(Future<T> Function() action) async {
     try {
       return await action();
@@ -79,5 +143,27 @@ class MemberRaidClient {
         idempotencyKey: key,
       ))!,
     );
+  });
+
+  Future<MemberWeeklyEntry> putTarget(
+    String character,
+    String raid,
+    String key,
+    Map<String, dynamic> body,
+  ) => _decode(() async {
+    roleId(character);
+    raidIdentifier(raid);
+    roleId(key);
+    final target = raidCycleKey(body['target_cycle_key']);
+    roleCheck(target == body['expected_cycle_key']);
+    return MemberManualCompletionResult(
+      (await api.request(
+        '/v2/me/characters/$character/raid-weekly-states/$raid/manual-completion',
+        method: 'PUT',
+        body: body,
+        idempotencyKey: key,
+      ))!,
+      target,
+    ).entry;
   });
 }

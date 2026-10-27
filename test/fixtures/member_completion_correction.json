@@ -1,0 +1,77 @@
+{
+  "source": "heo0328/lostparty-backend@8bbcfc8cb89e69eb1f9747a0fcf2e919e41c3b76/docs/design/issue13-completion-correction.examples.json (synthetic; tokens redacted)",
+  "examples": {
+    "ready_context": {
+      "server_now": "2026-10-23T07:40:45.898479Z",
+      "current_cycle_key": "2026-10-21",
+      "data": {
+        "character_id": "20b2477d-d11c-47fc-beb2-b833f74b3493",
+        "raid_id": "kazeros_act4",
+        "target_cycle_key": "2026-10-21",
+        "weekly_revision": 3,
+        "ownership_revision": 1,
+        "lifecycle_revision": 1,
+        "completion_sources": [
+          {
+            "source": "manual",
+            "completed_at": "2026-10-23T07:40:45.370663Z",
+            "difficulty_id": "normal",
+            "party_id": null
+          }
+        ],
+        "permission": {
+          "allowed": true,
+          "reason": null,
+          "next_change_at": null
+        },
+        "confirmation": {
+          "context_token": "<opaque-redacted>",
+          "issued_at": "2026-10-23T07:40:45.898479Z",
+          "expires_at": "2026-10-23T07:42:45.898479Z"
+        }
+      }
+    },
+    "no_completion_context": {
+      "server_now": "2026-10-23T07:40:44.772168Z",
+      "current_cycle_key": "2026-10-21",
+      "data": {
+        "character_id": "20b2477d-d11c-47fc-beb2-b833f74b3493",
+        "raid_id": "kazeros_act4",
+        "target_cycle_key": "2026-10-21",
+        "weekly_revision": 2,
+        "ownership_revision": 1,
+        "lifecycle_revision": 1,
+        "completion_sources": [],
+        "permission": {
+          "allowed": false,
+          "reason": "COMPLETION_NOT_FOUND",
+          "next_change_at": null
+        },
+        "confirmation": null
+      }
+    },
+    "correction_command": {
+      "target_cycle_key": "2026-10-21",
+      "expected_cycle_key": "2026-10-21",
+      "expected_weekly_revision": 3,
+      "expected_ownership_revision": 1,
+      "expected_lifecycle_revision": 1,
+      "correction_context_token": "<opaque-redacted>"
+    },
+    "correction_result": {
+      "server_now": "2026-10-23T07:40:46.104536Z",
+      "current_cycle_key": "2026-10-21",
+      "data": {
+        "command_id": "b7f5c191-b48a-4170-96d5-8472f5be72fc",
+        "outcome": "applied",
+        "correction_id": "9fc179b0-e848-4992-92db-22096a3d7b24",
+        "character_id": "20b2477d-d11c-47fc-beb2-b833f74b3493",
+        "raid_id": "kazeros_act4",
+        "target_cycle_key": "2026-10-21",
+        "weekly_revision": 4,
+        "completion_sources": [],
+        "participation_restored": false
+      }
+    }
+  }
+}
