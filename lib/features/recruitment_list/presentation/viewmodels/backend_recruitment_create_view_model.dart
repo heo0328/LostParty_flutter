@@ -1068,6 +1068,7 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'SOURCE_PARTICIPATION_REQUIRED' => '이번 주 참가 상태를 먼저 확인해 주세요.',
   'ROOM_COMPOSITION_CONFLICT' => '자리 중복과 파티별 직업·역할 구성을 확인해 주세요.',
   'ROOM_ITEMS_CHANGED' => '참가자나 레이드 구성이 변경되었습니다. 다시 확인해 주세요.',
+  'TARGET_CONTEXT_STALE' => '이 주차의 참가 정보가 변경되었습니다. 참가 조건을 다시 확인해 주세요.',
   'ROOM_LAST_MEMBER_REQUIRED' => '다른 참가자가 남아 있어 모집 전체를 종료할 수 없습니다.',
   'LEADERSHIP_RESOLUTION_REQUIRED' => '영향받는 주차의 공대장 승계를 먼저 확인해 주세요.',
   'CLIENT_UPGRADE_REQUIRED' => '앱과 서버의 기능 버전이 맞지 않습니다. 앱 버전을 확인해 주세요.',

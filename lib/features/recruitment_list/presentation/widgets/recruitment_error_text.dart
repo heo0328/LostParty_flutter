@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 
-/// Fits the complete error to two lines using the actual available card width.
+/// Fits two lines without shrinking below readable text; overflow is explicit.
 class RecruitmentErrorText extends StatelessWidget {
   const RecruitmentErrorText(this.message, {super.key});
   final String message;
@@ -9,9 +9,21 @@ class RecruitmentErrorText extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final style = DefaultTextStyle.of(
+      var style = DefaultTextStyle.of(
         context,
       ).style.copyWith(color: AppColors.error, fontSize: 24);
+      // Text applies these accessibility overrides while building. Measure the
+      // same weight/spacing, otherwise a measured two-line label may paint three.
+      style = style.copyWith(
+        fontWeight: MediaQuery.boldTextOf(context)
+            ? FontWeight.bold
+            : style.fontWeight,
+        letterSpacing:
+            MediaQuery.maybeLetterSpacingOverrideOf(context) ??
+            style.letterSpacing,
+        wordSpacing:
+            MediaQuery.maybeWordSpacingOverrideOf(context) ?? style.wordSpacing,
+      );
       final scaler = MediaQuery.textScalerOf(context);
       final direction = Directionality.of(context);
       final locale = Localizations.maybeLocaleOf(context);
@@ -29,13 +41,15 @@ class RecruitmentErrorText extends StatelessWidget {
               text: message,
               style: style.copyWith(fontSize: fontSize),
             );
-            painter.layout(maxWidth: constraints.maxWidth);
+            painter.layout(
+              maxWidth: (constraints.maxWidth - 1).clamp(0, double.infinity),
+            );
             return !painter.didExceedMaxLines &&
                 painter.width <= constraints.maxWidth;
           }
 
           if (!fits(size)) {
-            var low = 0.5, high = size;
+            var low = 12.0, high = size;
             while (high - low > 0.1) {
               final middle = (low + high) / 2;
               if (fits(middle)) {
@@ -58,6 +72,8 @@ class RecruitmentErrorText extends StatelessWidget {
         textDirection: direction,
         maxLines: 2,
         softWrap: true,
+        overflow: TextOverflow.ellipsis,
+        semanticsLabel: message,
       );
     },
   );

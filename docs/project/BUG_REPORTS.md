@@ -1,5 +1,9 @@
 # 버그 리포트
 
+## BUG-030. 폴드 확인창 오류라벨 잘림·완료탈퇴 후 다른캐릭터 재신청 차단 (2026-10-27)
+
+라벨은 Native 수정/111개직접검증 완료·폴드기기 확인대기. Text의 접근성 굵게/간격 적용과 기존측정 차이를 재현해 같은측정/12~24범위·2줄ellipsis·전체원문 의미정보로 수정했다. 재신청 TARGET_CONTEXT_STALE은 Backend의 과거완료Assignment/현재참가 판정 차이 원인후보를 [Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6435522815)에 익명절차로 인계·조사대기다. Native권한우회/기록삭제/새키재송은 하지 않는다. 별도 기능은잠기지않으며 denied조회POST0을 확인했다. 사용자보고의 편성잠금/계정완료·추방/CN개별관리는 통과로 반영한다. 설계37 §37.88/NEXT_WORK.
+
 ## BUG-029. 해산 확인창 첫 build에서 공용 Controller 알림 예외 (2026-10-27)
 
 상태: 재현/수정·고유103개 직접검증 완료, 기기 로그 확인 대기. _MembershipDialog.initState→load→membershipContext→_read의 동기 busy notify가 build 중 전역/보관 ListenableBuilder를 갱신했다. 최초 조회만 첫프레임 후 시작하고 무효 화면은 조회 없이 로딩을 종료한다. 수정 전 동일 assertion→수정 후 통과, 열기 POST0/확인POST1·대상주차별 갱신1회·취소/무효화쓰기0을 확인했다. 사용자 원HTTP횟수는 로그에 없어 실제 중복명령으로 단정하지 않는다. 기존 명령/원키/ACK/모달종료/목록복귀·복구는 보존한다. 설계37 §37.87·[Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6422980400).

@@ -2817,3 +2817,14 @@ Backend172/source1800160d·개발반영e4137073(6414001866), join690f36f를 대�
 확인창의 최초 조회 시작만 post-frame으로 옮겼다. mounted/회원/화면·주차 유효성은 기존 valid로 검사하고 사전 무효화 시 조회 없이 로딩을 종료한다. Controller 전체 _emit을 지연하거나 오류를 숨기지 않고 원요청/쓰기/ACK·승계/해산/성공 이동은 유지했다. 이 최소 변경을 다른 정상 기능 재작성으로 확대하지 않았다.
 
 재현 red→green. 고유 직접103개 PASS·분석0·포맷/diff검토: 열기 GET1/POST0, 명시확인 POST1, 실제 영향 C/N각갱신1회, 취소 POST0, 첫프레임 전 화면변경 GET/POST0과 로딩 종료·탈퇴/해산 의미·반대주차/기록·목록복귀·영속복구. 기존 검증 묶음 전체를 반복하지 않고 무효화 경계 보완 후 신규3개만 재확인했다. weeklyRefresh는 affectedTargets와 actorEnded의 나머지 주차를 중복 없이 갱신하는 기존경로이며2회 자체가 서버 중복쓰기 근거는 아니다. OnBackInvokedCallback 경고는 별개로 변경하지 않았다. [Issue13 결과](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6422980400), 수정 후 실제 기기 로그는 미확인이다. 서버/DB/자료·배포/dev/main·별도 시간정밀도 수정은 포함하지 않는다.
+
+
+### 37.88 좁은 확인창 라벨·완료탈퇴 후 다른 캐릭터 재신청 (2026-10-27)
+
+- 기기결과: 작은 확인창 가독성 외 이전 편성잠금/내계정완료후탈퇴 정상, 추방·동시생성 두주차 개별관리 정상 보고. 최종 정리는 아래 두문제 해결 후 진행한다.
+- 표시 원인/수정: Text는 MediaQuery.boldText/글자·단어간격을 자동 적용하지만 기존 측정TextPainter는 이를 누락했다. 같은조건에서 측정2줄/실제넘침을 red재현했다. 실제weight/spacing/scaler/locale로 맞추고1px측정여유,12~24범위·최대2줄·ellipsis를 적용한다. 최소크기에서 안들어가면 글자를 무한축소/무표시clip하지 않고 말줄임하며 semanticsLabel에 전체원문을 보존한다. 공통카드/상태·버튼/명령/배치/정상흐름은 유지했다.
+- 재신청: C/N생성·N관계유지 중 C개인완료탈퇴 후 다른캐릭터 재신청에서 후보는있고TARGET_CONTEXT_STALE이 표시된다. Native자체세대불일치오류(REVISION_CONFLICT)와 구분된다. 단순snapshot재조회로 해결됐다고 보지 않고 Backend420e057 cycle_admission.admit_bundle의 기존membership 과거Assignment상태 검사(old.state!='left')를 원인후보로 인계했다. 과거completed가 기록으로 남는 상황에서 현재참가와혼동되는지 조사/합성검증을 요청했다. 실제서버 원인은 아직 미확정이다.
+- 보호: 다른캐릭터의 새신청/승인/실제참가를 새관계로 평가하되 완료한원캐릭터/과거기록·예약해제이력·N참가/모드·후보자격/직업/전투력/다른방점유·권한/동의는 보존한다. 앱에서stale를무시/강제쓰기/원키변경/과거기록삭제하지 않는다. Native에는 구체 안내만 추가했고 denied context에서POST0/미확인슬롯없음/다른명령가능·명시재조회만을 확인했다.
+- 검증/한계: 직접111개 PASS·분석0·포맷/diff검토.320/600실제AlertDialog내부여백/굵게/간격·0.8/1.8배율·최소폰트/ellipsis·전체원문·기존편성/신청/해산/성공복귀 포함. semantics래퍼를 추가해 시험의RenderParagraph탐색을 실제RichText로 보완했다. 폴드기기 가독성과 재신청 서버수정/인수는 미확인이다. 민감회원/모집식별자는 공개게시 자동검토 거절로 제외하고 익명합성절차만 인계했다. 서버/DB/자료·배포/dev/main은 변경하지 않았다.
+
+협업/대기: [Issue13 익명 재현·Native 결과](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6435522815). Backend의 원인/수정/검증·개발반영을 기다린다.

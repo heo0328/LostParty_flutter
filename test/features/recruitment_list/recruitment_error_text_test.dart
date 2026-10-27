@@ -4,6 +4,94 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/presentation/widgets/recruitment_error_text.dart';
 
 void main() {
+  for (final width in [320.0, 600.0]) {
+    testWidgets(
+      'real dialog/card at $width keeps two-line ellipsis and full accessible message',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        const error = '자리 중복과 파티별 직업·역할 구성을 확인해 주세요.';
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: const MediaQueryData(
+                boldText: true,
+                textScaler: TextScaler.linear(1.3),
+                letterSpacingOverride: 1,
+              ),
+              child: const Scaffold(
+                body: AlertDialog(
+                  title: Text('파티 편성'),
+                  content: SizedBox(
+                    width: 400,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.all(28),
+                          child: RecruitmentErrorText(error),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(onPressed: null, child: Text('취소')),
+                    TextButton(onPressed: null, child: Text('확인')),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        final text = tester.widget<Text>(find.text(error));
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(
+            of: find.text(error),
+            matching: find.byType(RichText),
+          ),
+        );
+        expect(text.maxLines, 2);
+        expect(text.overflow, TextOverflow.ellipsis);
+        expect(text.style!.fontSize, inInclusiveRange(12, 24));
+        expect(text.style!.fontWeight, FontWeight.bold);
+        expect(text.style!.letterSpacing, 1);
+        expect(text.semanticsLabel, error);
+        if (text.style!.fontSize! > 12) {
+          expect(paragraph.didExceedMaxLines, false);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets(
+    'fold dialog measures bold and accessibility spacing like rendered text',
+    (tester) async {
+      const error = '자리 중복과 파티별 직업·역할 구성을 확인해 주세요.';
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(
+              boldText: true,
+              letterSpacingOverride: 2,
+            ),
+            child: Center(
+              child: SizedBox(
+                width: 280,
+                child: const RecruitmentErrorText(error),
+              ),
+            ),
+          ),
+        ),
+      );
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: find.text(error), matching: find.byType(RichText)),
+      );
+      expect(paragraph.didExceedMaxLines, false);
+    },
+  );
   const message =
       '이전 요청의 결과를 확인하지 못했습니다. 잠시 후 같은 요청을 다시 확인해 주세요. 자리 중복과 파티별 직업·역할 구성을 확인해 주세요.';
   for (final width in [160.0, 320.0]) {
@@ -26,11 +114,18 @@ void main() {
           );
           final text = tester.widget<Text>(find.text(message));
           final paragraph = tester.renderObject<RenderParagraph>(
-            find.text(message),
+            find.descendant(
+              of: find.text(message),
+              matching: find.byType(RichText),
+            ),
           );
           expect(text.maxLines, 2);
           expect(text.style!.fontSize, lessThan(24));
-          expect(paragraph.didExceedMaxLines, false);
+          if (text.style!.fontSize! > 12) {
+            expect(paragraph.didExceedMaxLines, false);
+          }
+          expect(text.style!.fontSize, greaterThanOrEqualTo(12));
+          expect(text.overflow, TextOverflow.ellipsis);
           expect(paragraph.size.width, lessThanOrEqualTo(width));
           expect(text.data, message);
           expect(tester.takeException(), isNull);

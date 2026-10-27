@@ -51,6 +51,7 @@ class Gateway extends f3.TestGateway {
   Future<List<RecruitmentCharacter>> Function()? onMetadata;
   int previewParty = 1;
   bool changedPreview = false;
+  String? deniedReason;
   @override
   Future<AdmissionCandidatePage> admissionCandidates(
     String room,
@@ -91,6 +92,13 @@ class Gateway extends f3.TestGateway {
   ) async {
     previews++;
     final j = f3.admissionWire(target, intent: intent);
+    if (deniedReason != null) {
+      j['data']['permissions'][intent] = {
+        'allowed': false,
+        'reason': deniedReason,
+        'next_change_at': null,
+      };
+    }
     j['data']['selection']['character_id'] = character;
     j['data']['selection']['selected_role'] = role;
     j['data']['selection']['registration_id'] =
@@ -258,6 +266,26 @@ void main() {
       changes.dispose();
       session.dispose();
     });
+    test(
+      'stale target permission blocks only this admission without a pending write',
+      () async {
+        gateway.deniedReason = 'TARGET_CONTEXT_STALE';
+        await m.load();
+        expect(m.characters, isNotEmpty);
+        expect(m.preview!.permission.allowed, false);
+        expect(m.preview!.permission.reason, 'TARGET_CONTEXT_STALE');
+        await m.submit();
+        expect(api.requests.where((r) => r['method'] == 'POST'), isEmpty);
+        expect(controller.hasPending, false);
+        expect(controller.canAct, true);
+        final reads = gateway.reads;
+        gateway.deniedReason = null;
+        await m.load(preserve: true);
+        expect(gateway.reads, reads + 1);
+        expect(m.preview!.permission.allowed, true);
+        expect(api.requests.where((r) => r['method'] == 'POST'), isEmpty);
+      },
+    );
     AdmissionSelectionViewModel replacement() {
       gateway.value = wire(name: 'change-eight-opposite-party-valid');
       gateway.value['data']['actor']['assignments'] = [
