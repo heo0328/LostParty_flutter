@@ -2,7 +2,7 @@
 
 ## 현재 구간
 
-사용자는 2026-10-28 그룹 전체 흐름 조사·설계 문서화에 이어 현재 기획 기준의 Backend 1차 API 개발 요청을 명시했다. 최신 dev bdfe0edf에서 feature/group-backend-integration을 시작했다. 종료 조건은 전체 그룹 설계·연결·검증 후 dev 통합이며 현재 파트는 1차 Penpot 러프디자인과 관련 기록을 보관한다. 기존 개별 그룹 수정/과거 Task 브랜치는 재사용 목적이 달라 보존했다.
+사용자는 2026-10-28 그룹 전체 흐름 조사·설계 문서화에 이어 현재 기획 기준의 Backend 1차 API 개발 요청을 명시했다. 최신 dev bdfe0edf에서 feature/group-backend-integration을 시작했다. 종료 조건은 전체 그룹 설계·연결·검증 후 dev 통합이며 현재 파트는 Backend Issue12·16의 1차 설계 회신 대조와 레이드 관리 권한 정정이다. 기존 개별 그룹 수정/과거 Task 브랜치는 재사용 목적이 달라 보존했다.
 
 [제품 계약](../product/GROUP_PRODUCT_FLOW.md)·[연결 설계39](../backend-migration/39-group-flutter-integration-design.md)에 기존 UX·식별자/권한·서버 제공 API·조회/명령 수명·단계별 회귀/완료 조건을 정리했다. 현재 그룹 Router는 pending, 기능 연결·자동/실기기 검증은 미착수다. 현재 디자인/기록 파트의 검증은 Penpot 구조·PNG/텍스트·경계와 문서 내용·링크·diffcheck이며 Flutter 시험/설치·서버/DB·자료삭제·dev/main 통합은 하지 않는다.
 
@@ -14,18 +14,18 @@ Penpot `03 작업중인 화면`에서 기존 메인 보드 `그룹 · 사용자 
 
 메인 보드 하나 안에8개 흐름 섹션/16개 화면과 공통 상태 가이드1개를 배치했다. 목록/요청→검색/생성→가입/코드→상세/초대→정보/코드관리→신청/금지→이전/탈퇴/해산→그룹 레이드 순서다. 메인과 각 섹션에 UX/권한·결과·구현 의도를 짧게 표시했다. 모든 인물/스펙은 가상 자료다.
 
-구조·텍스트/경계 검사와 전체/대표 상세·이전해산 PNG 검수를 마쳤다. 현재는 사용자 검토 전1차 러프디자인이며 클릭 프로토타입·앱 구현·API/기기 인수가 아니다. 실제 화면 배치/문구는 사용자 피드백으로 같은 보드를 수정한다. 서버 미제공 기능은 요청 상태로 구분했다. 그룹 개발·화면 확인 완료 후에만 같은 메인 보드 묶음을02로 이동한다. 운영은 [기존 디자인 공통 지침](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다.
+구조·텍스트/경계 검사와 전체/대표 상세·이전해산 PNG 검수를 마쳤다. 현재는 사용자 검토 전1차 러프디자인이며 클릭 프로토타입·앱 구현·API/기기 인수가 아니다. 실제 화면 배치/문구는 사용자 피드백으로 같은 보드를 수정한다. 서버 미제공 기능은 요청 상태로 구분했다. 최신 사용자 기준으로 그룹장 별도 공개전환/해산 버튼을 제거하고 같은 섹션을 그룹원 공통 목록→기존 레이드 상세 진입으로 수정했다. 해당 레이드 공대장의 기존 관리 권한을 사용한다. 그룹 개발·화면 확인 완료 후에만 같은 메인 보드 묶음을02로 이동한다. 운영은 [기존 디자인 공통 지침](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다.
 
 ## 1차 API 개발 요청과 다음 행동
 
 | 항목 | 담당·현재 상태 | 다음 행동·완료 조건 |
 |---|---|---|
-| G-DISPLAY: 멤버 카드 스펙/활동 캐릭터 펼침·금지목록 표시·활동시각/요청배지 | Backend Issue12 / 1차 명세·개발·검증·인계 요청 게시 | 기존 UX를 유지할 최소 공개자료·일괄조회/식별자·cursor/수명·총수 지원 또는 재사용 계약 회신, Flutter 설계 반영 |
-| G-MANAGE/G-RAID: 해산·추방·대표/복구승계·비참가 그룹장 방관리 | Backend Issue16 / 미제공 관리 API 1차 개발 요청 게시 | 실제 모집 원본/권한·CAS·ACK·기존 참가보존 및 그룹 소멸 후 기존 방 유지/신규 그룹모집 차단 계약과 구현 제공 범위 제시. 미정 제품 선택만 Flutter와 분리 협의 |
+| G-DISPLAY: 멤버 스펙/활동 캐릭터·금지목록·활동시각/요청배지 | Backend Issue12 / 92c1702f 설계 제안 확인, 미구현 | Backend 명세/구현 인계, Flutter gemValidationSnapshot·integrity 표시의 issues/code 소비 매핑 대조. opt-in/집계 기준은 설계39 |
+| G-MANAGE/G-RAID: 조건부 그룹 해산·추방·대표·그룹 모집 | Backend Issue16 / 92c1702f 설계 제안 확인, 권한 정정 필요·미구현 | 그룹원 누구나 개설·해당 레이드 공대장 관리로 제안 교체. 그룹장 별도 context/공개전환/해산 제외. 해산검사·방 안내/기존 참가보존 계약·구현 인계. 1인/다인 강제종료 선택은 대기 항목 아님 |
 | G-RECOVERY: 유효 후임 없는 계정자격상실 | 현재 서버 보장/기존 정책 먼저 대조 | 기술 범위로 해결 안 되는 경우만 사용자 결정. 단순 그룹탈퇴와 혼동 금지 |
 | 후속 구현 | Flutter / 그룹탭 연결은 미착수·Backend는 1차 개발 요청됨 | 계약 회신 반영 후 조회/생성→관계/코드→이전/탈퇴→미제공 관리/레이드 순서의 해당 구현 구간 확정. 전체 완료로 성급히 표시하지 않음 |
 
-협업: [Issue12 1차 표시자료 API 개발 요청](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6464116834) · [Issue16 1차 그룹 관리 API 개발 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6464117245). 사용자 명시 지시로 이전 ‘계약 확인만/구현 요청 아님’ 단계에서 개발 요청으로 전환했다. Backend는 명세를 먼저 게시하고 확정 범위의 독립 구현·직접검증·source/OpenAPI·push·개발환경 반영/실행상태·미확인을 인계한다. 추가 제품 결정이 필요한 부분만 분리하며 시안/Flutter 소비회신으로 전체 서버 구현을 대기하지 않는다. 게시 후 재조회·본문 일치 확인 완료, Backend 회신/구현 완료는 아직 미확인이다. Flutter 기능코드는 이번에 수정하지 않는다.
+협업: [Issue12 1차 표시자료 API 개발 요청](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6464116834) · [Issue16 1차 그룹 관리 API 개발 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6464117245). 사용자 명시 지시로 이전 ‘계약 확인만/구현 요청 아님’ 단계에서 개발 요청으로 전환했다. Backend는 명세를 먼저 게시하고 확정 범위의 독립 구현·직접검증·source/OpenAPI·push·개발환경 반영/실행상태·미확인을 인계한다. 추가 제품 결정이 필요한 부분만 분리하며 시안/Flutter 소비회신으로 전체 서버 구현을 대기하지 않는다. Backend 회신은 [Issue12](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6464713065)·[Issue16](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6464713503)에서 확인했다. 두 회신은 설계 제안이며 실행 API/OpenAPI·서버/DB 변경0, Flutter 연결/실기기 미실행이다. Backend 자체 승인 구간이 설계까지였다는 보고와 기존 Flutter 개발 요청을 구분하며 실제 구현 완료로 표시하지 않는다. [Issue16 최신 권한 정정 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6464943488)을 게시·재조회 확인했다. 그룹장 별도 관리 제안의 교체 회신과 실제 구현 인계를 기다린다. Flutter 기능코드는 이번에 수정하지 않는다.
 
 ## 현재 구간 밖의 차후 수정안
 

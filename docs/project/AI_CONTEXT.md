@@ -8,7 +8,7 @@
 
 ## 현재 작업과 실제 코드 상태
 
-현재는 그룹 전체 흐름 설계 후 Backend 1차 API 개발을 요청하고 그룹 화면 준비를 진행하는 구간이다. [그룹 제품 계약](../product/GROUP_PRODUCT_FLOW.md)과 [설계39](../backend-migration/39-group-flutter-integration-design.md)를 정리했고 현재 일반 그룹 Router는 pending이다. Backend G1/G2·이전/탈퇴 제공과 Flutter 미연결, 해산/추방/대표/그룹장 방관리 미제공·계약 대기를 구분한다. 담당/협업·다음 행동은 NEXT_WORK다.
+현재는 그룹 전체 흐름 설계 후 Backend 1차 API 개발을 요청하고 그룹 화면 준비를 진행하는 구간이다. [그룹 제품 계약](../product/GROUP_PRODUCT_FLOW.md)과 [설계39](../backend-migration/39-group-flutter-integration-design.md)를 정리했고 현재 일반 그룹 Router는 pending이다. Backend G1/G2·이전/탈퇴 제공과 Flutter 미연결, 해산/추방/대표 미제공과 Issue12·16의 1차 설계 제안(미구현)을 구분한다. 그룹원 누구나 그룹 레이드를 개설하고 해당 레이드 공대장이 관리한다. 그룹장 별도 공개전환/해산 제안은 최신 사용자 기준으로 정정한다. 담당/협업·다음 행동은 NEXT_WORK다.
 
 모집 1차 구현·보고된 정상 흐름 인수와 dev/main 통합은 bdfe0edf로 완료했다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
 
