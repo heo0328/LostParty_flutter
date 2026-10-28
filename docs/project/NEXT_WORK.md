@@ -2,15 +2,19 @@
 
 ## 현재 구간
 
-사용자는 2026-10-28 그룹 전체 흐름 조사·설계 문서화에 이어 현재 기획 기준의 Backend 1차 API 개발 요청을 명시했다. 최신 dev bdfe0edf에서 feature/group-backend-integration을 시작했다. 종료 조건은 전체 그룹 설계·연결·검증 후 dev 통합이며 이번 파트는 문서화만 보관한다. 기존 개별 그룹 수정/과거 Task 브랜치는 재사용 목적이 달라 보존했다.
+사용자는 2026-10-28 그룹 전체 흐름 조사·설계 문서화에 이어 현재 기획 기준의 Backend 1차 API 개발 요청을 명시했다. 최신 dev bdfe0edf에서 feature/group-backend-integration을 시작했다. 종료 조건은 전체 그룹 설계·연결·검증 후 dev 통합이며 현재 파트는 1차 Penpot 러프디자인과 관련 기록을 보관한다. 기존 개별 그룹 수정/과거 Task 브랜치는 재사용 목적이 달라 보존했다.
 
-[제품 계약](../product/GROUP_PRODUCT_FLOW.md)·[연결 설계39](../backend-migration/39-group-flutter-integration-design.md)에 기존 UX·식별자/권한·서버 제공 API·조회/명령 수명·단계별 회귀/완료 조건을 정리했다. 현재 그룹 Router는 pending, 기능 연결·자동/실기기 검증은 미착수다. 현재 설계 문서 파트의 검증은 내용·링크·diffcheck이며 Flutter 시험/설치·서버/DB·자료삭제·dev/main 통합은 하지 않는다.
+[제품 계약](../product/GROUP_PRODUCT_FLOW.md)·[연결 설계39](../backend-migration/39-group-flutter-integration-design.md)에 기존 UX·식별자/권한·서버 제공 API·조회/명령 수명·단계별 회귀/완료 조건을 정리했다. 현재 그룹 Router는 pending, 기능 연결·자동/실기기 검증은 미착수다. 현재 디자인/기록 파트의 검증은 Penpot 구조·PNG/텍스트·경계와 문서 내용·링크·diffcheck이며 Flutter 시험/설치·서버/DB·자료삭제·dev/main 통합은 하지 않는다.
 
 Backend dev 1b6f57bb의 현재 문서/소스/OpenAPI를 확인해 과거404는 문서이동으로 해소했다. G1/G2 및 관리조회·이전/일반탈퇴는 제공, 해산 write는 현재도 없고 GROUP_RECRUITMENT_STATE_UNAVAILABLE다. 완료 조사/과거 구현 이력은 DEV_LOG로 이관했다.
 
-## 1차 그룹 화면 디자인 준비
+## 1차 그룹 화면 디자인 — 검토 대기
 
-사용자가 Penpot ‘03 작업 중인 화면’ 페이지를 생성했다고 알렸다. 실제 페이지/보드 조회와 그룹 러프디자인 작성은 아직 미수행이다. 다음 디자인 작업은 [기존 디자인 공통 지침](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)에 따라03에 그룹 메인 보드 하나를 두고 화면/기능 섹션별 하위 보드를 갱신한다. 그룹 개발·화면 확인 완료 후 같은 보드 묶음을02 구현 화면으로 이동할 수 있게 구성한다. 현재 문서 기록만으로 시안 준비/보드 이동 완료로 표시하지 않는다.
+Penpot `03 작업중인 화면`에서 기존 메인 보드 `그룹 · 사용자 흐름과 화면`(0f0035d1-2d8f-8071-8008-dbabf5c8d408)을 갱신했다. [보드 열기](https://design.penpot.app/#/workspace?team-id=cd444aaf-0d8c-801b-8008-d058a5328d8d&file-id=cd444aaf-0d8c-801b-8008-d058e3181ffd&page-id=0f0035d1-2d8f-8071-8008-dba78bf41adc&board-id=0f0035d1-2d8f-8071-8008-dbabf5c8d408).
+
+메인 보드 하나 안에8개 흐름 섹션/16개 화면과 공통 상태 가이드1개를 배치했다. 목록/요청→검색/생성→가입/코드→상세/초대→정보/코드관리→신청/금지→이전/탈퇴/해산→그룹 레이드 순서다. 메인과 각 섹션에 UX/권한·결과·구현 의도를 짧게 표시했다. 모든 인물/스펙은 가상 자료다.
+
+구조·텍스트/경계 검사와 전체/대표 상세·이전해산 PNG 검수를 마쳤다. 현재는 사용자 검토 전1차 러프디자인이며 클릭 프로토타입·앱 구현·API/기기 인수가 아니다. 실제 화면 배치/문구는 사용자 피드백으로 같은 보드를 수정한다. 서버 미제공 기능은 요청 상태로 구분했다. 그룹 개발·화면 확인 완료 후에만 같은 메인 보드 묶음을02로 이동한다. 운영은 [기존 디자인 공통 지침](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다.
 
 ## 1차 API 개발 요청과 다음 행동
 
