@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-28 — 그룹 핵심 활용 목적·우선 완료 흐름 명시
+
+사용자가 그룹의 주력 기능을 원하는 사람 초대/가입과 모집 목록의 그룹·그룹원·특정 캐릭터 필터를 통한 쉬운 조합 구성으로 명시했다. 기존 제품 §2/§8에 통합하고 연결39/NEXT_WORK의 우선 완료 흐름을 이 기준으로 정리했다. 관리·복구 정책은 보존하되 독립 가능한 핵심 흐름의 전체 선행조건으로 두지 않는다. 신규 문서·기능코드는 추가하지 않았다.
+
+[Backend Issue16 정정 수용 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6465101118)의 cb9b6b9c 설계·그룹장 전용 명령 제외를 확인해 권한 정정 대기를 해소했다. 실제 구현 인계는 별도 대기다. Penpot 동일 메인의 전체 흐름 설명을 초대/가입→활동 캐릭터→모집 필터→기존 참가/신청으로 갱신했다. 세부 필터 화면의 기존 모집 UX 대응과 사용자 디자인 검토는 남아 있다. [Issue12 핵심 목적/우선순위 회신](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6465156288)을 게시·재조회 본문 일치 확인했다.
+
+새 실행 기능 없음. 기존 앱/서버·모집 필터/참가 코드·통계35/미추적 자료를 보존했다. 문서 내용/링크·diffcheck와 변경 시안 문구 경계를 확인하며 Flutter 시험·기기 검증은 실행하지 않는다. 현재 그룹 브랜치에서 보관하고 dev/main에 통합하지 않는다.
+
 ## 2026-10-28 — Backend Issue12·16 설계 회신 확인·레이드 권한 정정
 
 Issue12/16의 회신과 설계 SHA92c1702f의 표시/관리 제안 원문을 확인했다. Backend 보고는 문서·JSON 예시/링크·diffcheck 검증이며 app/alembic/openapi/tests 변경0, 신규 기능 시험·서버/DB 반영·Flutter 인수는 미실행이다. reader profile·현재 membership 활동 조회·마지막 성공 수치와 현재 오류 분리·실효 요청 집계·CAS/원ACK/실제 모집 검사 방향과 기존 표시 매핑 미확인을 설계39/NEXT_WORK에 통합했다. [Issue12 검토 회신](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6464852611)을 게시했다.
