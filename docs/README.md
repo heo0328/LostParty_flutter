@@ -14,6 +14,8 @@
 
 ## 기능·기술 계약 지도
 
+- [그룹 제품 흐름](product/GROUP_PRODUCT_FLOW.md)·[그룹 연결 설계39](backend-migration/39-group-flutter-integration-design.md): 전체 UX·기존 구현/현재 서버·미연결/미제공·단계별 완료 조건.
+
 - [모집·일정 통합37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md): 최신 두 주차/단일 기본 출발·조기조율·번호·신청메모 계약. [현재 구현·기기 인수표](backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027)에서 통과·남은 경계·베타 이후 개선을 구분한다.
 - [비활성 기능](project/INACTIVE_FEATURES.md): IF-001/002/003의 제품 제외·실제 차단 상태 구분
 - [계정/캐시/복원30](backend-migration/30-scoped-storage-write-contract.md), [등록19](backend-migration/19-account-registration-flutter-contract.md), [키25](backend-migration/25-member-lostark-key-request.md), [인증36](backend-migration/36-roster-ownership-dispute-flutter-design.md)

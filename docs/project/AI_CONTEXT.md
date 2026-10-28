@@ -8,7 +8,9 @@
 
 ## 현재 작업과 실제 코드 상태
 
-모집 1차 구현·보고된 정상 흐름 기기 인수를 마감했고 사용자 지시로 `feature/raid-recruitment-scheduling`을 dev→main에 통합한다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
+현재는 그룹 전체 흐름 조사·설계 문서화 구간이다. [그룹 제품 계약](../product/GROUP_PRODUCT_FLOW.md)과 [설계39](../backend-migration/39-group-flutter-integration-design.md)를 정리했고 현재 일반 그룹 Router는 pending이다. Backend G1/G2·이전/탈퇴 제공과 Flutter 미연결, 해산/추방/대표/그룹장 방관리 미제공·계약 대기를 구분한다. 담당/협업·다음 행동은 NEXT_WORK다.
+
+모집 1차 구현·보고된 정상 흐름 인수와 dev/main 통합은 bdfe0edf로 완료했다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
 
 사용자가 안내된 모집 정상 흐름과 후속 수정을 기기로 확인했다. **현재 안내 범위에서 추가 필수 기기 시험은 없다.** 세부 인수표·정확한 Backend/협업 근거는 [설계37 현재 구현·인수 상태](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027), 당시 구현/자동검증은 각 절과 DEV_LOG를 따른다.
 
@@ -24,7 +26,7 @@
 | 디자인 | 승인 Penpot03과 화면 대조/복원 이력 유지.02 실구현 최신화는 별도, 이번 문서 작업으로 보드 갱신 완료를 주장하지 않음 |
 | 계정/로그인 | 자체 Google/Backend 세션·원정대 등록/인증·캐시/복원·개별 갱신 연결 유지. BUG-025와 계정/출시 경계는 NEXT_WORK의 별도 후속 |
 
-이번 사용자 지시는 dev/main Git 통합이며 release/tag·서비스 배포는 아니다. Backend [Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6438046779)도 사용자 승인으로 completed 종료했다. 보류한 네이티브 보완·웹소켓/디자인·그룹/통계·계정/출시 후속을 실행하거나 완료로 확대하지 않는다. 기존 코드/시험·기기 결과는 그대로 보존하며 후속 재착수 조건은 [NEXT_WORK](NEXT_WORK.md)에서 관리한다.
+현재 사용자 지시는 그룹 설계 문서화이며 release/tag·서비스 배포나 그룹 기능 구현은 아니다. Backend [Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6438046779)도 사용자 승인으로 completed 종료했다. 보류한 네이티브 보완·웹소켓/디자인·통계·계정/출시 후속을 실행하거나 완료로 확대하지 않는다. 그룹은 별도 설계 구간에 착수했지만 기능 연결 완료가 아니다. 기존 코드/시험·기기 결과는 그대로 보존하며 후속 재착수 조건은 [NEXT_WORK](NEXT_WORK.md)에서 관리한다.
 
 ## 제품·디자인 지도
 
