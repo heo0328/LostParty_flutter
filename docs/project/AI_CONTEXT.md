@@ -8,7 +8,7 @@
 
 ## 현재 작업과 실제 코드 상태
 
-현재는 그룹 전체 흐름 조사·설계 문서화 구간이다. [그룹 제품 계약](../product/GROUP_PRODUCT_FLOW.md)과 [설계39](../backend-migration/39-group-flutter-integration-design.md)를 정리했고 현재 일반 그룹 Router는 pending이다. Backend G1/G2·이전/탈퇴 제공과 Flutter 미연결, 해산/추방/대표/그룹장 방관리 미제공·계약 대기를 구분한다. 담당/협업·다음 행동은 NEXT_WORK다.
+현재는 그룹 전체 흐름 설계 후 Backend 1차 API 개발을 요청하고 그룹 화면 준비를 진행하는 구간이다. [그룹 제품 계약](../product/GROUP_PRODUCT_FLOW.md)과 [설계39](../backend-migration/39-group-flutter-integration-design.md)를 정리했고 현재 일반 그룹 Router는 pending이다. Backend G1/G2·이전/탈퇴 제공과 Flutter 미연결, 해산/추방/대표/그룹장 방관리 미제공·계약 대기를 구분한다. 담당/협업·다음 행동은 NEXT_WORK다.
 
 모집 1차 구현·보고된 정상 흐름 인수와 dev/main 통합은 bdfe0edf로 완료했다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
 
@@ -26,7 +26,7 @@
 | 디자인 | 현재03은 작업 중 화면,02는 구현 완료 화면. 메인 보드/섹션별 하위 보드를 수정하고 완료 후 같은 묶음을02로 이동. 운영 기준은 디자인 공통 지침, 과거 모집 시안/복원은 DEV_LOG·설계37 이력 |
 | 계정/로그인 | 자체 Google/Backend 세션·원정대 등록/인증·캐시/복원·개별 갱신 연결 유지. BUG-025와 계정/출시 경계는 NEXT_WORK의 별도 후속 |
 
-현재 사용자 지시는 그룹 설계 문서화이며 release/tag·서비스 배포나 그룹 기능 구현은 아니다. Backend [Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6438046779)도 사용자 승인으로 completed 종료했다. 보류한 네이티브 보완·웹소켓/디자인·통계·계정/출시 후속을 실행하거나 완료로 확대하지 않는다. 그룹은 별도 설계 구간에 착수했지만 기능 연결 완료가 아니다. 기존 코드/시험·기기 결과는 그대로 보존하며 후속 재착수 조건은 [NEXT_WORK](NEXT_WORK.md)에서 관리한다.
+현재 사용자 지시는 그룹 설계에 따른 Backend 1차 API 개발 요청까지 포함한다. Flutter 기능 연결·release/tag·운영배포는 이번에 실행하지 않았다. Backend [Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6438046779)도 사용자 승인으로 completed 종료했다. 보류한 네이티브 보완·웹소켓/디자인·통계·계정/출시 후속을 실행하거나 완료로 확대하지 않는다. 그룹은 별도 설계 구간에 착수했지만 기능 연결 완료가 아니다. 기존 코드/시험·기기 결과는 그대로 보존하며 후속 재착수 조건은 [NEXT_WORK](NEXT_WORK.md)에서 관리한다.
 
 ## 제품·디자인 지도
 
