@@ -278,6 +278,17 @@ void main() {
       expect(journal.values, isEmpty);
     },
   );
+  test('no saved request does not report a recovered command', () async {
+    final r = repo();
+    final adapter = Adapter((_) async => reply(ack()));
+    dio.httpClientAdapter = adapter;
+    final vm = BackendGroupViewModel(r, GroupPageKind.create);
+    await vm.recover();
+    expect(vm.hasPendingRequest, isFalse);
+    expect(vm.notice, isNull);
+    expect(adapter.calls, 0);
+    vm.dispose();
+  });
   test(
     'successful command followed by refresh failure stays successful',
     () async {

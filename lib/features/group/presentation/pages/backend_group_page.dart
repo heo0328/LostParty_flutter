@@ -252,13 +252,24 @@ class _BackendGroupPageState extends State<BackendGroupPage>
 
   Future<void> invite(Map<String, dynamic> c) async {
     if (!await confirm('${groupName(c['display'])}님을 초대할까요?')) return;
-    await m.act('POST', '$path/invitations', {
-      'target_character_id': c['target_character_id'],
-      'expected_target_ownership_revision': c['ownership_revision'],
-      'expected_target_lifecycle_revision': c['lifecycle_revision'],
-      'expected_group_revision': m.detail!.group['revision'],
-      'expected_membership_revision': m.detail!.membership['revision'],
-    });
+    final result = await m.act(
+      'POST',
+      '$path/invitations',
+      {
+        'target_character_id': c['target_character_id'],
+        'expected_target_ownership_revision': c['ownership_revision'],
+        'expected_target_lifecycle_revision': c['lifecycle_revision'],
+        'expected_group_revision': m.detail!.group['revision'],
+        'expected_membership_revision': m.detail!.membership['revision'],
+      },
+      successNotice: '${groupName(c['display'])}님에게 초대를 보냈습니다. 상대가 수락하면 가입됩니다.',
+    );
+    if (result != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('초대를 보냈습니다. 요청 현황에서 확인할 수 있습니다.')),
+      );
+      setState(() => candidates = []);
+    }
   }
 
   Future<void> previewCode() async {
@@ -909,10 +920,11 @@ class _BackendGroupPageState extends State<BackendGroupPage>
                         ),
                       ...content(),
                       const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: m.busy ? null : m.recover,
-                        child: const Text('미확정 요청 결과 확인'),
-                      ),
+                      if (m.hasPendingRequest)
+                        TextButton(
+                          onPressed: m.busy ? null : m.recover,
+                          child: const Text('이전 요청 결과 확인'),
+                        ),
                     ],
                   ),
                 ),

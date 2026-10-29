@@ -31,6 +31,7 @@ class BackendGroupViewModel extends ChangeNotifier {
   int get observation => _epoch;
   bool _disposed = false;
   bool loading = false, busy = false;
+  bool hasPendingRequest = false;
   Object? failure, countsFailure;
   String? notice, cursor;
   Map<String, dynamic>? summary, management, code, counts, usage, preview;
@@ -62,6 +63,7 @@ class BackendGroupViewModel extends ChangeNotifier {
     activityFailures.clear();
     failure = null;
     notice = null;
+    hasPendingRequest = false;
     cursor = null;
     _emit();
     if (authenticated) load();
@@ -214,8 +216,8 @@ class BackendGroupViewModel extends ChangeNotifier {
         }
       }
       if (current()) {
-        await repository
-            .pending(); // Surface journal corruption without overwriting it.
+        final pending = await repository.pending();
+        if (current()) hasPendingRequest = pending != null;
       }
     } catch (error) {
       if (current()) {
@@ -260,8 +262,9 @@ class BackendGroupViewModel extends ChangeNotifier {
   Future<Map<String, dynamic>?> act(
     String method,
     String path,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    String successNotice = '처리되었습니다.',
+  }) async {
     if (busy) return null;
     final scope = repository.readScope;
     busy = true;
@@ -271,7 +274,7 @@ class BackendGroupViewModel extends ChangeNotifier {
     try {
       final result = await repository.command(method, path, body);
       if (_disposed || scope != repository.readScope) return null;
-      notice = '처리되었습니다.';
+      notice = successNotice;
       await load(); // A refresh error must not turn success into a retry command.
       return result;
     } catch (error) {
@@ -279,8 +282,11 @@ class BackendGroupViewModel extends ChangeNotifier {
       return null;
     } finally {
       if (!_disposed && scope == repository.readScope) {
-        busy = false;
-        _emit();
+        await _readPending(scope);
+        if (!_disposed && scope == repository.readScope) {
+          busy = false;
+          _emit();
+        }
       }
     }
   }
@@ -292,17 +298,38 @@ class BackendGroupViewModel extends ChangeNotifier {
     _emit();
     final scope = repository.readScope;
     try {
+      final pending = await repository.pending();
+      if (_disposed || scope != repository.readScope) return;
+      if (pending == null) {
+        hasPendingRequest = false;
+        notice = null;
+        return;
+      }
       await repository.recover();
       if (_disposed || scope != repository.readScope) return;
-      notice = '원요청 처리를 확인했습니다. 현재 목록을 갱신합니다.';
+      notice = '이전 요청의 처리가 확인되었습니다.';
       await load();
     } catch (error) {
       if (!_disposed && scope == repository.readScope) failure = error;
     } finally {
       if (!_disposed && scope == repository.readScope) {
-        busy = false;
-        _emit();
+        await _readPending(scope);
+        if (!_disposed && scope == repository.readScope) {
+          busy = false;
+          _emit();
+        }
       }
+    }
+  }
+
+  Future<void> _readPending(String scope) async {
+    try {
+      final pending = await repository.pending();
+      if (!_disposed && scope == repository.readScope) {
+        hasPendingRequest = pending != null;
+      }
+    } catch (error) {
+      if (!_disposed && scope == repository.readScope) failure ??= error;
     }
   }
 
