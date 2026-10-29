@@ -1075,7 +1075,13 @@ class _BackendRecruitmentCreatePageState
     if (mounted &&
         value != null &&
         binding == (m.session.userId, m.session.generation, m.editGeneration)) {
-      m.update(m.draft.copy(groupId: value, clearGroup: value.isEmpty));
+      m.update(
+        m.draft.copy(
+          groupId: value,
+          clearGroup: value.isEmpty,
+          groupOnly: value.isNotEmpty,
+        ),
+      );
     }
   }
 

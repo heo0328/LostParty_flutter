@@ -1162,7 +1162,7 @@ R2-C의 현재 성공 경로는 schedule_groups=[]인 완전 미정 상태다. i
 2026-10-21 사용자가 직전 브리핑의 세 추천안을 채택했다. 이 절은 §36.8~36.10과 다른 문서의 해당 미정 표현보다 우선한다. 이번 채택은 제품 정책 확정/문서·Backend 전달이며 실제 기능·DB/배포 변경 지시가 아니다.
 
 1. **L1 핵심 채택:** 마지막1인의 N탈퇴는 그 N회차만 취소/종료한다. N의참가/점유·예약/미결신청·일정은 해당범위에서 정리하며 C의공대장/참가·완료/예약과Room전역종료는 건드리지 않는다. 미래예정취소를 실제 게임완료나 C미완료종료로 기록하지 않는다. 이후 C공대장이 새개방context로 본인참가까지 명시확인하면 같은N을 재개할 수 있다. 단순조회/신규신청·ON재전송으로 자동부활시키지 않으며 과거취소인원·예약/동의를 자동복구하지 않는다. RoomCycle UUID보존/새generation·Round세대 및멱등/보존이행은 Backend가 정확한wire와 원자경계로 고정한다.
-2. **G1 채택:** 공통제목·공개범위는 실제C공대장이 우선관리한다. C회차자체가없고 열린N만있으면N공대장이관리한다. 변경시C/N공통영향을 context/확인창에 명시하고 기존그룹자격·CAS를검사한다. C가있지만책임자review/회차종료인경우 N권한을자동확장하지않고 관리복구/권한계약을 따른다. 연결그룹불변을 유지하며 그룹교체기능은추가하지않는다. 전역해산은 기존안전한전체마지막1인 조건만 유지하고 다른실제T참가자가있으면거절한다. N위임은C권한이나전역leader를덮지않는다. G2합의관리/G3별도공통관리자는채택하지않는다.
+2. **G1 채택:** 공통제목·공개범위는 실제C공대장이 우선관리한다. C회차자체가없고 열린N만있으면N공대장이관리한다. 변경시C/N공통영향을 context/확인창에 명시하고 기존그룹자격·CAS를검사한다. C가있지만책임자review/회차종료인경우 N권한을자동확장하지않고 관리복구/권한계약을 따른다. 2026-10-30 개정: 연결 없는 방의 최초 그룹 연결은 기존 공통설정 명령에서 공개범위와 함께 원자 처리한다. 연결 후 그룹 교체·해제는 추가하지 않는다. 해당 Backend 계약/Flutter 연결은 구현 대기다. 전역해산은 기존안전한전체마지막1인 조건만 유지하고 다른실제T참가자가있으면거절한다. N위임은C권한이나전역leader를덮지않는다. G2합의관리/G3별도공통관리자는채택하지않는다.
 3. **A1 채택:** 초기에는 사용자의명시개방만제공한다. 매주자동새N개방은보류하며 기존auto_open_enabled=true를 새자동동의로해석하지않는다. 이미열린N은수06시에같은UUID/리더/예약으로C가되지만 그즉시새N을자동생성/가입시키지않는다. 열린N을OFF로철회하거나기존참가특례를끊는추가조작은도입하지않고 본인탈퇴/승계를사용한다.
 
 채택 범위 구분: 위세정책의실행전제에필요한Backend전체DTO/권한·보존/동시성/한도효과는확인해야한다. 별도'방관계종료'새진입점/연속확인UX까지이번에포괄채택했다고확대하지않는다. 지속관계가남는N탈퇴만으로자동한도회복을가정하지않고 C나과거이력무단삭제도없다. #19사전참가취소통계는여전히별도다.
@@ -1364,7 +1364,7 @@ Backend0afd879의 실제OpenAPI168경로/실행소스를 소비한다. CycleMana
 | N개방/재개 | opening-context의 prospective_room_cycle_id/generation으로 원ACK를 확인. 본인만 첫참가/공대장. 열린N OFF 없음·다른인원 자동복사/매주자동개방 없음 |
 | 선택T탈퇴/위임 | cancellation impact/mode/successor를 표시하고 context/leadership CAS 전송. 마지막1인N은 N만종료, 자동승계는 서버순서 사용. transfer-context 최대8후보의 cycle_member_id/revision·64bit joined_order 문자열 보존. 위임만으로 본인 탈퇴 안 함 |
 | 편성/설정/추방 | 기존 실제 자리4인1~4/8인1-1~2-4. BPlacement는 **cycle_member_id/expected_cycle_member_revision/item_id/party_no/slot_no**이며 지속membership CAS가 아니다. 현재 active assignment 전체·중복자리/게임·앱 정원 범위를 확인한다. 역할/직업·최종권한과 동시성은 서버가 검증한다. 설정은 경험/역할별 Decimal 최소값/참가방식, 추방은 actor/removed cycle_member revision과 leadership CAS |
-| 공통/전역 | common-context의 G1 서버권한·영향C/N/인원·예약을 확인하고 GlobalScope 명령/ACK 사용. 공통은 제목/공개범위만 수정, 그룹연결 불변·기존group revision 보존. 빈제목은 기존제목. common noop의 affected=[]는 정상원ACK. 전체탈퇴/종료는 persistent membership revision·context로 실행하고 실제영향T를 각각 갱신 |
+| 공통/전역 | common-context의 G1 서버권한·영향C/N/인원·예약을 확인하고 GlobalScope 명령/ACK 사용. 공통은 제목/공개범위와 미연결 방의 최초 그룹 연결을 대상으로 하며 연결 후 교체·해제는 제외한다. 최초연결의 대상 그룹 증거 계약/구현은 대기, 기존 연결의group revision 보호는 유지. 빈제목은 기존제목. common noop의 affected=[]는 정상원ACK. 전체탈퇴/종료는 persistent membership revision·context로 실행하고 실제영향T를 각각 갱신 |
 
 기존 앱소유 CycleParticipationController의 불변 encoded body/key에 method/ACK종류/영향T를 확장했다. 원ACK만 성공으로 처리하며 개방의 이전generation/다른T/다른방·전역영향누락ACK는 pending 유지다. 400/403/404/413 및 확정409는 보류를 해제해 재확인하고, 결과불명/진행중은 기존키/본문/HTTP method로만 재전송한다. 로그아웃/회원scope 변경의 늦은context/ACK는 폐기하고 관리창 개인정보도 가린다. 앱종료 후 관리 pending 영속복구는 미구현이다.
 
