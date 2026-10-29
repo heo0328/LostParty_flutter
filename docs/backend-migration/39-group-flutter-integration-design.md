@@ -136,6 +136,20 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 ## 6. 구현 단계·회귀와 인수
 
+### 초대 후보 표시 후속 — c3814452 소비 설계 (2026-10-29)
+
+담당 Flutter. 기준은 Backend c38144528c42eda7fcf2912fa412d3a005fc68e7 OpenAPI·display_schemas의 DisplayInviteCandidates/DisplayInviteCandidate와 [구현 인계](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6496536145)다. 서버 코드 구현/격리검증 완료와 현재 개발환경 미반영을 구분한다. 기본 업무 계약22b16207을 전면 교체하는 작업이 아니라 초대 후보 GET의 opt-in 표시 확장만 소비한다.
+
+- 계약: 기존 GET invite-candidates에 character_name과 reader_profile=group-display-1을 명시한다. 응답 profile/evaluated_at/items와 기존 후보필드+character_spec을 검증한다. 고정 wire projection은 해당 query/응답 및 추가2 DTO를 c3814452에 맞춰 갱신하고 기존 component/명령 계약이 바뀌지 않는지 diff로 확인한다. profile 누락 또는 구 DTO를 성공으로 수용하는 fallback은 두지 않는다. 기존 GroupRepository의 profile 일치 검사와 strict DTO 검증을 유지한다.
+- 화면: 초대 후보 카드의 이름·서버·직업·초대 버튼/진입은 유지한다. 단일 combat_power 표시를 기존 groupSpecText(character_spec)의 역할별 표시로 교체한다. dealer/support 수치를 합치거나 최댓값으로 대표하지 않으며 마지막 성공 수치와 현재 분석·보석/아크그리드 오류·warning/null 의미를 보존한다. 숫자가 없다는 이유로 재인증·새 저장을 요구하지 않는다. 후보 수치는 저장 자료로, 현재 실시간 게임 수치 보장이 아니다.
+- 검색/수명: Flutter는 앞뒤 공백 제거만 유지하고 ASCII 대소문자 무시 정확검색은 서버에 맡긴다. 부분검색·와일드카드·로컬 소문자화/후보별 외부조회는 추가하지 않는다. 새 검색 시작/실패 시 과거 후보를 새 결과처럼 남기지 않고 입력·조회 세대와 회원/환경을 묶어 늦은 결과를 폐기한다. 기존 서버/UUID 순서·최대50건·cursor 없음은 유지한다.
+- 초대 쓰기: 기존 target_character_id·ownership/lifecycle revision·group/membership revision과 원본문/멱등키 흐름은 그대로다. character_spec이나 단일 전투력을 권한/명령 입력으로 보내지 않는다. 초대 대상은 현재 인증·등록된 캐릭터의 소유 회원이며 활동선택 조건을 새로 추가하지 않는다. 대표 선택 레벨 정렬399b66ab와 전송 결과 안내7a4dd636는 보존한다.
+- 자동검증: 명시 query와 새 DTO 수용, profile 불일치/필드 누락 거절, 역할별 성공+현재 오류/자료없음 표시, 구 DTO fallback 금지, 검색 연속 입력/실패·회원전환 후 늦은 결과 폐기를 직접 시험한다. 기존 초대 명령 원요청/ACK·성공 후 갱신 시험을 회귀로 사용한다. 기본은 그룹 직접 시험·변경 lib/test 분석·포맷/diff검토이며 앱 공용 동작은 이번에 바꾸지 않는다.
+- 실행 순서: 고정계약 diff→초대 조회/profile·표시·검색 수명 연결→직접 시험/분석→커밋·푸시 및 Issue12 소비 결과 회신. Backend가 이번 수정의 개발환경 실행SHA/0034 유지·확인/미확인을 인계한 뒤 사용자가 대소문자 다른 동일 이름 조회→후보 역할별 전투력→초대 전송/수락을 확인한다. 서버 미반영 중 새 profile을 현재 서버에 강제 시험하지 않는다. 구현 준비와 서버 교체는 별도이며 이 설계가 배포 지시는 아니다.
+- Penpot: 실제 연결한 후보의 역할별 수치·상태·초대 결과를03 기존 직접초대 화면/설명에서 갱신한다. 자료없는 후보도 미확인으로 구분하고 앱과 다르게 정상값을 합성하지 않는다. 화면 확인 전02 이동은 하지 않는다.
+
+완료 조건은 고정 opt-in 계약의 실제 Flutter 연결·직접검증/인계, 새 서버 반영 확인 후 사용자 후보검색/표시·초대 흐름 확인이다. 새 DB·중복 전투력 저장·게임 API 호출·대표 선택 정책 변경·전체 앱 리디자인은 제외한다.
+
 1차 Penpot 러프디자인은03의 기존 그룹 메인 보드(0f0035d1-2d8f-8071-8008-dbabf5c8d408)에8개 흐름 섹션/16개 화면과 공통 상태 가이드로 작성했다. 제품의 새 확정 정책/구현 완료가 아니라 사용자 검토 대상이다. 화면별 API 제공/미제공 경계는 이 문서의 표를 따르고, 메인/섹션에 사용자 흐름·결과/권한과 구현 의도를 표시한다. 실제 보드 링크·현재 다음 행동은 NEXT_WORK, 디자인 운영은 기존 공통 지침을 따른다.
 
 

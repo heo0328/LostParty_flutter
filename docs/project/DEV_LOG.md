@@ -1,5 +1,9 @@
 # 개발 이력
 
+## 2026-10-29 — Backend c3814452 초대 후보 소비 설계
+
+고정 DisplayInviteCandidates/DisplayInviteCandidate와 현재 Flutter strict wire/profile 검사·기본 후보 조회를 대조해 설계39의 기존 문서에 소비 설계를 추가하고 NEXT_WORK의 자료 재사용 확인 대기를 구현 인계 수신/Flutter 연결 설계로 교체했다. opt-in query/추가2 DTO·역할별 기존 표시 재사용·검색 수명·기존 명령 보존·직접 시험/서버 반영 후 기기 확인 순서를 정의했다. 기능코드·서버·Penpot 변경 없음, 문서 diff/내용 검토만 수행했다. c3814452 코드 완료와 개발환경 미반영을 구분한다.
+
 ## 2026-10-29 — 그룹 대표 선택 레벨 정렬·초대 전투력 경로 확인
 
 공통 그룹 활동 캐릭터 선택창은 scoped roster의 기존 item_level로 높은 순/누락 마지막·동률 이름/UUID 정렬하고 레벨을 표시한다. 생성·신청·초대 수락·코드 가입·대표 변경이 같은 선택창을 사용하며 추가 조회/저장은 없다. 초대 후보는 서버 admissions의 Character.summary 전투력, 그룹원 표시는 CharacterRoleSummary/RolePowerSuccess를 사용함을 소스로 확인했다. 인증 여부만으로 역할별 분석/전투력 존재를 보장하지 않으며 해당 실회원 DB는 미조회다. [Issue12 자료 재사용 확인 요청](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6496105720)에 최소 소비 계약/기존 저장자료 대응을 문의했다. 새 전투력 저장·외부 조회·임의 정상값은 추가하지 않았다. 정렬 직접시험과 그룹 회귀·변경 분석/diff 확인, 실제 기기 목록 확인은 대기다.
