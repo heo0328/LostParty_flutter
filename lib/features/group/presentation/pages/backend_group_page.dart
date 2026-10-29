@@ -31,7 +31,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
   late final BackendGroupViewModel m;
   late String _memberBinding;
   final input = TextEditingController();
-  List<Map<String, dynamic>> candidates = [];
+  List<Map<String, dynamic>> get candidates => m.inviteCandidates;
   String get path => '/v1/groups/${widget.groupId}';
   String get route => '/groups/${widget.groupId}';
   @override
@@ -53,7 +53,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
     if (next == _memberBinding) return;
     _memberBinding = next;
     input.clear();
-    candidates = [];
+    m.clearInviteCandidates();
   }
 
   @override
@@ -68,7 +68,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !m.busy) {
-      candidates = [];
+      m.clearInviteCandidates();
       unawaited(m.load());
     }
   }
@@ -76,7 +76,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
   Future<void> open(String target) async {
     await context.push(target);
     if (mounted) {
-      candidates = [];
+      m.clearInviteCandidates();
       await m.load();
     }
   }
@@ -241,16 +241,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
     }
   }
 
-  Future<void> searchInvite() async {
-    await prepare(() async {
-      final value = await widget.repository.get(
-        '$path/invite-candidates',
-        query: {'character_name': input.text.trim()},
-      );
-      if (mounted) setState(() => candidates = groupItems(value));
-      return true;
-    });
-  }
+  Future<void> searchInvite() => m.searchInvites(input.text);
 
   Future<void> invite(Map<String, dynamic> c) async {
     if (!await confirm('${groupName(c['display'])}님을 초대할까요?')) return;
@@ -270,7 +261,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('초대를 보냈습니다. 요청 현황에서 확인할 수 있습니다.')),
       );
-      setState(() => candidates = []);
+      setState(m.clearInviteCandidates);
     }
   }
 
@@ -439,6 +430,9 @@ class _BackendGroupPageState extends State<BackendGroupPage>
           : TextCapitalization.none,
       onChanged: (_) {
         if (code && m.preview != null) setState(() => m.preview = null);
+        if (widget.kind == GroupPageKind.invite) {
+          setState(m.clearInviteCandidates);
+        }
       },
       onSubmitted: (_) {
         if (!m.busy && !m.loading) submit();
@@ -668,7 +662,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
                   children: [
                     Text(groupName(c['display'])),
                     Text(
-                      '${c['display']['server_name']} · ${c['display']['class_name'] ?? ''}\nLv. ${c['item_level'] ?? '미확인'} · 전투력 ${c['combat_power'] ?? '미확인'}',
+                      '${c['display']['server_name']} · ${c['display']['class_name'] ?? ''}\n${groupSpecText(c['character_spec'])}',
                     ),
                     button('초대', () => invite(c)),
                   ],
@@ -869,7 +863,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
                 onPressed: m.busy
                     ? null
                     : () {
-                        candidates = [];
+                        m.clearInviteCandidates();
                         unawaited(m.load());
                       },
                 icon: const Icon(Icons.refresh),

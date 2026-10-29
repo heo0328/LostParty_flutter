@@ -29,6 +29,47 @@ Map<String, dynamic> ack() => {
   'membership_revision': 2,
   'ended_at': stamp,
 };
+Map<String, dynamic> invitePage() {
+  final role = {
+    'combat_power': null,
+    'source': 'unavailable',
+    'trust': null,
+    'observed_at': null,
+    'saved_at': null,
+    'power_revision': null,
+    'analysis': null,
+    'reason': 'ROLE_ANALYSIS_UNAVAILABLE',
+  };
+  return {
+    'profile': 'group-display-1',
+    'evaluated_at': stamp,
+    'items': [
+      {
+        'target_character_id': mid,
+        'display': {
+          'server_name': '서버',
+          'character_name': 'MiXeD',
+          'class_name': '바드',
+        },
+        'ownership_revision': 1,
+        'lifecycle_revision': 1,
+        'item_level': '1760',
+        'combat_power': null,
+        'character_spec': {
+          'character_id': mid,
+          'state': 'partial',
+          'reason': 'ROLE_ANALYSIS_UNAVAILABLE',
+          'item_level': '1760',
+          'item_level_source': 'stored_character_summary',
+          'summary_fetched_at': stamp,
+          'dealer': role,
+          'support': role,
+        },
+      },
+    ],
+  };
+}
+
 Map<String, dynamic> summary() => {
   'group_id': gid,
   'name': '그룹',
@@ -163,6 +204,91 @@ void main() {
     changes.dispose();
     session.dispose();
   });
+  test(
+    'invite profile sends exact query and rejects legacy or missing profile',
+    () async {
+      final r = repo();
+      var legacy = false;
+      dio.httpClientAdapter = Adapter((o) async {
+        expect(o.queryParameters, {
+          'character_name': 'MiXeD',
+          'reader_profile': 'group-display-1',
+        });
+        return reply(legacy ? {'items': []} : invitePage());
+      });
+      const path = '/v1/groups/$gid/invite-candidates';
+      final query = {
+        'character_name': 'MiXeD',
+        'reader_profile': 'group-display-1',
+      };
+      expect(groupItems(await r.get(path, query: query)), hasLength(1));
+      legacy = true;
+      await expectLater(r.get(path, query: query), throwsFormatException);
+      expect(
+        () => GroupContract.response('GET', path, 200, {
+          'profile': 'group-display-1',
+          'items': [],
+        }),
+        throwsFormatException,
+      );
+    },
+  );
+  test('invite search discards cleared late results', () async {
+    final gate = Completer<ResponseBody>();
+    dio.httpClientAdapter = Adapter((_) => gate.future);
+    final vm = BackendGroupViewModel(
+      repo(),
+      GroupPageKind.invite,
+      groupId: gid,
+    );
+    final pending = vm.searchInvites(' MiXeD ');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    vm.clearInviteCandidates();
+    gate.complete(reply(invitePage()));
+    await pending;
+    expect(vm.inviteCandidates, isEmpty);
+    expect(vm.failure, isNull);
+    vm.dispose();
+  });
+  test('invite candidate response from previous member is discarded', () async {
+    final gate = Completer<ResponseBody>();
+    dio.httpClientAdapter = Adapter((_) => gate.future);
+    final vm = BackendGroupViewModel(
+      repo(),
+      GroupPageKind.invite,
+      groupId: gid,
+    );
+    final pending = vm.searchInvites('MiXeD');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    session.change(authenticated: false);
+    gate.complete(reply(invitePage()));
+    await pending;
+    expect(vm.inviteCandidates, isEmpty);
+    expect(vm.failure, isNull);
+    vm.dispose();
+  });
+  test(
+    'failed invite search clears old candidates and preserves failure',
+    () async {
+      dio.httpClientAdapter = Adapter(
+        (_) async => reply({
+          'error': {'code': 'SERVICE_UNAVAILABLE'},
+        }, 503),
+      );
+      final vm = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.invite,
+        groupId: gid,
+      );
+      vm.inviteCandidates = [
+        {'old': true},
+      ];
+      await vm.searchInvites('name');
+      expect(vm.inviteCandidates, isEmpty);
+      expect(vm.failure, isA<AccountReadException>());
+      vm.dispose();
+    },
+  );
   test(
     'member changes during ACK persistence do not notify the new member or resurrect a request',
     () async {

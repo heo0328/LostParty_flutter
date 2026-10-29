@@ -37,6 +37,45 @@ class BackendGroupViewModel extends ChangeNotifier {
   Map<String, dynamic>? summary, management, code, counts, usage, preview;
   GroupDetailSnapshot? detail;
   List<Map<String, dynamic>> rows = [], groups = [];
+  List<Map<String, dynamic>> inviteCandidates = [];
+  int _inviteEpoch = 0;
+  void clearInviteCandidates() {
+    _inviteEpoch++;
+    inviteCandidates = [];
+  }
+
+  Future<void> searchInvites(String name) async {
+    if (busy || !authenticated || groupId == null) return;
+    clearInviteCandidates();
+    final e = _inviteEpoch, scope = repository.readScope, observation = _epoch;
+    bool current() =>
+        !_disposed &&
+        e == _inviteEpoch &&
+        scope == repository.readScope &&
+        observation == _epoch;
+    busy = true;
+    failure = null;
+    notice = null;
+    _emit();
+    try {
+      final value = await repository.get(
+        '/v1/groups/$groupId/invite-candidates',
+        query: {
+          'character_name': name.trim(),
+          'reader_profile': 'group-display-1',
+        },
+      );
+      if (current()) inviteCandidates = groupItems(value);
+    } catch (error) {
+      if (current()) failure = error;
+    } finally {
+      if (!_disposed && scope == repository.readScope) {
+        busy = false;
+        _emit();
+      }
+    }
+  }
+
   final Map<String, List<Map<String, dynamic>>> activities = {};
   final Map<String, Object> activityFailures = {};
   int homeTab = 0;
@@ -57,6 +96,7 @@ class BackendGroupViewModel extends ChangeNotifier {
     detail = null;
     summary = management = code = counts = usage = preview = null;
     rows = [];
+    clearInviteCandidates();
     groups = [];
     activities.clear();
     _activityLoading.clear();
@@ -83,6 +123,7 @@ class BackendGroupViewModel extends ChangeNotifier {
     _emit();
     try {
       if (!more) {
+        if (kind == GroupPageKind.invite) clearInviteCandidates();
         detail = null;
         management = null;
         code = null;

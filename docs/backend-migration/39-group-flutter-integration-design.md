@@ -138,7 +138,7 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 ### 초대 후보 표시 후속 — c3814452 소비 설계 (2026-10-29)
 
-담당 Flutter. 기준은 Backend c38144528c42eda7fcf2912fa412d3a005fc68e7 OpenAPI·display_schemas의 DisplayInviteCandidates/DisplayInviteCandidate와 [구현 인계](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6496536145)다. 서버 코드 구현/격리검증 완료와 현재 개발환경 미반영을 구분한다. 기본 업무 계약22b16207을 전면 교체하는 작업이 아니라 초대 후보 GET의 opt-in 표시 확장만 소비한다.
+담당 Flutter. 기준은 Backend c38144528c42eda7fcf2912fa412d3a005fc68e7 OpenAPI·display_schemas의 DisplayInviteCandidates/DisplayInviteCandidate와 [구현 인계](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6496536145)다. 2026-10-30 Flutter 조회/역할표시·검색 수명 연결과 직접18PASS/그룹 분석0을 확인했다. Backend 실행5d24244b/DB0034의 실제 반영 인계도 확인했으며 사용자 기기 인수는 남았다. 기본 업무 계약22b16207을 전면 교체하는 작업이 아니라 초대 후보 GET의 opt-in 표시 확장만 소비한다.
 
 - 계약: 기존 GET invite-candidates에 character_name과 reader_profile=group-display-1을 명시한다. 응답 profile/evaluated_at/items와 기존 후보필드+character_spec을 검증한다. 고정 wire projection은 해당 query/응답 및 추가2 DTO를 c3814452에 맞춰 갱신하고 기존 component/명령 계약이 바뀌지 않는지 diff로 확인한다. profile 누락 또는 구 DTO를 성공으로 수용하는 fallback은 두지 않는다. 기존 GroupRepository의 profile 일치 검사와 strict DTO 검증을 유지한다.
 - 화면: 초대 후보 카드의 이름·서버·직업·초대 버튼/진입은 유지한다. 단일 combat_power 표시를 기존 groupSpecText(character_spec)의 역할별 표시로 교체한다. dealer/support 수치를 합치거나 최댓값으로 대표하지 않으며 마지막 성공 수치와 현재 분석·보석/아크그리드 오류·warning/null 의미를 보존한다. 숫자가 없다는 이유로 재인증·새 저장을 요구하지 않는다. 후보 수치는 저장 자료로, 현재 실시간 게임 수치 보장이 아니다.
