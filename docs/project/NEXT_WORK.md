@@ -1,10 +1,10 @@
-# NEXT WORK — 그룹 1차 API 개발 요청·화면 준비
+# NEXT WORK — 그룹 Flutter 연결 구현
 
 ## 현재 구간
 
-사용자는 2026-10-28 그룹 전체 흐름 조사·설계 문서화에 이어 현재 기획 기준의 Backend 1차 API 개발 요청을 명시했다. 최신 dev bdfe0edf에서 feature/group-backend-integration을 시작했다. 종료 조건은 전체 그룹 설계·연결·검증 후 dev 통합이며 현재 파트는 과거 Firebase 재현을 전제하지 않고 그룹 기획/현재 Backend 인계를 재대조해 필요한 협업 요청을 정리하는 것이다. 기존 개별 그룹 수정/과거 Task 브랜치는 재사용 목적이 달라 보존했다.
+사용자는 2026-10-28 그룹 전체 흐름 조사·설계 문서화에 이어 현재 기획 기준의 Backend 1차 API 개발 요청을 명시했다. 최신 dev bdfe0edf에서 feature/group-backend-integration을 시작했다. 종료 조건은 전체 그룹 설계·연결·검증 후 dev 통합이며 현재 파트는 사용자 승인 계획에 따른 그룹 HTTP/명령 복구 기반·화면·모집 필터 갱신 연결 구현이다. 기존 개별 그룹 수정/과거 Task 브랜치는 재사용 목적이 달라 보존했다.
 
-[제품 계약](../product/GROUP_PRODUCT_FLOW.md)·[연결 설계39](../backend-migration/39-group-flutter-integration-design.md)에 기존 UX·식별자/권한·서버 제공 API·조회/명령 수명·단계별 회귀/완료 조건을 정리했다. 현재 그룹 Router는 pending, 기능 연결·자동/실기기 검증은 미착수다. 현재 디자인/기록 파트의 검증은 Penpot 구조·PNG/텍스트·경계와 문서 내용·링크·diffcheck이며 Flutter 시험/설치·서버/DB·자료삭제·dev/main 통합은 하지 않는다.
+[제품 계약](../product/GROUP_PRODUCT_FLOW.md)·[연결 설계39](../backend-migration/39-group-flutter-integration-design.md)에 기존 UX·식별자/권한·서버 제공 API·조회/명령 수명·단계별 회귀/완료 조건을 정리했다. 현재 그룹 Router/DI는 실제 Backend 화면에 연결했다. Flutter 구현/자동검증과 서버 미반영·사용자 기기 미확인을 구분한다. 현재 파트 검증은 Flutter 정적 분석·전체 시험·직접 경계시험·문서/diff검토다. 서버/DB·자료삭제·dev/main 통합·기기 설치/조작은 하지 않는다. Penpot 도구 미제공으로 실제 디자인 보완/완료 이관은 남았다.
 
 Backend 구현 인계는22b1620747707afaa87ba84223e5a2beb886f658이며 표시/활동/집계·관리/기존 레이드 보존의 source/DTO/router/OpenAPI를 대조했다. 소스 구현·격리검증 인계와 실제 개발서버 반영·Flutter/기기 인수를 구분한다. 신규 기능은 DB0034가 필요하고 개발환경은 미반영이라는 보고다. 현재 API 표와 소비 판단은 설계39를 따른다.
 
@@ -14,7 +14,7 @@ Backend 구현 인계는22b1620747707afaa87ba84223e5a2beb886f658이며 표시/�
 
 담당 Flutter. `원하는 사람 초대·가입 → 그룹원/활동 캐릭터 확인 → 레이드 모집의 그룹·그룹원·특정 캐릭터 필터 → 기존 상세/참가·신청`을 먼저 사용 가능하게 하는 것이 목표다. 기존 모집37의 후보/필터를 재사용하며 새 membership과 성공 후 갱신을 연결한다. 가입/탈퇴 후 현재 그룹과 캐릭터 후보가 갱신되고 원하는 조합의 모집을 찾을 수 있어야 완료다. 관리/복구 전체 준비를 이 독립 흐름의 선행조건으로 삼지 않는다.
 
-디자인은 기존03 메인/관련 섹션에서 이 흐름의 가시성을 우선 보완한다. 새 별도 그룹 운영 기능·화면을 늘리지 않으며 기존 관리 기능의 정책/권한은 유지한다. 기능 구현/사용자 인수는 아직 미완료다. [Issue12 핵심 흐름 협업 회신](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6465156288)을 게시·재조회 확인했다.
+디자인은 기존03 메인/관련 섹션에서 이 흐름의 가시성을 우선 보완한다. 새 별도 그룹 운영 기능·화면을 늘리지 않으며 기존 관리 기능의 정책/권한은 유지한다. Flutter 기본 흐름 구현은 연결했으며 서버 연동/사용자 인수와 Penpot 화면 대조는 남았다. [Issue12 핵심 흐름 협업 회신](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6465156288)을 게시·재조회 확인했다.
 
 ## 1차 그룹 화면 디자인 — 검토 대기
 
@@ -28,16 +28,35 @@ Penpot `03 작업중인 화면`에서 기존 메인 보드 `그룹 · 사용자 
 
 | 항목 | 담당·현재 상태 | 다음 행동·완료 조건 |
 |---|---|---|
-| G-DISPLAY: 멤버/활동/차단 표시·집계 | Backend22b16207 구현 인계 / Flutter 미연결 | Flutter가 현재 analysis/issues 기반 표시·역할별 last-success·null/권한·활동캐릭터 cursor를 연결한다. 과거 gemValidationSnapshot/count 재현 요구는 하지 않는다. 실제 어댑터/화면 검증은 남음 |
-| 핵심 모집 연결 | Flutter / 현재 모집 필터·후보 기반 사용 | 초대/가입→활동캐릭터→그룹/회원/캐릭터 필터→기존 상세/참가, 가입/탈퇴 후 context/후보 갱신·회원 전환/늦은 응답 보호까지 확인 |
-| G-MANAGE/G-RAID | Backend22b16207 해산/추방/대표·공통방목록/기존참가보존 구현 인계 | Flutter가 CAS/원ACK·새membership·성공 후 갱신 연결. 레이드 관리는 해당 실제T 공대장, 그룹장 별도 명령 없음 |
-| 개발환경 연결 준비 | Backend /0034·신규 코드 미반영 | [Issue16 준비 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6488471756): 대상/코드·DB/API/worker 조합·적용순서/확인과 기존흐름 보존 범위 제시. 현재 요청은 준비·범위 정리이며 실제 반영/merge/배포/초기화 실행은 아님 |
+| G-DISPLAY: 멤버/활동/차단 표시·집계 | Backend22b16207·Flutter 구현/직접시험 완료, 실제 연동 대기 | 연결한 analysis/issues 기반 표시·역할별 last-success·null/권한·활동캐릭터 cursor를 실제 서버와 사용자 화면에서 확인한다. 과거 gemValidationSnapshot/count 재현 요구는 하지 않는다 |
+| 핵심 모집 연결 | Flutter / 그룹 변경 알림과 현재 모집 필터·후보 갱신 연결 | 초대/가입→활동캐릭터→그룹/회원/캐릭터 필터→기존 상세/참가, 가입/탈퇴 후 context/후보 갱신·회원 전환/늦은 응답 보호까지 확인 |
+| G-MANAGE/G-RAID | Backend22b16207·Flutter 명령/화면·보존상태 표시 연결, 기기 미확인 | 연결한 CAS/원ACK·새membership·성공 후 갱신을 실제 서버/기기에서 확인한다. 레이드 관리는 해당 실제T 공대장, 그룹장 별도 명령 없음 |
+| 개발환경 연결 준비 | Backend /0034·신규 코드 미반영 | [Issue16 준비 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6488471756): 대상/코드·DB/API/worker 조합·적용순서/확인과 기존흐름 보존 범위 제시. [Backend 준비 완료 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6488544015) 확인. 실제 반영은 별도 지시 후 Backend 실행/인계, merge/운영배포/초기화 제외 |
 | G-RECOVERY | 실제 자격상실·유효후임/후임없음 별도 미결정 | Backend 현재 lifecycle/유효대상과 제품 차이부터 제시. 단순 그룹탈퇴/대표문제와 구분, 핵심흐름 전체 대기 금지 |
 
-최신 인계: [Issue12](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6466328231)·[Issue16](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6466327755). 2026-10-29 [Issue12 표시 소비 대조](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6488471404)와 위 Issue16 준비 요청을 게시·재조회 본문 일치를 확인했다. 이전 설계-only/미구현 대기는 완료 이력으로 대체했다. 이번은 기획/인계 검토·문서·협업이며 Flutter 기능코드·서버/DB·기기 조작은 하지 않는다.
+최신 인계: [Issue12](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6466328231)·[Issue16](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6466327755). 2026-10-29 [Issue12 표시 소비 대조](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6488471404)와 위 Issue16 준비 요청을 게시·재조회 본문 일치를 확인했다. 이전 설계-only/미구현 대기는 완료 이력으로 대체했다. 이번은 Flutter 구현·자동검증·문서/협업까지다. 실제 서버/DB 반영·기기 조작·자료삭제/운영배포는 제외한다.
 
 ## 현재 구간 밖의 차후 수정안
 
 모집 기기 인수·dev/main 통합은 완료 이력(DEV_LOG)을 따른다. 제안 정밀도·보류 UX·웹소켓·생성 복귀 제보·제품/계정/출시 후속의 현재 상태·담당·완료 조건은 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md)에 통합했다. 이 파일에는 같은 수정안을 다시 복제하지 않는다. 그룹 설계 착수로 기존 보류가 해제된 것은 아니다.
 
 그룹 정원 초과 예외의 범위 질문은 해소됐다. 기존 정원 초과 제한은 유지하며, 그룹 해산/삭제 후 기존 레이드 보존과 사라진 그룹을 통한 신규 모집 불가 기준은 제품 계약 §13·설계39 G-RAID에 통합했다. 일반 그룹 해산의 허용 조건 변경으로 확대하지 않는다. [Issue16 범위 확인 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6463878563)을 게시·재조회 확인했다.
+
+## 승인 구현 순서와 검증 단위
+
+1. 그룹 전용 고정계약 DTO/HTTP·secure 원요청 journal·회원/환경/늦은응답 보호.
+2. 일반 BackendApp Router/DI→내그룹·검색/생성·상세→초대/신청/코드→활동 캐릭터 표시.
+3. 그룹변경 알림→현재 모집 그룹/후보/context/페이지 무효화, 유효 선택 복원·기존 상세/참가 연결.
+4. 정보/대표·요청/차단/코드·즉시 이전/별도탈퇴·추방/조건부해산·공통방목록, 보존된 그룹 상태 표시.
+5. 직접경계 자동시험·flutter analyze/전체 flutter test·diff검토, Issue12/16 결과/미확인 회신과 파트 커밋/푸시.
+
+원요청은 그룹 별도 보안 namespace에서 환경/회원에 격리하며 동일 key/body 복구, 성공 후 조회만 재시도한다. 과거 Firebase WritePlan/Projection/로컬 Player는 실행하지 않는다. 기존 UI 의미/카드와 핵심 흐름을 유지하되 Backend DTO를 직접 소비하는 화면 상태로 교체한다. 회귀 보호는 기존 계정·모집 생성/참가·C/N 권한/완료/기록·원요청 복구다. 최종 완료와 개발서버 미반영·사용자 기기 미확인을 분리한다. Penpot 도구 미제공이면 완료 이관/시각 확인을 주장하지 않는다.
+
+## 이번 Flutter 구현 후 남은 완료 조건
+
+- 실제 서버반영/DB0034·API/worker 실행SHA 인계 확인 뒤 연동·사용자 기기 확인. 현재 미반영 서버로 그룹 신규 명령을 시험하지 않음.
+- 사용자 확인은 생성→상세, 초대/신청/코드 가입, 멤버 활동 캐릭터와 모집 그룹원/캐릭터 필터, 이전→별도탈퇴, 추방/해산 조건·레이드 상세 연결. 기존 로그인/인증 인수 반복 없음.
+- Penpot03 동일 보드와 실제 화면 대조/수정·전체 인수 후02로 이동. 현재 MCP 미제공이며 이동하지 않음.
+- G-RECOVERY·운영자 정리·웹소켓/공지/통계는 이번 완료 범위 밖. Flutter 코드/자동검증 완료를 실회원/기기 전체 완료로 보고하지 않음.
+
+Flutter 구현 인계: [Issue12](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6488900145)·[Issue16](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6488900495). 최종 전체시험2691PASS(직접경계12 포함), lib/test분석0건. 전체분석의 기존미추적tools info3건은 사용자자료로 보존했다. 새빌드의 명시 그룹상태 확장도 신계약을 사용하므로 Backend 실제반영인계 뒤에 기기확인한다.

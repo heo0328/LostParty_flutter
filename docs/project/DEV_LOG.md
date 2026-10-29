@@ -1,5 +1,17 @@
 # 개발 이력
 
+## 2026-10-29 — 그룹 Flutter 연결·기본 관리/모집 갱신 구현 및 자동검증
+
+새로 연결한 흐름: 일반 main→BackendApp Router/DI의 pending 그룹 경로를 Backend 전용 화면/ViewModel·GroupRepository로 교체했다. 내그룹/요청 탭·검색/생성·초대/신청/코드가입·멤버/활동캐릭터·이름/대표·요청/차단/코드관리·즉시이전/별도탈퇴·추방/조건부해산·그룹레이드목록을 인계22b16207의 HTTP/profile/DTO·현재권한/CAS로 연결했다. 현재 scoped runtime의 인증소유/활동·revision으로 선택하며 가상Player/Firestore Projection·WritePlan/구계정DB로 서버원장을 대체하지 않는다.
+
+그룹38동작/70스키마의 고정계약 검증 projection과 환경/회원별 secure 원요청 journal을 추가했다. 원본문/멱등키를 전송 전 보존, 중복입력 차단·동일요청 복구·ACK저장 후 해제·확정거절/불확실 분리·회원전환 중 늦은HTTP/저장응답을 보호한다. 성공명령 이후 조회실패는 새명령으로 재실행하지 않는다. 코드원문은 일반로그/캐시 없이 필요한 원요청 secure 수명에만 두며 ACK는 현재가입/권한으로 쓰지 않는다. 새경로 GROUP_FEATURE_NOT_READY·조회실패는 빈목록/0건과 구분한다.
+
+보존/연결: 기존 모집 필터/후보·상세/참가를 재사용한다. 그룹 변경은 별도 앱신호로 생성/검색 그룹·context·후보·페이지를 갱신하며 현재 alias/membership과 유효캐릭터로 선택을 대조하고 독립필터·선택주차/미확정모집명령은 유지한다. 일반상세 application-display 및 참가자 membership detail/plan의 명시 include_group_state 응답은 검증 후 기존 parser와 분리해 표시한다. 그룹장별도레이드명령·구보석count snapshot 합성은 없다. 현재 역할별 분석/오류코드와 마지막성공수치를 분리한다.
+
+실행 검증: Flutter SDK의 flutter_tools.snapshot CLI로 최종 전체 flutter test **2691PASS**. 신규직접경계12건은 전체에 포함되며 중복합산하지 않는다. 고정DTO/UUID·profile/null, 원요청저장실패/중복·응답유실동일본문/키, ACK정리실패/과거탈퇴재실행방지, HTTP/ACK저장중 회원전환, 성공후조회실패, stale cursor 유한복구, 보석상태/보존그룹확장, 그룹변경후 alias/캐릭터 재조회와 독립필터/주차보존을 확인했다. flutter analyze lib test는 **No issues**. 전체 flutter analyze는 기존미추적 tools/roster_rebalance_domain_fixtures.dart의 info3건(상대lib import2/print1)만 남으며 해당파일은 수정하지 않았다. 초기 새시험의 leave ACK fixture에 disband용 revision필드를 넣은 오류는 실제 LeaveAck에 맞춰 정정했다. 일반 dart/flutter 래퍼 지연은 SDK snapshot CLI로 실행해 검증했다.
+
+[Issue12 구현/소비 회신](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6488900145)·[Issue16 관리/모집 연결 인계](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6488900495)를 게시하고 본문 재조회 일치를 확인했다. 실제 개발서버/DB0034 반영·실회원/사용자기기·Penpot시각대조는 미확인이다. 현재 새빌드의 명시 그룹확장조회도 새서버계약이 필요하므로 Backend반영인계 전 기존서버로 기기인수를 요구하지 않는다. 기존설치앱/실자료·통계35/미추적자료는 변경하지 않았다. 현재 Penpot MCP 미제공으로03보드추가수정/02이동은 하지 않았다. G-RECOVERY·운영정리·웹소켓/공지/통계는 제외하고 실제서버변경/배포·초기화·dev/main통합 없이 현그룹브랜치에 구현파트를 보관한다.
+
 ## 2026-10-29 — 그룹 기획/Backend 구현 인계 재대조·필요 협업 요청
 
 Issue12/16 최신 댓글을 다시 확인했다. 최종인계22b16207의 표시/관리 DTO·display.py/router.py·profile_schemas·표시/관리 계약과 JSON OpenAPI를 고정 SHA로 읽어 신규7경로/프로필과 현재 분석 코드 소비를 대조했다. 소스 구현 인계·격리검증 보고와 미반영 개발서버/DB·미연결 Flutter/미인수 기기를 분리해 설계39/NEXT_WORK/AI_CONTEXT의 낡은 ‘미구현/설계-only’ 대기를 교체했다. Backend 선택노드 중복제거152개는 같은HEAD 전체일괄시험이 아니며 이번에 재실행하지 않았다.

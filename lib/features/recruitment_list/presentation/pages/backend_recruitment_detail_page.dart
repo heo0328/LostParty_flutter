@@ -353,6 +353,11 @@ class _BackendRecruitmentDetailPageState
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
+        if (retainedGroupLabel(value.betaData) case final label?)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(label),
+          ),
         if (!m.readOnly && value.betaData?['recruitment_identity'] != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),

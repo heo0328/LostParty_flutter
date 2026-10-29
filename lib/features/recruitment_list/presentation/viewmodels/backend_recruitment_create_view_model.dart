@@ -33,10 +33,12 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     DateTime Function()? now,
     this.scopeKey,
     this.commandTransport,
+    this.groupChanges,
     this.onActiveRoomsChanged,
   }) : now = now ?? DateTime.now {
     session.addListener(_access);
     accessChanges.addListener(_access);
+    groupChanges?.addListener(_groupsChanged);
     _binding = (session.userId, session.generation);
     _scopeBinding = scopeKey?.call();
     _eligible = session.isAuthenticated && hasVerifiedAccount();
@@ -48,6 +50,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   final void Function(String commandKey)? onActiveRoomsChanged;
   final AccountReadSession session;
   final Listenable accessChanges;
+  final Listenable? groupChanges;
   final bool Function() hasVerifiedAccount;
   final DateTime Function() now;
   final String Function()? scopeKey;
@@ -562,6 +565,25 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _emit();
   }
 
+  Future<void> _groupsChanged() async {
+    if (_disposed || !session.isAuthenticated) return;
+    // Preserve an uncertain creation request and unrelated draft fields.
+    if (hasPending || busy) {
+      groups = [];
+      return;
+    }
+    selection = null;
+    _contextGeneration++;
+    contextLoading = false;
+    final epoch = _epoch;
+    await loadGroups();
+    if (!_current(epoch) || groupFailure != null) return;
+    if (draft.groupId != null && !groups.any((g) => g.id == draft.groupId)) {
+      update(draft.copy(clearGroup: true));
+    }
+    await refreshContext();
+  }
+
   Future<void> loadGroups() async {
     if (!editable || groupsLoading) return;
     final epoch = _epoch;
@@ -1008,6 +1030,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _cycleTimer?.cancel();
     session.removeListener(_access);
     accessChanges.removeListener(_access);
+    groupChanges?.removeListener(_groupsChanged);
     super.dispose();
   }
 }

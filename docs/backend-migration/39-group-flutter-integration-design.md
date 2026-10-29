@@ -1,6 +1,6 @@
 # 그룹 전체 흐름 — Flutter 연결 설계
 
-2026-10-29 / 기획·인계 재검토 / Flutter 그룹 탭 연결 미착수. Flutter 기준 dev `bdfe0edf`, Backend 구현 인계 기준 `22b1620747707afaa87ba84223e5a2beb886f658`(feat/group-management). 개발서버/DB 반영은 별도 미완료다.
+2026-10-29 / 기획·인계 재검토 / Flutter 그룹 기본 흐름 연결·자동검증, 실제 연동/기기 인수 대기. Flutter 기준 dev `bdfe0edf`, Backend 구현 인계 기준 `22b1620747707afaa87ba84223e5a2beb886f658`(feat/group-management). 개발서버/DB 반영은 별도 미완료다.
 
 ## 1. 기준·포함/제외
 
@@ -8,13 +8,13 @@
 
 그룹 전용도 일반 레이드의 생성·참가·신청·일정·완료 흐름을 그대로 사용한다. 차이는 신규 목록/참가/신청의 그룹 소속 범위다. 공개범위 왕복·기존 참가/신청 보존·참가자 모두가 확인하는 소속 배지와 그룹 문제/독립 제한 구분은 제품 계약 §4/§9.2/§13을 단일 기준으로 삼는다. 이를 별도 그룹 모집 절차로 재설계하지 않는다.
 
-전체 그룹 기획/연결 설계에는 생성·검색·요청·코드·차단·이름/대표 변경·멤버표시·추방·이전·탈퇴·해산·그룹 레이드 관리를 포함한다. 이번에는 기능코드/Router/DI·서버/DB·실기기·배포·자료 삭제를 변경하지 않는다. 웹소켓·공지·통계화면·BM·운영자 삭제 자동화는 별도 후속이다. 제품 UX를 API 준비 상황에 맞춰 축소하지 않는다.
+전체 그룹 기획/연결 설계에는 생성·검색·요청·코드·차단·이름/대표 변경·멤버표시·추방·이전·탈퇴·해산·그룹 레이드 관리를 포함한다. 사용자 승인 구현 계획에 따라 Flutter 기능코드/Router/DI·그룹 HTTP·원요청/표시·모집 갱신 연결을 수정한다. 서버/DB·실기기·배포·자료 삭제는 이번 실행에서 제외한다. 웹소켓·공지·통계화면·BM·운영자 삭제 자동화는 별도 후속이다. 제품 UX를 API 준비 상황에 맞춰 축소하지 않는다.
 
 과거 구현 재사용은 [협업 지침 §6](../project/ai_rules.md#6-architecture-principles)의 검토 기준을 따른다. 기존 그룹 화면/Domain이 남아 있다는 사실은 그대로 연결할 설계 승인이나 기능 완료가 아니다. 각 흐름을 `현재 사용자 목적/정책·UX → 과거 기술 수단/제약 → 자체 Backend에서 유지·제거·교체할 책임 → 영향/검증` 순서로 검토한다. Firebase 때문에 생긴 Stream/Projection/클라이언트 WritePlan 우회는 현재 서버 원장·권한·HTTP 갱신에 맞게 바로잡는다. 기존 gemValidationSnapshot도 같은 저장형식 복제가 아니라 사용자에게 필요한 보석/빌드 상태 의미가 현재 analysis/issues로 정확히 전달되는지 대조한다. 현재 Backend의 DTO/명령도 같은 기준으로 검토하며 임의 정상값 합성은 하지 않는다.
 
 ## 2. 확인 근거와 과거 구현
 
-- 현재 일반 앱: `lib/main.dart` → BackendApp. `lib/app/backend_app.dart`의 `/groups`·검색·생성·코드 가입은 pending이다. 기존 화면이 남았다는 이유로 현재 기능 완료로 표시하지 않는다.
+- 현재 일반 앱: `lib/main.dart` → BackendApp. `lib/app/backend_app.dart`의 `/groups`·검색·생성·코드 가입·그룹 상세 및 관리 하위 경로는 BackendGroupPage/BackendGroupViewModel·GroupRepository에 연결했다. 단순히 과거 화면이 남은 상태와 실제 현재 연결을 구분한다.
 - 잔존 구현: `lib/features/group/presentation`의 탭/검색/생성/상세/초대/신청/코드 화면과 ViewModel, Domain의 이름 정규화/Validator·역할/관계 모델. 기존 탭은 내 그룹·요청 현황, 상세는 공개요약과 membership 확인 후 private 멤버 읽기를 분리한다.
 - 과거 저장: GroupReadRepository의 watchMyGroups/watchMyRequests와 Player 역방향 Projection, WritePlan의 요청·membership·카운터·활동시각 Transaction을 Firestore Repository/Rules가 실행했다. 현재 새 서버에서 클라이언트 WritePlan을 실행하거나 Firestore 원장을 복원하지 않는다. 상태 전이/검증 의도만 서버 계약과 대조한다.
 - 표시: 기존 GroupMemberDisplay에는 전투력·아이템레벨·보석 검증 표시가 있고 상세에서 멤버의 활동 캐릭터를 펼쳤다. 기본 G1 응답만으로는 부족했으나 현재 인계의 opt-in 표시 DTO·활동 조회가 해당 자료를 제공한다. 표시값을0으로 채우거나 남의 로컬 계정DB를 조회해 메우지 않는다.
@@ -39,7 +39,7 @@ Backend의 이전 경로404는 문서 이동이었다. 초기 조사 SHA1b6f57bb
 
 ## 3. 기능별 상태·담당·완료 기준
 
-그룹 탭·관리 기능의 현재 일반 Flutter 연결과 신규 Backend 실기기 인수는 미완료다. 기존 모집의 그룹 레이드 생성·검색은 이미 연결돼 있으며 아래 표의 해당 행은 새 그룹 membership/갱신과의 추가 연계를 뜻한다. 서버 제공은 위 고정 소스 확인 수준이다. 상세 제품 정책은 제품 문서에만 두며 이 표는 남은 구현을 관리한다.
+그룹 탭·관리 기능의 일반 Flutter 연결은 이번 코드로 구현했고 신규 Backend 실서버 연동/실기기 인수는 미완료다. 아래 담당·다음 행동은 원 구현 기준과 연결 후 인수할 경계를 포함한다. 기존 모집의 그룹 레이드 생성·검색은 이미 연결돼 있으며 아래 표의 해당 행은 새 그룹 membership/갱신과의 추가 연계를 뜻한다. 서버 제공은 위 고정 소스 확인 수준이다. 상세 제품 정책은 제품 문서에만 두며 이 표는 남은 구현을 관리한다.
 
 | 기능 | 기존 부품/흐름 | 현재 Backend | 담당·다음 행동 / 완료 기준 |
 |---|---|---|---|
@@ -125,6 +125,14 @@ actor는 서버 세션, 그룹은 group_id, 현재 가입은 membership_id, 요�
 | G-OPS | 별도 운영 후속 | §17 보관·정리 요구와 현재 감사/이력 원장 대응 | 운영 파트에서 정책/개인정보·보관 차이 검토, 이번에 자동삭제/DB변환 안 함 |
 
 위 계약 확인은 기술 질문이며 이미 확정된15/5·즉시 이전·기존 레이드 유지·코드 정책을 다시 사용자 결정 대기로 두지 않는다. 기존 UX 변경이 필요하다는 답변이 오면 변경 전후·효과를 사용자와 협의한다. 현재 1차 개발 요청은 [Issue12](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6464116834)·[Issue16](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6464117245)이며 인계/회신 대기는 NEXT_WORK에서 관리한다. 이전 계약질문은 당시 경과다. 기존 API 재개발·운영배포·자료초기화는 요청하지 않았다.
+
+### 실제 Flutter 연결 구조
+
+GroupContract는22b16207 OpenAPI에서 그룹38동작/연결70스키마를 추출한 고정 검증 projection을 사용한다. GroupRepository는 Dio/현재 AccountReadSession·환경을 확인하고 profile·요청/응답·cursor를 검증한다. 보안 journal은 그룹 namespace로 분리하며 원 key/raw body를 먼저 저장하고 미확정 복구·확정거절 정리·ACK저장 후 해제를 처리한다. ACK는 권한으로 보관하지 않고 저장 실패/회원 전환 경계도 현재 화면에 성공 권한을 주지 않는다.
+
+BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카드·활동 펼침·관리 진입을 현재 DTO로 연결한다. GroupMember/Player Projection·로컬 계정조회/클라이언트 WritePlan은 일반 경로에서 실행하지 않는다. 활동 캐릭터 선택은 scoped runtime의 현재 인증/소유·활동·revision 자료를 사용한다. 이름·대표·요청/차단·코드·이전/탈퇴·추방/해산 명령은 각각 인계 경로/CAS로 실행한다. 코드 평문은 일반 캐시/로그 없이 메모리·필요한 원요청 secure 저장으로 한정한다.
+
+앱 소유 GroupChanges는 그룹변경을 모집 생성·검색에 전달한다. 모집 원요청/다른 초안·선택 주차는 보존하고 그룹/context/후보·결과 페이지를 갱신하며 실제 alias/membership·캐릭터 후보로 선택을 재대조한다. 보존 그룹 상태는 일반 상세의 application-display 경로와 참가자의 membership detail/plan 경로 모두 include_group_state=true를 명시하고 검증된 확장만 표시 데이터로 전달한다. 기존 beta 응답/명령 parser와 원ACK는 변경하지 않는다.
 
 ## 6. 구현 단계·회귀와 인수
 

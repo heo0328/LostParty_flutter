@@ -8,7 +8,7 @@
 
 ## 현재 작업과 실제 코드 상태
 
-현재는 그룹 기획·현재 Backend 인계를 재검토하고 Flutter 연결을 준비하는 구간이다. [그룹 제품 계약](../product/GROUP_PRODUCT_FLOW.md)·[설계39](../backend-migration/39-group-flutter-integration-design.md)를 기준으로 하며 일반 그룹 Router는 pending이다. Backend22b16207은 표시/활동/집계·해산/추방/대표·기존 레이드 보존 구현/격리검증을 인계했고 실제 개발서버/DB 반영·Flutter/기기 인수는 남았다. 그룹원 누구나 개설하고 해당 레이드 공대장이 관리한다. 과거 Firebase 저장/우회 구조의 복제를 요구하지 않으며 현재 목적/표시 의미로 재검토한다. 담당·다음 행동은 NEXT_WORK다.
+현재는 그룹 기획·현재 Backend 인계를 재검토하고 Flutter 연결을 준비하는 구간이다. [그룹 제품 계약](../product/GROUP_PRODUCT_FLOW.md)·[설계39](../backend-migration/39-group-flutter-integration-design.md)를 기준으로 하며 일반 그룹 Router는 Backend 전용 그룹 화면/HTTP·secure 원요청 기반에 연결했고 모집 그룹 후보 갱신·기존 레이드 보존 상태 표시도 연결했다. 실제 서버 연동/기기 인수는 대기다. Backend22b16207은 표시/활동/집계·해산/추방/대표·기존 레이드 보존 구현/격리검증을 인계했고 실제 개발서버/DB 반영·Flutter/기기 인수는 남았다. 그룹원 누구나 개설하고 해당 레이드 공대장이 관리한다. 과거 Firebase 저장/우회 구조의 복제를 요구하지 않으며 현재 목적/표시 의미로 재검토한다. 담당·다음 행동은 NEXT_WORK다.
 
 모집 1차 구현·보고된 정상 흐름 인수와 dev/main 통합은 bdfe0edf로 완료했다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
 

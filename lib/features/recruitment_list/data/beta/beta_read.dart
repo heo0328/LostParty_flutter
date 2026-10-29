@@ -15,6 +15,7 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   required String path,
   required T Function(Map<String, dynamic>) parse,
   Map<String, dynamic> query = const {},
+  bool includeGroupState = false,
   String method = 'GET',
   Map<String, dynamic>? body,
 }) async {
@@ -23,14 +24,41 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   if (mode == RecruitmentContractMode.betaWire2) {
     contract.validateRequest(method, path, q, body);
   }
-  final raw = (await api.request(
+  final received = (await api.request(
     path,
     method: method,
-    query: q.isEmpty ? null : q,
+    query: includeGroupState
+        ? {...q, 'include_group_state': 'true'}
+        : q.isEmpty
+        ? null
+        : q,
     body: body,
   ))!;
+  final raw = Map<String, dynamic>.of(received);
+  Map<String, dynamic>? groupState;
+  if (includeGroupState) {
+    roleCheck(
+      method == 'GET' &&
+          (RegExp(r'^/v2/raid-rooms/[^/]+/detail$').hasMatch(path) ||
+              RegExp(r'^/v2/me/raid-rooms/[^/]+/plan$').hasMatch(path)),
+    );
+    roleCheck(raw.containsKey('group_state'));
+    if (raw['group_state'] != null) {
+      groupState = roleMap(raw['group_state']);
+      roleShape(groupState, 'group_id name state');
+      roleId(groupState['group_id']);
+      roleCheck(groupState['name'] == null || groupState['name'] is String);
+      roleCheck(
+        {'active', 'ended', 'unavailable'}.contains(groupState['state']),
+      );
+    }
+    raw.remove('group_state');
+  }
   if (mode == RecruitmentContractMode.legacy) {
-    return BetaDecoded(parse(raw), null);
+    return BetaDecoded(
+      parse(raw),
+      groupState == null ? null : {'group_state': groupState},
+    );
   }
   final result = BetaResponse.parse(
     method: method,
@@ -39,7 +67,10 @@ Future<BetaDecoded<T>> readRecruitment<T>({
     json: raw,
     parseLegacy: parse,
   );
-  return BetaDecoded(result.value, roleMap(result.metadata['data']));
+  return BetaDecoded(result.value, {
+    ...roleMap(result.metadata['data']),
+    if (includeGroupState) 'group_state': groupState,
+  });
 }
 
 Map<String, dynamic>? betaDisplayData(Map<String, dynamic>? raw) {
@@ -55,6 +86,7 @@ Map<String, dynamic>? betaDisplayData(Map<String, dynamic>? raw) {
               }
             : schedule,
         'coordination_wait': ?wait,
+        if (raw.containsKey('group_state')) 'group_state': raw['group_state'],
         if (raw.containsKey('recruitment_identity'))
           'recruitment_identity': raw['recruitment_identity'],
       })
@@ -93,4 +125,15 @@ String betaDepartureText(Map<String, dynamic> data) {
   return instant == null
       ? label
       : '${instant.add(const Duration(hours: 9)).toIso8601String().substring(5, 16).replaceAll('T', ' ')} · $label';
+}
+
+String? retainedGroupLabel(Map<String, dynamic>? data) {
+  final group = data?['group_state'];
+  if (group is! Map) return null;
+  final name = group['name'] ?? '연결 그룹';
+  return switch (group['state']) {
+    'active' => '$name',
+    'ended' => '$name · 해산된 그룹',
+    _ => '$name · 그룹 상태 확인 불가',
+  };
 }

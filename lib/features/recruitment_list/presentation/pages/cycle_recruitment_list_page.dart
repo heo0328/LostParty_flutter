@@ -24,6 +24,7 @@ class CycleRecruitmentListPage extends StatefulWidget {
     required this.onRoom,
     required this.onCreate,
     required this.onLogin,
+    this.groupChanges,
     super.key,
   });
   final CycleInteractionGateway gateway;
@@ -34,6 +35,7 @@ class CycleRecruitmentListPage extends StatefulWidget {
   final void Function(String, String) onRoom;
   final void Function(String?) onCreate;
   final VoidCallback onLogin;
+  final Listenable? groupChanges;
   @override
   State<CycleRecruitmentListPage> createState() =>
       _CycleRecruitmentListPageState();
@@ -47,6 +49,7 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     m = CycleSearchViewModel(
+      groupChanges: widget.groupChanges,
       gateway: widget.gateway,
       session: widget.session,
       changes: widget.changes,
