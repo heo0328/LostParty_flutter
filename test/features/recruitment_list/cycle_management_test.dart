@@ -221,6 +221,7 @@ void main() {
   late CycleInteractionRepository gateway;
   late CycleParticipationController controller;
   late List<String> refresh;
+  var groupRefreshes = 0;
   late Map<String, dynamic> wire;
   late String action;
   late bool loseAck, badAck;
@@ -286,7 +287,9 @@ void main() {
       }
       return ack();
     };
+    groupRefreshes = 0;
     controller = CycleParticipationController(
+      onGroupConnectionChanged: () => groupRefreshes++,
       gateway: gateway,
       session: session,
       changes: changes,
@@ -302,6 +305,125 @@ void main() {
     changes.dispose();
     session.dispose();
   });
+  Future<CycleManagementPreview> firstLink({bool allowed = true}) async {
+    action = 'common';
+    wire = managementWire(action);
+    wire['target_group'] = {
+      'group_id': id(500),
+      'group_revision': 6,
+      'members_revision': 8,
+      'membership_id': id(501),
+      'membership_revision': 9,
+      'permission': f1.permit(allowed),
+    };
+    return (await controller.management(
+      room,
+      n,
+      action,
+      query: {'target_group_id': id(500)},
+    ))!;
+  }
+
+  test(
+    'initial link uses target review and one atomic PUT, recovering original body/key',
+    () async {
+      final p = await firstLink();
+      expect(p.targetGroup!['membership_revision'], 9);
+      expect(api.requests.last['query']['target_group_id'], id(500));
+      loseAck = true;
+      await controller.manage(p, {
+        'title': '최초 연결',
+        'scope': 'group',
+        'group_id': id(500),
+      });
+      final first = api.requests.where((r) => r['method'] == 'PUT').single;
+      expect(first['body']['expected_group_revision'], 6);
+      expect(first['body']['group_id'], id(500));
+      expect(first['body']['scope'], 'group');
+      expect(controller.hasPending, true);
+      final original = jsonEncode(first);
+      wire['target_group']['membership_revision'] = 20;
+      await controller.retry();
+      expect(jsonEncode(api.requests.last), original);
+      expect(controller.hasPending, false);
+      expect(refresh, [c, n]);
+      expect(groupRefreshes, 1);
+    },
+  );
+  test(
+    'target change, stale membership and expired review block initial-link writes',
+    () async {
+      final p = await firstLink();
+      expect(
+        () => p.body({'title': 'x', 'group_id': id(502), 'scope': 'group'}),
+        throwsFormatException,
+      );
+      expect(
+        () => p.body({'title': 'x', 'group_id': id(500), 'scope': 'public'}),
+        throwsFormatException,
+      );
+      wire['target_group']['members_revision'] = 10;
+      await controller.manage(p, {
+        'title': 'x',
+        'group_id': id(500),
+        'scope': 'group',
+      });
+      expect(api.requests.where((r) => r['method'] == 'PUT'), isEmpty);
+      expect(controller.failure, 'REVISION_CONFLICT');
+      wire['data']['expires_at'] = f2.nowStamp;
+      expect(
+        await controller.management(
+          room,
+          n,
+          action,
+          query: {'target_group_id': id(500)},
+        ),
+        isNull,
+      );
+    },
+  );
+  test(
+    'member switch during fresh target review discards the late reply without a write',
+    () async {
+      final p = await firstLink();
+      final pending = Completer<Map<String, dynamic>>();
+      api.respond = (_, _) => pending.future;
+      final operation = controller.manage(p, {
+        'title': 'x',
+        'scope': 'group',
+        'group_id': id(500),
+      });
+      session.userId = 'another-user';
+      session.generation++;
+      session.notifyListeners();
+      pending.complete(copy(wire));
+      await operation;
+      expect(api.requests.where((r) => r['method'] == 'PUT'), isEmpty);
+      expect(groupRefreshes, 0);
+    },
+  );
+  test(
+    'denied target and missing root target do not authorize an initial link',
+    () async {
+      final p = await firstLink(allowed: false);
+      await controller.manage(p, {
+        'title': 'x',
+        'group_id': id(500),
+        'scope': 'group',
+      });
+      expect(api.requests.where((r) => r['method'] == 'PUT'), isEmpty);
+      wire.remove('target_group');
+      expect(
+        await controller.management(
+          room,
+          n,
+          action,
+          query: {'target_group_id': id(500)},
+        ),
+        isNull,
+      );
+    },
+  );
   test(
     'room end visibility reads global permission without writes or failure',
     () async {

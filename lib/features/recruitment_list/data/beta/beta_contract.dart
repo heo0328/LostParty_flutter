@@ -247,6 +247,9 @@ class BetaResponse<T> {
                 'recruitment_identity',
                 'availability_copy',
                 'application_memo',
+                'group_states',
+                'room_groups',
+                'target_group',
               }.contains(e.key))
                 e.key: strip(e.value),
           }

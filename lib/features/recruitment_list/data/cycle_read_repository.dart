@@ -308,11 +308,12 @@ class CycleReadRepository {
   CycleReadRepository(
     this.api, {
     this.membershipProfile = false,
+    this.includeGroupList = false,
     this.contractMode = RecruitmentContractMode.legacy,
   });
   final RecruitmentContractMode contractMode;
   final DioBackendAccountReadApi api;
-  final bool membershipProfile;
+  final bool membershipProfile, includeGroupList;
   Future<T> _read<T>(Future<T> Function() f) async {
     try {
       return await f();
@@ -333,6 +334,7 @@ class CycleReadRepository {
     final result = await readRecruitment(
       api: api,
       mode: contractMode,
+      includeGroupList: includeGroupList,
       path: applications
           ? '/v2/me/raid-room-applications'
           : '/v2/me/raid-room-memberships',
@@ -356,7 +358,11 @@ class CycleReadRepository {
       final items = result.metadata!['items'] as List;
       for (var i = 0; i < result.value.rows.length; i++) {
         final row = result.value.rows[i];
-        row.betaData = betaDisplayData(roleMap(items[i]));
+        row.betaData = listDisplayData(
+          result.metadata,
+          roleMap(items[i]),
+          row.roomId,
+        );
         row.card?.betaData = row.betaData;
       }
     }

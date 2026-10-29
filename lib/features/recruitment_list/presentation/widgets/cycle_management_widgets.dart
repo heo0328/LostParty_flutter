@@ -106,7 +106,9 @@ class _ManagementDialogState extends State<_ManagementDialog> {
   String? error, candidate;
   bool loading = true, alternative = false;
   List<RecruitmentCharacter> characters = [];
-  String? character, group;
+  List<RecruitmentGroupChoice>? groups;
+  String? groupsError;
+  String? character, group, initialGroup;
   String role = 'dealer',
       visibility = 'public',
       admission = 'leader_only',
@@ -205,6 +207,8 @@ class _ManagementDialogState extends State<_ManagementDialog> {
       widget.target,
       widget.action,
       query: {
+        if (widget.action == 'common' && group != null && initialGroup == null)
+          'target_group_id': group,
         if (alternative && character != null) 'character_id': character,
         if (alternative && character != null) 'selected_role': role,
         if (betaOpening)
@@ -236,6 +240,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
         title.text = d['title'] as String;
         visibility = d['scope'] as String;
         group = d['group_id'] as String?;
+        initialGroup = group;
       }
       if (p.action == 'formation') {
         final room = p.data['room'] as Map;
@@ -267,6 +272,16 @@ class _ManagementDialogState extends State<_ManagementDialog> {
           }
         }
       }
+    }
+    if (p?.action == 'common' && initialGroup == null && groups == null) {
+      final choices = await widget.controller.groups();
+      if (!mounted ||
+          e != generation ||
+          binding != widget.controller.scopeKey()) {
+        return;
+      }
+      groups = choices;
+      groupsError = choices == null ? widget.controller.failure : null;
     }
     setState(() {
       preview = p;
@@ -326,7 +341,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
       return;
     }
     final failure = widget.controller.failure;
-    if (p.continuation || p.opening) await load();
+    if (p.continuation || p.opening || p.action == 'common') await load();
     if (!mounted) return;
     setState(() {
       loading = false;
@@ -365,7 +380,9 @@ class _ManagementDialogState extends State<_ManagementDialog> {
           : null;
       final allowed =
           p != null &&
-          (permission == null || (permission as Map)['allowed'] == true);
+          (permission == null || (permission as Map)['allowed'] == true) &&
+          (p.targetGroup == null ||
+              p.targetGroup!['permission']['allowed'] == true);
       final selectionReady = p == null
           ? false
           : (!{'transfer', 'remove'}.contains(p.action) || candidate != null) &&
@@ -413,13 +430,52 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                   ),
                   text('다음 주 날짜와 출발 시각을 직접 선택해 주세요.'),
                 ],
+                if (widget.action == 'common' &&
+                    initialized &&
+                    initialGroup == null) ...[
+                  if (groupsError != null)
+                    text(recruitmentFailureMessage(groupsError)),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('group/$group'),
+                    initialValue: group ?? '',
+                    decoration: const InputDecoration(labelText: '연결 그룹'),
+                    isExpanded: true,
+                    items: [
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('연결 그룹 없음'),
+                      ),
+                      for (final g in groups ?? <RecruitmentGroupChoice>[])
+                        DropdownMenuItem(
+                          value: g.id,
+                          child: Text(g.name, overflow: TextOverflow.ellipsis),
+                        ),
+                    ],
+                    onChanged: loading || widget.controller.busy
+                        ? null
+                        : (value) {
+                            setState(() {
+                              group = value == '' ? null : value;
+                              visibility = group == null ? 'public' : 'group';
+                            });
+                            unawaited(load());
+                          },
+                  ),
+                  if (group != null)
+                    text(
+                      '선택한 그룹에 최초 연결하고 그룹 전용으로 전환합니다. 검토에 표시된 주차에 공통 적용되며 기존 참가·신청·예약은 유지됩니다.',
+                    ),
+                ],
                 if (p != null) ...[
                   if (p.opening && d!['opening_effect'] == 'already_open')
                     text('이미 개방된 주차입니다.'),
                   if (!allowed)
                     text(
                       recruitmentFailureMessage(
-                        (permission as Map)['reason'] as String?,
+                        (p.targetGroup?['permission']?['allowed'] == false
+                                ? p.targetGroup!['permission']['reason']
+                                : (permission as Map)['reason'])
+                            as String?,
                       ),
                     ),
                   if (p.global) ...[
@@ -645,6 +701,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                       ),
                     ),
                     DropdownButtonFormField<String>(
+                      key: ValueKey('visibility/$visibility'),
                       initialValue: visibility,
                       items: [
                         const DropdownMenuItem(
@@ -657,11 +714,12 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                             child: Text('그룹 전용'),
                           ),
                       ],
-                      onChanged: loading
+                      onChanged:
+                          loading || (initialGroup == null && group != null)
                           ? null
                           : (v) => setState(() => visibility = v!),
                     ),
-                    if (group != null) text('기존 연결 그룹이 유지됩니다.'),
+                    if (initialGroup != null) text('기존 연결 그룹이 유지됩니다.'),
                   ],
                   if (p.action == 'formation')
                     for (final place in placements)
@@ -702,7 +760,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                 if (!loading)
                   TextButton(
                     onPressed: () {
-                      initialized = false;
+                      if (widget.action != 'common') initialized = false;
                       placements.clear();
                       candidate = null;
                       sessions.clear();

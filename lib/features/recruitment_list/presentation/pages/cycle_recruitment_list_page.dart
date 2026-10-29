@@ -57,7 +57,6 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
       mutations: widget.mutations,
     );
     unawaited(m.load());
-    unawaited(m.loadGroups());
   }
 
   @override
@@ -279,7 +278,7 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
     final leader = room.wire['leader_display'] as Map?;
     final schedule = room.betaData?['beta_schedule'] as Map?;
     final groupId = room.wire['group_id'] as String?;
-    final groupName = m.groups.where((g) => g.id == groupId).firstOrNull?.name;
+    final groupName = retainedGroupLabel(room.betaData);
     final state = schedule?['coordination_state'];
     final effective =
         betaEffectiveStart(room.betaData) ?? room.starts.firstOrNull;

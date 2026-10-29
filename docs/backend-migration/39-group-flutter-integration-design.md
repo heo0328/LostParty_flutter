@@ -1,6 +1,6 @@
 # 그룹 전체 흐름 — Flutter 연결 설계
 
-2026-10-29 / 기획·인계 재검토 / Flutter 그룹 기본 흐름 연결·자동검증, 실제 연동/기기 인수 대기. Flutter 기준 dev `bdfe0edf`, Backend 구현 인계 기준 `22b1620747707afaa87ba84223e5a2beb886f658`(feat/group-management). 개발서버/DB 반영은 별도 미완료다.
+기본 그룹 업무 계약22b16207, 초대 표시c3814452, 모집 최초 연결·목록 표시 확장6dac5ab2. 개발서버 실행2602e459/DB0034 반영 인계를 확인했다. 기존 그룹 기능은 사용자 정상 인수했으며 현재 모집 연결 변경의 기기 인수/디자인 검수 상태는 NEXT_WORK를 따른다.
 
 ## 1. 기준·포함/제외
 
@@ -134,11 +134,19 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 앱 소유 GroupChanges는 그룹변경을 모집 생성·검색에 전달한다. 모집 원요청/다른 초안·선택 주차는 보존하고 그룹/context/후보·결과 페이지를 갱신하며 실제 alias/membership·캐릭터 후보로 선택을 재대조한다. 보존 그룹 상태는 일반 상세의 application-display 경로와 참가자의 membership detail/plan 경로 모두 include_group_state=true를 명시하고 검증된 확장만 표시 데이터로 전달한다. 기존 beta 응답/명령 parser와 원ACK는 변경하지 않는다.
 
+### 모집 최초 연결·목록 표시 — 6dac5ab2 소비 계약
+
+일반 앱 BackendApp DI는 검색/내 참가·신청 목록에 include_group_state=true를 query로 지정한다. POST 검색 본문은 기존 그대로다. 응답 root group_states와 room_groups의 UUID·상태·중복/페이지 대응을 검증해 카드 표시 metadata로 보존한다. 신청 admission_origin은 과거 스냅샷이므로 현재 연결로 덮지 않는다. content=null인 기록은 현재 참가자를 합성하지 않는다. 소속 밖 공개 모집도 서버 이름을 표시하며 ended 보존 이름과 unavailable/null을 구분한다. 카드 이름 목적의 내 그룹 조회와 카드별 조회는 없다.
+
+미연결 방의 기존 공통설정에서 현재 내 그룹을 선택하면 common-context의 target_group_id로 재검토한다. root target_group(group/members/membership revision·permission)을 선택 UUID와 대조하고 확인 서명에 포함한다. 선택 그룹·영향 주차·기존 참가/신청/예약 보존을 확인한 뒤 기존 common-settings PUT에 group_id/scope=group/expected_group_revision을 함께 보낸다. 교체/해제는 거절하고, 연결 뒤 기존 전체공개/전용 왕복은 유지한다. 대상/권한/revision 변경은 재확인하며 미확정 명령에는 원본문·키를 유지한다. 성공 ACK 후 GroupChanges로 그룹/필터/context/후보와 목록을 무효화하고 기존 주차별 상세 갱신을 사용한다. 후속 조회 실패는 새 명령을 만들지 않는다.
+
+소속 배지는 일반/application-display의 data.members와 membership-actions의 data.content.data.members를 같은 상세 변환·렌더링으로 전달한다. 조회자 소속에 따른 숨김은 확인되지 않았다. 대상별 true/false 보존, null/누락 거절과 history content=null 유지를 시험한다. 해당 제보의 실기기 재현 없이 해결 완료로 판정하지 않으며 현재 결과는 DEV_LOG/기기 인수는 NEXT_WORK에서 관리한다.
+
 ## 6. 구현 단계·회귀와 인수
 
 ### 초대 후보 표시 후속 — c3814452 소비 설계 (2026-10-29)
 
-담당 Flutter. 기준은 Backend c38144528c42eda7fcf2912fa412d3a005fc68e7 OpenAPI·display_schemas의 DisplayInviteCandidates/DisplayInviteCandidate와 [구현 인계](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6496536145)다. 2026-10-30 Flutter 조회/역할표시·검색 수명 연결과 직접18PASS/그룹 분석0을 확인했다. Backend 실행5d24244b/DB0034의 실제 반영 인계도 확인했으며 사용자 기기 인수는 남았다. 기본 업무 계약22b16207을 전면 교체하는 작업이 아니라 초대 후보 GET의 opt-in 표시 확장만 소비한다.
+담당 Flutter. 기준은 Backend c38144528c42eda7fcf2912fa412d3a005fc68e7 OpenAPI·display_schemas의 DisplayInviteCandidates/DisplayInviteCandidate와 [구현 인계](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6496536145)다. 2026-10-30 Flutter 조회/역할표시·검색 수명 연결과 직접18PASS/그룹 분석0을 확인했다. Backend 실행5d24244b/DB0034의 실제 반영 인계도 확인했으며 이후 기존 그룹 기능은 사용자 전체 정상 인수했다. 기본 업무 계약22b16207을 전면 교체하는 작업이 아니라 초대 후보 GET의 opt-in 표시 확장만 소비한다.
 
 - 계약: 기존 GET invite-candidates에 character_name과 reader_profile=group-display-1을 명시한다. 응답 profile/evaluated_at/items와 기존 후보필드+character_spec을 검증한다. 고정 wire projection은 해당 query/응답 및 추가2 DTO를 c3814452에 맞춰 갱신하고 기존 component/명령 계약이 바뀌지 않는지 diff로 확인한다. profile 누락 또는 구 DTO를 성공으로 수용하는 fallback은 두지 않는다. 기존 GroupRepository의 profile 일치 검사와 strict DTO 검증을 유지한다.
 - 화면: 초대 후보 카드의 이름·서버·직업·초대 버튼/진입은 유지한다. 단일 combat_power 표시를 기존 groupSpecText(character_spec)의 역할별 표시로 교체한다. dealer/support 수치를 합치거나 최댓값으로 대표하지 않으며 마지막 성공 수치와 현재 분석·보석/아크그리드 오류·warning/null 의미를 보존한다. 숫자가 없다는 이유로 재인증·새 저장을 요구하지 않는다. 후보 수치는 저장 자료로, 현재 실시간 게임 수치 보장이 아니다.

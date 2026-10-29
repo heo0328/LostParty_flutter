@@ -878,7 +878,11 @@ class _BackendRecruitmentDetailPageState
             ),
           ),
           if (groupLinked)
-            RecruitmentBadge(member['group_member'] == true ? '그룹원' : '비그룹'),
+            RecruitmentBadge(switch (member['group_member']) {
+              true => '그룹원',
+              false => '비그룹원',
+              _ => '소속 확인 불가',
+            }),
           if (_canManage &&
               m.target != null &&
               _canLead &&

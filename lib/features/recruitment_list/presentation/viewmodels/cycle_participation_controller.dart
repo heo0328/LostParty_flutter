@@ -162,6 +162,7 @@ class CycleParticipationController extends ChangeNotifier {
     required this.changes,
     required this.scopeKey,
     this.onMutation,
+    this.onGroupConnectionChanged,
     this.onRelationEnded,
     this.onActiveRoomsChanged,
     this.commandTransport,
@@ -194,6 +195,7 @@ class CycleParticipationController extends ChangeNotifier {
   final Listenable changes;
   final String Function() scopeKey;
   final Future<void> Function(String)? onMutation;
+  final VoidCallback? onGroupConnectionChanged;
   final Future<void> Function(List<String>)? onRelationEnded;
   final void Function(String commandKey)? onActiveRoomsChanged;
   final DateTime Function() now;
@@ -343,6 +345,8 @@ class CycleParticipationController extends ChangeNotifier {
     }
     return null;
   }
+
+  Future<List<RecruitmentGroupChoice>?> groups() => _read(gateway.groups);
 
   Future<List<RecruitmentCharacter>?> characters() => _read(gateway.characters);
   Future<MembershipActionContext?> membershipContext(
@@ -1231,6 +1235,10 @@ class CycleParticipationController extends ChangeNotifier {
         'personal-completion-departures',
       }.contains(command.path.split('/').last)) {
         onActiveRoomsChanged?.call(command.key);
+      }
+      if (command.path.endsWith('/common-settings') &&
+          (jsonDecode(command.encoded) as Map)['group_id'] != null) {
+        onGroupConnectionChanged?.call();
       }
       for (final target in command.affectedTargets ?? [command.target]) {
         if (!_valid(e)) return;

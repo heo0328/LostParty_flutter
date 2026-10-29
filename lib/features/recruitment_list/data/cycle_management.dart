@@ -83,12 +83,24 @@ class CycleManagementPreview {
     Map<String, dynamic> raw, {
     Map<String, dynamic> query = const {},
     this.betaData,
+    Map<String, dynamic>? targetGroup,
   }) : wire = jsonDecode(jsonEncode(raw)) as Map<String, dynamic>,
-       query = Map.unmodifiable(query) {
+       query = Map.unmodifiable(query),
+       targetGroup = targetGroup == null
+           ? null
+           : betaFreeze(targetGroup) as Map<String, dynamic> {
     roleId(room);
     raidCycleKey(target);
     roleCheck(cycleManagementLabels.containsKey(action));
     roleShape(wire, 'scope data');
+    roleCheck((query['target_group_id'] != null) == (this.targetGroup != null));
+    if (this.targetGroup != null) {
+      BetaContract.definition('TargetGroup', this.targetGroup);
+      roleCheck(
+        action == 'common' &&
+            query['target_group_id'] == this.targetGroup!['group_id'],
+      );
+    }
     scope = roleMap(wire['scope']);
     data = roleMap(wire['data']);
     roleCheck(
@@ -156,6 +168,7 @@ class CycleManagementPreview {
       roleCheck(affected.toSet().length == affected.length);
       final settings = roleMap(data['current_settings']);
       roleShape(settings, 'title scope group_id group_revision');
+      roleCheck(this.targetGroup == null || settings['group_id'] == null);
       raidText(settings['title']);
       roleCheck({'public', 'group'}.contains(settings['scope']));
       if (settings['group_id'] != null) {
@@ -410,7 +423,7 @@ class CycleManagementPreview {
       CyclePermission.fromJson(roleMap(data['permission']));
     }
   }
-  final Map<String, dynamic>? betaData;
+  final Map<String, dynamic>? betaData, targetGroup;
   final String room, target, action;
   final Map<String, dynamic> wire, query;
   late final Map<String, dynamic> scope, data;
@@ -456,6 +469,7 @@ class CycleManagementPreview {
         if (e.key != 'server_now') e.key: e.value,
     },
     'beta_schedule_config': betaData?['beta_schedule_config'],
+    'target_group': targetGroup,
     'data': {
       for (final e in data.entries)
         if (!{'context_token', 'issued_at', 'expires_at'}.contains(e.key))
@@ -538,10 +552,17 @@ class CycleManagementPreview {
       final group = input.containsKey('group_id')
           ? input['group_id']
           : s['group_id'];
-      roleCheck(group == s['group_id']);
+      final firstLink = s['group_id'] == null && group != null;
+      if (firstLink) {
+        roleCheck(targetGroup != null && group == targetGroup!['group_id']);
+        _permission(targetGroup!['permission']);
+      } else {
+        roleCheck(group == s['group_id'] && targetGroup == null);
+      }
       final visibility = input['scope'] ?? s['scope'];
       roleCheck({'public', 'group'}.contains(visibility));
       roleCheck(visibility != 'group' || group != null);
+      roleCheck(!firstLink || visibility == 'group');
       if (group != null) roleId(group);
       return {
         ...base,
@@ -550,7 +571,11 @@ class CycleManagementPreview {
         'group_id': group,
         'expected_group_revision': group == null
             ? null
-            : rolePositive(s['group_revision']),
+            : rolePositive(
+                firstLink
+                    ? targetGroup!['group_revision']
+                    : s['group_revision'],
+              ),
       };
     }
     if (continuation || opening) {
@@ -731,6 +756,7 @@ class CycleManagementReader {
     roleCheck(
       query.keys.every(
         (k) => {
+          'target_group_id',
           'character_id',
           'selected_role',
           'base_starts_at',
@@ -739,7 +765,15 @@ class CycleManagementReader {
         }.contains(k),
       ),
     );
-    roleCheck(query.isEmpty || {'continue', 'open', 'reopen'}.contains(action));
+    if (action == 'common') {
+      roleCheck(query.keys.every((k) => k == 'target_group_id'));
+      if (query.isNotEmpty) roleId(query['target_group_id']);
+    } else {
+      roleCheck(!query.containsKey('target_group_id'));
+      roleCheck(
+        query.isEmpty || {'continue', 'open', 'reopen'}.contains(action),
+      );
+    }
     if (query.containsKey('character_id')) {
       roleId(query['character_id']);
       roleCheck({'dealer', 'support'}.contains(query['selected_role']));
@@ -771,7 +805,7 @@ class CycleManagementReader {
         'include_session_display': 'true',
       ...query,
     };
-    Map<String, dynamic>? betaData;
+    Map<String, dynamic>? betaData, targetGroup;
     late Map<String, dynamic> raw;
     if (api is BetaInteractionApi) {
       final decoded = await (api as BetaInteractionApi).requestDecoded(
@@ -779,6 +813,9 @@ class CycleManagementReader {
         query: requestQuery,
       );
       raw = decoded.value;
+      targetGroup = decoded.metadata?['target_group'] == null
+          ? null
+          : roleMap(decoded.metadata!['target_group']);
       betaData =
           betaFreeze({
                 'beta_schedule_config':
@@ -786,7 +823,10 @@ class CycleManagementReader {
               })
               as Map<String, dynamic>;
     } else {
-      raw = (await api.request(path, query: requestQuery))!;
+      raw = Map.of((await api.request(path, query: requestQuery))!);
+      if (raw.containsKey('target_group')) {
+        targetGroup = roleMap(raw.remove('target_group'));
+      }
     }
     try {
       return CycleManagementPreview(
@@ -796,6 +836,7 @@ class CycleManagementReader {
         raw,
         query: query,
         betaData: betaData,
+        targetGroup: targetGroup,
       );
     } on FormatException {
       throw const AccountReadException('INVALID_RESPONSE');

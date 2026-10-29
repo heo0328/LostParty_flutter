@@ -576,9 +576,11 @@ class CycleInteractionRepository
   CycleInteractionRepository({
     required this.api,
     required this.recruitment,
+    this.includeGroupList = false,
     this.contractMode = RecruitmentContractMode.legacy,
   });
   final RecruitmentContractMode contractMode;
+  final bool includeGroupList;
   @override
   bool get applicationMessagesEnabled =>
       contractMode == RecruitmentContractMode.betaWire2;
@@ -829,6 +831,7 @@ class CycleInteractionRepository
       api: api,
       mode: contractMode,
       path: '/v2/raid-rooms/search',
+      includeGroupList: includeGroupList,
       method: 'POST',
       body: filter.body(target, cursor: cursor),
       parse: (j) => CycleSearchPage(j, target),
@@ -836,7 +839,11 @@ class CycleInteractionRepository
     if (result.metadata != null) {
       final items = result.metadata!['items'] as List;
       for (var i = 0; i < result.value.rows.length; i++) {
-        result.value.rows[i].betaData = betaDisplayData(roleMap(items[i]));
+        result.value.rows[i].betaData = listDisplayData(
+          result.metadata,
+          roleMap(items[i]),
+          result.value.rows[i].id,
+        );
       }
     }
     return result.value;

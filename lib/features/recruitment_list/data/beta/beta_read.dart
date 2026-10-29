@@ -16,11 +16,15 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   required T Function(Map<String, dynamic>) parse,
   Map<String, dynamic> query = const {},
   bool includeGroupState = false,
+  bool includeGroupList = false,
   String method = 'GET',
   Map<String, dynamic>? body,
 }) async {
   final contract = BetaContract(mode: mode);
-  final q = contract.query(method, path, query);
+  final q = contract.query(method, path, {
+    ...query,
+    if (includeGroupList) 'include_group_state': 'true',
+  });
   if (mode == RecruitmentContractMode.betaWire2) {
     contract.validateRequest(method, path, q, body);
   }
@@ -54,10 +58,24 @@ Future<BetaDecoded<T>> readRecruitment<T>({
     }
     raw.remove('group_state');
   }
+  if (includeGroupList && mode == RecruitmentContractMode.betaWire2) {
+    contract.validateResponse(method, path, 200, raw);
+  }
+  final roomGroups = includeGroupList ? groupListStates(raw) : null;
+  if (includeGroupList) {
+    raw.remove('group_states');
+    raw.remove('room_groups');
+  }
   if (mode == RecruitmentContractMode.legacy) {
     return BetaDecoded(
       parse(raw),
-      groupState == null ? null : {'group_state': groupState},
+      !includeGroupState && !includeGroupList
+          ? null
+          : {
+              if (includeGroupList) ...roleMap(raw['data']),
+              if (includeGroupState) 'group_state': groupState,
+              if (includeGroupList) 'room_group_states': roomGroups,
+            },
     );
   }
   final result = BetaResponse.parse(
@@ -70,6 +88,7 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   return BetaDecoded(result.value, {
     ...roleMap(result.metadata['data']),
     if (includeGroupState) 'group_state': groupState,
+    if (includeGroupList) 'room_group_states': roomGroups,
   });
 }
 
@@ -137,3 +156,57 @@ String? retainedGroupLabel(Map<String, dynamic>? data) {
     _ => '$name · 그룹 상태 확인 불가',
   };
 }
+
+/// Page-scoped directory. Admission-origin group IDs are historical and never
+/// substitute for the current room connection supplied by room_groups.
+Map<String, dynamic> groupListStates(Map<String, dynamic> raw) {
+  final states = <String, dynamic>{};
+  roleCheck(raw['group_states'] is List && raw['room_groups'] is List);
+  for (final value in raw['group_states'] as List) {
+    final state = roleMap(value);
+    BetaContract.definition('GroupLinkState', state);
+    final id = roleId(state['group_id']);
+    roleCheck(!states.containsKey(id));
+    roleCheck(state['state'] != 'unavailable' || state['name'] == null);
+    states[id] = state;
+  }
+  final rooms = <String, dynamic>{};
+  final used = <String>{};
+  for (final value in raw['room_groups'] as List) {
+    final link = roleMap(value);
+    BetaContract.definition('RoomGroupLink', link);
+    final room = roleId(link['room_id']);
+    roleCheck(!rooms.containsKey(room));
+    final group = link['group_id'];
+    roleCheck(group == null || states.containsKey(group));
+    if (group != null) used.add(group as String);
+    rooms[room] = group == null ? null : states[group];
+  }
+  final page = <String>{};
+  for (final value in roleMap(raw['data'])['items'] as List) {
+    final row = roleMap(value);
+    final room = row['room_id'] ?? roleMap(row['target'])['room_id'];
+    page.add(roleId(room));
+    // Only actual card payloads carry the current link. Applications retain origin.
+    final card = row.containsKey('group_id')
+        ? row
+        : row['room'] ?? (row['content'] as Map?)?['room'];
+    if (card is Map) {
+      roleCheck(rooms.containsKey(room));
+      roleCheck(card['group_id'] == (rooms[room] as Map?)?['group_id']);
+    }
+  }
+  roleCheck(page.length == rooms.length && page.containsAll(rooms.keys));
+  roleCheck(used.length == states.length);
+  return betaFreeze(rooms) as Map<String, dynamic>;
+}
+
+Map<String, dynamic>? listDisplayData(
+  Map<String, dynamic>? metadata,
+  Map<String, dynamic> item,
+  String room,
+) => betaDisplayData({
+  ...item,
+  if (metadata?.containsKey('room_group_states') == true)
+    'group_state': (metadata!['room_group_states'] as Map)[room],
+});

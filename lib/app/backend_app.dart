@@ -428,6 +428,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     final cycleReads = CycleReadRepository(
       accountApi,
+      includeGroupList: true,
       membershipProfile: true,
       contractMode: widget.recruitmentContractMode,
     );
@@ -523,6 +524,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       },
     );
     final cycleInteractions = CycleInteractionRepository(
+      includeGroupList: true,
       contractMode: widget.recruitmentContractMode,
       api: accountApi,
       recruitment: recruitmentGateway,
@@ -530,6 +532,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final participation = _participation = CycleParticipationController(
       commandTransport: commandTransport,
       onActiveRoomsChanged: raidUsage.commandApplied,
+      onGroupConnectionChanged: _groupChanges.applied,
       gateway: cycleInteractions,
       session: readSession,
       changes: _memberAccount?.model ?? auth,

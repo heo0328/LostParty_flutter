@@ -1,4 +1,5 @@
 // Generated validation projection from Backend e4137073d80a754c6dea38d8207333eb8523f80b.
+// Group list/initial-link extensions pinned to Backend 6dac5ab2; existing DTOs retained.
 // Successful response/request DTOs; beta-recruitment-wire-2.
 const betaWireSchemaJson = r'''
 {
@@ -319,12 +320,35 @@ const betaWireSchemaJson = r'''
         {
           "name": "schedule_states",
           "required": false
+        },
+        {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false",
+            "title": "Include Group State"
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3PostV2RaidRoomsSearch"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Beta_OutputContract3PostV2RaidRoomsSearch"
+            },
+            {
+              "$ref": "#/$defs/GroupSearchPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupSearchPage"
+            }
+          ]
         }
       }
     },
@@ -650,6 +674,19 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false",
+            "title": "Include Group State"
+          }
         }
       ],
       "request": {
@@ -657,7 +694,17 @@ const betaWireSchemaJson = r'''
       },
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3PostV2RaidRoomsSearch"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Beta_OutputContract3PostV2RaidRoomsSearch"
+            },
+            {
+              "$ref": "#/$defs/GroupSearchPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupSearchPage"
+            }
+          ]
         }
       }
     },
@@ -1058,12 +1105,35 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false",
+            "title": "Include Group State"
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomsRoomIdApplications"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomsRoomIdApplications"
+            },
+            {
+              "$ref": "#/$defs/GroupApplicationPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupApplicationPage"
+            }
+          ]
         }
       }
     },
@@ -1144,6 +1214,19 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "default": "false",
+            "title": "Include Group State"
+          }
         }
       ],
       "request": null,
@@ -1155,9 +1238,20 @@ const betaWireSchemaJson = r'''
             },
             {
               "$ref": "#/$defs/Beta_MembershipActionMembershipPage"
+            },
+            {
+              "$ref": "#/$defs/GroupMembershipPage"
+            },
+            {
+              "$ref": "#/$defs/GroupActionMembershipPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupMembershipPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupActionMembershipPage"
             }
-          ],
-          "title": "Response Contract3 Get  V2 Me Raid-Room-Memberships"
+          ]
         }
       }
     },
@@ -2243,12 +2337,35 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "target_group_id",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Group Id"
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/CommonContext"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommonContext"
+            },
+            {
+              "$ref": "#/$defs/GroupConnectionContext"
+            }
+          ]
         }
       }
     },
@@ -19583,6 +19700,1056 @@ const betaWireSchemaJson = r'''
           }
         }
       ]
+    },
+    "GroupSearchPage": {
+      "properties": {
+        "group_states": {
+          "items": {
+            "$ref": "#/$defs/GroupLinkState"
+          },
+          "type": "array",
+          "title": "Group States"
+        },
+        "room_groups": {
+          "items": {
+            "$ref": "#/$defs/RoomGroupLink"
+          },
+          "type": "array",
+          "title": "Room Groups"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_states",
+        "room_groups",
+        "scope",
+        "data"
+      ],
+      "title": "GroupSearchPage"
+    },
+    "GroupLinkState": {
+      "properties": {
+        "group_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Group Id"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "active",
+            "ended",
+            "unavailable"
+          ],
+          "title": "State"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_id",
+        "name",
+        "state"
+      ],
+      "title": "GroupLinkState"
+    },
+    "RoomGroupLink": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Id"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "group_id"
+      ],
+      "title": "RoomGroupLink"
+    },
+    "BPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/BCard"
+          },
+          "type": "array",
+          "title": "Items"
+        },
+        "directory_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Directory Revision"
+        },
+        "filter_scope_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Filter Scope Digest"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Cursor"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Evaluated At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "items",
+        "directory_revision",
+        "filter_scope_digest",
+        "next_cursor",
+        "evaluated_at"
+      ],
+      "title": "BPage"
+    },
+    "BCard": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "title": {
+          "type": "string",
+          "title": "Title"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope1"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Id"
+        },
+        "admission_mode": {
+          "$ref": "#/$defs/AdmissionMode2"
+        },
+        "experience_level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperienceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "app_capacity": {
+          "$ref": "#/$defs/AppCapacity"
+        },
+        "app_member_count": {
+          "type": "integer",
+          "maximum": 8.0,
+          "minimum": 0.0,
+          "title": "App Member Count",
+          "description": "Distinct target cycle members holding active assignment leases, including review-held slots, not persistent global member count or legacy choices."
+        },
+        "state": {
+          "$ref": "#/$defs/State1"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/BCardItem"
+          },
+          "type": "array",
+          "title": "Items"
+        },
+        "game_items": {
+          "items": {
+            "$ref": "#/$defs/BCardItem"
+          },
+          "type": "array",
+          "title": "Game Items"
+        },
+        "leader_display": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Leader Display"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Created At"
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "restricted": {
+          "type": "boolean",
+          "title": "Restricted"
+        },
+        "schedule_summary": {
+          "$ref": "#/$defs/BAppRaidRoomsSearchRouterSummary"
+        },
+        "combat_requirement": {
+          "$ref": "#/$defs/BCombat"
+        },
+        "continuation_enabled": {
+          "type": "boolean",
+          "title": "Continuation Enabled"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions1"
+        },
+        "leadership": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Leadership"
+        },
+        "my_target_role": {
+          "$ref": "#/$defs/MyTargetRole"
+        },
+        "target_cycle_key": {
+          "type": "string",
+          "title": "Target Cycle Key"
+        },
+        "target_state": {
+          "$ref": "#/$defs/TargetState"
+        },
+        "target_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "room_cycle_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Cycle Id"
+        },
+        "target_generation": {
+          "$ref": "#/$defs/Version"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "revision",
+        "title",
+        "scope",
+        "group_id",
+        "admission_mode",
+        "experience_level",
+        "app_capacity",
+        "app_member_count",
+        "state",
+        "items",
+        "game_items",
+        "leader_display",
+        "created_at",
+        "phase",
+        "restricted",
+        "schedule_summary",
+        "combat_requirement",
+        "continuation_enabled",
+        "permissions",
+        "leadership",
+        "my_target_role",
+        "target_cycle_key",
+        "target_state",
+        "target_revision",
+        "room_cycle_id",
+        "target_generation"
+      ],
+      "title": "BCard"
+    },
+    "Beta_GroupSearchPage": {
+      "properties": {
+        "group_states": {
+          "items": {
+            "$ref": "#/$defs/GroupLinkState"
+          },
+          "type": "array",
+          "title": "Group States"
+        },
+        "room_groups": {
+          "items": {
+            "$ref": "#/$defs/RoomGroupLink"
+          },
+          "type": "array",
+          "title": "Room Groups"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_BPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_states",
+        "room_groups",
+        "scope",
+        "data"
+      ],
+      "title": "Beta_GroupSearchPage"
+    },
+    "GroupApplicationPage": {
+      "properties": {
+        "group_states": {
+          "items": {
+            "$ref": "#/$defs/GroupLinkState"
+          },
+          "type": "array",
+          "title": "Group States"
+        },
+        "room_groups": {
+          "items": {
+            "$ref": "#/$defs/RoomGroupLink"
+          },
+          "type": "array",
+          "title": "Room Groups"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BApplicationPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_states",
+        "room_groups",
+        "scope",
+        "data"
+      ],
+      "title": "GroupApplicationPage"
+    },
+    "BApplicationPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/BApplication"
+          },
+          "type": "array",
+          "title": "Items"
+        },
+        "applications_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Applications Revision"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Cursor"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Evaluated At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "items",
+        "applications_revision",
+        "next_cursor",
+        "evaluated_at"
+      ],
+      "title": "BApplicationPage"
+    },
+    "BApplication": {
+      "properties": {
+        "application_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Application Id"
+        },
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "state": {
+          "type": "string",
+          "title": "State"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Created At"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expires At"
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ended At"
+        },
+        "character_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Character Id"
+        },
+        "selected_role": {
+          "$ref": "#/$defs/SelectedRole"
+        },
+        "display": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object",
+          "title": "Display"
+        },
+        "admission_origin": {
+          "$ref": "#/$defs/BOrigin"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "target_generation": {
+          "$ref": "#/$defs/Version"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "application_id",
+        "room_id",
+        "revision",
+        "state",
+        "created_at",
+        "expires_at",
+        "ended_at",
+        "character_id",
+        "selected_role",
+        "display",
+        "admission_origin",
+        "target_cycle_key",
+        "target_generation"
+      ],
+      "title": "BApplication"
+    },
+    "Beta_GroupApplicationPage": {
+      "properties": {
+        "group_states": {
+          "items": {
+            "$ref": "#/$defs/GroupLinkState"
+          },
+          "type": "array",
+          "title": "Group States"
+        },
+        "room_groups": {
+          "items": {
+            "$ref": "#/$defs/RoomGroupLink"
+          },
+          "type": "array",
+          "title": "Room Groups"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_BApplicationPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_states",
+        "room_groups",
+        "scope",
+        "data"
+      ],
+      "title": "Beta_GroupApplicationPage"
+    },
+    "GroupMembershipPage": {
+      "properties": {
+        "group_states": {
+          "items": {
+            "$ref": "#/$defs/GroupLinkState"
+          },
+          "type": "array",
+          "title": "Group States"
+        },
+        "room_groups": {
+          "items": {
+            "$ref": "#/$defs/RoomGroupLink"
+          },
+          "type": "array",
+          "title": "Room Groups"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BMembershipPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_states",
+        "room_groups",
+        "scope",
+        "data"
+      ],
+      "title": "GroupMembershipPage"
+    },
+    "BMembershipPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/BMembership"
+          },
+          "type": "array",
+          "title": "Items"
+        },
+        "membership_head": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Membership Head"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Cursor"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Evaluated At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "items",
+        "membership_head",
+        "next_cursor",
+        "evaluated_at"
+      ],
+      "title": "BMembershipPage"
+    },
+    "BMembership": {
+      "properties": {
+        "membership_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Membership Id"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "state": {
+          "$ref": "#/$defs/State7"
+        },
+        "joined_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Joined At"
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ended At"
+        },
+        "assignments": {
+          "items": {
+            "$ref": "#/$defs/BOwnAssignment"
+          },
+          "type": "array",
+          "title": "Assignments"
+        },
+        "room": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BCard"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recovery_only": {
+          "type": "boolean",
+          "title": "Recovery Only"
+        },
+        "history_only": {
+          "type": "boolean",
+          "title": "History Only"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions8"
+        },
+        "target_role": {
+          "$ref": "#/$defs/TargetRole"
+        },
+        "cycle_member_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Member Id"
+        },
+        "cycle_member_revision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Version"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "joined_order": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JoinedOrder"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_participation_state": {
+          "$ref": "#/$defs/TargetParticipationState"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "room_cycle_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Room Cycle Id"
+        },
+        "target_generation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Version"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_revision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Version"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "membership_id",
+        "revision",
+        "room_id",
+        "state",
+        "joined_at",
+        "ended_at",
+        "assignments",
+        "room",
+        "recovery_only",
+        "history_only",
+        "permissions",
+        "target_role",
+        "cycle_member_id",
+        "cycle_member_revision",
+        "joined_order",
+        "target_participation_state",
+        "target_cycle_key",
+        "room_cycle_id",
+        "target_generation",
+        "target_revision"
+      ],
+      "title": "BMembership"
+    },
+    "GroupActionMembershipPage": {
+      "properties": {
+        "group_states": {
+          "items": {
+            "$ref": "#/$defs/GroupLinkState"
+          },
+          "type": "array",
+          "title": "Group States"
+        },
+        "room_groups": {
+          "items": {
+            "$ref": "#/$defs/RoomGroupLink"
+          },
+          "type": "array",
+          "title": "Room Groups"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionMembershipReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/MembershipActionMembershipPageData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_states",
+        "room_groups",
+        "scope",
+        "data"
+      ],
+      "title": "GroupActionMembershipPage"
+    },
+    "MembershipActionMembershipPageData": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/MembershipActionMembershipEntry"
+          },
+          "type": "array",
+          "maxItems": 50,
+          "minItems": 0,
+          "title": "Items"
+        },
+        "membership_head": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Membership Head"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Cursor"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Evaluated At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "items",
+        "membership_head",
+        "next_cursor",
+        "evaluated_at"
+      ],
+      "title": "MembershipActionMembershipPageData"
+    },
+    "MembershipActionMembershipEntry": {
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/MembershipActionReaderTarget"
+        },
+        "viewer": {
+          "$ref": "#/$defs/MembershipActionReaderRelation"
+        },
+        "recovery": {
+          "$ref": "#/$defs/MembershipActionRecovery"
+        },
+        "permissions": {
+          "$ref": "#/$defs/MembershipActionReaderPermissions"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BMembership"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "target",
+        "viewer",
+        "recovery",
+        "permissions",
+        "content"
+      ],
+      "title": "MembershipActionMembershipEntry"
+    },
+    "Beta_GroupMembershipPage": {
+      "properties": {
+        "group_states": {
+          "items": {
+            "$ref": "#/$defs/GroupLinkState"
+          },
+          "type": "array",
+          "title": "Group States"
+        },
+        "room_groups": {
+          "items": {
+            "$ref": "#/$defs/RoomGroupLink"
+          },
+          "type": "array",
+          "title": "Room Groups"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_BMembershipPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_states",
+        "room_groups",
+        "scope",
+        "data"
+      ],
+      "title": "Beta_GroupMembershipPage"
+    },
+    "Beta_GroupActionMembershipPage": {
+      "properties": {
+        "group_states": {
+          "items": {
+            "$ref": "#/$defs/GroupLinkState"
+          },
+          "type": "array",
+          "title": "Group States"
+        },
+        "room_groups": {
+          "items": {
+            "$ref": "#/$defs/RoomGroupLink"
+          },
+          "type": "array",
+          "title": "Room Groups"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionMembershipReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_MembershipActionMembershipPageData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_states",
+        "room_groups",
+        "scope",
+        "data"
+      ],
+      "title": "Beta_GroupActionMembershipPage"
+    },
+    "GroupConnectionContext": {
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/GlobalScope"
+        },
+        "data": {
+          "$ref": "#/$defs/CommonContextData"
+        },
+        "target_group": {
+          "$ref": "#/$defs/TargetGroup"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "target_group"
+      ],
+      "title": "GroupConnectionContext"
+    },
+    "TargetGroup": {
+      "properties": {
+        "group_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Group Id"
+        },
+        "group_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "members_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "membership_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Membership Id"
+        },
+        "membership_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "permission": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Permission"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "group_id",
+        "group_revision",
+        "members_revision",
+        "membership_id",
+        "membership_revision",
+        "permission"
+      ],
+      "title": "TargetGroup"
     }
   }
 }
