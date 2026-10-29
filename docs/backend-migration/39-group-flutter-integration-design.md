@@ -1,6 +1,6 @@
 # 그룹 전체 흐름 — Flutter 연결 설계
 
-2026-10-28 / 설계 문서화·Backend 1차 개발 요청 게시 / Flutter 그룹 탭 연결 미착수. Flutter 기준 dev `bdfe0edf`, Backend 조회 기준 dev `1b6f57bb2cfebc5c8ce9f796d59beea0e05cc1dd`.
+2026-10-29 / 기획·인계 재검토 / Flutter 그룹 탭 연결 미착수. Flutter 기준 dev `bdfe0edf`, Backend 구현 인계 기준 `22b1620747707afaa87ba84223e5a2beb886f658`(feat/group-management). 개발서버/DB 반영은 별도 미완료다.
 
 ## 1. 기준·포함/제외
 
@@ -17,24 +17,25 @@
 - 현재 일반 앱: `lib/main.dart` → BackendApp. `lib/app/backend_app.dart`의 `/groups`·검색·생성·코드 가입은 pending이다. 기존 화면이 남았다는 이유로 현재 기능 완료로 표시하지 않는다.
 - 잔존 구현: `lib/features/group/presentation`의 탭/검색/생성/상세/초대/신청/코드 화면과 ViewModel, Domain의 이름 정규화/Validator·역할/관계 모델. 기존 탭은 내 그룹·요청 현황, 상세는 공개요약과 membership 확인 후 private 멤버 읽기를 분리한다.
 - 과거 저장: GroupReadRepository의 watchMyGroups/watchMyRequests와 Player 역방향 Projection, WritePlan의 요청·membership·카운터·활동시각 Transaction을 Firestore Repository/Rules가 실행했다. 현재 새 서버에서 클라이언트 WritePlan을 실행하거나 Firestore 원장을 복원하지 않는다. 상태 전이/검증 의도만 서버 계약과 대조한다.
-- 표시: 기존 GroupMemberDisplay에는 전투력·아이템레벨·보석 검증 표시가 있고 상세에서 멤버의 활동 캐릭터를 펼쳤다. 새 G1 응답에는 이를 채울 전체 필드가 없다. 표시값을0으로 채우거나 남의 로컬 계정DB를 조회해 메우지 않는다.
+- 표시: 기존 GroupMemberDisplay에는 전투력·아이템레벨·보석 검증 표시가 있고 상세에서 멤버의 활동 캐릭터를 펼쳤다. 기본 G1 응답만으로는 부족했으나 현재 인계의 opt-in 표시 DTO·활동 조회가 해당 자료를 제공한다. 표시값을0으로 채우거나 남의 로컬 계정DB를 조회해 메우지 않는다.
 - 과거 기기 확인·Task-11 완료/후속 및 D2/D3 기록은 [DEV_LOG](../project/DEV_LOG.md#group-design-20261028)에 모았다. 과거8~9월 Firebase 인수는 현재 Backend 인수가 아니다.
 
-Backend의 이전 경로404는 문서 이동이었다. 위 고정 SHA의 다음 파일을 읽고 현재 Python Router/Schema 및 JSON 형태의 `openapi/two-cycle.openapi.yaml` 경로·DTO를 대조했다.
+Backend의 이전 경로404는 문서 이동이었다. 초기 조사 SHA1b6f57bb의 다음 파일을 읽고 당시 Python Router/Schema 및 JSON 형태의 `openapi/two-cycle.openapi.yaml` 경로·DTO를 대조했다.
 
 - [현재 그룹 기능 지도](https://github.com/heo0328/lostparty-backend/blob/1b6f57bb2cfebc5c8ce9f796d59beea0e05cc1dd/docs/features/groups/README.md)의 discovery/joining/management.
 - `docs/archive/work-records/features/groups/ISSUE_12_GROUP_G1_SPEC.md`, `ISSUE_12_GROUP_G2_SPEC.md`, `ISSUE_16_GROUP_G3_SPEC.md`는 이력 명세이며 현재 소스/OpenAPI와 함께 읽는다.
-- `app/groups/router.py`, `admission_router.py`, `schemas.py`, `admission_schemas.py`, `management.py`: 현재 disband=false/`GROUP_RECRUITMENT_STATE_UNAVAILABLE`, 해산 write 경로 없음 확인. 모집이 구현됐다는 이유로 해산까지 활성화됐다고 추정하지 않는다.
+- `app/groups/router.py`, `admission_router.py`, `schemas.py`, `admission_schemas.py`, `management.py`: 당시 disband=false/`GROUP_RECRUITMENT_STATE_UNAVAILABLE`, 해산 write 경로 없음 확인(과거 조사). 모집이 구현됐다는 이유로 해산까지 활성화됐다고 추정하지 않는다.
 - [Issue12 이전 소비 회신](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6259124455), [Issue16 이전 통합/미완료](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6262944673). 현재 소스 조회와 개발 서버 실행 버전/실회원 인수는 별개이며 이번에는 서버를 조작하지 않았다.
 
-### 2.1 1차 Backend 회신 확인 — 설계와 실제 구현 구분
+### 2.1 현재 Backend 인계·대조 결과
 
-2026-10-28 [Issue12 회신](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6464713065)·[Issue16 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6464713503)의 설계 SHA는 `92c1702f84720ce76789f100bf0acdb1efd29c82`(feat/group-management)다. [표시 제안](https://github.com/heo0328/lostparty-backend/blob/92c1702f84720ce76789f100bf0acdb1efd29c82/docs/features/groups/discovery/display-contract-proposal.md)·[관리 제안](https://github.com/heo0328/lostparty-backend/blob/92c1702f84720ce76789f100bf0acdb1efd29c82/docs/features/groups/management/phase-one-contract-proposal.md)을 확인했다. app/alembic/openapi/tests 변경0, 서버/DB 반영·실회원/Flutter 인수 미실행 보고다. 아래 기존 제공 API 표에 제안 endpoint를 실행 가능 경로로 추가하지 않는다.
+[Issue12 인계](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6466328231)·[Issue16 인계](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6466327755)의 고정 source/계약은 `22b1620747707afaa87ba84223e5a2beb886f658`다. 같은 SHA의 display_schemas.py·display.py·management_schemas.py·router.py·profile_schemas.py, 표시/관리 계약과 JSON 형태의 two-cycle.openapi.yaml을 대조했다. 이전 설계-only/미구현 상태는 DEV_LOG 및 과거 커밋 이력이며 현재 상태를 대체하지 않는다.
 
-- 표시: reader_profile=group-display-1 opt-in, 현재 membership별 활동 캐릭터 조회, canonical/유효 소유·활동 자료, 역할별 마지막 성공 수치와 현재 분석 오류·null/출처를 분리한다. 오래된 차단 subject를 이름으로 재연결하지 않는다. 기존 gemValidationSnapshot과 integrity displayLabels의 정확한 issues/code 매핑은 Flutter가 실제 DTO 인계 시 대조한다. 저장되지 않은 원본/정상 상태 합성은 요구하지 않는다.
-- 집계: 실효 pending·현재 권한 기준, action_required는 받은 초대와 처리할 가입 신청의 relation 합집합이다. 보낸 신청·관리 초대는 별도 현황이며 필수 처리 수에 더하지 않는다. 조회 실패는0건이 아니다. last_activity는 실제 의미 있는 쓰기만 갱신하며 과거 자료가 없으면 null이다.
-- 그룹 관리: management profile opt-in, CAS·원ACK·코드/관계/사용량 원자 처리, 실제 활성 전용방 검사·불명확 count=null 방향을 대조했다. 추방·대표·조건부 그룹 해산은 미구현이다. 그룹 자체와 레이드 생명주기 분리·기존 참가 보존은 유지한다.
-- 권한 정정: 제안의 비참가 그룹장 command-context/make-public/end는 제품 §9.3의 최신 사용자 지시에 맞춰 제외해야 한다. 그룹장1인/다인방 강제종료 범위를 고르는 질문으로 축소하지 않는다. 그룹원 누구나 개설·해당 레이드 공대장 관리가 확정 기준이며, Backend는 기존 제안 항목을 교체하고 독립 범위의 명세/구현 인계를 진행한다. G-RECOVERY의 실제 자격상실/후임 없음은 별도 미결정이다. [Issue16 권한 정정 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6464943488) 게시·재조회 완료, [Backend 정정 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6465101118)에서 cb9b6b9c 설계 교체·전용 명령 제외를 확인했다. 권한 정정 대기는 해소됐고 실제 구현 인계는 대기다. 기능코드/실행OpenAPI 변경0이라는 보고는 유지한다.
+- 구현 인계: reader_profile=group-display-1, membership별 활동 조회, 개인/그룹 요청집계·활동시각, management_profile=group-management-1, 조건부 해산·추방·대표 변경·그룹원 공통 레이드 목록, 기존 실제 주차 참가 보존. 그룹장 별도 레이드 변경 경로는 없다.
+- 제공/실행 경계: 신규 기능은 DB0034_group_features가 필요하다. 기존0023/0033에서 명시 요청은503 GROUP_FEATURE_NOT_READY다. Backend는 개발서버/DB를 반영하거나 다시 조회하지 않았다고 보고했다. 격리 시험 선택 노드 중복제거152개는 동일HEAD 전체 일괄시험이 아니다. Flutter는 이번에 시험을 재실행하거나 서버/기기 인수를 하지 않았다.
+- 표시: 현재 회원·소유/활동/생명주기와 canonical UUID를 사용한다. 수치는 역할별 마지막 성공과 현재 analysis 오류를 분리하며 null/출처·관측시각을 유지한다. 과거 subject를 이름으로 재연결하지 않는다. 개인 표시 개수/원정대 전체나 카드별 provider 호출을 요구하지 않는다.
+- 보석/빌드 소비 결론: 기존 gemValidationSnapshot의 보석 개수 필드는 재현 계약이 아니다. 현재 Flutter scoped_role_build_mapper가 저장하는 GEM_SLOT_COUNT·FOREIGN_CLASS_GEM·UNMATCHED_SKILL_GEM 오류는 ‘보석 오류’, ARK_GRID_MINIMUM·ARK_GRID_CONDITION 오류는 ‘아크그리드 오류’에 대응할 수 있다. warning은 error로 올리지 않으며 unknown 오류는 일반 분석 오류로 표시한다. clean/미확인·분석 없음과 전투력 last-success를 혼동하지 않는다. 기존 스냅샷/카운트 합성을 위한 Backend 신규 저장·API 요구는 하지 않는다. 실제 화면 어댑터와 역할별 표시는 Flutter 구현에서 검증한다.
+- 기존 모집 연결: 일반 활동 조회의 membership_id/canonical character_id를 현재 모집 filter-context의 alias.group_membership_id·후보와 대조한다. 일반 열람 응답은 후보 token/명령 권한이 아니다. 가입·탈퇴/회원 전환 뒤 표시와 필터/후보 context를 함께 무효화한다.
 
 ## 3. 기능별 상태·담당·완료 기준
 
@@ -44,18 +45,18 @@ Backend의 이전 경로404는 문서 이동이었다. 위 고정 SHA의 다음 
 |---|---|---|---|
 | 내 그룹·공개 검색·상세 | 탭/검색/상세·ReadRepository | G1 제공 | Flutter / HTTP·페이지·권한 연결, 실제 Router→조회→표시 및 복귀 갱신 |
 | 생성·이름 변경 | 생성 VM·정규화, 수정은 화면 연결 대조 필요 | POST/PATCH 제공 | Flutter / 현재 소유/활동 선택·버전·한도 소비, 생성 후 상세·목록/사용량 갱신 |
-| 멤버 카드·활동 캐릭터 펼침 | 카드/표시 DTO·기존 계정 조회 의존 | G1은 membership/역할/이름/직업/가입일/is_me만 제공 | Backend 계약 확인→Flutter / 기존 스펙·활동 캐릭터 공개 범위/일괄조회 대응 확정·카드 유지 |
+| 멤버 카드·활동 캐릭터 펼침 | 카드/표시 DTO·기존 계정 조회 의존 | 표시 profile·활동 GET 구현 인계, 서버 미반영 | Flutter / 현재 DTO를 역할별 표시로 연결, 과거 스냅샷 저장 복제 없이 null/오류·갱신 검증 |
 | 직접 초대 | 정확 이름 검색→대상 확인→전송 | G2 제공 | Flutter / 전역 user ID 대신 target_character_id·현재 버전, 일반 멤버 초대·충돌 기존관계 안내 |
 | 신청·요청관리 | 신청·수신초대·보낸신청·그룹장 관리 | G2 제공 | Flutter / kind/state/permissions·만료·cursor 소비, 승인/거절/철회 후 관련 목록 갱신 |
-| 신청금지·해제 | 그룹장 관리 | G2 제공, 표시 스펙 일부 부족 | Flutter·Backend / subject_id·누적·차단 소비, 부족한 카드 자료는 기존 계약에서 보완 대조 |
+| 신청금지·해제 | 그룹장 관리 | G2+표시 profile 구현 인계, 서버 미반영 | Flutter / subject_id·누적·차단·현재 표시 DTO 소비, 과거 참조 없는 스펙은 미확인 유지 |
 | 초대코드 | 생성/공개/복사·입력확인/즉시가입 | G2 제공 | Flutter / 원문조회·재생성10분·폐기·OFF 의미 동기화, 현재권한 재조회 |
 | 그룹장 이전·일반 탈퇴 | 상세 확인→이전, 별도 탈퇴 | G3 제공 | Flutter / membership UUID/CAS·최소 ACK·현재 GET·이전 후 새 revision 탈퇴 |
-| 조건부 해산 | 1인·pending·활성 전용방 검사 | write 미제공·현재 거절 reason | Backend Issue16 / 현재 실제 모집 원본을 사용하는 검사/원자 해산 계약 제공 후 Flutter 연결 |
-| 멤버 추방 | 권한/목록·후속 요구 | API 미제공 | Backend Issue16 / 그룹장 권한·관계종료·초대/한도·기존 레이드 보존 계약→Flutter 연결 |
-| 그룹 대표 변경 | 대표 needs_update·별도 선택 요구 | status만 제공·변경 API 없음 | Backend Issue16 / 새 대표 소유/활동·revision·기존 그룹 정체성 보존→Flutter 연결 |
+| 조건부 해산 | 1인·pending·활성 전용방 검사 | POST 구현 인계, 서버 미반영 | Flutter / 서버 원본 판정·CAS/ACK·성공 후 갱신 연결 |
+| 멤버 추방 | 권한/목록·후속 요구 | remove POST 구현 인계, 서버 미반영 | Flutter / 새 membership 보호·기존 레이드 보존·갱신 연결 |
+| 그룹 대표 변경 | 대표 needs_update·별도 선택 요구 | representative PUT 구현 인계, 서버 미반영 | Flutter / 그룹장 소유·활동 선택·noop·개인 대표/그룹명 보존 연결 |
 | 자격 상실 정리·그룹장 복구승계 | 과거 별도 정책/부품 | 대응 공개 계약 미확인 | Backend Issue16 / 계정 자격 상실과 단순 그룹탈퇴 구분·후임 없음 경로 확정. 임의 승계 금지 |
 | 그룹 레이드 생성·검색 | 현재 모집 기능의 그룹 연결 | 모집37 경로/원장 사용 | Flutter / 새 그룹 membership 갱신을 현재 모집의 context/후보·캐시와 연결, 기존 C/N·원ACK 유지 |
-| 그룹 레이드 조회·공대장 관리 | 일반 모집 생성/상세 재사용 | 그룹장 별도 변경 권한 제안은 최신 사용자 기준과 불일치 | Backend Issue16 / 그룹원 누구나 생성·해당 레이드 공대장만 기존 관리, 해산검사/방 안내·기존 참가보존 계약 정정 후 Flutter |
+| 그룹 레이드 조회·공대장 관리 | 일반 모집 생성/상세 재사용 | 공통 raid-rooms GET·기존 참가보존 구현 인계, 서버 미반영 | Flutter / 실제 주차 공대장 안내→기존 상세. 별도 그룹장 변경 권한 없음 |
 | 그룹 사용량 배지 | 설계34 확정 요구·기존 셸 재사용 | GET /v1/me/usage-limits 제공 | Flutter / used/limit·회원수명·변경 후 갱신. 실패를0으로 표시하지 않으며 미확인 표시는 구현 전 기존 셸과 통일 |
 | 활동시각·이력/운영 정리 | 제품 §17 장기 요구 | 전체 운영 화면/삭제계약 미확인 | 별도 운영 파트 / 현재 화면에 필요한 활동시각 필드만 먼저 계약 확인, 삭제 구현은 별도 |
 
@@ -75,7 +76,9 @@ Backend의 이전 경로404는 문서 이동이었다. 위 고정 SHA의 다음 
 | 코드입력/가입 | POST /v1/group-join-codes/preview, /join | preview 확인→현재 선택/버전으로 join. 코드 원문을 URL/로그에 넣지 않음 |
 | 이전/탈퇴 | GET /v1/groups/{group_id}/management, POST .../leadership-transfer 또는 leave | 관리 권한·최소 ACK 후 현재 상세/멤버/관리 재조회 |
 
-기존 `/groups`와 하위 화면 진입점을 유지한다. 그룹별 상세·초대·신청관리·코드 화면도 BackendApp DI에 명시적으로 연결한다. 기존 AccountRepository의 구 Player/정수 로컬ID 조회로 canonical 자료를 우회하지 않고 현재 scoped 계정 읽기 계약을 사용한다. 기존 normalizer/표현 로직은 재사용하되 document ID 검사만으로 UUID/서버 자격을 검증했다고 보지 않는다. 50개 고정 문구는 서버 유효 한도 기반 안내로 교체 대상이다.
+인계 추가 API는 GET members에 reader_profile=group-display-1, GET /v1/groups/{group_id}/members/{membership_id}/activity-characters, GET /v1/me/group-request-counts 및 /v1/groups/{group_id}/join-request-counts, GET management에 management_profile=group-management-1, POST /v1/groups/{group_id}/disband, POST /v1/groups/{group_id}/members/{membership_id}/remove, PUT /v1/groups/{group_id}/representative, GET /v1/groups/{group_id}/raid-rooms다. 기존 내 그룹/상세·차단목록도 reader profile을 명시한다. 모집 detail/plan의 보존 그룹 상태는 include_group_state=true에서만 제공한다. 이 목록은 고정 소스 제공이며 현재 서버 실행 가능 판정이 아니다.
+
+기존 `/groups`와 하위 화면 진입점을 유지한다. 그룹별 상세·초대·신청관리·코드 화면도 BackendApp DI에 명시적으로 연결한다. 기존 AccountRepository의 구 Player/정수 로컬ID 조회로 canonical 자료를 우회하지 않고 현재 scoped 계정 읽기 계약을 사용한다. 기존 normalizer/표현 로직은 현재 정책과 맞는 부분만 재사용하되 document ID 검사만으로 UUID/서버 자격을 검증했다고 보지 않는다. 50개 고정 문구는 서버 유효 한도 기반 안내로 교체 대상이다.
 
 ### 조회 수명·재사용
 
@@ -115,9 +118,9 @@ actor는 서버 세션, 그룹은 group_id, 현재 가입은 membership_id, 요�
 
 | ID | 종류 | 확인된 차이·필요 답변 | 담당/협업·해소 조건 |
 |---|---|---|---|
-| G-DISPLAY | 서버 계약 보완 | 기존 멤버 스펙/활동 캐릭터 펼침·금지목록 스펙·활동시각·요청배지 총수와 현재 DTO 차이 | Issue12 / 기존 허용 공개범위 안의 일괄 DTO 또는 재사용 endpoint/식별자·cursor·수명 제시. 모집용 후보토큰을 일반 그룹열람 권한으로 재사용하지 않음 |
-| G-MANAGE | 서버 미구현 | 현재 해산 write 없음, 추방/대표변경/복구승계 없음 | Issue16 / 기존 정책의 권한·CAS·ACK·한도회복·새 관계 보호와 실제 모집 검사 계약/구현 인계 |
-| G-RAID | 권한 설계 정정 수용·실제 구현 대기 | 그룹장 별도 context/make-public/end 제안 제외. 그룹원 누구나 개설·해당 레이드 공대장 관리, 실제 방/주차 상태 및 그룹 소멸 후 기존 참가보존·신규 접근 차단 | Issue16 / 기존 모집 권한 재사용·해산검사/방 안내의 정정 설계 cb9b6b9c를 기준으로 실제 구현 인계. 마지막1인/다인방 그룹장 강제종료 선택은 폐기한 질문이며 제품 결정 대기가 아님 |
+| G-DISPLAY | 구현 인계·Flutter 연결 대기 | 표시/활동/집계 제공, 과거 보석 count 재현 요구 불필요 | Flutter / §2.1 DTO 소비·오류 표시·모집 후보 연결 검증. Backend에는 구체 코드 차이만 회신 |
+| G-MANAGE | 구현 인계·Flutter 연결 대기 | 해산/추방/대표 제공, 복구승계는 별도 | Flutter / 원자 명령·현재 권한·원ACK/새 관계 보호 연결. 개발환경 반영 준비는 Backend |
+| G-RAID | 구현 인계·실제 연동 대기 | 공통 방목록/그룹 소멸 기존 참가보존 제공, 그룹장 별도 권한 제외 완료 | Flutter / 현재 모집과 연결·필터 갱신, Backend / 개발환경 반영 전 범위/준비 확인. G-RECOVERY와 분리 |
 | G-RECOVERY | 제품 결정이 필요할 수 있는 후속 | 계정자격 상실 후 유효 후임이 없는 그룹의 운영 복구 | Backend가 현재 lifecycle 보장/기존 정책과의 차이를 먼저 제시한 뒤 필요한 사용자 결정만 질문. 임의 그룹삭제/승격 금지 |
 | G-OPS | 별도 운영 후속 | §17 보관·정리 요구와 현재 감사/이력 원장 대응 | 운영 파트에서 정책/개인정보·보관 차이 검토, 이번에 자동삭제/DB변환 안 함 |
 
@@ -135,7 +138,7 @@ actor는 서버 세션, 그룹은 group_id, 현재 가입은 membership_id, 요�
 1. 조회·생성·이름/멤버 표시: G1 HTTP/계정 scope/DTO, 탭·하위 Router/DI, 사용량과 생성 성공 갱신. G-DISPLAY 미해소 기능은 연결 대기이며 전체 상세 완료로 보고하지 않는다.
 2. 관계·코드: G2·권한/요청 수명·Relation와GroupDetail·코드 원문 수명, 기존 카드·확인 동작 연결.
 3. 이전·탈퇴: G3·새 membership/최소 ACK·새 revision, 관련 사용량/모집 context 갱신.
-4. 관리 미제공 기능·그룹 레이드: G-MANAGE/G-RAID 계약 인계 후 해산·추방·대표/승계·그룹 모집 조회와 기존 공대장 관리 연결. 단순 서버 모드 변경이나 미지원 경로 호출로 완료하지 않는다.
+4. 관리·그룹 레이드: 인계된 G-MANAGE/G-RAID 계약으로 해산·추방·대표·그룹 모집 조회와 기존 공대장 관리 연결. 단순 서버 모드 변경이나 미지원 경로 호출로 완료하지 않는다.
 5. 일반 main→DI/Router→조회/명령→ACK→갱신까지 최종 검증하고 기능별 사용자 기기 인수 후 통합 판단. 소분류 문서 파트 종료는 dev/main 병합 조건이 아니다.
 
 자동검증은 private 비회원/역할 위조·마지막 자리/동시 수락·초대/신청 충돌·24시간 만료·차단 우회·코드 OFF/재발급10분/폐기·원요청/ACK/rollback·탈퇴/재가입/과거 ACK·권한 변경·회원 전환/늦은 응답·cursor·조회실패 갱신에 집중한다. 서버가 이미 검증한 동일 코드 결과를 반복 요청하지 않고 새 구현/계약 변경의 직접 경계를 검증한다.
