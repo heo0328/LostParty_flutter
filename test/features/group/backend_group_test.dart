@@ -96,6 +96,15 @@ ResponseBody reply(Object value, [int status = 200]) => ResponseBody.fromString(
   },
 );
 void main() {
+  test('representative choices sort by descending level with missing last', () {
+    final choices = [
+      const GroupCharacterChoice('B', {'character_id': 'b'}, itemLevel: 1700),
+      const GroupCharacterChoice('C', {'character_id': 'c'}),
+      const GroupCharacterChoice('D', {'character_id': 'd'}, itemLevel: 1760),
+      const GroupCharacterChoice('A', {'character_id': 'a'}, itemLevel: 1700),
+    ]..sort(GroupCharacterChoice.compare);
+    expect(choices.map((c) => c.id), ['d', 'a', 'b', 'c']);
+  });
   test(
     'retained group state is opt-in, validated separately and absent from old parser',
     () async {

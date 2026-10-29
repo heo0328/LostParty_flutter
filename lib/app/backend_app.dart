@@ -6,6 +6,7 @@ import '../features/recruitment_list/presentation/widgets/cycle_member_action_wi
 import '../features/recruitment_list/data/raid_room_usage_repository.dart';
 import '../features/recruitment_list/presentation/viewmodels/raid_room_usage_controller.dart';
 import 'dart:async';
+import 'dart:convert';
 import '../features/recruitment_list/data/beta/beta_contract.dart';
 import '../features/recruitment_list/data/beta/recruitment_command_store.dart';
 import '../features/recruitment_list/data/beta/recruitment_command_transport.dart';
@@ -469,14 +470,20 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
             continue;
           }
           choices.add(
-            GroupCharacterChoice('${c.characterName} · ${c.serverName}', {
-              'registration_id': reg.registrationId,
-              'character_id': c.characterId,
-              'expected_registration_version': reg.version,
-              'expected_ownership_revision': reg.ownershipRevision,
-              'expected_roster_revision': reg.rosterRevision,
-              'expected_lifecycle_revision': c.lifecycleRevision,
-            }),
+            GroupCharacterChoice(
+              '${c.characterName} · ${c.serverName}',
+              {
+                'registration_id': reg.registrationId,
+                'character_id': c.characterId,
+                'expected_registration_version': reg.version,
+                'expected_ownership_revision': reg.ownershipRevision,
+                'expected_roster_revision': reg.rosterRevision,
+                'expected_lifecycle_revision': c.lifecycleRevision,
+              },
+              itemLevel: double.tryParse(
+                '${groupMap(jsonDecode(c.profileJson))['item_level']}',
+              ),
+            ),
           );
         }
       }

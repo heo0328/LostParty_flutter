@@ -121,7 +121,8 @@ class _BackendGroupPageState extends State<BackendGroupPage>
 
   Future<GroupCharacterChoice?> choose() async {
     final binding = widget.repository.readScope;
-    final choices = await widget.characters();
+    final choices = [...await widget.characters()]
+      ..sort(GroupCharacterChoice.compare);
     if (!mounted || binding != widget.repository.readScope) return null;
     if (choices.isEmpty) {
       throw const AccountReadException('NO_ACTIVITY_CHARACTERS');
@@ -137,6 +138,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
             for (final choice in choices)
               ListTile(
                 title: Text(choice.label),
+                subtitle: Text('Lv. ${choice.itemLevel ?? '미확인'}'),
                 onTap: () => Navigator.pop(context, choice),
               ),
           ],

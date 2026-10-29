@@ -31,10 +31,17 @@ class GroupDetailSnapshot {
 }
 
 class GroupCharacterChoice {
-  const GroupCharacterChoice(this.label, this.selection);
+  const GroupCharacterChoice(this.label, this.selection, {this.itemLevel});
   final String label;
+  final double? itemLevel;
   final Map<String, dynamic> selection;
   String get id => selection['character_id'] as String;
+  static int compare(GroupCharacterChoice a, GroupCharacterChoice b) {
+    final level = (b.itemLevel ?? -1).compareTo(a.itemLevel ?? -1);
+    if (level != 0) return level;
+    final name = a.label.compareTo(b.label);
+    return name != 0 ? name : a.id.compareTo(b.id);
+  }
 }
 
 String groupSpecText(Object? value) {
