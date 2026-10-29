@@ -1,5 +1,9 @@
 # 개발 이력
 
+## 2026-10-30 — 일반 모집의 최초 그룹 연결 최소안 조사
+
+현재 V2 integrated_models.RecruitmentRoom은 nullable group_id FK와 scope를 이미 보유하고 CommonSettings도 group_id/expected_group_revision을 입력받는다. 실제 제한은 cycle_common.execute의 GROUP_LINK_IMMUTABLE, Flutter cycle_management의 동일값 검사와 기존 설계 계약이다. 사용자의 ‘내 그룹 선택으로 기존 방에 연결’ 안을 우선 검토하는 것이 구조적으로 타당함을 확인하고 [Issue16](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6501728155)에 최초연결/공통명령·대상증거·참가/기록 보존의 최소 제안을 요청했다. 원본 V1 Room과 현재 V2 원장을 구분했다. A→B 변경/해제·배포/DB 변경을 승인 범위로 확대하지 않았으며 기능코드는 수정하지 않았다. 문서 diff/게시 확인만 수행한다.
+
 ## 2026-10-30 — 그룹 기기 통과·모집 카드 그룹 표기
 
 사용자가 그룹 초대/거절/수락, 코드 생성/코드 가입, 그룹원 코드 표시/폐기, 그룹원 추방 성공을 보고했다. 그 외 검색/전투력·이전/탈퇴/해산·그룹 모집 필터는 이 보고로 인수 완료 확대하지 않는다. [Issue12 결과/카드 계약 확인](https://github.com/heo0328/lostparty-backend/issues/12#issuecomment-6501551683)에 회신했다.
