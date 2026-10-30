@@ -179,6 +179,8 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 없는 N의 opening-context는 GET마다 새 seed로 prospective 회차/round·표시 ref/hash를 만든다(Backend 실행b8542ef7의 cycle_opening.prepare/session_display.preview). 사용자가 확인한 원 검토를 현재 Controller 회원/환경 epoch에 묶고 그대로 원개방 요청에 저장한다. 확인 직전 별도 GET의 새 seed와 서명을 비교하지 않으며 생성 예정 ID/표시 hash를 임의 삭제·정규화하지 않는다. 서버 execute는 token.seed로 같은 검토를 재구성하고 require_match·현재 권한·CAS·만료를 트랜잭션 안에서 검증한다. 거절 시 UI의 기존 재조회로 새 확인을 받는다. 이미 존재하는 N·다른 관리 명령의 재검토/서명 비교는 유지하며 응답 유실 시 저장한 원검토만 같은 키로 복구한다.
 
+개방 일정 검토는 UTC 시각의 문자열 표기(`.000Z`/`Z`/`+00:00`)가 아닌 기존 DateTime 값과 조율 여부/추가 인원으로 비교한다. 실제 분·설정 변경은 계속 거절하며 원요청 시각 문자열은 재작성하지 않는다.
+
 과거 저장 원요청은 기존 snapshot을 고정해 method/path/query/body/key·검증 근거와 원ACK를 당시 계약으로 검증한다. 신규 실행 실패의 구계약 fallback은 없다. CLIENT_UPGRADE_REQUIRED는 확정 거절로 슬롯을 정리하고 별도 사용자 명령에서 최신 상태를 검토한다. GROUP_FEATURE_NOT_READY는 준비 미완료로 안내한다. 저장 스키마 변경·원요청 자동 변환·개발자료 이중 운영을 추가하지 않는다.
 
 직접 경계 시험은 C/N·과거 세대 매핑, 세 가지 변경의 한 번 저장/영향 주차 갱신, 위임 후보8명·개방의 서버 효과, unavailable/잘못된 식별자·revision·권한·만료, 원요청/원ACK 복구, 회원 전환 중 늦은 응답, 초안 보존·취소 시 쓰기 없음을 검증한다. 최종 전체 시험·분석과 실제 실행 결과는 DEV_LOG에 기록한다. 서버의 권한·승계 원자성 검증은 Backend 인계 근거이며 Flutter의 실제 인증 쓰기/기기 결과로 합산하지 않는다. 비그룹원 배지·긴 이름·Penpot03 검수는 결과 전까지 미완료다.

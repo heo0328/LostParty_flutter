@@ -33,6 +33,9 @@ final config = BetaScheduleEditor.config(
 Map<String, dynamic> openingWire(String action) {
   final raw = clone(management.managementWire(action));
   raw['data']['beta_schedule_config'] = clone(config);
+  // Pydantic serializes zero fractional seconds without Dart's `.000`.
+  raw['data']['beta_schedule_config']['base_starts_at'] =
+      (config['base_starts_at'] as String).replaceFirst('.000Z', 'Z');
   return raw;
 }
 
@@ -101,6 +104,67 @@ void main() {
     },
   );
   for (final action in ['open', 'reopen']) {
+    test(
+      '$action accepts server UTC serialization and rejects actual schedule changes',
+      () async {
+        final input = {
+          ...config,
+          'early_coordination_enabled': false,
+          'early_additional_members': null,
+        };
+        final instant = DateTime.parse(input['base_starts_at']);
+        final canonical = instant.toIso8601String().replaceFirst('.000Z', 'Z');
+        for (final serverTime in [
+          canonical,
+          canonical.replaceFirst('Z', '+00:00'),
+          instant.toIso8601String(),
+        ]) {
+          final raw = openingWire(action);
+          raw['data']['beta_schedule_config'] = {
+            ...input,
+            'base_starts_at': serverTime,
+          };
+          final api = base.Api()..respond = (_, _) async => raw;
+          final preview = await CycleManagementReader(BetaInteractionApi(api))
+              .preview(
+                base.roomId,
+                cycles.n,
+                action,
+                query: {
+                  for (final e in input.entries)
+                    if (e.value != null) e.key: e.value,
+                  'base_starts_at': canonical,
+                },
+              );
+          expect(
+            preview.body({'beta_schedule': input})['beta_schedule'],
+            input,
+          );
+          expect(
+            () => preview.body({
+              'beta_schedule': {
+                ...input,
+                'base_starts_at': instant
+                    .add(const Duration(minutes: 1))
+                    .toIso8601String(),
+              },
+            }),
+            throwsFormatException,
+          );
+          expect(
+            () => preview.body({
+              'beta_schedule': {
+                ...input,
+                'early_coordination_enabled': true,
+                'early_additional_members': 2,
+              },
+            }),
+            throwsFormatException,
+          );
+        }
+      },
+    );
+
     test('$action binds explicit N config to context and command', () async {
       final api = base.Api()..respond = (_, q) async => openingWire(action);
       final preview = await CycleManagementReader(
@@ -115,7 +179,10 @@ void main() {
         api.requests.single['query']['contract_profile'],
         BetaContract.profile,
       );
-      expect(preview.betaData!['beta_schedule_config'], config);
+      expect(
+        BetaScheduleConfig(preview.betaData!['beta_schedule_config']).startsAt,
+        DateTime.parse(config['base_starts_at']),
+      );
       expect(
         () => preview.body({
           'beta_schedule': {...config, 'early_additional_members': 3},

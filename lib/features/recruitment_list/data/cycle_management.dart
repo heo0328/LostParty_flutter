@@ -554,12 +554,16 @@ class CycleManagementPreview {
 
   Map<String, dynamic> _openingSchedule(Map<String, dynamic> input) {
     final schedule = BetaScheduleConfig(roleMap(input['beta_schedule']));
-    roleCheck(
-      _stable(schedule.wire) == _stable(betaData!['beta_schedule_config']),
+    final reviewed = BetaScheduleConfig(
+      roleMap(betaData!['beta_schedule_config']),
     );
     roleCheck(
-      _stable(query['base_starts_at']) ==
-              _stable(schedule.wire['base_starts_at']) &&
+      schedule.startsAt == reviewed.startsAt &&
+          schedule.enabled == reviewed.enabled &&
+          schedule.additionalMembers == reviewed.additionalMembers,
+    );
+    roleCheck(
+      roleUtc(query['base_starts_at']) == schedule.startsAt &&
           query['early_coordination_enabled'] == schedule.enabled &&
           query['early_additional_members'] == schedule.additionalMembers,
     );

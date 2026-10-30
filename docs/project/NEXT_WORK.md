@@ -8,11 +8,11 @@
 
 ## 실제 상태·담당·다음 행동
 
-기존 금주만 있는 모집의 다음주 개방에서 검토마다 달라지는 예정 회차 ID를 변경으로 오판하던 오류를 수정했다. 없는 N은 현재 회원/환경 세대에서 확인한 원 token/ID·그룹 효과를 한 개방 명령에 저장하며 서버가 같은 seed로 상태/권한·그룹·revision·만료를 원자 재검증한다. 실제 상태 변경/권한 거절은 원요청을 정리하고 새 확인을 기다린다. 직접 회귀108PASS이며 다음 행동은 사용자가 기존 금주 방에서 같은 개방을 재확인하는 것이다. C/N 동시 생성·서로 다른 캐릭터/그룹·금주 탈퇴의 자동승계/일반 전환·반대 주차 보존은 사용자 정상 인수를 기록했다.
+ffffc4e6 이후 기기 재실패의 두 번째 원인은 `_openingSchedule`의 UTC 문자열 비교였다. 실행 서버 DTO가 `.000Z`를 같은 시각의 `Z`로 직렬화하는 것을 합성값으로 확인했고 수정 전 open/reopen 양쪽 실패를 재현했다. 시각은 기존 DateTime 값, 조율 설정은 타입 값으로 비교하도록 최소 수정했으며 직접110PASS·전체 분석0이다. 원 body/token/key·예정 ID·회원 epoch·다른 일정/인원/그룹 변경 검증은 보존한다. 최근2시간 실행 로그는 opening-context GET200 37건·개방 POST0건으로, 확인 범위에서는 기존 명령이 서버에 도달하기 전 실패했다. 수정 앱의 기존 금주 방 개방 기기 재확인이 남아 있다. C/N 동시 생성·금주 자동승계/일반 전환·N 보존의 기존 사용자 인수는 유지한다.
 
 **Backend 고정 계약 소비·Flutter 네이티브 연결 완료 / 변경 경계 기기 인수·Penpot 검수 대기**다. [Backend 구현 인계](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6523975291)의 b212ad0f 계약을 소비한다. [실제 개발 반영 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6524503597)을 재조회했으며 실행 소스b8542ef7·DB0035, 후행 기록476d1f31이다. 새 group_policy_version·주차별 원본/효과·cycle_groups를 일반 앱 경로에 연결했다. 그룹 편집은 기존 모집 조건 변경, 공통 정보 변경은 제목만 제공한다. 새 요청과 과거 저장 원요청/ACK 검증을 분리하고 자동 query/본문 변환은 하지 않는다. 자동 검증 결과는 DEV_LOG에 기록하며 실제 인증 쓰기·기기 인수와 구분한다. 기존 기기 인수는 보존하되 과거 공개 왕복 시험을 새 정책 인수로 사용하지 않는다.
 
-기반 연결88a69fa7의 전체 `flutter test` **2,724 PASS**를 보존한다. 이번 없는 N 개방 수정은 스키마/DTO·Router/DI를 바꾸지 않으며 개방·영속복구·그룹/승계 직접108PASS와 전체 분석·변경 파일 포맷·diff 검토로 검증한다. 코드/자동검증 파트와 실제 기기 인수는 구분한다.
+기반 연결88a69fa7의 전체 `flutter test` **2,724 PASS**를 보존한다. 이번 없는 N 개방 수정은 스키마/DTO·Router/DI를 바꾸지 않으며 개방·영속복구·그룹/승계 직접110PASS와 전체 분석·변경 파일 포맷·diff 검토로 검증한다. 코드/자동검증 파트와 실제 기기 인수는 구분한다.
 
 | 다음 작업 | 담당 | 완료 조건 |
 |---|---|---|
@@ -28,6 +28,7 @@
 - 현행 근거: [Issue16 서버 인계](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6503318794), [Flutter 기존 연결](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6503895060).
 - 새 정책 요청: [Issue16 확정 정책·구현 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6521839291), 게시 본문 재조회 확인. Backend b212ad0f 고정 계약·격리 검증 및 실행b8542ef7/DB0035 반영 인계 완료. [Flutter 연결·자동검증 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6527340458)의 본문을 재조회했다. 다음 담당 사용자는 아래 변경 경계 기기 확인, 양측은 구체 차이 수정이다.
 - [기기 일부 통과·없는 N 개방 수정 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6528974995): 본문 재조회 확인. 추가 Backend 변경 요청 없이 사용자 개방 재확인 대기.
+- [개방 재실패·UTC 비교 수정 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529532073): 본문 재조회 확인. 이번 개방의 앱 최소 수정과 별도 상세GET500 관찰을 분리했다. 개방은 사용자 재확인 대기, 조회500 원인 대조는 Backend 후속이다.
 - 모집·탈퇴 연계: [Issue13 출처 연결](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6521848149), 게시 본문 재조회 확인. completed 상태 유지·재개/종료 조작 없음.
 
 ## 회귀 보호·자동 검증
