@@ -618,8 +618,19 @@ class CycleInteractionRepository
       _decode(() async {
         roleId(room);
         raidCycleKey(view);
+        final path = '/v2/raid-rooms/$room/membership-action-context';
+        if (interactionApi is BetaInteractionApi) {
+          final decoded = await (interactionApi as BetaInteractionApi)
+              .requestDecoded(path, query: {'target_cycle_key': view});
+          return MembershipActionContext(
+            room,
+            view,
+            decoded.value,
+            groupPolicyData: decoded.metadata,
+          );
+        }
         final raw = await interactionApi.request(
-          '/v2/raid-rooms/$room/membership-action-context',
+          path,
           query: {'target_cycle_key': view},
         );
         return MembershipActionContext(room, view, raw!);
@@ -685,10 +696,20 @@ class CycleInteractionRepository
     roleId(room);
     raidCycleKey(target);
     roleId(round);
-    final raw = await interactionApi.request(
-      '/v2/raid-rooms/$room/personal-completion-departure-context',
-      query: {'target_cycle_key': target, 'round_id': round},
-    );
+    final path = '/v2/raid-rooms/$room/personal-completion-departure-context';
+    final query = {'target_cycle_key': target, 'round_id': round};
+    if (interactionApi is BetaInteractionApi) {
+      final decoded = await (interactionApi as BetaInteractionApi)
+          .requestDecoded(path, query: query);
+      return DeparturePreview(
+        room,
+        target,
+        round,
+        decoded.value,
+        groupPolicyData: decoded.metadata,
+      );
+    }
+    final raw = await interactionApi.request(path, query: query);
     return DeparturePreview(room, target, round, raw!);
   });
   @override

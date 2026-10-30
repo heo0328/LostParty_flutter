@@ -1,3 +1,4 @@
+import '../../data/beta/cycle_group_policy.dart';
 import 'cycle_action_dialog_route.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -241,6 +242,10 @@ class _MembershipDialogState extends State<_MembershipDialog> {
               children: [
                 if (loading) const LinearProgressIndicator(),
                 if (p != null) ...[
+                  for (final effect in p.groupEffects)
+                    Text(
+                      '${effect['target_cycle_key']} · ${CycleGroupEffect(effect).description}',
+                    ),
                   for (final target in p.impact['targets'] as List) ...[
                     Text(
                       '${target['target_cycle_key'] == p.context.scope['current_cycle_key'] ? '이번주' : '다음주'} · ${target['target_cycle_key']} 주차',

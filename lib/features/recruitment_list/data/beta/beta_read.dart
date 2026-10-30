@@ -2,6 +2,7 @@ import 'coordination_wait.dart';
 import '../../../account/domain/server_registration_api.dart';
 import '../../../account/domain/role_summary.dart';
 import 'beta_contract.dart';
+import 'cycle_group_policy.dart';
 
 class BetaDecoded<T> {
   const BetaDecoded(this.value, this.metadata);
@@ -64,7 +65,7 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   final roomGroups = includeGroupList ? groupListStates(raw) : null;
   if (includeGroupList) {
     raw.remove('group_states');
-    raw.remove('room_groups');
+    raw.remove('cycle_groups');
   }
   if (mode == RecruitmentContractMode.legacy) {
     return BetaDecoded(
@@ -87,6 +88,8 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   );
   return BetaDecoded(result.value, {
     ...roleMap(result.metadata['data']),
+    if (result.metadata['group_policy'] != null)
+      'group_policy': result.metadata['group_policy'],
     if (includeGroupState) 'group_state': groupState,
     if (includeGroupList) 'room_group_states': roomGroups,
   });
@@ -106,6 +109,8 @@ Map<String, dynamic>? betaDisplayData(Map<String, dynamic>? raw) {
             : schedule,
         'coordination_wait': ?wait,
         if (raw.containsKey('group_state')) 'group_state': raw['group_state'],
+        if (raw.containsKey('group_policy'))
+          'group_policy': CycleGroupPolicy(roleMap(raw['group_policy'])).wire,
         if (raw.containsKey('recruitment_identity'))
           'recruitment_identity': raw['recruitment_identity'],
       })
@@ -147,6 +152,13 @@ String betaDepartureText(Map<String, dynamic> data) {
 }
 
 String? retainedGroupLabel(Map<String, dynamic>? data) {
+  final policy = data?['group_policy'];
+  if (policy is Map && policy['state'] == 'unavailable') return '그룹 정보 확인 불가';
+  if (policy is Map &&
+      policy['state'] == 'known' &&
+      policy['scope'] == 'public') {
+    return null;
+  }
   final group = data?['group_state'];
   if (group is! Map) return null;
   final name = group['name'] ?? '연결 그룹';
@@ -157,11 +169,10 @@ String? retainedGroupLabel(Map<String, dynamic>? data) {
   };
 }
 
-/// Page-scoped directory. Admission-origin group IDs are historical and never
-/// substitute for the current room connection supplied by room_groups.
+/// Page-scoped policies use room, actual cycle and generation together.
 Map<String, dynamic> groupListStates(Map<String, dynamic> raw) {
   final states = <String, dynamic>{};
-  roleCheck(raw['group_states'] is List && raw['room_groups'] is List);
+  roleCheck(raw['group_states'] is List && raw['cycle_groups'] is List);
   for (final value in raw['group_states'] as List) {
     final state = roleMap(value);
     BetaContract.definition('GroupLinkState', state);
@@ -170,43 +181,67 @@ Map<String, dynamic> groupListStates(Map<String, dynamic> raw) {
     roleCheck(state['state'] != 'unavailable' || state['name'] == null);
     states[id] = state;
   }
-  final rooms = <String, dynamic>{};
-  final used = <String>{};
-  for (final value in raw['room_groups'] as List) {
-    final link = roleMap(value);
-    BetaContract.definition('RoomGroupLink', link);
-    final room = roleId(link['room_id']);
-    roleCheck(!rooms.containsKey(room));
-    final group = link['group_id'];
-    roleCheck(group == null || states.containsKey(group));
-    if (group != null) used.add(group as String);
-    rooms[room] = group == null ? null : states[group];
+  final policies = <String, dynamic>{};
+  for (final value in raw['cycle_groups'] as List) {
+    final policy = CycleGroupPolicy(roleMap(value));
+    roleCheck(!policies.containsKey(policy.identity));
+    roleCheck(policy.groupId == null || states.containsKey(policy.groupId));
+    policies[policy.identity] = {
+      'group_policy': policy.wire,
+      'group_state': policy.groupId == null ? null : states[policy.groupId],
+    };
   }
-  final page = <String>{};
+  final used = <String>{};
   for (final value in roleMap(raw['data'])['items'] as List) {
     final row = roleMap(value);
-    final room = row['room_id'] ?? roleMap(row['target'])['room_id'];
-    page.add(roleId(room));
-    // Only actual card payloads carry the current link. Applications retain origin.
+    final target = _policyTarget(row);
+    final matches = policies.entries
+        .where((e) => _matchesPolicy(roleMap(e.value)['group_policy'], target))
+        .toList();
+    roleCheck(matches.length == 1);
+    used.add(matches.single.key);
+    // Current card fields must agree, never overwrite historical admission_origin.
     final card = row.containsKey('group_id')
         ? row
         : row['room'] ?? (row['content'] as Map?)?['room'];
-    if (card is Map) {
-      roleCheck(rooms.containsKey(room));
-      roleCheck(card['group_id'] == (rooms[room] as Map?)?['group_id']);
+    if (card is Map &&
+        roleMap(matches.single.value)['group_policy']['state'] == 'known') {
+      roleCheck(
+        card['group_id'] ==
+            roleMap(matches.single.value)['group_policy']['group_id'],
+      );
     }
   }
-  roleCheck(page.length == rooms.length && page.containsAll(rooms.keys));
-  roleCheck(used.length == states.length);
-  return betaFreeze(rooms) as Map<String, dynamic>;
+  roleCheck(used.length == policies.length);
+  return betaFreeze(policies) as Map<String, dynamic>;
 }
+
+Map<String, dynamic> _policyTarget(Map<String, dynamic> row) {
+  final t = row['target'] ?? row['room'] ?? row;
+  return roleMap(t);
+}
+
+bool _matchesPolicy(Map<String, dynamic> policy, Map<String, dynamic> target) =>
+    policy['room_id'] == target['room_id'] &&
+    policy['target_cycle_key'] == target['target_cycle_key'] &&
+    policy['room_cycle_id'] == target['room_cycle_id'] &&
+    policy['generation'] == target['target_generation'];
 
 Map<String, dynamic>? listDisplayData(
   Map<String, dynamic>? metadata,
   Map<String, dynamic> item,
   String room,
-) => betaDisplayData({
-  ...item,
-  if (metadata?.containsKey('room_group_states') == true)
-    'group_state': (metadata!['room_group_states'] as Map)[room],
-});
+) {
+  final directory = metadata?['room_group_states'];
+  Map<String, dynamic>? policy;
+  if (directory is Map) {
+    final target = _policyTarget(item);
+    roleCheck(target['room_id'] == room);
+    final matches = directory.values
+        .where((v) => _matchesPolicy(roleMap(v)['group_policy'], target))
+        .toList();
+    roleCheck(matches.length == 1);
+    policy = roleMap(matches.single);
+  }
+  return betaDisplayData({...item, if (policy != null) ...policy});
+}

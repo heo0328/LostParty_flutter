@@ -9,7 +9,6 @@ import 'package:lost_party/features/recruitment_list/data/membership_readers.dar
 import 'package:lost_party/features/recruitment_list/data/cycle_read_repository.dart';
 import 'backend_recruitment_test.dart' as b;
 import 'cycle_interaction_test.dart' as search;
-import 'cycle_management_test.dart' as management;
 import 'cycle_recruitment_test.dart' as cycles;
 import 'membership_readers_test.dart' as records;
 
@@ -18,9 +17,25 @@ const beta = RecruitmentContractMode.betaWire2;
 Map<String, dynamic> copy(Map<String, dynamic> value) =>
     jsonDecode(jsonEncode(value)) as Map<String, dynamic>;
 
+Map<String, dynamic> policyFor(
+  Map<String, dynamic> target, {
+  String? groupId = group,
+}) => {
+  'room_id': target['room_id'],
+  'target_cycle_key': target['target_cycle_key'],
+  'room_cycle_id': target['room_cycle_id'],
+  'generation': target['target_generation'],
+  'scope': groupId == null ? 'public' : 'group',
+  'group_id': groupId,
+  'revision': 1,
+  'state': 'known',
+};
+String policyKey(Map<String, dynamic> p) =>
+    '${p['room_id']}/${p['target_cycle_key']}/${p['room_cycle_id']}/${p['generation']}';
 Map<String, dynamic> groupPage({String state = 'active'}) {
   final raw = search.searchWire(cycles.c);
   raw['data']['items'][0]['group_id'] = group;
+  raw['data']['items'][0]['scope'] = 'group';
   raw['data']['items'][0]['beta_schedule'] = null;
   raw['group_states'] = [
     {
@@ -29,8 +44,8 @@ Map<String, dynamic> groupPage({String state = 'active'}) {
       'state': state,
     },
   ];
-  raw['room_groups'] = <Map<String, dynamic>>[
-    {'room_id': b.roomId, 'group_id': group},
+  raw['cycle_groups'] = <Map<String, dynamic>>[
+    policyFor(raw['data']['items'][0]),
   ];
   return raw;
 }
@@ -65,12 +80,17 @@ void main() {
       final raw = records.sample('current_unknown_generation_page');
       final item = raw['data']['items'][0];
       item['beta_schedule'] = null;
-      final room = item['target']['room_id'] as String;
       raw['group_states'] = [
         {'group_id': group, 'name': '보존 그룹', 'state': 'ended'},
       ];
-      raw['room_groups'] = [
-        {'room_id': room, 'group_id': group},
+      raw['cycle_groups'] = [
+        {
+          ...policyFor(item['target']),
+          'state': 'unavailable',
+          'scope': null,
+          'group_id': null,
+          'revision': null,
+        },
       ];
       final api = b.Api()..respond = (_, _) async => raw;
       final result = await readRecruitment(
@@ -89,7 +109,7 @@ void main() {
       expect(row.profile!.content, isNull);
       expect(
         retainedGroupLabel(listDisplayData(result.metadata, item, row.roomId)),
-        '보존 그룹 · 해산된 그룹',
+        '그룹 정보 확인 불가',
       );
     },
   );
@@ -98,9 +118,9 @@ void main() {
     () {
       for (final change in <void Function(Map<String, dynamic>)>[
         (raw) => raw.remove('group_states'),
-        (raw) => raw['room_groups'] = <Map<String, dynamic>>[],
-        (raw) => raw['room_groups'].add(copy(raw['room_groups'][0])),
-        (raw) => raw['room_groups'][0]['group_id'] = null,
+        (raw) => raw['cycle_groups'] = <Map<String, dynamic>>[],
+        (raw) => raw['cycle_groups'].add(copy(raw['cycle_groups'][0])),
+        (raw) => raw['cycle_groups'][0]['group_id'] = null,
         (raw) => raw['group_states'][0]['state'] = 'unknown',
         (raw) => raw['group_states'][0]['group_id'] = b.membershipId,
       ]) {
@@ -109,19 +129,13 @@ void main() {
         expect(() => groupListStates(raw), throwsFormatException);
       }
       final ended = groupListStates(groupPage(state: 'ended'));
-      expect(
-        retainedGroupLabel({'group_state': ended[b.roomId]}),
-        '서버 그룹 · 해산된 그룹',
-      );
+      expect(retainedGroupLabel(ended.values.single), '서버 그룹 · 해산된 그룹');
       final missing = groupListStates(groupPage(state: 'unavailable'));
-      expect(
-        retainedGroupLabel({'group_state': missing[b.roomId]}),
-        contains('확인 불가'),
-      );
+      expect(retainedGroupLabel(missing.values.single), contains('확인 불가'));
       expect(
         groupListStates({
           'data': {'items': []},
-          'room_groups': [],
+          'cycle_groups': [],
           'group_states': [],
         }),
         isEmpty,
@@ -134,66 +148,42 @@ void main() {
     () {
       final raw = groupPage();
       raw['data']['items'] = [
-        {
-          'room_id': b.roomId,
+        <String, dynamic>{
+          ...raw['cycle_groups'][0],
+          'target_generation': raw['cycle_groups'][0]['generation'],
           'admission_origin': {'group_id': b.membershipId},
         },
       ];
-      expect(groupListStates(raw)[b.roomId]['group_id'], group);
+      expect(
+        groupListStates(raw).values.single['group_policy']['group_id'],
+        group,
+      );
       raw['data']['items'] = [
         {
-          'target': {'room_id': b.roomId},
+          'target': <String, dynamic>{
+            ...raw['cycle_groups'][0],
+            'target_generation': raw['cycle_groups'][0]['generation'],
+          },
           'content': null,
         },
       ];
-      expect(groupListStates(raw)[b.roomId]['group_id'], group);
+      expect(
+        groupListStates(raw).values.single['group_policy']['group_id'],
+        group,
+      );
       expect(raw['data']['items'][0]['content'], isNull);
     },
   );
 
   test(
-    'fixed beta root target survives decoding and binds the selected group',
+    'new native common menu rejects obsolete initial-link query before HTTP',
     () async {
-      final raw = management.managementWire('common');
-      raw['target_group'] = {
-        'group_id': group,
-        'group_revision': 4,
-        'members_revision': 6,
-        'membership_id': b.membershipId,
-        'membership_revision': 2,
-        'permission': {'allowed': true, 'reason': null, 'next_change_at': null},
-      };
-      final api = b.Api()..respond = (_, _) async => raw;
+      final api = b.Api();
       final repo = CycleInteractionRepository(
         api: api,
         recruitment: cycles.CycleGateway(),
         contractMode: beta,
       );
-      final preview = await repo.management(
-        b.roomId,
-        cycles.c,
-        'common',
-        query: {'target_group_id': group},
-      );
-      expect(
-        preview.body({
-          'title': '연결',
-          'group_id': group,
-          'scope': 'group',
-        })['expected_group_revision'],
-        4,
-      );
-      final changed = copy(raw)..['target_group']['membership_revision'] = 3;
-      api.respond = (_, _) async => changed;
-      final next = await repo.management(
-        b.roomId,
-        cycles.c,
-        'common',
-        query: {'target_group_id': group},
-      );
-      expect(next.signature, isNot(preview.signature));
-      raw['target_group']['group_id'] = b.membershipId;
-      api.respond = (_, _) async => raw;
       await expectLater(
         repo.management(
           b.roomId,
@@ -203,6 +193,7 @@ void main() {
         ),
         throwsA(anything),
       );
+      expect(api.requests, isEmpty);
     },
   );
 

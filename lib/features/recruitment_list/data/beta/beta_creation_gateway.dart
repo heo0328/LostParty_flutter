@@ -7,6 +7,7 @@ import '../../domain/backend_recruitment.dart';
 import '../../domain/policies/recruitment_start_policy.dart';
 import '../../domain/policies/party_cycle_policy.dart';
 import 'beta_contract.dart';
+import 'cycle_group_policy.dart';
 import 'recruitment_command.dart';
 
 abstract interface class BetaCreationGateway {
@@ -51,6 +52,7 @@ class BetaCreationReader {
   final BackendRegistrationApi api;
   static const contract = BetaContract(mode: RecruitmentContractMode.betaWire2);
   Future<RecruitmentCreationContext> context(RecruitmentDraft draft) async {
+    roleCheck(draft.groupOnly || draft.groupId == null);
     final targets = betaScheduleTargets(draft).targets;
     final current = targets.values.first;
     final next = targets.length == 2 ? targets.values.last : null;
@@ -123,6 +125,7 @@ class BetaCreationReader {
     String key,
     DateTime createdAt,
   ) {
+    roleCheck(draft.groupOnly || draft.groupId == null);
     final body = draft.body(context, title)..remove('schedule_groups');
     body['beta_schedule_targets'] = betaScheduleTargets(draft).toWire();
     final evidence = {
@@ -165,6 +168,7 @@ RecruitmentCreationAck validateBetaCreationAck(
     throw const AccountReadException('REQUEST_REVIEW_REQUIRED');
   }
   roleShape(evidence, 'room_id target_cycle_key effect created_cycles');
+  raw = withoutCycleGroupFields(raw);
   roleShape(raw, 'scope data');
   final ack = RecruitmentCreationAck.fromCycleJson(
     roleMap(raw['data']),

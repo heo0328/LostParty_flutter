@@ -1,5 +1,20 @@
 # 개발 이력
 
+## 2026-10-31 — 네이티브 주차별 그룹 변경·승계 연결·전체 자동 검증
+
+사용자 승인 네이티브 구현 계획을 feature/group-backend-integration/78e53aa0에서 이어갔다. Backend 고정 계약 b212ad0f45e36e1bd5c6c860bb1e118f590bbc79의 실제66동작과 연결 스키마를 wire projection으로 갱신했다. 원본 OpenAPI blob hash·재생성 동일성을 확인했으며 beta의 기존 필수 개방 날짜 등은 보존한다. 과거 저장 요청 전용 snapshot은 변경 전 wire와 동일함을 검증했다. [Backend 개발 반영 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6524503597)을 재조회해 실행b8542ef7·이미지930c25f8·DB0035와 기록476d1f31, 계약 shape 유지·실회원 쓰기/새 기기 미실시를 구분했다.
+
+새로 가능해진 흐름: 생성 후 선택 주차의 모집 조건 변경에서 일반→A/A→B/A→일반을 검토하고 기존 PUT settings 한 번에 저장한다. 일반 생성/public 선택은 그룹 연결을 비운다. 기존 공통 정보 변경은 제목만 제공한다. 탈퇴·후보별 직접 위임·다음주 개방의 서버가 계산한 그룹 유지/일반 전환·연결 해제 효과를 기존 확인창에 표시한다. 그룹 변경 재조회 중 설정 초안을 보존하고 그룹만 변경할 때 기존 전투력 입력 모드도 유지한다. 성공 후 실제 영향 주차와 그룹 목록/필터/context·후보를 갱신한다.
+
+보존 확인한 기존 흐름: 일반 앱 BackendApp/DI의 기존 생성·상세/목록·신청·관리·원명령 복구 경로를 유지했다. cycle_groups는 방/실제 주차/회차/세대를 함께 식별해 C/N·과거 세대를 합치지 않는다. 과거 pending origin·완료 기록을 현재 그룹으로 덮지 않으며 unavailable은 일반/비그룹원으로 합성하지 않는다. 새 query는 선언된 모집 operation에만 붙이고 로그인/그룹 자체 API는 유지한다. 저장된 원 method/path/query/body/key·검증 근거와 원ACK는 당시 계약으로 복구하며 자동 새 정책 변환·구계약 fallback 재실행은 없다. CLIENT_UPGRADE_REQUIRED 확정 거절과 GROUP_FEATURE_NOT_READY 준비 미완료를 구분한다. 기존 참가·일정/예약·완료 보존/주차 격리·권한/승계 원자성은 서버의 고정 계약·검증 근거와 앱의 기존 회귀 시험을 함께 대조했으며 실회원 쓰기 인수로 표시하지 않는다.
+
+검증: 최종 전체 flutter test **2,724 PASS**, 전체 flutter analyze **No issues found**. 새 정책 직접17시험에는 세 가지 변경의 단일 PUT/반대 주차 보호·8명 위임 후보와 탈퇴 옵션별 효과·신규 N 상속/외부 공개 결과·root/list 주차/세대/방 불일치·unavailable·권한/revision/만료·회원 전환 중 늦은 응답·편집 초안 보존/취소 시 쓰기 없음·과거 원요청/ACK 원형 복구를 포함했다. 직전 정책+복구 직접55PASS 이후 root 대응 시험을 추가한 최종 전체 결과가 위 수치다. 기존 회귀 실패는 누락 query 기대값·새 title-only 응답 fixture와 generator의 beta 필수 입력을 바로잡아 재검증했다. Dart 포맷·생성 projection 재현성/동결 snapshot 동일성·git diff --check·diff를 확인했다. flutter.bat 대기 문제로 설치된 Dart와 flutter_tools.snapshot을 직접 사용했다.
+
+[Issue16 소비 결과](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6527340458)를 gh로 게시하고 connector에서 본문을 재조회했다. 같은 검증 파트의 코드·시험·문서 커밋과 local/origin 동일 SHA는 해당 댓글에서 확인한다.
+
+미확인 실기기 항목: 새 앱의 연결→교체→일반 전환→같은 그룹/외부 승계·직접 위임→반대 주차 보존·다음주 상속, 카드 긴 그룹명/비그룹원 배지. 사용자가 직접 설치/조작하며 기존 로그인·인증·그룹 전체 정상 인수를 반복 요구하지 않는다. Penpot 도구 미제공으로03 보드 갱신/시각 검수·02 이동은 미실시다. 기능 연결·자동검증 완료를 전체 그룹 기기 인수 완료로 확대하지 않는다. 이 파트에서 서버/DB·자료초기화·AWS/release·dev/main 통합·기기 조작·Issue 종료는 실행하지 않았다.
+
+
 ## 2026-10-30 — 주차별 그룹 변경·공대장 승계 계약 정정·Backend 선행 요청
 
 사용자가 그룹 기능의 최초 연결 한정/그룹 불변·전체 공개 후 연결 유지와 의도가 다름을 재확인하고 계획 구현을 승인했다. 실제 주차별 일반(null+public)/한 그룹 전용, 일반→A/A→B/A→일반, 같은 그룹 후임 우선·외부 후임 시 일반 전환+승계+탈퇴, 직접 외부 위임의 동일 처리, 신규 N 설정 상속/기존 N 보존을 확정했다. 기존 그룹 자체 탈퇴/추방/해산 정책은 변경하지 않는다.

@@ -6,6 +6,7 @@ import 'beta_schedule_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/cycle_management.dart';
+import '../../data/beta/cycle_group_policy.dart';
 import '../../data/membership_readers.dart';
 import '../../domain/backend_recruitment.dart';
 import '../viewmodels/cycle_participation_controller.dart';
@@ -118,7 +119,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
       support = TextEditingController();
   final sessions = <String>{};
   final placements = <Map<String, dynamic>>[];
-  bool initialized = false;
+  bool initialized = false, groupEdited = false;
   CycleScheduleView? openingSource;
   DateTime? sourceReceivedAt;
   BetaScheduleInput openingInput = const BetaScheduleInput();
@@ -207,8 +208,10 @@ class _ManagementDialogState extends State<_ManagementDialog> {
       widget.target,
       widget.action,
       query: {
-        if (widget.action == 'common' && group != null && initialGroup == null)
-          'target_group_id': group,
+        if (widget.action == 'settings' && initialized && groupEdited) ...{
+          'review_group_policy': true,
+          if (group != null) 'target_group_id': group,
+        },
         if (alternative && character != null) 'character_id': character,
         if (alternative && character != null) 'selected_role': role,
         if (betaOpening)
@@ -234,13 +237,14 @@ class _ManagementDialogState extends State<_ManagementDialog> {
         admission = d['admission_mode'] as String;
         dealer.text = c['dealer_min'] as String? ?? '';
         support.text = c['support_min'] as String? ?? '';
+        if (p.groupPolicy != null) {
+          initialGroup = group = p.groupPolicy!.groupId;
+          visibility = group == null ? 'public' : 'group';
+        }
       }
       if (p.action == 'common') {
         final d = p.data['current_settings'] as Map;
         title.text = d['title'] as String;
-        visibility = d['scope'] as String;
-        group = d['group_id'] as String?;
-        initialGroup = group;
       }
       if (p.action == 'formation') {
         final room = p.data['room'] as Map;
@@ -273,7 +277,11 @@ class _ManagementDialogState extends State<_ManagementDialog> {
         }
       }
     }
-    if (p?.action == 'common' && initialGroup == null && groups == null) {
+    if (p?.action == 'settings' && p?.groupPolicy != null && !groupEdited) {
+      initialGroup = group = p!.groupPolicy!.groupId;
+      visibility = group == null ? 'public' : 'group';
+    }
+    if (p?.action == 'settings' && p?.groupPolicy != null && groups == null) {
       final choices = await widget.controller.groups();
       if (!mounted ||
           e != generation ||
@@ -317,11 +325,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
     'group_id': group,
     'experience_level': experience.isEmpty ? null : experience,
     'admission_mode': admission,
-    'combat_requirement': {
-      'input_mode': 'per_role',
-      'dealer_min': dealer.text.trim().isEmpty ? null : dealer.text.trim(),
-      'support_min': support.text.trim().isEmpty ? null : support.text.trim(),
-    },
+    'combat_requirement': combatInput(),
     'placements': [
       for (final p in placements)
         {
@@ -330,6 +334,23 @@ class _ManagementDialogState extends State<_ManagementDialog> {
         },
     ],
   };
+
+  Map<String, dynamic> combatInput() {
+    final dealerMin = dealer.text.trim().isEmpty ? null : dealer.text.trim();
+    final supportMin = support.text.trim().isEmpty ? null : support.text.trim();
+    final current = preview?.data['combat_requirement'];
+    if (current is Map &&
+        current['dealer_min'] == dealerMin &&
+        current['support_min'] == supportMin) {
+      return Map<String, dynamic>.from(current);
+    }
+    return {
+      'input_mode': 'per_role',
+      'dealer_min': dealerMin,
+      'support_min': supportMin,
+    };
+  }
+
   Future<void> submit() async {
     final p = preview;
     if (p == null) return;
@@ -341,7 +362,11 @@ class _ManagementDialogState extends State<_ManagementDialog> {
       return;
     }
     final failure = widget.controller.failure;
-    if (p.continuation || p.opening || p.action == 'common') await load();
+    if (p.continuation ||
+        p.opening ||
+        {'common', 'settings'}.contains(p.action)) {
+      await load();
+    }
     if (!mounted) return;
     setState(() {
       loading = false;
@@ -382,7 +407,10 @@ class _ManagementDialogState extends State<_ManagementDialog> {
           p != null &&
           (permission == null || (permission as Map)['allowed'] == true) &&
           (p.targetGroup == null ||
-              p.targetGroup!['permission']['allowed'] == true);
+              p.targetGroup!['permission']['allowed'] == true) &&
+          (p.betaData?['group_review'] == null ||
+              p.betaData!['group_review']['data']['permission']['allowed'] ==
+                  true);
       final selectionReady = p == null
           ? false
           : (!{'transfer', 'remove'}.contains(p.action) || candidate != null) &&
@@ -430,49 +458,69 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                   ),
                   text('다음 주 날짜와 출발 시각을 직접 선택해 주세요.'),
                 ],
-                if (widget.action == 'common' &&
-                    initialized &&
-                    initialGroup == null) ...[
+                if (widget.action == 'settings' && initialized) ...[
+                  if (p?.groupPolicy?.known == false)
+                    text('그룹 정보를 확인할 수 없습니다. 다시 조회해 주세요.'),
                   if (groupsError != null)
                     text(recruitmentFailureMessage(groupsError)),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('group/$group'),
-                    initialValue: group ?? '',
-                    decoration: const InputDecoration(labelText: '연결 그룹'),
-                    isExpanded: true,
-                    items: [
-                      const DropdownMenuItem(
-                        value: '',
-                        child: Text('연결 그룹 없음'),
+                  if (groups != null)
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('group/$group'),
+                      initialValue: group ?? '',
+                      decoration: const InputDecoration(
+                        labelText: '공개범위 · 연결 그룹',
                       ),
-                      for (final g in groups ?? <RecruitmentGroupChoice>[])
-                        DropdownMenuItem(
-                          value: g.id,
-                          child: Text(g.name, overflow: TextOverflow.ellipsis),
+                      isExpanded: true,
+                      items: [
+                        const DropdownMenuItem(
+                          value: '',
+                          child: Text('전체 공개 · 그룹 연결 없음'),
                         ),
-                    ],
-                    onChanged: loading || widget.controller.busy
-                        ? null
-                        : (value) {
-                            setState(() {
-                              group = value == '' ? null : value;
-                              visibility = group == null ? 'public' : 'group';
-                            });
-                            unawaited(load());
-                          },
-                  ),
-                  if (group != null)
-                    text(
-                      '선택한 그룹에 최초 연결하고 그룹 전용으로 전환합니다. 검토에 표시된 주차에 공통 적용되며 기존 참가·신청·예약은 유지됩니다.',
+                        if (initialGroup != null &&
+                            !groups!.any((g) => g.id == initialGroup))
+                          DropdownMenuItem(
+                            value: initialGroup,
+                            child: const Text('현재 연결 그룹 · 가입 목록에 없음'),
+                          ),
+                        for (final g in groups!)
+                          DropdownMenuItem(
+                            value: g.id,
+                            child: Text(
+                              g.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged:
+                          loading ||
+                              widget.controller.busy ||
+                              p?.groupPolicy?.known != true
+                          ? null
+                          : (v) {
+                              setState(() {
+                                groupEdited = true;
+                                group = v == '' ? null : v;
+                                visibility = group == null ? 'public' : 'group';
+                              });
+                              unawaited(load());
+                            },
                     ),
                 ],
                 if (p != null) ...[
+                  for (final effect in p.effectsFor(candidate))
+                    text(
+                      '${effect['target_cycle_key']} · ${CycleGroupEffect(effect).description}',
+                    ),
                   if (p.opening && d!['opening_effect'] == 'already_open')
                     text('이미 개방된 주차입니다.'),
                   if (!allowed)
                     text(
                       recruitmentFailureMessage(
-                        (p.targetGroup?['permission']?['allowed'] == false
+                        (p.betaData?['group_review']?['data']?['permission']?['allowed'] ==
+                                    false
+                                ? p.betaData!['group_review']['data']['permission']['reason']
+                                : p.targetGroup?['permission']?['allowed'] ==
+                                      false
                                 ? p.targetGroup!['permission']['reason']
                                 : (permission as Map)['reason'])
                             as String?,
@@ -481,7 +529,7 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                   if (p.global) ...[
                     text(
                       p.action == 'common'
-                          ? '제목과 공개 정보는 방의 공통 정보입니다.'
+                          ? '모집 제목은 두 주차에 공통으로 적용됩니다.'
                           : '아래 주차의 참가·점유·예약에도 영향을 줍니다.',
                     ),
                     for (final i in d!['impact_cycles'] as List)
@@ -700,26 +748,6 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                         hintText: '비우면 기존 제목 유지',
                       ),
                     ),
-                    DropdownButtonFormField<String>(
-                      key: ValueKey('visibility/$visibility'),
-                      initialValue: visibility,
-                      items: [
-                        const DropdownMenuItem(
-                          value: 'public',
-                          child: Text('전체 공개'),
-                        ),
-                        if (group != null)
-                          const DropdownMenuItem(
-                            value: 'group',
-                            child: Text('그룹 전용'),
-                          ),
-                      ],
-                      onChanged:
-                          loading || (initialGroup == null && group != null)
-                          ? null
-                          : (v) => setState(() => visibility = v!),
-                    ),
-                    if (initialGroup != null) text('기존 연결 그룹이 유지됩니다.'),
                   ],
                   if (p.action == 'formation')
                     for (final place in placements)
@@ -760,7 +788,10 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                 if (!loading)
                   TextButton(
                     onPressed: () {
-                      if (widget.action != 'common') initialized = false;
+                      if (!{'common', 'settings'}.contains(widget.action)) {
+                        initialized = false;
+                      }
+                      if (widget.action == 'settings') groups = null;
                       placements.clear();
                       candidate = null;
                       sessions.clear();

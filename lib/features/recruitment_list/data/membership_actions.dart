@@ -5,6 +5,7 @@ import '../../account/domain/role_summary.dart';
 import '../domain/policies/party_cycle_policy.dart';
 import 'cycle_member_actions.dart' show actionTime;
 import 'cycle_schedule.dart' show scheduleStable;
+import 'beta/cycle_group_policy.dart';
 
 const membershipActionNames = {
   'leave_target',
@@ -261,8 +262,15 @@ void _target(Map<String, dynamic> t) {
 
 /// Immutable server-owned menu. No client inference of eligibility or successors.
 class MembershipActionContext {
-  MembershipActionContext(this.room, this.view, Map<String, dynamic> raw)
-    : wire = _snapshot(raw) {
+  MembershipActionContext(
+    this.room,
+    this.view,
+    Map<String, dynamic> raw, {
+    Map<String, dynamic>? groupPolicyData,
+  }) : groupPolicyData = groupPolicyData == null
+           ? null
+           : _snapshot(groupPolicyData),
+       wire = _snapshot(raw) {
     roleId(room);
     raidCycleKey(view);
     roleShape(wire, 'scope data');
@@ -360,6 +368,7 @@ class MembershipActionContext {
       );
     }
   }
+  final Map<String, dynamic>? groupPolicyData;
   final String room, view;
   final Map<String, dynamic> wire;
   late final Map<String, dynamic> scope, data, options;
@@ -391,12 +400,16 @@ class MembershipActionPreview {
       'visible': option['visible'],
       'permission': option['permission'],
       'impact': impact,
+      'group_policy_effects': groupEffects,
     });
   }
   final MembershipActionContext context;
   final String action;
   late final Map<String, dynamic> option, impact;
   late final String signature;
+  List<Map<String, dynamic>> get groupEffects => cycleGroupEffects(
+    context.groupPolicyData?['data']?['options']?[action]?['impact'],
+  );
   String get room => context.room;
   String get view => context.view;
   String get path => '/v2/raid-rooms/$room/membership-actions';

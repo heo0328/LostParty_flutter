@@ -1094,6 +1094,7 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'TARGET_CONTEXT_STALE' => '이 주차의 참가 정보가 변경되었습니다. 참가 조건을 다시 확인해 주세요.',
   'ROOM_LAST_MEMBER_REQUIRED' => '다른 참가자가 남아 있어 모집 전체를 종료할 수 없습니다.',
   'LEADERSHIP_RESOLUTION_REQUIRED' => '영향받는 주차의 공대장 승계를 먼저 확인해 주세요.',
+  'GROUP_FEATURE_NOT_READY' => '서버의 그룹 기능을 준비 중입니다. 잠시 후 다시 확인해 주세요.',
   'CLIENT_UPGRADE_REQUIRED' => '앱과 서버의 기능 버전이 맞지 않습니다. 앱 버전을 확인해 주세요.',
   'TARGET_CYCLE_OUT_OF_RANGE' => '대상 주차가 바뀌었습니다. 주차를 다시 선택해 주세요.',
   'TARGET_NOT_OPEN' => '이 주차에는 열린 모집이 없습니다.',

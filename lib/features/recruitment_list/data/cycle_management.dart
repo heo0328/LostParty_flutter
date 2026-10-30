@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'beta/beta_interaction_api.dart';
 import 'beta/beta_contract.dart';
+import 'beta/cycle_group_policy.dart';
 import '../domain/policies/recruitment_start_policy.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_cycle_models.dart';
@@ -93,7 +94,10 @@ class CycleManagementPreview {
     raidCycleKey(target);
     roleCheck(cycleManagementLabels.containsKey(action));
     roleShape(wire, 'scope data');
-    roleCheck((query['target_group_id'] != null) == (this.targetGroup != null));
+    roleCheck(
+      action != 'common' ||
+          (query['target_group_id'] != null) == (this.targetGroup != null),
+    );
     if (this.targetGroup != null) {
       BetaContract.definition('TargetGroup', this.targetGroup);
       roleCheck(
@@ -167,10 +171,15 @@ class CycleManagementPreview {
       }).toList();
       roleCheck(affected.toSet().length == affected.length);
       final settings = roleMap(data['current_settings']);
-      roleShape(settings, 'title scope group_id group_revision');
+      roleShape(
+        settings,
+        usesCycleGroupPolicy ? 'title' : 'title scope group_id group_revision',
+      );
       roleCheck(this.targetGroup == null || settings['group_id'] == null);
       raidText(settings['title']);
-      roleCheck({'public', 'group'}.contains(settings['scope']));
+      if (!usesCycleGroupPolicy) {
+        roleCheck({'public', 'group'}.contains(settings['scope']));
+      }
       if (settings['group_id'] != null) {
         roleId(settings['group_id']);
         rolePositive(settings['group_revision']);
@@ -444,6 +453,7 @@ class CycleManagementPreview {
     return matches.length == 1 ? cycleMember : null;
   }
 
+  bool get usesCycleGroupPolicy => betaData?['policy_source'] != null;
   bool get global => {'common', 'leave', 'end'}.contains(action);
   bool get continuation => {'continue', 'decline'}.contains(action);
   bool get opening => {'open', 'reopen'}.contains(action);
@@ -470,6 +480,10 @@ class CycleManagementPreview {
     },
     'beta_schedule_config': betaData?['beta_schedule_config'],
     'target_group': targetGroup,
+    'group_policy': betaData?['group_policy'],
+    'group_effects': cycleGroupEffects(betaData),
+    if (betaData?['group_review'] != null)
+      'group_permission': betaData!['group_review']['data']['permission'],
     'data': {
       for (final e in data.entries)
         if (!{'context_token', 'issued_at', 'expires_at'}.contains(e.key))
@@ -483,6 +497,60 @@ class CycleManagementPreview {
               : e.value,
     },
   });
+
+  CycleGroupPolicy? get groupPolicy => betaData?['group_policy'] == null
+      ? null
+      : CycleGroupPolicy(roleMap(betaData!['group_policy']));
+  List<Map<String, dynamic>> effectsFor([String? candidate]) {
+    if (action == 'transfer') {
+      final rows =
+          betaData?['policy_source']?['data']?['candidates'] as List? ?? [];
+      return cycleGroupEffects(
+        rows.where((x) => x['cycle_member_id'] == candidate).toList(),
+      );
+    }
+    return cycleGroupEffects(
+      betaData?['group_review'] ?? betaData?['policy_source'],
+    );
+  }
+
+  Map<String, dynamic> _groupChange(Map<String, dynamic> input) {
+    final review = roleMap(betaData!['group_review']);
+    final effect = CycleGroupEffect(roleMap(review['group_policy_effect']));
+    final policy = groupPolicy!;
+    if (input.containsKey('group_id')) {
+      roleCheck(input['group_id'] == effect.after['group_id']);
+    }
+    if (input.containsKey('scope')) {
+      roleCheck(input['scope'] == effect.after['scope']);
+    }
+    policy.bind(room, target, scope);
+    roleCheck(
+      policy.known &&
+          effect.wire['room_id'] == room &&
+          effect.wire['target_cycle_key'] == target &&
+          effect.wire['room_cycle_id'] == scope['room_cycle_id'] &&
+          effect.wire['generation'] == scope['target_generation'] &&
+          effect.before['revision'] == policy.wire['revision'] &&
+          effect.before['scope'] == policy.wire['scope'] &&
+          effect.before['group_id'] == policy.groupId,
+    );
+    final d = roleMap(review['data']);
+    _permission(d['permission']);
+    final now = roleUtc(review['scope']['server_now']);
+    roleCheck(
+      !now.isBefore(roleUtc(d['issued_at'])) &&
+          now.isBefore(roleUtc(d['expires_at'])),
+    );
+    return {
+      'context_token': d['context_token'],
+      'group_policy': {
+        'scope': effect.after['scope'],
+        'group_id': effect.after['group_id'],
+        'expected_revision': policy.wire['revision'],
+      },
+    };
+  }
 
   Map<String, dynamic> _openingSchedule(Map<String, dynamic> input) {
     final schedule = BetaScheduleConfig(roleMap(input['beta_schedule']));
@@ -549,6 +617,9 @@ class CycleManagementPreview {
       roleCheck(
         title is String && title.trim().isNotEmpty && title.trim().length <= 60,
       );
+      if (usesCycleGroupPolicy) {
+        return {...base, 'title': title.trim()};
+      }
       final group = input.containsKey('group_id')
           ? input['group_id']
           : s['group_id'];
@@ -649,6 +720,7 @@ class CycleManagementPreview {
         ...base,
         'expected_room_revision': data['room_revision'],
         'expected_settings_revision': data['revision'],
+        if (betaData?['group_review'] != null) ..._groupChange(input),
         'experience_level': exp,
         'combat_requirement': combat,
         'admission_mode': mode,
@@ -757,6 +829,7 @@ class CycleManagementReader {
       query.keys.every(
         (k) => {
           'target_group_id',
+          'review_group_policy',
           'character_id',
           'selected_role',
           'base_starts_at',
@@ -766,8 +839,16 @@ class CycleManagementReader {
       ),
     );
     if (action == 'common') {
+      if (api is BetaInteractionApi) roleCheck(query.isEmpty);
       roleCheck(query.keys.every((k) => k == 'target_group_id'));
       if (query.isNotEmpty) roleId(query['target_group_id']);
+    } else if (action == 'settings') {
+      roleCheck(
+        query.keys.every(
+          (k) => {'target_group_id', 'review_group_policy'}.contains(k),
+        ),
+      );
+      if (query['target_group_id'] != null) roleId(query['target_group_id']);
     } else {
       roleCheck(!query.containsKey('target_group_id'));
       roleCheck(
@@ -803,7 +884,10 @@ class CycleManagementReader {
       if ({'open', 'reopen'}.contains(action)) 'intent': action,
       if ({'continue', 'decline', 'open', 'reopen'}.contains(action))
         'include_session_display': 'true',
-      ...query,
+      for (final e in query.entries)
+        if (!(action == 'settings' &&
+            {'target_group_id', 'review_group_policy'}.contains(e.key)))
+          e.key: e.value,
     };
     Map<String, dynamic>? betaData, targetGroup;
     late Map<String, dynamic> raw;
@@ -818,6 +902,10 @@ class CycleManagementReader {
           : roleMap(decoded.metadata!['target_group']);
       betaData =
           betaFreeze({
+                'group_policy_version':
+                    decoded.metadata?['group_policy_version'],
+                'group_policy': decoded.metadata?['group_policy'],
+                'policy_source': decoded.metadata,
                 'beta_schedule_config':
                     decoded.metadata?['data']?['beta_schedule_config'],
               })
@@ -827,6 +915,22 @@ class CycleManagementReader {
       if (raw.containsKey('target_group')) {
         targetGroup = roleMap(raw.remove('target_group'));
       }
+    }
+    if (action == 'settings' && query['review_group_policy'] == true) {
+      roleCheck(api is BetaInteractionApi);
+      final checked = await (api as BetaInteractionApi).requestDecoded(
+        '/v2/raid-rooms/$room/command-context',
+        query: {
+          'command': 'edit_group_policy',
+          'target_cycle_key': target,
+          if (query['target_group_id'] != null)
+            'target_group_id': query['target_group_id'],
+        },
+      );
+      final review = checked.metadata!;
+      final effect = CycleGroupEffect(roleMap(review['group_policy_effect']));
+      roleCheck(effect.after['group_id'] == query['target_group_id']);
+      betaData = {...?betaData, 'group_review': review};
     }
     try {
       return CycleManagementPreview(

@@ -5,6 +5,7 @@ import '../../data/application_messages.dart';
 import 'application_messages_controller.dart';
 import '../../data/beta/recruitment_command_transport.dart';
 import '../../data/beta/beta_contract.dart';
+import '../../data/beta/cycle_group_policy.dart';
 import '../../data/beta/recruitment_command.dart';
 import '../../data/beta/participation_command_evidence.dart';
 import '../../../account/domain/member_raid_models.dart' show raidList;
@@ -44,6 +45,7 @@ class _CycleCommand {
     this.removal,
     this.removalMode,
     this.membership,
+    this.groupEffects = const [],
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
@@ -71,7 +73,8 @@ class _CycleCommand {
       departure = null,
       removal = null,
       removalMode = null,
-      membership = null;
+      membership = null,
+      groupEffects = cycleGroupEffects(info.wire['group_policy_effects']);
   RecruitmentCommand? journal;
   ParticipationCommandEvidence? storedEvidence;
   ParticipationCommandEvidence freeze(RecruitmentContractMode mode) {
@@ -95,6 +98,7 @@ class _CycleCommand {
         : 'basic';
     final frozen = ParticipationCommandEvidence.create(
       kind: kind,
+      groupEffects: groupEffects,
       room: room,
       target: target,
       scope: evidence,
@@ -137,6 +141,7 @@ class _CycleCommand {
     return frozen;
   }
 
+  final List<Map<String, dynamic>> groupEffects;
   final String path, encoded, key, room, target;
   final String? applicationId, applicationState;
   final String method;
@@ -388,6 +393,7 @@ class CycleParticipationController extends ChangeNotifier {
         createdAt: now(),
         evidence: context.scope,
         membership: fresh,
+        groupEffects: fresh.groupEffects,
         affectedTargets: fresh.affected,
       );
       key = _pending!.key;
@@ -573,6 +579,7 @@ class CycleParticipationController extends ChangeNotifier {
         createdAt: now(),
         evidence: fresh.scope,
         departure: fresh,
+        groupEffects: fresh.groupEffects,
       );
       onPrepared?.call(_pending!.key);
       await _send(e);
@@ -771,6 +778,7 @@ class CycleParticipationController extends ChangeNotifier {
         method: fresh.method,
         globalAck: fresh.global ? fresh.action : null,
         affectedTargets: List.unmodifiable(fresh.affected),
+        groupEffects: fresh.effectsFor(frozenInput['candidate'] as String?),
       );
       await _send(e);
     } on AccountReadException catch (error) {
@@ -1066,6 +1074,7 @@ class CycleParticipationController extends ChangeNotifier {
     try {
       String? resumeOutcome;
       MembershipActionResult? membershipResult;
+      var groupPolicyChanged = command.groupEffects.isNotEmpty;
       if (commandTransport != null) {
         final info = command.freeze(commandTransport!.mode),
             journal = command.journal!;
@@ -1080,10 +1089,13 @@ class CycleParticipationController extends ChangeNotifier {
               status: journal.expectedStatus,
               mode: journal.contractMode,
               rawBody: journal.rawBody,
+              original: !journal.usesCycleGroupPolicy,
             );
           },
         );
         if (!_valid(e)) return;
+        groupPolicyChanged =
+            groupPolicyChanged || cycleGroupEffects(raw).isNotEmpty;
         command.journal = journal.transition(
           state: RecruitmentCommandState.acknowledged,
           rawAck: jsonEncode(raw),
@@ -1096,6 +1108,7 @@ class CycleParticipationController extends ChangeNotifier {
           status: journal.expectedStatus,
           mode: journal.contractMode,
           rawBody: journal.rawBody,
+          original: !journal.usesCycleGroupPolicy,
         );
       } else if (command.membership != null) {
         membershipResult = await (gateway as MembershipActionGateway)
@@ -1236,8 +1249,10 @@ class CycleParticipationController extends ChangeNotifier {
       }.contains(command.path.split('/').last)) {
         onActiveRoomsChanged?.call(command.key);
       }
-      if (command.path.endsWith('/common-settings') &&
-          (jsonDecode(command.encoded) as Map)['group_id'] != null) {
+      if (groupPolicyChanged ||
+          (commandTransport == null &&
+              command.path.endsWith('/common-settings') &&
+              (jsonDecode(command.encoded) as Map)['group_id'] != null)) {
         onGroupConnectionChanged?.call();
       }
       for (final target in command.affectedTargets ?? [command.target]) {

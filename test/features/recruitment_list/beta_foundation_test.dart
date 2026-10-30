@@ -166,6 +166,7 @@ void main() {
         expect(const BetaContract().query('POST', '/v2/raid-rooms'), isEmpty);
         expect(beta.query('POST', '/v2/raid-rooms'), {
           'contract_profile': BetaContract.profile,
+          'group_policy_version': BetaContract.groupPolicyVersion,
         });
         expect(beta.query('GET', path), isEmpty);
         expect(beta.query('PUT', path), isEmpty);

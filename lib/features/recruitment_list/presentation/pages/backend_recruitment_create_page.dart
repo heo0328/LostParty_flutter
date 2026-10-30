@@ -520,7 +520,7 @@ class _BackendRecruitmentCreatePageState
                       ChoiceChip(
                         label: const Text('전체 공개'),
                         selected: !d.groupOnly,
-                        onSelected: (_) => m.update(d.copy(groupOnly: false)),
+                        onSelected: (_) => m.update(d.copy(clearGroup: true)),
                       ),
                       ChoiceChip(
                         label: const Text('그룹 전용'),

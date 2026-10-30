@@ -4,27 +4,41 @@ import '../../../account/domain/role_summary.dart';
 import '../../../account/domain/member_raid_models.dart';
 import '../../domain/policies/party_cycle_policy.dart';
 import 'beta_wire_schema.g.dart';
+import 'beta_original_wire_schema.g.dart';
+import 'cycle_group_policy.dart';
 
 enum RecruitmentContractMode { legacy, betaWire2 }
 
 /// Closed, pinned wire validation, separate from existing semantic parsers.
 /// This never negotiates with a server or retries using a different profile.
 class BetaContract {
-  const BetaContract({this.mode = RecruitmentContractMode.legacy});
+  const BetaContract({
+    this.mode = RecruitmentContractMode.legacy,
+    this.original = false,
+  });
   final RecruitmentContractMode mode;
+
+  /// Only persisted originals may opt into the pre-cutover contract.
+  final bool original;
+  static const groupPolicyVersion = 'cycle-group-policy-1';
   static const version = 'beta-recruitment-wire-2';
   static const profile = 'beta-recruitment-1';
   static final Map<String, dynamic> _wire = jsonDecode(betaWireSchemaJson);
+  static final Map<String, dynamic> _originalWire = jsonDecode(
+    betaOriginalWireSchemaJson,
+  );
 
   Map<String, dynamic> operation(String method, String path) {
-    final found = (_wire['operations'] as List).where((o) {
-      final template = o['path'] as String;
-      final pattern = template
-          .split('/')
-          .map((s) => s.startsWith('{') ? r'[^/]+' : RegExp.escape(s))
-          .join('/');
-      return o['method'] == method && RegExp('^$pattern\$').hasMatch(path);
-    }).toList();
+    final found = ((original ? _originalWire : _wire)['operations'] as List)
+        .where((o) {
+          final template = o['path'] as String;
+          final pattern = template
+              .split('/')
+              .map((s) => s.startsWith('{') ? r'[^/]+' : RegExp.escape(s))
+              .join('/');
+          return o['method'] == method && RegExp('^$pattern\$').hasMatch(path);
+        })
+        .toList();
     roleCheck(found.length == 1);
     final templateParts = (found.single['path'] as String).split('/');
     final actualParts = path.split('/');
@@ -50,9 +64,17 @@ class BetaContract {
       !supplied.containsKey('contract_profile') ||
           (profiled && supplied['contract_profile'] == profile),
     );
+    roleCheck(
+      !supplied.containsKey('group_policy_version') ||
+          (!original &&
+              params.any((p) => p['name'] == 'group_policy_version') &&
+              supplied['group_policy_version'] == groupPolicyVersion),
+    );
     return Map.unmodifiable({
       ...supplied,
       if (profiled) 'contract_profile': profile,
+      if (!original && params.any((p) => p['name'] == 'group_policy_version'))
+        'group_policy_version': groupPolicyVersion,
     });
   }
 
@@ -69,9 +91,9 @@ class BetaContract {
     for (final p in params) {
       final name = p['name'] as String;
       roleCheck(p['required'] != true || query.containsKey(name));
-      if (query.containsKey(name)) validate(p['schema'], query[name]);
+      if (query.containsKey(name)) _validateSelected(p['schema'], query[name]);
     }
-    validate(op['request'], body);
+    _validateSelected(op['request'], body);
     if (body is Map<String, dynamic>) {
       if (body['application_memo'] case final String text) {
         RawApplicationMemo(text);
@@ -89,7 +111,30 @@ class BetaContract {
     roleCheck(mode == RecruitmentContractMode.betaWire2);
     final responses = roleMap(operation(method, path)['responses']);
     roleCheck(responses.containsKey('$status'));
-    validate(responses['$status'], value);
+    _validateSelected(responses['$status'], value);
+  }
+
+  void _validateSelected(Object? schema, Object? value) {
+    if (!original) {
+      validate(schema, value);
+      return;
+    }
+    Object? expand(Object? node, [Set<String> seen = const {}]) {
+      if (node is Map && node[r'$ref'] is String) {
+        final name = (node[r'$ref'] as String).split('/').last;
+        roleCheck(!seen.contains(name));
+        return expand(_originalWire['definitions'][name], {...seen, name});
+      }
+      if (node is Map) {
+        return <String, dynamic>{
+          for (final e in node.entries) e.key as String: expand(e.value, seen),
+        };
+      }
+      if (node is List) return node.map((x) => expand(x, seen)).toList();
+      return node;
+    }
+
+    validate(expand(schema), value);
   }
 
   static void definition(
@@ -232,8 +277,12 @@ class BetaResponse<T> {
     required int status,
     required Map<String, dynamic> json,
     required T Function(Map<String, dynamic>) parseLegacy,
+    bool original = false,
   }) {
-    const contract = BetaContract(mode: RecruitmentContractMode.betaWire2);
+    final contract = BetaContract(
+      mode: RecruitmentContractMode.betaWire2,
+      original: original,
+    );
     contract.validateResponse(method, path, status, json);
     _relations(json);
     final metadata = betaFreeze(json) as Map<String, dynamic>;
@@ -250,6 +299,11 @@ class BetaResponse<T> {
                 'group_states',
                 'room_groups',
                 'target_group',
+                'group_policy_version',
+                'group_policy',
+                'group_policy_effect',
+                'group_policy_effects',
+                'cycle_groups',
               }.contains(e.key))
                 e.key: strip(e.value),
           }
@@ -266,7 +320,32 @@ class BetaResponse<T> {
       }
       return;
     }
-    if (raw is! Map<String, dynamic>) return;
+    if (raw is! Map<String, dynamic>) {
+      return;
+    }
+    if (raw['group_policy_version'] != null) {
+      roleCheck(raw['group_policy_version'] == BetaContract.groupPolicyVersion);
+    }
+    if (raw['group_policy'] != null) {
+      final policy = CycleGroupPolicy(roleMap(raw['group_policy']));
+      final scope = raw['scope'];
+      final data = raw['data'];
+      if (scope is Map<String, dynamic> && scope['target_cycle_key'] != null) {
+        policy.bind(
+          data is Map && data['room_id'] is String
+              ? data['room_id'] as String
+              : policy.wire['room_id'] as String,
+          scope['target_cycle_key'] as String,
+          policy.known ? scope : null,
+        );
+      }
+    }
+    if (raw['group_policy_effect'] != null) {
+      CycleGroupEffect(roleMap(raw['group_policy_effect']));
+    }
+    if (raw['group_policy_effects'] != null) {
+      cycleGroupEffects(raw['group_policy_effects']);
+    }
     if (raw['beta_schedule'] case final Map<String, dynamic> s) {
       BetaSchedule(s);
     }

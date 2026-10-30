@@ -1,3 +1,4 @@
+import '../../data/beta/cycle_group_policy.dart';
 import 'recruitment_error_text.dart';
 import 'cycle_action_dialog_route.dart';
 import 'dart:async';
@@ -433,6 +434,10 @@ class _DepartureDialogState extends State<_DepartureDialog> {
                       '${const {'complete': '완료', 'cancel': '참가 취소', 'preserve_completed': '기존 완료 유지'}[v['effect']]} · ${v['raid_name']} · ${v['difficulty_name']}',
                     ),
                   const SizedBox(height: 8),
+                  for (final effect in p.groupEffects)
+                    Text(
+                      '${effect['target_cycle_key']} · ${CycleGroupEffect(effect).description}',
+                    ),
                   Text(
                     '이 주차에서 탈퇴하며 예약 ${p.impact['released_reservation_count']}건을 해제합니다. 다음 주 참가는 유지됩니다.',
                   ),

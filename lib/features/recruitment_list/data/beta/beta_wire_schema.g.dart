@@ -1,6 +1,5 @@
-// Generated validation projection from Backend e4137073d80a754c6dea38d8207333eb8523f80b.
-// Group list/initial-link extensions pinned to Backend 6dac5ab2; existing DTOs retained.
-// Successful response/request DTOs; beta-recruitment-wire-2.
+// Generated validation projection from Backend b212ad0f45e36e1bd5c6c860bb1e118f590bbc79.
+// Regenerate with tool/extract_cycle_group_wire.py; original requests use the original snapshot.
 const betaWireSchemaJson = r'''
 {
   "operations": [
@@ -162,12 +161,30 @@ const betaWireSchemaJson = r'''
             "minimum": 1,
             "maximum": 7
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomCreationContext"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2MeRaidRoomCreationContext"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomCreationContext"
+            }
+          ],
+          "title": "Response Contract3 Get  V2 Me Raid-Room-Creation-Context"
         }
       }
     },
@@ -183,10 +200,20 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
-        "$ref": "#/$defs/Proposed_BetaCreateRequest"
+        "$ref": "#/$defs/BetaCreateRequest"
       },
       "responses": {
         "201": {
@@ -306,6 +333,19 @@ const betaWireSchemaJson = r'''
           }
         },
         {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "enum": [
+              "true",
+              "false"
+            ],
+            "type": "string",
+            "default": "false",
+            "title": "Include Group State"
+          }
+        },
+        {
           "name": "contract_profile",
           "required": true,
           "schema": {
@@ -322,16 +362,13 @@ const betaWireSchemaJson = r'''
           "required": false
         },
         {
-          "name": "include_group_state",
+          "name": "group_policy_version",
           "required": false,
           "schema": {
             "type": "string",
             "enum": [
-              "true",
-              "false"
-            ],
-            "default": "false",
-            "title": "Include Group State"
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -340,15 +377,19 @@ const betaWireSchemaJson = r'''
         "200": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Beta_OutputContract3PostV2RaidRoomsSearch"
-            },
-            {
               "$ref": "#/$defs/GroupSearchPage"
             },
             {
+              "$ref": "#/$defs/OutputContract3PostV2RaidRoomsSearch"
+            },
+            {
               "$ref": "#/$defs/Beta_GroupSearchPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3PostV2RaidRoomsSearch"
             }
-          ]
+          ],
+          "title": "Response Contract3 Get  V2 Raid-Rooms"
         }
       }
     },
@@ -419,12 +460,30 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_AdmissionDisplayContext"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdmissionDisplayContext"
+            },
+            {
+              "$ref": "#/$defs/Beta_AdmissionDisplayContext"
+            }
+          ],
+          "title": "Response Contract3 Get  V2 Raid-Rooms Room Id Admission-Context"
         }
       }
     },
@@ -439,6 +498,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -463,10 +532,20 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
-        "$ref": "#/$defs/Proposed_BetaApplyRequest"
+        "$ref": "#/$defs/BetaApplyRequest"
       },
       "responses": {
         "201": {
@@ -555,12 +634,28 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
           "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2RaidRoomsRoomIdApplications"
+            },
+            {
+              "$ref": "#/$defs/ApplicationDisplayPageResponse"
+            },
             {
               "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomsRoomIdApplications"
             },
@@ -584,12 +679,30 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomApplicationsApplicationId"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2RaidRoomApplicationsApplicationId"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomApplicationsApplicationId"
+            }
+          ],
+          "title": "Response Contract3 Get  V2 Raid-Room-Applications Application Id"
         }
       }
     },
@@ -604,6 +717,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -628,6 +751,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
@@ -651,6 +784,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
@@ -668,6 +811,19 @@ const betaWireSchemaJson = r'''
       "path": "/v2/raid-rooms/search",
       "query": [
         {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "enum": [
+              "true",
+              "false"
+            ],
+            "type": "string",
+            "default": "false",
+            "title": "Include Group State"
+          }
+        },
+        {
           "name": "contract_profile",
           "required": true,
           "schema": {
@@ -676,35 +832,36 @@ const betaWireSchemaJson = r'''
           }
         },
         {
-          "name": "include_group_state",
+          "name": "group_policy_version",
           "required": false,
           "schema": {
             "type": "string",
             "enum": [
-              "true",
-              "false"
-            ],
-            "default": "false",
-            "title": "Include Group State"
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
       "request": {
-        "$ref": "#/$defs/Proposed_BetaSearchRequest"
+        "$ref": "#/$defs/BetaSearchRequest"
       },
       "responses": {
         "200": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Beta_OutputContract3PostV2RaidRoomsSearch"
-            },
-            {
               "$ref": "#/$defs/GroupSearchPage"
             },
             {
+              "$ref": "#/$defs/OutputContract3PostV2RaidRoomsSearch"
+            },
+            {
               "$ref": "#/$defs/Beta_GroupSearchPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3PostV2RaidRoomsSearch"
             }
-          ]
+          ],
+          "title": "Response Contract3 Post  V2 Raid-Rooms Search"
         }
       }
     },
@@ -728,6 +885,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -789,6 +956,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -818,12 +995,30 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomsRoomId"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2RaidRoomsRoomId"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomsRoomId"
+            }
+          ],
+          "title": "Response Contract3 Get  V2 Raid-Rooms Room Id"
         }
       }
     },
@@ -841,16 +1036,29 @@ const betaWireSchemaJson = r'''
           }
         },
         {
+          "name": "include_coordination_wait",
+          "required": false,
+          "schema": {
+            "enum": [
+              "true",
+              "false"
+            ],
+            "type": "string",
+            "default": "false",
+            "title": "Include Coordination Wait"
+          }
+        },
+        {
           "name": "reader_profile",
           "required": false,
           "schema": {
             "anyOf": [
               {
-                "type": "string",
                 "enum": [
                   "membership-actions-1",
                   "application-display-1"
-                ]
+                ],
+                "type": "string"
               },
               {
                 "type": "null"
@@ -892,6 +1100,19 @@ const betaWireSchemaJson = r'''
           }
         },
         {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "enum": [
+              "true",
+              "false"
+            ],
+            "type": "string",
+            "default": "false",
+            "title": "Include Group State"
+          }
+        },
+        {
           "name": "contract_profile",
           "required": true,
           "schema": {
@@ -900,15 +1121,13 @@ const betaWireSchemaJson = r'''
           }
         },
         {
-          "name": "include_coordination_wait",
+          "name": "group_policy_version",
           "required": false,
           "schema": {
             "type": "string",
             "enum": [
-              "true",
-              "false"
-            ],
-            "default": "false"
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -916,6 +1135,33 @@ const betaWireSchemaJson = r'''
       "responses": {
         "200": {
           "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkedDetail"
+            },
+            {
+              "$ref": "#/$defs/GroupLinkedMembershipDetail"
+            },
+            {
+              "$ref": "#/$defs/GroupLinkedApplicationDetail"
+            },
+            {
+              "$ref": "#/$defs/OutputContract3GetV2RaidRoomsRoomIdDetail"
+            },
+            {
+              "$ref": "#/$defs/MembershipActionDetailProfile"
+            },
+            {
+              "$ref": "#/$defs/ApplicationDisplayDetailResponse"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupLinkedDetail"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupLinkedMembershipDetail"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupLinkedApplicationDetail"
+            },
             {
               "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomsRoomIdDetail"
             },
@@ -941,6 +1187,19 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "title": "Target Cycle Key"
+          }
+        },
+        {
+          "name": "include_coordination_wait",
+          "required": false,
+          "schema": {
+            "enum": [
+              "true",
+              "false"
+            ],
+            "type": "string",
+            "default": "false",
+            "title": "Include Coordination Wait"
           }
         },
         {
@@ -1005,6 +1264,19 @@ const betaWireSchemaJson = r'''
           }
         },
         {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "enum": [
+              "true",
+              "false"
+            ],
+            "type": "string",
+            "default": "false",
+            "title": "Include Group State"
+          }
+        },
+        {
           "name": "contract_profile",
           "required": true,
           "schema": {
@@ -1013,15 +1285,13 @@ const betaWireSchemaJson = r'''
           }
         },
         {
-          "name": "include_coordination_wait",
+          "name": "group_policy_version",
           "required": false,
           "schema": {
             "type": "string",
             "enum": [
-              "true",
-              "false"
-            ],
-            "default": "false"
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1029,6 +1299,24 @@ const betaWireSchemaJson = r'''
       "responses": {
         "200": {
           "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkedPlan"
+            },
+            {
+              "$ref": "#/$defs/GroupLinkedMembershipPlan"
+            },
+            {
+              "$ref": "#/$defs/ResumePlanContext"
+            },
+            {
+              "$ref": "#/$defs/MembershipActionPlanProfile"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupLinkedPlan"
+            },
+            {
+              "$ref": "#/$defs/Beta_GroupLinkedMembershipPlan"
+            },
             {
               "$ref": "#/$defs/Beta_ResumePlanContext"
             },
@@ -1099,6 +1387,19 @@ const betaWireSchemaJson = r'''
           }
         },
         {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "enum": [
+              "true",
+              "false"
+            ],
+            "type": "string",
+            "default": "false",
+            "title": "Include Group State"
+          }
+        },
+        {
           "name": "contract_profile",
           "required": true,
           "schema": {
@@ -1107,16 +1408,13 @@ const betaWireSchemaJson = r'''
           }
         },
         {
-          "name": "include_group_state",
+          "name": "group_policy_version",
           "required": false,
           "schema": {
             "type": "string",
             "enum": [
-              "true",
-              "false"
-            ],
-            "default": "false",
-            "title": "Include Group State"
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1125,15 +1423,19 @@ const betaWireSchemaJson = r'''
         "200": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomsRoomIdApplications"
-            },
-            {
               "$ref": "#/$defs/GroupApplicationPage"
             },
             {
+              "$ref": "#/$defs/OutputContract3GetV2RaidRoomsRoomIdApplications"
+            },
+            {
               "$ref": "#/$defs/Beta_GroupApplicationPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2RaidRoomsRoomIdApplications"
             }
-          ]
+          ],
+          "title": "Response Contract3 Get  V2 Me Raid-Room-Applications"
         }
       }
     },
@@ -1208,6 +1510,19 @@ const betaWireSchemaJson = r'''
           }
         },
         {
+          "name": "include_group_state",
+          "required": false,
+          "schema": {
+            "enum": [
+              "true",
+              "false"
+            ],
+            "type": "string",
+            "default": "false",
+            "title": "Include Group State"
+          }
+        },
+        {
           "name": "contract_profile",
           "required": true,
           "schema": {
@@ -1216,16 +1531,13 @@ const betaWireSchemaJson = r'''
           }
         },
         {
-          "name": "include_group_state",
+          "name": "group_policy_version",
           "required": false,
           "schema": {
             "type": "string",
             "enum": [
-              "true",
-              "false"
-            ],
-            "default": "false",
-            "title": "Include Group State"
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1234,24 +1546,31 @@ const betaWireSchemaJson = r'''
         "200": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomMemberships"
-            },
-            {
-              "$ref": "#/$defs/Beta_MembershipActionMembershipPage"
-            },
-            {
               "$ref": "#/$defs/GroupMembershipPage"
             },
             {
               "$ref": "#/$defs/GroupActionMembershipPage"
             },
             {
+              "$ref": "#/$defs/OutputContract3GetV2MeRaidRoomMemberships"
+            },
+            {
+              "$ref": "#/$defs/MembershipActionMembershipPage"
+            },
+            {
               "$ref": "#/$defs/Beta_GroupMembershipPage"
             },
             {
               "$ref": "#/$defs/Beta_GroupActionMembershipPage"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomMemberships"
+            },
+            {
+              "$ref": "#/$defs/Beta_MembershipActionMembershipPage"
             }
-          ]
+          ],
+          "title": "Response Contract3 Get  V2 Me Raid-Room-Memberships"
         }
       }
     },
@@ -1314,6 +1633,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1405,12 +1734,30 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_ContinuationDisplayContext"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContinuationDisplayContext"
+            },
+            {
+              "$ref": "#/$defs/Beta_ContinuationDisplayContext"
+            }
+          ],
+          "title": "Response Get  V2 Me Raid-Rooms Room Id Continuation-Context"
         }
       }
     },
@@ -1425,6 +1772,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1448,6 +1805,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1564,12 +1931,30 @@ const betaWireSchemaJson = r'''
             "minimum": 1,
             "maximum": 7
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OpeningDisplayContext"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpeningDisplayContext"
+            },
+            {
+              "$ref": "#/$defs/Beta_OpeningDisplayContext"
+            }
+          ],
+          "title": "Response Get  V2 Me Raid-Rooms Room Id Opening-Context"
         }
       }
     },
@@ -1584,6 +1969,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1616,6 +2011,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -1636,6 +2041,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1668,6 +2083,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -1688,6 +2113,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1711,6 +2146,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1743,12 +2188,30 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
+            }
+          ],
+          "title": "Response Contract3 Get  V2 Me Raid-Rooms Room Id Availability-Submission"
         }
       }
     },
@@ -1764,6 +2227,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
@@ -1771,7 +2244,15 @@ const betaWireSchemaJson = r'''
       },
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
+            }
+          ],
+          "title": "Response Contract3 Put  V2 Me Raid-Rooms Room Id Availability-Submission"
         }
       }
     },
@@ -1811,12 +2292,30 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomsRoomIdScheduleContext"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2MeRaidRoomsRoomIdScheduleContext"
+            },
+            {
+              "$ref": "#/$defs/Beta_OutputContract3GetV2MeRaidRoomsRoomIdScheduleContext"
+            }
+          ],
+          "title": "Response Contract3 Get  V2 Me Raid-Rooms Room Id Schedule-Context"
         }
       }
     },
@@ -1867,6 +2366,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -1887,6 +2396,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1911,10 +2430,20 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
-        "$ref": "#/$defs/Proposed_BetaScheduleEditRequest"
+        "$ref": "#/$defs/BetaScheduleEditRequest"
       },
       "responses": {
         "200": {
@@ -1942,6 +2471,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -1962,6 +2501,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -1986,6 +2535,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
@@ -2008,6 +2567,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2040,7 +2609,8 @@ const betaWireSchemaJson = r'''
             "enum": [
               "close_weekly",
               "complete_item",
-              "personal_completion"
+              "personal_completion",
+              "edit_group_policy"
             ],
             "type": "string",
             "title": "Command"
@@ -2063,18 +2633,52 @@ const betaWireSchemaJson = r'''
           }
         },
         {
+          "name": "target_group_id",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Group Id"
+          }
+        },
+        {
           "name": "contract_profile",
           "required": true,
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/OutputContract3GetV2RaidRoomsRoomIdCommandContext"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2RaidRoomsRoomIdCommandContext"
+            },
+            {
+              "$ref": "#/$defs/SettingsContext"
+            }
+          ],
+          "title": "Response Contract3 Get  V2 Raid-Rooms Room Id Command-Context"
         }
       }
     },
@@ -2089,6 +2693,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2113,6 +2727,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
@@ -2135,6 +2759,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2172,6 +2806,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
@@ -2202,6 +2846,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2234,6 +2888,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -2254,6 +2918,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2278,6 +2952,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
@@ -2300,6 +2984,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2331,14 +3025,6 @@ const betaWireSchemaJson = r'''
           }
         },
         {
-          "name": "contract_profile",
-          "required": true,
-          "schema": {
-            "type": "string",
-            "const": "beta-recruitment-1"
-          }
-        },
-        {
           "name": "target_group_id",
           "required": false,
           "schema": {
@@ -2353,6 +3039,24 @@ const betaWireSchemaJson = r'''
             ],
             "title": "Target Group Id"
           }
+        },
+        {
+          "name": "contract_profile",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -2360,12 +3064,16 @@ const betaWireSchemaJson = r'''
         "200": {
           "anyOf": [
             {
-              "$ref": "#/$defs/CommonContext"
+              "$ref": "#/$defs/TitleContext"
             },
             {
               "$ref": "#/$defs/GroupConnectionContext"
+            },
+            {
+              "$ref": "#/$defs/CommonContext"
             }
-          ]
+          ],
+          "title": "Response Contract3 Get  V2 Me Raid-Rooms Room Id Common-Context"
         }
       }
     },
@@ -2381,10 +3089,20 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": {
-        "$ref": "#/$defs/CommonSettings"
+        "$ref": "#/$defs/TitleCommand"
       },
       "responses": {
         "200": {
@@ -2403,6 +3121,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2426,6 +3154,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2458,6 +3196,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -2487,6 +3235,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -2507,6 +3265,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2550,6 +3318,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -2570,6 +3348,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2613,6 +3401,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -2633,6 +3431,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2667,6 +3475,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -2687,6 +3505,16 @@ const betaWireSchemaJson = r'''
           "schema": {
             "type": "string",
             "const": "beta-recruitment-1"
+          }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
           }
         }
       ],
@@ -2760,6 +3588,16 @@ const betaWireSchemaJson = r'''
             "type": "string",
             "const": "beta-recruitment-1"
           }
+        },
+        {
+          "name": "group_policy_version",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "cycle-group-policy-1"
+            ]
+          }
         }
       ],
       "request": null,
@@ -2777,7 +3615,7 @@ const betaWireSchemaJson = r'''
       "request": null,
       "responses": {
         "200": {
-          "$ref": "#/$defs/Proposed_PresetStoredDocument"
+          "$ref": "#/$defs/PresetDocument"
         }
       }
     },
@@ -2787,11 +3625,11 @@ const betaWireSchemaJson = r'''
       "path": "/v2/me/application-message-presets",
       "query": [],
       "request": {
-        "$ref": "#/$defs/Proposed_PresetPut"
+        "$ref": "#/$defs/PresetPut"
       },
       "responses": {
         "200": {
-          "$ref": "#/$defs/Proposed_PresetStoredDocument"
+          "$ref": "#/$defs/PresetDocument"
         }
       }
     }
@@ -2864,14 +3702,14 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "target_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Revision"
         },
         "cycle_member_id": {
@@ -2881,8 +3719,8 @@ const betaWireSchemaJson = r'''
         },
         "cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Cycle Member Revision"
         },
         "state": {
@@ -2943,8 +3781,54 @@ const betaWireSchemaJson = r'''
     },
     "ActionResult": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/ActionResultData"
@@ -3037,14 +3921,14 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "schedule_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Schedule Revision"
         },
         "state": {
@@ -3128,8 +4012,8 @@ const betaWireSchemaJson = r'''
         },
         "cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Cycle Member Revision"
         },
         "assignments": {
@@ -3161,8 +4045,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "item_id": {
@@ -3190,14 +4074,14 @@ const betaWireSchemaJson = r'''
         },
         "party_no": {
           "type": "integer",
-          "maximum": 2,
-          "minimum": 1,
+          "maximum": 2.0,
+          "minimum": 1.0,
           "title": "Party No"
         },
         "slot_no": {
           "type": "integer",
-          "maximum": 4,
-          "minimum": 1,
+          "maximum": 4.0,
+          "minimum": 1.0,
           "title": "Slot No"
         }
       },
@@ -3317,12 +4201,12 @@ const betaWireSchemaJson = r'''
         },
         "raw_candidate_count": {
           "type": "integer",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Raw Candidate Count"
         },
         "eligible_candidate_count": {
           "type": "integer",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Eligible Candidate Count"
         },
         "exclusion_summary": {
@@ -3404,7 +4288,7 @@ const betaWireSchemaJson = r'''
         },
         "character_count": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Character Count"
         }
       },
@@ -3492,16 +4376,16 @@ const betaWireSchemaJson = r'''
         },
         "current_summary_version": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Current Summary Version"
         },
         "success_summary_version": {
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -3511,8 +4395,8 @@ const betaWireSchemaJson = r'''
         },
         "power_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Power Revision"
         },
         "observed_at": {
@@ -3664,8 +4548,8 @@ const betaWireSchemaJson = r'''
         },
         "target_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Revision"
         },
         "policy_version": {
@@ -3680,8 +4564,8 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         }
       },
@@ -3775,8 +4659,8 @@ const betaWireSchemaJson = r'''
       "properties": {
         "version": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Version"
         },
         "saved_at": {
@@ -4028,8 +4912,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "intervals": {
@@ -4058,8 +4942,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "group_member": {
@@ -4129,20 +5013,20 @@ const betaWireSchemaJson = r'''
         },
         "party_no": {
           "type": "integer",
-          "maximum": 2,
-          "minimum": 1,
+          "maximum": 2.0,
+          "minimum": 1.0,
           "title": "Party No"
         },
         "expected_round_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Round Revision"
         },
         "expected_weekly_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Weekly Revision"
         }
       },
@@ -4166,8 +5050,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "session_id": {
@@ -4213,8 +5097,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -4273,14 +5157,14 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "evaluated_at": {
@@ -4437,12 +5321,12 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "state": {
-          "$ref": "#/$defs/State"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__State"
         },
         "executed_at": {
           "type": "string",
@@ -4489,14 +5373,14 @@ const betaWireSchemaJson = r'''
         },
         "party_no": {
           "type": "integer",
-          "maximum": 2,
-          "minimum": 1,
+          "maximum": 2.0,
+          "minimum": 1.0,
           "title": "Party No"
         },
         "slot_no": {
           "type": "integer",
-          "maximum": 4,
-          "minimum": 1,
+          "maximum": 4.0,
+          "minimum": 1.0,
           "title": "Slot No"
         }
       },
@@ -4521,8 +5405,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Revision"
         }
       },
@@ -4543,8 +5427,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "membership_id": {
@@ -4646,8 +5530,8 @@ const betaWireSchemaJson = r'''
         },
         "schedule_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Schedule Revision"
         }
       },
@@ -4758,8 +5642,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "item_id": {
@@ -4817,14 +5701,14 @@ const betaWireSchemaJson = r'''
         },
         "membership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Membership Revision"
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "items": {
@@ -4963,26 +5847,26 @@ const betaWireSchemaJson = r'''
         },
         "actor_membership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Actor Membership Revision"
         },
         "room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Room Revision"
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "target_round_id": {
@@ -5094,8 +5978,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_weekly_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Weekly Revision"
         }
       },
@@ -5160,8 +6044,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -5171,8 +6055,8 @@ const betaWireSchemaJson = r'''
         },
         "weekday": {
           "type": "integer",
-          "maximum": 7,
-          "minimum": 1,
+          "maximum": 7.0,
+          "minimum": 1.0,
           "title": "Weekday"
         },
         "starts_local": {
@@ -5245,8 +6129,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -5268,8 +6152,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 7,
-              "minimum": 1
+              "maximum": 7.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -5450,8 +6334,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "raid_id": {
@@ -5476,8 +6360,8 @@ const betaWireSchemaJson = r'''
         },
         "round_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Round Revision"
         },
         "round_state": {
@@ -5509,8 +6393,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "client_group_key": {
@@ -5635,8 +6519,8 @@ const betaWireSchemaJson = r'''
       "properties": {
         "weekday": {
           "type": "integer",
-          "maximum": 7,
-          "minimum": 1,
+          "maximum": 7.0,
+          "minimum": 1.0,
           "title": "Weekday"
         },
         "start": {
@@ -5651,8 +6535,8 @@ const betaWireSchemaJson = r'''
         },
         "end_day_offset": {
           "type": "integer",
-          "maximum": 1,
-          "minimum": 0,
+          "maximum": 1.0,
+          "minimum": 0.0,
           "title": "End Day Offset"
         }
       },
@@ -5677,9 +6561,9 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "multipleOf": 5,
-              "maximum": 1440,
-              "minimum": 10
+              "multipleOf": 5.0,
+              "maximum": 1440.0,
+              "minimum": 10.0
             },
             {
               "type": "null"
@@ -5700,14 +6584,14 @@ const betaWireSchemaJson = r'''
       "properties": {
         "start_minute": {
           "type": "integer",
-          "exclusiveMaximum": 10080,
-          "minimum": 0,
+          "exclusiveMaximum": 10080.0,
+          "minimum": 0.0,
           "title": "Start Minute"
         },
         "end_minute": {
           "type": "integer",
-          "maximum": 10080,
-          "exclusiveMinimum": 0,
+          "maximum": 10080.0,
+          "exclusiveMinimum": 0.0,
           "title": "End Minute"
         }
       },
@@ -5855,8 +6739,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "item_id": {
@@ -5953,14 +6837,14 @@ const betaWireSchemaJson = r'''
         },
         "party_no": {
           "type": "integer",
-          "maximum": 2,
-          "minimum": 1,
+          "maximum": 2.0,
+          "minimum": 1.0,
           "title": "Party No"
         },
         "slot_no": {
           "type": "integer",
-          "maximum": 4,
-          "minimum": 1,
+          "maximum": 4.0,
+          "minimum": 1.0,
           "title": "Slot No"
         },
         "cycle_member_id": {
@@ -5970,8 +6854,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Cycle Member Revision"
         }
       },
@@ -6032,16 +6916,16 @@ const betaWireSchemaJson = r'''
         },
         "current_summary_version": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Current Summary Version"
         },
         "success_summary_version": {
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -6051,8 +6935,8 @@ const betaWireSchemaJson = r'''
         },
         "power_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Power Revision"
         },
         "observed_at": {
@@ -6239,8 +7123,8 @@ const betaWireSchemaJson = r'''
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "evaluated_at": {
@@ -6275,8 +7159,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_schedule_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Schedule Revision"
         },
         "starts_at": {
@@ -6311,8 +7195,8 @@ const betaWireSchemaJson = r'''
         },
         "proposal_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Proposal Plan Revision"
         },
         "membership_id": {
@@ -6322,8 +7206,8 @@ const betaWireSchemaJson = r'''
         },
         "membership_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Membership Generation"
         },
         "response": {
@@ -6331,8 +7215,8 @@ const betaWireSchemaJson = r'''
         },
         "response_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Response Revision"
         },
         "responded_at": {
@@ -6374,8 +7258,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "group_member": {
@@ -6515,20 +7399,20 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "proposal_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Proposal Plan Revision"
         },
         "created_from_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Created From Plan Revision"
         },
         "state": {
@@ -6722,44 +7606,44 @@ const betaWireSchemaJson = r'''
         },
         "expected_registration_version": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Registration Version"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Ownership Revision"
         },
         "expected_roster_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Roster Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Lifecycle Revision"
         },
         "expected_role_summary_version": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Role Summary Version"
         },
         "expected_limits_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Limits Revision"
         },
         "expected_usage_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Usage Revision"
         }
       },
@@ -6788,8 +7672,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "round_ids": {
@@ -6812,8 +7696,8 @@ const betaWireSchemaJson = r'''
         },
         "schedule_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Schedule Revision"
         },
         "starts_at": {
@@ -6931,14 +7815,14 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Room Revision"
         },
         "experience_level": {
@@ -7059,17 +7943,17 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "ownership_revision": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Ownership Revision"
         },
         "lifecycle_revision": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Lifecycle Revision"
         },
         "state": {
@@ -7178,7 +8062,7 @@ const betaWireSchemaJson = r'''
           "$ref": "#/$defs/Intent"
         },
         "beta_schedule": {
-          "$ref": "#/$defs/Proposed_BetaScheduleConfig"
+          "$ref": "#/$defs/BetaScheduleConfig"
         }
       },
       "additionalProperties": false,
@@ -7194,12 +8078,58 @@ const betaWireSchemaJson = r'''
         "intent",
         "beta_schedule"
       ],
-      "title": "Open"
+      "title": "BetaOpenRequest"
     },
     "Beta_AdmissionDisplayContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_AdmissionDisplayData"
@@ -7211,7 +8141,7 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "AdmissionDisplayContext"
+      "title": "Beta_AdmissionDisplayContext"
     },
     "Beta_AdmissionDisplayData": {
       "properties": {
@@ -7222,20 +8152,20 @@ const betaWireSchemaJson = r'''
         },
         "room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Room Revision"
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "expected_cycle_key": {
@@ -7328,7 +8258,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -7360,7 +8290,7 @@ const betaWireSchemaJson = r'''
         "leadership",
         "beta_schedule"
       ],
-      "title": "AdmissionDisplayData"
+      "title": "Beta_AdmissionDisplayData"
     },
     "Beta_ApplicationDisplayDetail": {
       "properties": {
@@ -7379,8 +8309,8 @@ const betaWireSchemaJson = r'''
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "members": {
@@ -7402,8 +8332,8 @@ const betaWireSchemaJson = r'''
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "permissions": {
@@ -7458,7 +8388,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -7468,7 +8398,7 @@ const betaWireSchemaJson = r'''
         "recruitment_identity": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_RecruitmentIdentity"
+              "$ref": "#/$defs/RecruitmentIdentity"
             },
             {
               "type": "null"
@@ -7496,12 +8426,12 @@ const betaWireSchemaJson = r'''
         "beta_schedule",
         "recruitment_identity"
       ],
-      "title": "ApplicationDisplayDetail"
+      "title": "Beta_ApplicationDisplayDetail"
     },
     "Beta_ApplicationDisplayDetailResponse": {
       "properties": {
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_ApplicationDisplayDetail"
@@ -7513,7 +8443,7 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "ApplicationDisplayDetailResponse"
+      "title": "Beta_ApplicationDisplayDetailResponse"
     },
     "Beta_ApplicationDisplayItem": {
       "properties": {
@@ -7529,8 +8459,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "state": {
@@ -7635,7 +8565,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -7645,12 +8575,16 @@ const betaWireSchemaJson = r'''
         "application_memo": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_MemoStored"
+              "type": "string",
+              "maxLength": 20,
+              "minLength": 1,
+              "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣ\\x20-\\x7e]+$(?![\\s\\S])"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "title": "Application Memo"
         }
       },
       "additionalProperties": false,
@@ -7675,7 +8609,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule",
         "application_memo"
       ],
-      "title": "ApplicationDisplayItem"
+      "title": "Beta_ApplicationDisplayItem"
     },
     "Beta_ApplicationDisplayOwnApplication": {
       "properties": {
@@ -7686,8 +8620,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "state": {
@@ -7710,12 +8644,16 @@ const betaWireSchemaJson = r'''
         "application_memo": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_MemoStored"
+              "type": "string",
+              "maxLength": 20,
+              "minLength": 1,
+              "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣ\\x20-\\x7e]+$(?![\\s\\S])"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "title": "Application Memo"
         }
       },
       "additionalProperties": false,
@@ -7727,7 +8665,7 @@ const betaWireSchemaJson = r'''
         "expires_at",
         "application_memo"
       ],
-      "title": "ApplicationDisplayOwnApplication"
+      "title": "Beta_ApplicationDisplayOwnApplication"
     },
     "Beta_ApplicationDisplayPage": {
       "properties": {
@@ -7741,8 +8679,8 @@ const betaWireSchemaJson = r'''
         },
         "applications_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Applications Revision"
         },
         "next_cursor": {
@@ -7770,12 +8708,12 @@ const betaWireSchemaJson = r'''
         "next_cursor",
         "evaluated_at"
       ],
-      "title": "ApplicationDisplayPage"
+      "title": "Beta_ApplicationDisplayPage"
     },
     "Beta_ApplicationDisplayPageResponse": {
       "properties": {
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_ApplicationDisplayPage"
@@ -7787,7 +8725,7 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "ApplicationDisplayPageResponse"
+      "title": "Beta_ApplicationDisplayPageResponse"
     },
     "Beta_BApplication": {
       "properties": {
@@ -7803,8 +8741,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "state": {
@@ -7874,7 +8812,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -7884,12 +8822,16 @@ const betaWireSchemaJson = r'''
         "application_memo": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_MemoStored"
+              "type": "string",
+              "maxLength": 20,
+              "minLength": 1,
+              "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣ\\x20-\\x7e]+$(?![\\s\\S])"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "title": "Application Memo"
         }
       },
       "additionalProperties": false,
@@ -7911,7 +8853,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule",
         "application_memo"
       ],
-      "title": "BApplication"
+      "title": "Beta_BApplication"
     },
     "Beta_BApplicationPage": {
       "properties": {
@@ -7924,8 +8866,8 @@ const betaWireSchemaJson = r'''
         },
         "applications_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Applications Revision"
         },
         "next_cursor": {
@@ -7953,7 +8895,7 @@ const betaWireSchemaJson = r'''
         "next_cursor",
         "evaluated_at"
       ],
-      "title": "BApplicationPage"
+      "title": "Beta_BApplicationPage"
     },
     "Beta_BApplicationView": {
       "properties": {
@@ -7969,8 +8911,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "state": {
@@ -8044,7 +8986,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -8054,12 +8996,16 @@ const betaWireSchemaJson = r'''
         "application_memo": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_MemoStored"
+              "type": "string",
+              "maxLength": 20,
+              "minLength": 1,
+              "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣ\\x20-\\x7e]+$(?![\\s\\S])"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "title": "Application Memo"
         }
       },
       "additionalProperties": false,
@@ -8081,7 +9027,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule",
         "application_memo"
       ],
-      "title": "BApplicationView"
+      "title": "Beta_BApplicationView"
     },
     "Beta_BCard": {
       "properties": {
@@ -8092,8 +9038,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "title": {
@@ -8133,8 +9079,8 @@ const betaWireSchemaJson = r'''
         },
         "app_member_count": {
           "type": "integer",
-          "maximum": 8,
-          "minimum": 0,
+          "maximum": 8.0,
+          "minimum": 0.0,
           "title": "App Member Count",
           "description": "Distinct target cycle members holding active assignment leases, including review-held slots, not persistent global member count or legacy choices."
         },
@@ -8228,7 +9174,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -8268,7 +9214,7 @@ const betaWireSchemaJson = r'''
         "target_generation",
         "beta_schedule"
       ],
-      "title": "BCard"
+      "title": "Beta_BCard"
     },
     "Beta_BCreationContext": {
       "properties": {
@@ -8307,8 +9253,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -8370,12 +9316,13 @@ const betaWireSchemaJson = r'''
           "$ref": "#/$defs/ContinuationEffect"
         },
         "beta_schedule_targets": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 2,
           "items": {
-            "$ref": "#/$defs/Proposed_BetaScheduleTarget"
-          }
+            "$ref": "#/$defs/BetaScheduleTarget"
+          },
+          "type": "array",
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Beta Schedule Targets"
         }
       },
       "additionalProperties": false,
@@ -8402,7 +9349,7 @@ const betaWireSchemaJson = r'''
         "continuation_effect",
         "beta_schedule_targets"
       ],
-      "title": "BCreationContext"
+      "title": "Beta_BCreationContext"
     },
     "Beta_BDetail": {
       "properties": {
@@ -8421,8 +9368,8 @@ const betaWireSchemaJson = r'''
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "members": {
@@ -8444,8 +9391,8 @@ const betaWireSchemaJson = r'''
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "permissions": {
@@ -8490,7 +9437,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -8500,7 +9447,7 @@ const betaWireSchemaJson = r'''
         "recruitment_identity": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_RecruitmentIdentity"
+              "$ref": "#/$defs/RecruitmentIdentity"
             },
             {
               "type": "null"
@@ -8527,7 +9474,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule",
         "recruitment_identity"
       ],
-      "title": "BDetail"
+      "title": "Beta_BDetail"
     },
     "Beta_BMembership": {
       "properties": {
@@ -8538,8 +9485,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "room_id": {
@@ -8671,7 +9618,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -8704,7 +9651,7 @@ const betaWireSchemaJson = r'''
         "target_revision",
         "beta_schedule"
       ],
-      "title": "BMembership"
+      "title": "Beta_BMembership"
     },
     "Beta_BMembershipPage": {
       "properties": {
@@ -8717,8 +9664,8 @@ const betaWireSchemaJson = r'''
         },
         "membership_head": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Membership Head"
         },
         "next_cursor": {
@@ -8746,7 +9693,7 @@ const betaWireSchemaJson = r'''
         "next_cursor",
         "evaluated_at"
       ],
-      "title": "BMembershipPage"
+      "title": "Beta_BMembershipPage"
     },
     "Beta_BPage": {
       "properties": {
@@ -8759,8 +9706,8 @@ const betaWireSchemaJson = r'''
         },
         "directory_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Directory Revision"
         },
         "filter_scope_digest": {
@@ -8800,7 +9747,7 @@ const betaWireSchemaJson = r'''
         "next_cursor",
         "evaluated_at"
       ],
-      "title": "BPage"
+      "title": "Beta_BPage"
     },
     "Beta_BReview": {
       "properties": {
@@ -8809,20 +9756,20 @@ const betaWireSchemaJson = r'''
         },
         "room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Room Revision"
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "server_time": {
@@ -8839,7 +9786,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -8859,7 +9806,7 @@ const betaWireSchemaJson = r'''
         "permissions",
         "beta_schedule"
       ],
-      "title": "BReview"
+      "title": "Beta_BReview"
     },
     "Beta_BSubmissionOut": {
       "properties": {
@@ -8873,16 +9820,16 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "source_personal_version": {
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -8930,7 +9877,7 @@ const betaWireSchemaJson = r'''
         "availability_copy": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_AvailabilityCopyView"
+              "$ref": "#/$defs/AvailabilityCopyView"
             },
             {
               "type": "null"
@@ -8953,7 +9900,7 @@ const betaWireSchemaJson = r'''
         "cycle_member_revision",
         "availability_copy"
       ],
-      "title": "BSubmissionOut"
+      "title": "Beta_BSubmissionOut"
     },
     "Beta_BTimeContext": {
       "properties": {
@@ -8964,14 +9911,14 @@ const betaWireSchemaJson = r'''
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "evaluated_at": {
@@ -9008,7 +9955,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -9029,7 +9976,7 @@ const betaWireSchemaJson = r'''
         "target_cycle_key",
         "beta_schedule"
       ],
-      "title": "BTimeContext"
+      "title": "Beta_BTimeContext"
     },
     "Beta_BTimeMember": {
       "properties": {
@@ -9080,12 +10027,58 @@ const betaWireSchemaJson = r'''
         "anonymous_busy",
         "cycle_member_id"
       ],
-      "title": "BTimeMember"
+      "title": "Beta_BTimeMember"
     },
     "Beta_ContinuationDisplayContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_ContinuationDisplayData"
@@ -9097,7 +10090,7 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "ContinuationDisplayContext"
+      "title": "Beta_ContinuationDisplayContext"
     },
     "Beta_ContinuationDisplayData": {
       "properties": {
@@ -9193,7 +10186,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -9217,10 +10210,56 @@ const betaWireSchemaJson = r'''
         "conflicts",
         "beta_schedule"
       ],
-      "title": "ContinuationDisplayData"
+      "title": "Beta_ContinuationDisplayData"
     },
     "Beta_MembershipActionDetailProfile": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/MembershipActionDetailReaderScope"
         },
@@ -9234,7 +10273,7 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "MembershipActionDetailProfile"
+      "title": "Beta_MembershipActionDetailProfile"
     },
     "Beta_MembershipActionDetailProfileData": {
       "properties": {
@@ -9276,7 +10315,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -9286,7 +10325,7 @@ const betaWireSchemaJson = r'''
         "recruitment_identity": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_RecruitmentIdentity"
+              "$ref": "#/$defs/RecruitmentIdentity"
             },
             {
               "type": "null"
@@ -9307,7 +10346,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule",
         "recruitment_identity"
       ],
-      "title": "MembershipActionDetailProfileData"
+      "title": "Beta_MembershipActionDetailProfileData"
     },
     "Beta_MembershipActionMembershipEntry": {
       "properties": {
@@ -9336,7 +10375,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -9354,10 +10393,56 @@ const betaWireSchemaJson = r'''
         "content",
         "beta_schedule"
       ],
-      "title": "MembershipActionMembershipEntry"
+      "title": "Beta_MembershipActionMembershipEntry"
     },
     "Beta_MembershipActionMembershipPage": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/MembershipActionMembershipReaderScope"
         },
@@ -9371,7 +10456,7 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "MembershipActionMembershipPage"
+      "title": "Beta_MembershipActionMembershipPage"
     },
     "Beta_MembershipActionMembershipPageData": {
       "properties": {
@@ -9386,8 +10471,8 @@ const betaWireSchemaJson = r'''
         },
         "membership_head": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Membership Head"
         },
         "next_cursor": {
@@ -9416,10 +10501,56 @@ const betaWireSchemaJson = r'''
         "next_cursor",
         "evaluated_at"
       ],
-      "title": "MembershipActionMembershipPageData"
+      "title": "Beta_MembershipActionMembershipPageData"
     },
     "Beta_MembershipActionPlanProfile": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/MembershipActionPlanReaderScope"
         },
@@ -9433,7 +10564,7 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "MembershipActionPlanProfile"
+      "title": "Beta_MembershipActionPlanProfile"
     },
     "Beta_MembershipActionPlanProfileData": {
       "properties": {
@@ -9475,7 +10606,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -9485,7 +10616,7 @@ const betaWireSchemaJson = r'''
         "recruitment_identity": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_RecruitmentIdentity"
+              "$ref": "#/$defs/RecruitmentIdentity"
             },
             {
               "type": "null"
@@ -9506,12 +10637,58 @@ const betaWireSchemaJson = r'''
         "beta_schedule",
         "recruitment_identity"
       ],
-      "title": "MembershipActionPlanProfileData"
+      "title": "Beta_MembershipActionPlanProfileData"
     },
     "Beta_OpeningDisplayContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_OpeningDisplayData"
@@ -9523,10 +10700,20 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OpeningDisplayContext"
+      "title": "Beta_OpeningDisplayContext"
     },
     "Beta_OpeningDisplayData": {
       "properties": {
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "room_id": {
           "type": "string",
           "format": "uuid",
@@ -9645,7 +10832,7 @@ const betaWireSchemaJson = r'''
           }
         },
         "beta_schedule_config": {
-          "$ref": "#/$defs/Proposed_BetaScheduleConfig"
+          "$ref": "#/$defs/BetaScheduleConfig"
         }
       },
       "additionalProperties": false,
@@ -9669,12 +10856,58 @@ const betaWireSchemaJson = r'''
         "item_settings",
         "beta_schedule_config"
       ],
-      "title": "OpeningDisplayData"
+      "title": "Beta_OpeningDisplayData"
     },
     "Beta_OutputContract3GetV2MeRaidRoomCreationContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BCreationContext"
@@ -9686,12 +10919,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3GetV2MeRaidRoomCreationContext"
+      "title": "Beta_OutputContract3GetV2MeRaidRoomCreationContext"
     },
     "Beta_OutputContract3GetV2MeRaidRoomMemberships": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BMembershipPage"
@@ -9703,12 +10982,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3GetV2MeRaidRoomMemberships"
+      "title": "Beta_OutputContract3GetV2MeRaidRoomMemberships"
     },
     "Beta_OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BSubmissionOut"
@@ -9720,12 +11045,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
+      "title": "Beta_OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
     },
     "Beta_OutputContract3GetV2MeRaidRoomsRoomIdScheduleContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BTimeContext"
@@ -9737,12 +11108,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3GetV2MeRaidRoomsRoomIdScheduleContext"
+      "title": "Beta_OutputContract3GetV2MeRaidRoomsRoomIdScheduleContext"
     },
     "Beta_OutputContract3GetV2RaidRoomApplicationsApplicationId": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "anyOf": [
@@ -9762,12 +11179,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3GetV2RaidRoomApplicationsApplicationId"
+      "title": "Beta_OutputContract3GetV2RaidRoomApplicationsApplicationId"
     },
     "Beta_OutputContract3GetV2RaidRoomsRoomId": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BCard"
@@ -9779,12 +11242,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3GetV2RaidRoomsRoomId"
+      "title": "Beta_OutputContract3GetV2RaidRoomsRoomId"
     },
     "Beta_OutputContract3GetV2RaidRoomsRoomIdApplications": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BApplicationPage"
@@ -9796,12 +11305,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3GetV2RaidRoomsRoomIdApplications"
+      "title": "Beta_OutputContract3GetV2RaidRoomsRoomIdApplications"
     },
     "Beta_OutputContract3GetV2RaidRoomsRoomIdDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BDetail"
@@ -9813,12 +11368,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3GetV2RaidRoomsRoomIdDetail"
+      "title": "Beta_OutputContract3GetV2RaidRoomsRoomIdDetail"
     },
     "Beta_OutputContract3PostV2RaidRoomsSearch": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BPage"
@@ -9830,12 +11431,58 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "OutputContract3PostV2RaidRoomsSearch"
+      "title": "Beta_OutputContract3PostV2RaidRoomsSearch"
     },
     "Beta_ResumePlanContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_ResumePlanData"
@@ -9847,7 +11494,7 @@ const betaWireSchemaJson = r'''
         "scope",
         "data"
       ],
-      "title": "ResumePlanContext"
+      "title": "Beta_ResumePlanContext"
     },
     "Beta_ResumePlanData": {
       "properties": {
@@ -9858,14 +11505,14 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "server_time": {
@@ -9984,7 +11631,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_BetaScheduleView"
+              "$ref": "#/$defs/BetaScheduleView"
             },
             {
               "type": "null"
@@ -9994,7 +11641,7 @@ const betaWireSchemaJson = r'''
         "recruitment_identity": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Proposed_RecruitmentIdentity"
+              "$ref": "#/$defs/RecruitmentIdentity"
             },
             {
               "type": "null"
@@ -10030,7 +11677,7 @@ const betaWireSchemaJson = r'''
         "beta_schedule",
         "recruitment_identity"
       ],
-      "title": "ResumePlanData"
+      "title": "Beta_ResumePlanData"
     },
     "Cancel": {
       "properties": {
@@ -10066,8 +11713,54 @@ const betaWireSchemaJson = r'''
     },
     "CancellationContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/CancellationContextData"
@@ -10083,6 +11776,16 @@ const betaWireSchemaJson = r'''
     },
     "CancellationContextData": {
       "properties": {
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "room_id": {
           "type": "string",
           "format": "uuid",
@@ -10226,12 +11929,12 @@ const betaWireSchemaJson = r'''
         },
         "ownership_revision": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Ownership Revision"
         },
         "lifecycle_revision": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Lifecycle Revision"
         },
         "ownership_state": {
@@ -10492,7 +12195,7 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -10548,20 +12251,20 @@ const betaWireSchemaJson = r'''
         },
         "expected_room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Room Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Members Revision"
         },
         "expected_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Plan Revision"
         },
         "expected_policy_snapshot": {
@@ -10603,8 +12306,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Cycle Member Revision"
         },
         "target_cycle_key": {
@@ -10681,6 +12384,52 @@ const betaWireSchemaJson = r'''
     },
     "CommonContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/GlobalScope"
         },
@@ -10796,19 +12545,19 @@ const betaWireSchemaJson = r'''
         },
         "member_count": {
           "type": "integer",
-          "maximum": 8,
-          "minimum": 0,
+          "maximum": 8.0,
+          "minimum": 0.0,
           "title": "Member Count"
         },
         "assignment_count": {
           "type": "integer",
-          "maximum": 40,
-          "minimum": 0,
+          "maximum": 40.0,
+          "minimum": 0.0,
           "title": "Assignment Count"
         },
         "reservation_count": {
           "type": "integer",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Reservation Count"
         },
         "members_revision": {
@@ -10919,6 +12668,52 @@ const betaWireSchemaJson = r'''
     },
     "CommonSettingsAck": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/GlobalScope"
         },
@@ -11147,20 +12942,20 @@ const betaWireSchemaJson = r'''
         },
         "expected_weekly_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Weekly Revision"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Ownership Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Lifecycle Revision"
         },
         "correction_context_token": {
@@ -11229,20 +13024,20 @@ const betaWireSchemaJson = r'''
         },
         "weekly_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Weekly Revision"
         },
         "ownership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Ownership Revision"
         },
         "lifecycle_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Lifecycle Revision"
         },
         "completion_sources": {
@@ -11342,8 +13137,8 @@ const betaWireSchemaJson = r'''
         },
         "weekly_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Weekly Revision"
         },
         "completion_sources": {
@@ -11377,8 +13172,54 @@ const betaWireSchemaJson = r'''
     },
     "CreateAck": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/CreateAckData"
@@ -11590,14 +13431,14 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "expected_target_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Target Revision"
         },
         "context_token": {
@@ -11613,8 +13454,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Cycle Member Revision"
         },
         "round_id": {
@@ -11640,8 +13481,54 @@ const betaWireSchemaJson = r'''
     },
     "DepartureContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/DepartureData"
@@ -11782,7 +13669,7 @@ const betaWireSchemaJson = r'''
         },
         "released_reservation_count": {
           "type": "integer",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Released Reservation Count"
         },
         "departure_effect": {
@@ -11844,8 +13731,8 @@ const betaWireSchemaJson = r'''
         },
         "cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Cycle Member Revision"
         },
         "character_id": {
@@ -11865,8 +13752,8 @@ const betaWireSchemaJson = r'''
         },
         "assignment_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Assignment Revision"
         }
       },
@@ -12027,8 +13914,8 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "display_revision": {
@@ -12050,8 +13937,8 @@ const betaWireSchemaJson = r'''
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "sessions": {
@@ -12159,14 +14046,14 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         }
       },
@@ -12235,14 +14122,14 @@ const betaWireSchemaJson = r'''
         },
         "party_no": {
           "type": "integer",
-          "maximum": 2,
-          "minimum": 1,
+          "maximum": 2.0,
+          "minimum": 1.0,
           "title": "Party No"
         },
         "slot_no": {
           "type": "integer",
-          "maximum": 4,
-          "minimum": 1,
+          "maximum": 4.0,
+          "minimum": 1.0,
           "title": "Slot No"
         },
         "assignment_id": {
@@ -12316,6 +14203,52 @@ const betaWireSchemaJson = r'''
     },
     "GlobalMembershipAck": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/GlobalScope"
         },
@@ -12456,9 +14389,9 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "multipleOf": 5,
-              "maximum": 1440,
-              "minimum": 10
+              "multipleOf": 5.0,
+              "maximum": 1440.0,
+              "minimum": 10.0
             },
             {
               "type": "null"
@@ -12486,6 +14419,16 @@ const betaWireSchemaJson = r'''
     },
     "LeadershipCandidate": {
       "properties": {
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "cycle_member_id": {
           "type": "string",
           "format": "uuid",
@@ -12562,17 +14505,17 @@ const betaWireSchemaJson = r'''
         },
         "expected_revision": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Expected Revision"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Expected Ownership Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Expected Lifecycle Revision"
         },
         "target_cycle_key": {
@@ -12595,8 +14538,54 @@ const betaWireSchemaJson = r'''
     },
     "ManualCompletionResult": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BWeeklyEntry"
@@ -12629,8 +14618,8 @@ const betaWireSchemaJson = r'''
         },
         "membership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Membership Revision"
         }
       },
@@ -12646,26 +14635,26 @@ const betaWireSchemaJson = r'''
       "properties": {
         "released_reservation_count": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 0,
+          "maximum": 2147483647.0,
+          "minimum": 0.0,
           "title": "Released Reservation Count"
         },
         "ended_participation_count": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 0,
+          "maximum": 2147483647.0,
+          "minimum": 0.0,
           "title": "Ended Participation Count"
         },
         "cancelled_application_count": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 0,
+          "maximum": 2147483647.0,
+          "minimum": 0.0,
           "title": "Cancelled Application Count"
         },
         "cancelled_session_count": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 0,
+          "maximum": 2147483647.0,
+          "minimum": 0.0,
           "title": "Cancelled Session Count"
         }
       },
@@ -12700,8 +14689,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_actor_membership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Actor Membership Revision"
         },
         "action": {
@@ -12763,6 +14752,52 @@ const betaWireSchemaJson = r'''
     },
     "MembershipActionContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/MembershipActionScope"
         },
@@ -12905,8 +14940,8 @@ const betaWireSchemaJson = r'''
         },
         "leadership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Leadership Revision"
         }
       },
@@ -12933,8 +14968,8 @@ const betaWireSchemaJson = r'''
         },
         "cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Cycle Member Revision"
         },
         "character_id": {
@@ -13053,8 +15088,8 @@ const betaWireSchemaJson = r'''
         },
         "cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Cycle Member Revision"
         },
         "state": {
@@ -13152,8 +15187,8 @@ const betaWireSchemaJson = r'''
         },
         "room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Room Revision"
         },
         "actor": {
@@ -13347,8 +15382,8 @@ const betaWireSchemaJson = r'''
         },
         "leadership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Leadership Revision"
         },
         "status": {
@@ -13458,8 +15493,8 @@ const betaWireSchemaJson = r'''
         },
         "membership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Membership Revision"
         },
         "membership_state": {
@@ -13486,8 +15521,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -13582,8 +15617,8 @@ const betaWireSchemaJson = r'''
         },
         "room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Room Revision"
         },
         "room_state": {
@@ -13616,8 +15651,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -13629,8 +15664,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -13845,8 +15880,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -14049,8 +16084,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -14090,6 +16125,52 @@ const betaWireSchemaJson = r'''
     },
     "MembershipActionResult": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/MembershipActionScope"
         },
@@ -14139,8 +16220,8 @@ const betaWireSchemaJson = r'''
         },
         "room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Room Revision"
         },
         "actor_membership_id": {
@@ -14150,8 +16231,8 @@ const betaWireSchemaJson = r'''
         },
         "actor_membership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Actor Membership Revision"
         },
         "actor_membership_ended": {
@@ -14184,8 +16265,8 @@ const betaWireSchemaJson = r'''
         },
         "ended_persistent_membership_count": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 0,
+          "maximum": 2147483647.0,
+          "minimum": 0.0,
           "title": "Ended Persistent Membership Count"
         }
       },
@@ -14212,8 +16293,8 @@ const betaWireSchemaJson = r'''
       "properties": {
         "before": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Before"
         },
         "comparison": {
@@ -14228,8 +16309,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -14264,8 +16345,8 @@ const betaWireSchemaJson = r'''
         },
         "ended_persistent_membership_count": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 0,
+          "maximum": 2147483647.0,
+          "minimum": 0.0,
           "title": "Ended Persistent Membership Count"
         },
         "preserves_unaffected_cycles": {
@@ -14341,14 +16422,14 @@ const betaWireSchemaJson = r'''
         },
         "cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Cycle Member Revision"
         },
         "planned_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Planned Cycle Member Revision"
         },
         "character_id": {
@@ -14390,6 +16471,16 @@ const betaWireSchemaJson = r'''
     },
     "MembershipActionTargetPlan": {
       "properties": {
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "target_cycle_key": {
           "type": "string",
           "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
@@ -14403,26 +16494,26 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "target_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Revision"
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "target_state": {
@@ -14535,6 +16626,16 @@ const betaWireSchemaJson = r'''
     },
     "MembershipActionTargetResult": {
       "properties": {
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "target_cycle_key": {
           "type": "string",
           "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
@@ -14548,26 +16649,26 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "target_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Revision"
         },
         "members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Members Revision"
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "target_state": {
@@ -14715,8 +16816,8 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "display_revision": {
@@ -14738,8 +16839,8 @@ const betaWireSchemaJson = r'''
         },
         "plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Plan Revision"
         },
         "sessions": {
@@ -14803,8 +16904,8 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "display_revision": {
@@ -14870,8 +16971,8 @@ const betaWireSchemaJson = r'''
         },
         "source_group_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Source Group Revision"
         },
         "planning_mode": {
@@ -15024,8 +17125,54 @@ const betaWireSchemaJson = r'''
     },
     "OutputContract3GetV2GroupsGroupIdRaidRoomMemberProjections": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BProjectionPage"
@@ -15041,8 +17188,54 @@ const betaWireSchemaJson = r'''
     },
     "OutputContract3GetV2MeRaidRoomsRoomIdContinuationChoices": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BChoices"
@@ -15058,8 +17251,54 @@ const betaWireSchemaJson = r'''
     },
     "OutputContract3GetV2MeRaidRoomsRoomIdSettings": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BSettings"
@@ -15075,8 +17314,54 @@ const betaWireSchemaJson = r'''
     },
     "OutputContract3GetV2MeRaidScheduleOverlaps": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BOverlapPage"
@@ -15092,8 +17377,54 @@ const betaWireSchemaJson = r'''
     },
     "OutputContract3GetV2RaidRoomsRoomIdCommandContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BContext"
@@ -15109,8 +17440,54 @@ const betaWireSchemaJson = r'''
     },
     "OutputContract3GetV2RaidScheduleGroupsGroupIdCandidates": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BAppRaidRoomsScheduleRouterCandidate"
@@ -15126,8 +17503,54 @@ const betaWireSchemaJson = r'''
     },
     "OutputContract3PostV2RaidRoomsRoomIdApplications": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BApplicationAck"
@@ -15143,8 +17566,54 @@ const betaWireSchemaJson = r'''
     },
     "OutputContract3PostV2RaidRoomsRoomIdJoin": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/AckData"
@@ -15387,8 +17856,8 @@ const betaWireSchemaJson = r'''
         },
         "weekday": {
           "type": "integer",
-          "maximum": 7,
-          "minimum": 1,
+          "maximum": 7.0,
+          "minimum": 1.0,
           "title": "Weekday"
         },
         "starts_at": {
@@ -16848,8 +19317,8 @@ const betaWireSchemaJson = r'''
         },
         "party_no": {
           "type": "integer",
-          "maximum": 2,
-          "minimum": 1,
+          "maximum": 2.0,
+          "minimum": 1.0,
           "title": "Party No"
         },
         "expected_round_revision": {
@@ -16895,14 +19364,14 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "expected_target_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Target Revision"
         },
         "context_token": {
@@ -16923,8 +19392,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_target_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Target Cycle Member Revision"
         },
         "mode": {
@@ -16954,8 +19423,54 @@ const betaWireSchemaJson = r'''
     },
     "RemovalContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/RemovalData"
@@ -17041,7 +19556,7 @@ const betaWireSchemaJson = r'''
         },
         "released_reservation_count": {
           "type": "integer",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Released Reservation Count"
         }
       },
@@ -17175,14 +19690,14 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "target_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Revision"
         },
         "actor_cycle_member_id": {
@@ -17192,8 +19707,8 @@ const betaWireSchemaJson = r'''
         },
         "actor_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Actor Cycle Member Revision"
         },
         "target_cycle_member_id": {
@@ -17203,8 +19718,8 @@ const betaWireSchemaJson = r'''
         },
         "target_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Cycle Member Revision"
         },
         "character_id": {
@@ -17318,20 +19833,20 @@ const betaWireSchemaJson = r'''
         },
         "expected_room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Room Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Members Revision"
         },
         "expected_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Plan Revision"
         },
         "schedule_groups": {
@@ -17350,8 +19865,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Cycle Member Revision"
         },
         "target_cycle_key": {
@@ -17396,8 +19911,8 @@ const betaWireSchemaJson = r'''
         },
         "weekday": {
           "type": "integer",
-          "maximum": 7,
-          "minimum": 1,
+          "maximum": 7.0,
+          "minimum": 1.0,
           "title": "Weekday"
         },
         "starts_local": {
@@ -17555,8 +20070,8 @@ const betaWireSchemaJson = r'''
         },
         "target_generation": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Target Generation"
         },
         "proposal_id": {
@@ -17575,8 +20090,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -17588,8 +20103,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -17610,8 +20125,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
+              "maximum": 2147483647.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -17688,24 +20203,24 @@ const betaWireSchemaJson = r'''
       "properties": {
         "eligible_count": {
           "type": "integer",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Eligible Count"
         },
         "accepted_count": {
           "type": "integer",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Accepted Count"
         },
         "required_votes": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 1.0,
           "title": "Required Votes"
         },
         "new_round_count": {
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0.0
             },
             {
               "type": "null"
@@ -17717,7 +20232,7 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0.0
             },
             {
               "type": "null"
@@ -17729,7 +20244,7 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0.0
             },
             {
               "type": "null"
@@ -17741,7 +20256,7 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0.0
             },
             {
               "type": "null"
@@ -17764,7 +20279,7 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0.0
             },
             {
               "type": "null"
@@ -17814,8 +20329,8 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "maximum": 7,
-              "minimum": 1
+              "maximum": 7.0,
+              "minimum": 1.0
             },
             {
               "type": "null"
@@ -17872,7 +20387,7 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "exclusiveMinimum": 0
+              "exclusiveMinimum": 0.0
             },
             {
               "type": "null"
@@ -17908,7 +20423,7 @@ const betaWireSchemaJson = r'''
     "ResumePreviewContext": {
       "properties": {
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/ResumePreviewData"
@@ -17955,20 +20470,20 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "proposal_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Proposal Plan Revision"
         },
         "created_from_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Created From Plan Revision"
         },
         "state": {
@@ -18420,20 +20935,20 @@ const betaWireSchemaJson = r'''
       "properties": {
         "expected_personal_version": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Personal Version"
         },
         "expected_submission_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Submission Revision"
         },
         "expected_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Cycle Member Revision"
         },
         "target_cycle_key": {
@@ -18467,8 +20982,8 @@ const betaWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Revision"
         },
         "joined_order": {
@@ -18582,14 +21097,14 @@ const betaWireSchemaJson = r'''
         },
         "expected_room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Room Revision"
         },
         "expected_settings_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Settings Revision"
         },
         "experience_level": {
@@ -18616,6 +21131,29 @@ const betaWireSchemaJson = r'''
         },
         "expected_leadership_revision": {
           "$ref": "#/$defs/Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupChange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "context_token": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 4096,
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Context Token"
         }
       },
       "additionalProperties": false,
@@ -18656,8 +21194,54 @@ const betaWireSchemaJson = r'''
     },
     "TransferContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/TransferContextData"
@@ -18787,8 +21371,8 @@ const betaWireSchemaJson = r'''
     },
     "Version": {
       "type": "integer",
-      "maximum": 2147483647,
-      "minimum": 1,
+      "maximum": 2147483647.0,
+      "minimum": 1.0,
       "title": "Version",
       "description": "Strict integer at server; booleans/floats rejected."
     },
@@ -18843,8 +21427,8 @@ const betaWireSchemaJson = r'''
       "properties": {
         "expected_application_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Application Revision"
         },
         "target_cycle_key": {
@@ -18874,20 +21458,20 @@ const betaWireSchemaJson = r'''
         },
         "expected_room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Room Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Members Revision"
         },
         "expected_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Plan Revision"
         },
         "expected_policy_snapshot": {
@@ -18952,26 +21536,26 @@ const betaWireSchemaJson = r'''
         },
         "expected_application_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Application Revision"
         },
         "expected_room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Room Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Members Revision"
         },
         "expected_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Plan Revision"
         },
         "target_cycle_key": {
@@ -19005,20 +21589,20 @@ const betaWireSchemaJson = r'''
         },
         "expected_schedule_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Schedule Revision"
         },
         "expected_participation_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Participation Revision"
         },
         "expected_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Cycle Member Revision"
         },
         "target_cycle_key": {
@@ -19047,14 +21631,14 @@ const betaWireSchemaJson = r'''
         },
         "expected_members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Members Revision"
         },
         "expected_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Plan Revision"
         },
         "placements": {
@@ -19094,14 +21678,14 @@ const betaWireSchemaJson = r'''
         },
         "expected_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Plan Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Members Revision"
         },
         "targets": {
@@ -19142,26 +21726,26 @@ const betaWireSchemaJson = r'''
         },
         "expected_room_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Room Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Members Revision"
         },
         "expected_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Plan Revision"
         },
         "expected_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Cycle Member Revision"
         },
         "target_cycle_member_id": {
@@ -19171,8 +21755,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_removed_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Removed Cycle Member Revision"
         },
         "target_cycle_key": {
@@ -19208,14 +21792,14 @@ const betaWireSchemaJson = r'''
         },
         "expected_proposal_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Proposal Revision"
         },
         "expected_proposal_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Proposal Plan Revision"
         },
         "response": {
@@ -19223,8 +21807,8 @@ const betaWireSchemaJson = r'''
         },
         "expected_cycle_member_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Cycle Member Revision"
         },
         "target_cycle_key": {
@@ -19260,20 +21844,20 @@ const betaWireSchemaJson = r'''
         },
         "expected_group_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Group Revision"
         },
         "expected_plan_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Plan Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Members Revision"
         },
         "alternative_id": {
@@ -19385,13 +21969,13 @@ const betaWireSchemaJson = r'''
         },
         "assignment_count": {
           "type": "integer",
-          "maximum": 5,
-          "minimum": 0,
+          "maximum": 5.0,
+          "minimum": 0.0,
           "title": "Assignment Count"
         },
         "reservation_count": {
           "type": "integer",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Reservation Count"
         },
         "preserves_other_cycles": {
@@ -19548,44 +22132,44 @@ const betaWireSchemaJson = r'''
         },
         "expected_registration_version": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Registration Version"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Ownership Revision"
         },
         "expected_roster_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Roster Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Lifecycle Revision"
         },
         "expected_role_summary_version": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Role Summary Version"
         },
         "expected_limits_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Limits Revision"
         },
         "expected_usage_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Usage Revision"
         }
       },
@@ -19619,20 +22203,20 @@ const betaWireSchemaJson = r'''
         },
         "party_no": {
           "type": "integer",
-          "maximum": 2,
-          "minimum": 1,
+          "maximum": 2.0,
+          "minimum": 1.0,
           "title": "Party No"
         },
         "expected_round_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Round Revision"
         },
         "expected_weekly_revision": {
           "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
           "title": "Expected Weekly Revision"
         }
       },
@@ -19711,14 +22295,81 @@ const betaWireSchemaJson = r'''
           "title": "Group States"
         },
         "room_groups": {
-          "items": {
-            "$ref": "#/$defs/RoomGroupLink"
-          },
-          "type": "array",
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RoomGroupLink"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "title": "Room Groups"
         },
+        "cycle_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Metadata"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Groups"
+        },
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BPage"
@@ -19728,7 +22379,6 @@ const betaWireSchemaJson = r'''
       "type": "object",
       "required": [
         "group_states",
-        "room_groups",
         "scope",
         "data"
       ],
@@ -20039,14 +22689,81 @@ const betaWireSchemaJson = r'''
           "title": "Group States"
         },
         "room_groups": {
-          "items": {
-            "$ref": "#/$defs/RoomGroupLink"
-          },
-          "type": "array",
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RoomGroupLink"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "title": "Room Groups"
         },
+        "cycle_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Metadata"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Groups"
+        },
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BPage"
@@ -20056,7 +22773,6 @@ const betaWireSchemaJson = r'''
       "type": "object",
       "required": [
         "group_states",
-        "room_groups",
         "scope",
         "data"
       ],
@@ -20072,14 +22788,81 @@ const betaWireSchemaJson = r'''
           "title": "Group States"
         },
         "room_groups": {
-          "items": {
-            "$ref": "#/$defs/RoomGroupLink"
-          },
-          "type": "array",
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RoomGroupLink"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "title": "Room Groups"
         },
+        "cycle_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Metadata"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Groups"
+        },
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BApplicationPage"
@@ -20089,7 +22872,6 @@ const betaWireSchemaJson = r'''
       "type": "object",
       "required": [
         "group_states",
-        "room_groups",
         "scope",
         "data"
       ],
@@ -20249,14 +23031,81 @@ const betaWireSchemaJson = r'''
           "title": "Group States"
         },
         "room_groups": {
-          "items": {
-            "$ref": "#/$defs/RoomGroupLink"
-          },
-          "type": "array",
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RoomGroupLink"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "title": "Room Groups"
         },
+        "cycle_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Metadata"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Groups"
+        },
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BApplicationPage"
@@ -20266,7 +23115,6 @@ const betaWireSchemaJson = r'''
       "type": "object",
       "required": [
         "group_states",
-        "room_groups",
         "scope",
         "data"
       ],
@@ -20282,14 +23130,81 @@ const betaWireSchemaJson = r'''
           "title": "Group States"
         },
         "room_groups": {
-          "items": {
-            "$ref": "#/$defs/RoomGroupLink"
-          },
-          "type": "array",
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RoomGroupLink"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "title": "Room Groups"
         },
+        "cycle_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Metadata"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Groups"
+        },
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/BMembershipPage"
@@ -20299,7 +23214,6 @@ const betaWireSchemaJson = r'''
       "type": "object",
       "required": [
         "group_states",
-        "room_groups",
         "scope",
         "data"
       ],
@@ -20523,11 +23437,78 @@ const betaWireSchemaJson = r'''
           "title": "Group States"
         },
         "room_groups": {
-          "items": {
-            "$ref": "#/$defs/RoomGroupLink"
-          },
-          "type": "array",
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RoomGroupLink"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "title": "Room Groups"
+        },
+        "cycle_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Metadata"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Groups"
+        },
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
         },
         "scope": {
           "$ref": "#/$defs/MembershipActionMembershipReaderScope"
@@ -20540,7 +23521,6 @@ const betaWireSchemaJson = r'''
       "type": "object",
       "required": [
         "group_states",
-        "room_groups",
         "scope",
         "data"
       ],
@@ -20637,14 +23617,81 @@ const betaWireSchemaJson = r'''
           "title": "Group States"
         },
         "room_groups": {
-          "items": {
-            "$ref": "#/$defs/RoomGroupLink"
-          },
-          "type": "array",
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RoomGroupLink"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "title": "Room Groups"
         },
+        "cycle_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Metadata"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Groups"
+        },
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
-          "$ref": "#/$defs/Scope"
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
         "data": {
           "$ref": "#/$defs/Beta_BMembershipPage"
@@ -20654,7 +23701,6 @@ const betaWireSchemaJson = r'''
       "type": "object",
       "required": [
         "group_states",
-        "room_groups",
         "scope",
         "data"
       ],
@@ -20670,11 +23716,78 @@ const betaWireSchemaJson = r'''
           "title": "Group States"
         },
         "room_groups": {
-          "items": {
-            "$ref": "#/$defs/RoomGroupLink"
-          },
-          "type": "array",
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RoomGroupLink"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "title": "Room Groups"
+        },
+        "cycle_groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Metadata"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cycle Groups"
+        },
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
         },
         "scope": {
           "$ref": "#/$defs/MembershipActionMembershipReaderScope"
@@ -20687,7 +23800,6 @@ const betaWireSchemaJson = r'''
       "type": "object",
       "required": [
         "group_states",
-        "room_groups",
         "scope",
         "data"
       ],
@@ -20695,6 +23807,52 @@ const betaWireSchemaJson = r'''
     },
     "GroupConnectionContext": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/GlobalScope"
         },
@@ -20750,6 +23908,5120 @@ const betaWireSchemaJson = r'''
         "permission"
       ],
       "title": "TargetGroup"
+    },
+    "AdmissionDisplayContext": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/AdmissionDisplayData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "AdmissionDisplayContext"
+    },
+    "AdmissionDisplayData": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "room_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Room Revision"
+        },
+        "members_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Members Revision"
+        },
+        "plan_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Plan Revision"
+        },
+        "expected_cycle_key": {
+          "type": "string",
+          "title": "Expected Cycle Key"
+        },
+        "server_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Server Time"
+        },
+        "catalog_version": {
+          "type": "string",
+          "title": "Catalog Version"
+        },
+        "policy_snapshot": {
+          "type": "string",
+          "title": "Policy Snapshot"
+        },
+        "context_token": {
+          "type": "string",
+          "title": "Context Token"
+        },
+        "selection": {
+          "$ref": "#/$defs/BSelection"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/BAppRaidRoomsParticipationCommandsTarget"
+          },
+          "type": "array",
+          "title": "Targets"
+        },
+        "session_choices": {
+          "items": {
+            "$ref": "#/$defs/SessionChoice"
+          },
+          "type": "array",
+          "maxItems": 64,
+          "minItems": 0,
+          "title": "Session Choices"
+        },
+        "comparison": {
+          "$ref": "#/$defs/BPowerComparison"
+        },
+        "permissions": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Permissions"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "expected_target_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Issued At"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expires At"
+        },
+        "leadership": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Leadership"
+        },
+        "session_display": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExistingSessionDisplay"
+            },
+            {
+              "$ref": "#/$defs/OpeningPreviewDisplay"
+            },
+            {
+              "$ref": "#/$defs/NoSelectionDisplay"
+            }
+          ],
+          "title": "Session Display",
+          "discriminator": {
+            "propertyName": "kind",
+            "mapping": {
+              "existing": "#/components/schemas/ExistingSessionDisplay",
+              "none": "#/components/schemas/NoSelectionDisplay",
+              "opening_preview": "#/components/schemas/OpeningPreviewDisplay"
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "room_revision",
+        "members_revision",
+        "plan_revision",
+        "expected_cycle_key",
+        "server_time",
+        "catalog_version",
+        "policy_snapshot",
+        "context_token",
+        "selection",
+        "targets",
+        "session_choices",
+        "comparison",
+        "permissions",
+        "target_cycle_key",
+        "expected_target_revision",
+        "issued_at",
+        "expires_at",
+        "leadership"
+      ],
+      "title": "AdmissionDisplayData"
+    },
+    "ApplicationDisplayDetailResponse": {
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/ApplicationDisplayDetail"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "ApplicationDisplayDetailResponse"
+    },
+    "ApplicationDisplayDetail": {
+      "properties": {
+        "room": {
+          "$ref": "#/$defs/BCard"
+        },
+        "settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "members_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Members Revision"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/BRoomMember"
+          },
+          "type": "array",
+          "title": "Members"
+        },
+        "my_membership": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BAppRaidRoomsAdmissionSchemasMyMembership"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plan_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Plan Revision"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions3"
+        },
+        "access": {
+          "$ref": "#/$defs/BAccess"
+        },
+        "leadership": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Leadership"
+        },
+        "my_target_role": {
+          "$ref": "#/$defs/MyTargetRole"
+        },
+        "formation_slots": {
+          "items": {
+            "$ref": "#/$defs/FormationSlot"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Formation Slots"
+        },
+        "formation_history": {
+          "items": {
+            "$ref": "#/$defs/FormationSlot"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Formation History"
+        },
+        "unplaced_assignments": {
+          "items": {
+            "$ref": "#/$defs/UnplacedAssignment"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Unplaced Assignments"
+        },
+        "my_application": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApplicationDisplayOwnApplication"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room",
+        "settings",
+        "members_revision",
+        "members",
+        "my_membership",
+        "plan_revision",
+        "permissions",
+        "access",
+        "leadership",
+        "my_target_role",
+        "formation_slots",
+        "formation_history",
+        "unplaced_assignments",
+        "my_application"
+      ],
+      "title": "ApplicationDisplayDetail"
+    },
+    "ApplicationDisplayOwnApplication": {
+      "properties": {
+        "application_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Application Id"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "rejected",
+            "withdrawn",
+            "expired",
+            "cancelled"
+          ],
+          "title": "State"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expires At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "application_id",
+        "revision",
+        "state",
+        "expires_at"
+      ],
+      "title": "ApplicationDisplayOwnApplication"
+    },
+    "ApplicationDisplayPageResponse": {
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/ApplicationDisplayPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "ApplicationDisplayPageResponse"
+    },
+    "ApplicationDisplayPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ApplicationDisplayItem"
+          },
+          "type": "array",
+          "maxItems": 50,
+          "title": "Items"
+        },
+        "applications_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Applications Revision"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Cursor"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Evaluated At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "items",
+        "applications_revision",
+        "next_cursor",
+        "evaluated_at"
+      ],
+      "title": "ApplicationDisplayPage"
+    },
+    "ApplicationDisplayItem": {
+      "properties": {
+        "application_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Application Id"
+        },
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "state": {
+          "type": "string",
+          "title": "State"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Created At"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expires At"
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ended At"
+        },
+        "character_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Character Id"
+        },
+        "selected_role": {
+          "$ref": "#/$defs/SelectedRole"
+        },
+        "display": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object",
+          "title": "Display"
+        },
+        "admission_origin": {
+          "$ref": "#/$defs/BOrigin"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "target_generation": {
+          "$ref": "#/$defs/Version"
+        },
+        "comparison": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BPowerComparison"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "analysis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApplicationDisplayAnalysis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "display_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "APPLICATION_CONTEXT_CHANGED",
+                "CHARACTER_DATA_UNAVAILABLE"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Display Reason"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "application_id",
+        "room_id",
+        "revision",
+        "state",
+        "created_at",
+        "expires_at",
+        "ended_at",
+        "character_id",
+        "selected_role",
+        "display",
+        "admission_origin",
+        "target_cycle_key",
+        "target_generation",
+        "comparison",
+        "analysis",
+        "display_reason"
+      ],
+      "title": "ApplicationDisplayItem"
+    },
+    "BetaApplyRequest": {
+      "properties": {
+        "expected_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "expected_room_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Room Revision"
+        },
+        "expected_members_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Members Revision"
+        },
+        "expected_plan_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Plan Revision"
+        },
+        "expected_policy_snapshot": {
+          "type": "string",
+          "title": "Expected Policy Snapshot"
+        },
+        "expected_catalog_version": {
+          "type": "string",
+          "title": "Expected Catalog Version"
+        },
+        "selection_context": {
+          "$ref": "#/$defs/BContextRef"
+        },
+        "selection": {
+          "$ref": "#/$defs/BSelection"
+        },
+        "target_items": {
+          "items": {
+            "$ref": "#/$defs/BAppRaidRoomsParticipationCommandsTarget"
+          },
+          "type": "array",
+          "minItems": 1,
+          "title": "Target Items"
+        },
+        "target_session_ids": {
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": "array",
+          "title": "Target Session Ids"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "expected_target_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "application_memo": {
+          "anyOf": [
+            {
+              "type": "string",
+              "description": "NFC then printable ASCII/Hangul validation, trim U+0020; at most 20 code points. Raw idempotency body preserved.",
+              "x-allowed-after-nfc": "U+AC00-D7A3,U+3131-3163,U+0020-U+007E",
+              "x-max-utf8-bytes": 4096,
+              "x-text-policy": "hangul-printable-ascii-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Application Memo"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "expected_cycle_key",
+        "expected_room_revision",
+        "expected_members_revision",
+        "expected_plan_revision",
+        "expected_policy_snapshot",
+        "expected_catalog_version",
+        "selection_context",
+        "selection",
+        "target_items",
+        "target_session_ids",
+        "target_cycle_key",
+        "expected_target_revision"
+      ],
+      "title": "BetaApplyRequest"
+    },
+    "BetaCreateRequest": {
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Title"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope1"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Id"
+        },
+        "admission_mode": {
+          "$ref": "#/$defs/AdmissionMode"
+        },
+        "app_mode": {
+          "$ref": "#/$defs/AppMode"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/BCreateItem"
+          },
+          "type": "array",
+          "minItems": 1,
+          "title": "Items"
+        },
+        "selection": {
+          "$ref": "#/$defs/BSelection"
+        },
+        "selection_context": {
+          "$ref": "#/$defs/BContextRef"
+        },
+        "experience_level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperienceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "combat_requirement": {
+          "$ref": "#/$defs/BCombat"
+        },
+        "continuation": {
+          "$ref": "#/$defs/BContinuationInput"
+        },
+        "expected_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "expected_catalog_version": {
+          "type": "string",
+          "title": "Expected Catalog Version"
+        },
+        "expected_group_revision": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 2147483647.0,
+              "minimum": 1.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expected Group Revision"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "expected_target_revision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Version"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "beta_schedule_targets": {
+          "items": {
+            "$ref": "#/$defs/BetaScheduleTarget"
+          },
+          "type": "array",
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Beta Schedule Targets"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "title",
+        "scope",
+        "group_id",
+        "admission_mode",
+        "app_mode",
+        "items",
+        "selection",
+        "selection_context",
+        "experience_level",
+        "combat_requirement",
+        "continuation",
+        "expected_cycle_key",
+        "expected_catalog_version",
+        "expected_group_revision",
+        "target_cycle_key",
+        "expected_target_revision",
+        "beta_schedule_targets"
+      ],
+      "title": "BetaCreateRequest"
+    },
+    "AdmissionMode": {
+      "type": "string",
+      "enum": [
+        "leader_only",
+        "direct_join"
+      ],
+      "title": "AdmissionMode"
+    },
+    "AppMode": {
+      "type": "string",
+      "enum": [
+        "single",
+        "mixed_bundle"
+      ],
+      "title": "AppMode"
+    },
+    "BContinuationInput": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Enabled"
+        },
+        "next_selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/app__raid_rooms__cycle_wire__Selection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled",
+        "next_selection"
+      ],
+      "title": "BContinuationInput"
+    },
+    "BCreateItem": {
+      "properties": {
+        "raid_id": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z0-9_]+$",
+          "title": "Raid Id"
+        },
+        "difficulty_id": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z0-9_]+$",
+          "title": "Difficulty Id"
+        },
+        "duration_minutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "multipleOf": 5.0,
+              "maximum": 1440.0,
+              "minimum": 10.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Duration Minutes"
+        },
+        "expected_weekly_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Weekly Revision"
+        },
+        "party_no": {
+          "type": "integer",
+          "maximum": 2.0,
+          "minimum": 1.0,
+          "title": "Party No"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "raid_id",
+        "difficulty_id",
+        "duration_minutes",
+        "expected_weekly_revision",
+        "party_no"
+      ],
+      "title": "BCreateItem"
+    },
+    "BetaScheduleConfig": {
+      "properties": {
+        "base_starts_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Base Starts At"
+        },
+        "early_coordination_enabled": {
+          "type": "boolean",
+          "title": "Early Coordination Enabled"
+        },
+        "early_additional_members": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 7.0,
+              "minimum": 1.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Early Additional Members"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "base_starts_at",
+        "early_coordination_enabled",
+        "early_additional_members"
+      ],
+      "title": "BetaScheduleConfig",
+      "description": "Beta explicit departure uses UTC whole-minute precision; duration, personal availability and automatic candidates retain five-minute grids."
+    },
+    "BetaScheduleEditRequest": {
+      "properties": {
+        "expected_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "expected_plan_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Plan Revision"
+        },
+        "expected_members_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Members Revision"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "expected_target_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "expected_leadership_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "early_coordination_enabled": {
+          "type": "boolean",
+          "title": "Early Coordination Enabled"
+        },
+        "early_additional_members": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 7.0,
+              "minimum": 1.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Early Additional Members"
+        },
+        "accept_immediate_confirmation": {
+          "type": "boolean",
+          "title": "Accept Immediate Confirmation"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "expected_cycle_key",
+        "expected_plan_revision",
+        "expected_members_revision",
+        "target_cycle_key",
+        "expected_target_revision",
+        "expected_leadership_revision",
+        "early_coordination_enabled",
+        "early_additional_members",
+        "accept_immediate_confirmation"
+      ],
+      "title": "BetaScheduleEditRequest"
+    },
+    "BetaScheduleTarget": {
+      "properties": {
+        "base_starts_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Base Starts At"
+        },
+        "early_coordination_enabled": {
+          "type": "boolean",
+          "title": "Early Coordination Enabled"
+        },
+        "early_additional_members": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 7.0,
+              "minimum": 1.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Early Additional Members"
+        },
+        "target_cycle_key": {
+          "type": "string",
+          "title": "Target Cycle Key"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "base_starts_at",
+        "early_coordination_enabled",
+        "early_additional_members",
+        "target_cycle_key"
+      ],
+      "title": "BetaScheduleTarget"
+    },
+    "BetaSearchRequest": {
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/Category"
+        },
+        "admission_scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdmissionScope"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_ids": {
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": "array",
+          "title": "Group Ids"
+        },
+        "filter_context_token": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Filter Context Token"
+        },
+        "member_conditions": {
+          "items": {
+            "$ref": "#/$defs/BCondition"
+          },
+          "type": "array",
+          "title": "Member Conditions"
+        },
+        "raid_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "title": "Raid Ids"
+        },
+        "difficulty_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "title": "Difficulty Ids"
+        },
+        "sort": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BSort"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "remaining_slot_counts": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer",
+                "maximum": 7.0,
+                "minimum": 1.0
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Remaining Slot Counts"
+        },
+        "limit": {
+          "type": "integer",
+          "maximum": 50.0,
+          "minimum": 1.0,
+          "title": "Limit"
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cursor"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "experience_levels": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperienceFilterValues"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_character_candidates_token": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Group Character Candidates Token"
+        },
+        "departure_windows": {
+          "items": {
+            "$ref": "#/$defs/DepartureWindow"
+          },
+          "type": "array",
+          "maxItems": 16,
+          "minItems": 1,
+          "title": "Departure Windows"
+        },
+        "schedule_states": {
+          "items": {
+            "type": "string",
+            "enum": [
+              "base_committed",
+              "coordinating",
+              "early_confirmed",
+              "base_confirmed",
+              "proposal_confirmed",
+              "deadline_pending",
+              "needs_review",
+              "ended",
+              "legacy"
+            ]
+          },
+          "type": "array",
+          "maxItems": 9,
+          "minItems": 1,
+          "title": "Schedule States"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "category",
+        "admission_scope",
+        "group_ids",
+        "filter_context_token",
+        "member_conditions",
+        "raid_ids",
+        "difficulty_ids",
+        "limit",
+        "cursor",
+        "target_cycle_key"
+      ],
+      "title": "BetaSearchRequest"
+    },
+    "AdmissionScope": {
+      "type": "string",
+      "enum": [
+        "public",
+        "group"
+      ],
+      "title": "AdmissionScope"
+    },
+    "BCondition": {
+      "properties": {
+        "member_ref": {
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Member Ref"
+        },
+        "character_ids": {
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": "array",
+          "title": "Character Ids"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "member_ref",
+        "character_ids"
+      ],
+      "title": "BCondition"
+    },
+    "BSort": {
+      "properties": {
+        "criterion": {
+          "type": "string",
+          "const": "member_count",
+          "title": "Criterion",
+          "default": "member_count"
+        },
+        "direction": {
+          "$ref": "#/$defs/Direction",
+          "default": "descending"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "title": "BSort"
+    },
+    "BetaScheduleView": {
+      "properties": {
+        "policy_version": {
+          "type": "string",
+          "const": "beta-schedule-1",
+          "title": "Policy Version"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "session_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Session Id"
+        },
+        "base_starts_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Base Starts At"
+        },
+        "base_ends_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Base Ends At"
+        },
+        "base_deadline_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Base Deadline At"
+        },
+        "early_coordination_enabled": {
+          "type": "boolean",
+          "title": "Early Coordination Enabled"
+        },
+        "early_additional_members": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 7.0,
+              "minimum": 1.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Early Additional Members"
+        },
+        "coordination_state": {
+          "type": "string",
+          "enum": [
+            "base_committed",
+            "coordinating",
+            "early_confirmed",
+            "base_confirmed",
+            "proposal_confirmed",
+            "deadline_pending",
+            "needs_review",
+            "ended"
+          ],
+          "title": "Coordination State"
+        },
+        "coordination_active": {
+          "type": "boolean",
+          "title": "Coordination Active"
+        },
+        "confirmed_starts_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Confirmed Starts At"
+        },
+        "confirmed_ends_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Confirmed Ends At"
+        },
+        "effective_starts_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Effective Starts At"
+        },
+        "effective_ends_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Effective Ends At"
+        },
+        "admission_deadline": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Admission Deadline"
+        },
+        "deadline_status": {
+          "type": "string",
+          "enum": [
+            "not_due",
+            "due_unprocessed",
+            "processed",
+            "obsolete"
+          ],
+          "title": "Deadline Status"
+        },
+        "pending_transition": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "base_confirmation_due",
+                "departure_review_due"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pending Transition"
+        },
+        "review_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "departure_passed_unconfirmed"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Review Reason"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Evaluated At"
+        },
+        "coordination_wait": {
+          "$ref": "#/$defs/CoordinationWait"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "policy_version",
+        "revision",
+        "session_id",
+        "base_starts_at",
+        "base_ends_at",
+        "base_deadline_at",
+        "early_coordination_enabled",
+        "early_additional_members",
+        "coordination_state",
+        "coordination_active",
+        "confirmed_starts_at",
+        "confirmed_ends_at",
+        "effective_starts_at",
+        "effective_ends_at",
+        "admission_deadline",
+        "deadline_status",
+        "pending_transition",
+        "review_reason",
+        "evaluated_at"
+      ],
+      "title": "BetaScheduleView"
+    },
+    "Beta_GroupLinkedApplicationDetail": {
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_ApplicationDisplayDetail"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "Beta_GroupLinkedApplicationDetail"
+    },
+    "Beta_GroupLinkedDetail": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_BDetail"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "Beta_GroupLinkedDetail"
+    },
+    "Beta_GroupLinkedMembershipDetail": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionDetailReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_MembershipActionDetailProfileData"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "Beta_GroupLinkedMembershipDetail"
+    },
+    "Beta_GroupLinkedMembershipPlan": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionPlanReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_MembershipActionPlanProfileData"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "Beta_GroupLinkedMembershipPlan"
+    },
+    "Beta_GroupLinkedPlan": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/Beta_ResumePlanData"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "Beta_GroupLinkedPlan"
+    },
+    "AvailabilityCopyView": {
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "unset",
+            "configured"
+          ],
+          "title": "State"
+        },
+        "source_personal_version": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Source Personal Version"
+        },
+        "copied_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Copied At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "state",
+        "source_personal_version",
+        "copied_at"
+      ],
+      "title": "AvailabilityCopyView"
+    },
+    "Category": {
+      "type": "string",
+      "enum": [
+        "general",
+        "group_linked",
+        "all"
+      ],
+      "title": "Category"
+    },
+    "ContinuationDisplayContext": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/ContinuationDisplayData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "ContinuationDisplayContext"
+    },
+    "ContinuationDisplayData": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "action": {
+          "$ref": "#/$defs/Action"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/app__raid_rooms__cycle_wire__Selection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/app__raid_rooms__cycle_wire__Target"
+          },
+          "type": "array",
+          "maxItems": 5,
+          "minItems": 0,
+          "title": "Targets"
+        },
+        "target_session_ids": {
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": "array",
+          "minItems": 0,
+          "title": "Target Session Ids"
+        },
+        "context_token": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Context Token"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Issued At"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expires At"
+        },
+        "permission": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Permission"
+        },
+        "conflicts": {
+          "items": {
+            "$ref": "#/$defs/Conflict"
+          },
+          "type": "array",
+          "maxItems": 5,
+          "minItems": 0,
+          "title": "Conflicts"
+        },
+        "session_display": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExistingSessionDisplay"
+            },
+            {
+              "$ref": "#/$defs/OpeningPreviewDisplay"
+            },
+            {
+              "$ref": "#/$defs/NoSelectionDisplay"
+            }
+          ],
+          "title": "Session Display",
+          "discriminator": {
+            "propertyName": "kind",
+            "mapping": {
+              "existing": "#/components/schemas/ExistingSessionDisplay",
+              "none": "#/components/schemas/NoSelectionDisplay",
+              "opening_preview": "#/components/schemas/OpeningPreviewDisplay"
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "action",
+        "source",
+        "selection",
+        "targets",
+        "target_session_ids",
+        "context_token",
+        "issued_at",
+        "expires_at",
+        "permission",
+        "conflicts"
+      ],
+      "title": "ContinuationDisplayData"
+    },
+    "CoordinationWait": {
+      "oneOf": [
+        {
+          "properties": {
+            "status": {
+              "const": "waiting_members"
+            },
+            "missing_members": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "no_earlier_candidate",
+                "pending",
+                "unavailable",
+                "not_applicable"
+              ]
+            },
+            "missing_members": {
+              "type": "null"
+            }
+          }
+        }
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "waiting_members",
+            "no_earlier_candidate",
+            "pending",
+            "unavailable",
+            "not_applicable"
+          ],
+          "title": "Status"
+        },
+        "missing_members": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 8.0,
+              "minimum": 1.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Missing Members"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "status",
+        "missing_members"
+      ],
+      "title": "CoordinationWait"
+    },
+    "DepartureWindow": {
+      "properties": {
+        "starts_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Starts At"
+        },
+        "ends_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Ends At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "starts_at",
+        "ends_at"
+      ],
+      "title": "DepartureWindow",
+      "description": "Search-only UTC whole-minute bounds, start inclusive and end exclusive; no rounding. Positive at most 24h, within the selected cycle. Departure grids are unchanged."
+    },
+    "Direction": {
+      "type": "string",
+      "enum": [
+        "ascending",
+        "descending"
+      ],
+      "title": "Direction"
+    },
+    "Effect": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "target_cycle_key": {
+          "type": "string",
+          "format": "date",
+          "title": "Target Cycle Key"
+        },
+        "room_cycle_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Cycle Id"
+        },
+        "generation": {
+          "type": "integer",
+          "title": "Generation"
+        },
+        "before": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_group_schemas__State"
+        },
+        "after": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_group_schemas__State"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "target_cycle_key",
+        "room_cycle_id",
+        "generation",
+        "before",
+        "after"
+      ],
+      "title": "Effect"
+    },
+    "ExperienceFilterValues": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ExperienceFilterValue"
+          },
+          "type": "array",
+          "maxItems": 6,
+          "minItems": 0
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "ExperienceFilterValues",
+      "description": "OR values; []/omitted means no filter; unrestricted matches stored null. Null/duplicates/unknown enum rejected; sorting of valid values alone does not stale the cursor.",
+      "default": []
+    },
+    "GroupLinkedApplicationDetail": {
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/ApplicationDisplayDetail"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "GroupLinkedApplicationDetail"
+    },
+    "GroupLinkedDetail": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BDetail"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "GroupLinkedDetail"
+    },
+    "BDetail": {
+      "properties": {
+        "room": {
+          "$ref": "#/$defs/BCard"
+        },
+        "settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "members_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Members Revision"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/BRoomMember"
+          },
+          "type": "array",
+          "title": "Members"
+        },
+        "my_membership": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BAppRaidRoomsAdmissionSchemasMyMembership"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plan_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Plan Revision"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions3"
+        },
+        "access": {
+          "$ref": "#/$defs/BAccess"
+        },
+        "leadership": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Leadership"
+        },
+        "my_target_role": {
+          "$ref": "#/$defs/MyTargetRole"
+        },
+        "formation_slots": {
+          "items": {
+            "$ref": "#/$defs/FormationSlot"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Formation Slots"
+        },
+        "formation_history": {
+          "items": {
+            "$ref": "#/$defs/FormationSlot"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Formation History"
+        },
+        "unplaced_assignments": {
+          "items": {
+            "$ref": "#/$defs/UnplacedAssignment"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Unplaced Assignments"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room",
+        "settings",
+        "members_revision",
+        "members",
+        "my_membership",
+        "plan_revision",
+        "permissions",
+        "access",
+        "leadership",
+        "my_target_role",
+        "formation_slots",
+        "formation_history",
+        "unplaced_assignments"
+      ],
+      "title": "BDetail"
+    },
+    "GroupLinkedMembershipDetail": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionDetailReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/MembershipActionDetailProfileData"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "GroupLinkedMembershipDetail"
+    },
+    "GroupLinkedMembershipPlan": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionPlanReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/MembershipActionPlanProfileData"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "GroupLinkedMembershipPlan"
+    },
+    "GroupLinkedPlan": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/ResumePlanData"
+        },
+        "group_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupLinkState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data",
+        "group_state"
+      ],
+      "title": "GroupLinkedPlan"
+    },
+    "MembershipActionDetailProfile": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionDetailReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/MembershipActionDetailProfileData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "MembershipActionDetailProfile"
+    },
+    "MembershipActionDetailProfileData": {
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/MembershipActionReaderTarget"
+        },
+        "viewer": {
+          "$ref": "#/$defs/MembershipActionReaderRelation"
+        },
+        "access": {
+          "$ref": "#/$defs/MembershipActionReaderAccess"
+        },
+        "recovery": {
+          "$ref": "#/$defs/MembershipActionRecovery"
+        },
+        "permissions": {
+          "$ref": "#/$defs/MembershipActionReaderPermissions"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputContract3GetV2RaidRoomsRoomIdDetail"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MembershipActionRecordSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "target",
+        "viewer",
+        "access",
+        "recovery",
+        "permissions",
+        "content",
+        "record"
+      ],
+      "title": "MembershipActionDetailProfileData"
+    },
+    "MembershipActionMembershipPage": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionMembershipReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/MembershipActionMembershipPageData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "MembershipActionMembershipPage"
+    },
+    "MembershipActionPlanProfile": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/MembershipActionPlanReaderScope"
+        },
+        "data": {
+          "$ref": "#/$defs/MembershipActionPlanProfileData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "MembershipActionPlanProfile"
+    },
+    "MembershipActionPlanProfileData": {
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/MembershipActionReaderTarget"
+        },
+        "viewer": {
+          "$ref": "#/$defs/MembershipActionReaderRelation"
+        },
+        "access": {
+          "$ref": "#/$defs/MembershipActionReaderAccess"
+        },
+        "recovery": {
+          "$ref": "#/$defs/MembershipActionRecovery"
+        },
+        "permissions": {
+          "$ref": "#/$defs/MembershipActionReaderPermissions"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResumePlanContext"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MembershipActionRecordSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "target",
+        "viewer",
+        "access",
+        "recovery",
+        "permissions",
+        "content",
+        "record"
+      ],
+      "title": "MembershipActionPlanProfileData"
+    },
+    "Metadata": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "target_cycle_key": {
+          "type": "string",
+          "format": "date",
+          "title": "Target Cycle Key"
+        },
+        "room_cycle_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Cycle Id"
+        },
+        "generation": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Generation"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "public",
+                "group"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scope"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Id"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Revision"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "known",
+            "unavailable"
+          ],
+          "title": "State"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "target_cycle_key",
+        "room_cycle_id",
+        "generation",
+        "scope",
+        "group_id",
+        "revision",
+        "state"
+      ],
+      "title": "Metadata"
+    },
+    "OpeningDisplayContext": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/OpeningDisplayData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OpeningDisplayContext"
+    },
+    "OpeningDisplayData": {
+      "properties": {
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/app__raid_rooms__cycle_wire__Selection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/app__raid_rooms__cycle_wire__Target"
+          },
+          "type": "array",
+          "maxItems": 5,
+          "title": "Targets"
+        },
+        "target_session_ids": {
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": "array",
+          "maxItems": 64,
+          "title": "Target Session Ids"
+        },
+        "leadership": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/app__raid_rooms__cycle_wire__Leadership"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "context_token": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Context Token"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Issued At"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expires At"
+        },
+        "opening_effect": {
+          "$ref": "#/$defs/OpeningEffect"
+        },
+        "permission": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Permission"
+        },
+        "conflicts": {
+          "items": {
+            "$ref": "#/$defs/Conflict"
+          },
+          "type": "array",
+          "maxItems": 5,
+          "title": "Conflicts"
+        },
+        "prospective_room_cycle_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Prospective Room Cycle Id"
+        },
+        "prospective_generation": {
+          "$ref": "#/$defs/Version"
+        },
+        "prospective_target_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "item_settings": {
+          "items": {
+            "$ref": "#/$defs/ItemSetting"
+          },
+          "type": "array",
+          "maxItems": 5,
+          "minItems": 1,
+          "title": "Item Settings"
+        },
+        "session_display": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExistingSessionDisplay"
+            },
+            {
+              "$ref": "#/$defs/OpeningPreviewDisplay"
+            },
+            {
+              "$ref": "#/$defs/NoSelectionDisplay"
+            }
+          ],
+          "title": "Session Display",
+          "discriminator": {
+            "propertyName": "kind",
+            "mapping": {
+              "existing": "#/components/schemas/ExistingSessionDisplay",
+              "none": "#/components/schemas/NoSelectionDisplay",
+              "opening_preview": "#/components/schemas/OpeningPreviewDisplay"
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "source",
+        "selection",
+        "targets",
+        "target_session_ids",
+        "leadership",
+        "context_token",
+        "issued_at",
+        "expires_at",
+        "opening_effect",
+        "permission",
+        "conflicts",
+        "prospective_room_cycle_id",
+        "prospective_generation",
+        "prospective_target_revision",
+        "item_settings"
+      ],
+      "title": "OpeningDisplayData"
+    },
+    "OutputContract3GetV2MeRaidRoomCreationContext": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BCreationContext"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3GetV2MeRaidRoomCreationContext"
+    },
+    "BCreationContext": {
+      "properties": {
+        "expected_cycle_key": {
+          "type": "string",
+          "title": "Expected Cycle Key"
+        },
+        "server_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Server Time"
+        },
+        "catalog_version": {
+          "type": "string",
+          "title": "Catalog Version"
+        },
+        "policy_snapshot": {
+          "type": "string",
+          "title": "Policy Snapshot"
+        },
+        "context_token": {
+          "type": "string",
+          "title": "Context Token"
+        },
+        "selection": {
+          "$ref": "#/$defs/BSelection"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/BCreateTarget"
+          },
+          "type": "array",
+          "title": "Targets"
+        },
+        "group_revision": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 2147483647.0,
+              "minimum": 1.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Revision"
+        },
+        "settings_defaults": {
+          "$ref": "#/$defs/BDefaults"
+        },
+        "comparison": {
+          "$ref": "#/$defs/BPowerComparison"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions2"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "expected_target_revision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Version"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Issued At"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expires At"
+        },
+        "prospective_room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Prospective Room Id"
+        },
+        "target_creation": {
+          "$ref": "#/$defs/ProspectiveCreateCycle"
+        },
+        "next_cycle_creation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProspectiveCreateCycle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "continuation_effect": {
+          "$ref": "#/$defs/ContinuationEffect"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "expected_cycle_key",
+        "server_time",
+        "catalog_version",
+        "policy_snapshot",
+        "context_token",
+        "selection",
+        "targets",
+        "group_revision",
+        "settings_defaults",
+        "comparison",
+        "permissions",
+        "target_cycle_key",
+        "expected_target_revision",
+        "issued_at",
+        "expires_at",
+        "prospective_room_id",
+        "target_creation",
+        "next_cycle_creation",
+        "continuation_effect"
+      ],
+      "title": "BCreationContext"
+    },
+    "OutputContract3GetV2MeRaidRoomMemberships": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BMembershipPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3GetV2MeRaidRoomMemberships"
+    },
+    "OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BSubmissionOut"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3GetV2MeRaidRoomsRoomIdAvailabilitySubmission"
+    },
+    "BSubmissionOut": {
+      "properties": {
+        "membership_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Membership Id"
+        },
+        "state": {
+          "$ref": "#/$defs/State2"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "source_personal_version": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 2147483647.0,
+              "minimum": 1.0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Personal Version"
+        },
+        "intervals": {
+          "items": {
+            "$ref": "#/$defs/BInterval"
+          },
+          "type": "array",
+          "title": "Intervals"
+        },
+        "normalized_intervals": {
+          "items": {
+            "$ref": "#/$defs/BNormalizedInterval"
+          },
+          "type": "array",
+          "title": "Normalized Intervals"
+        },
+        "submitted_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Submitted At"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "cycle_member_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Cycle Member Id"
+        },
+        "cycle_member_revision": {
+          "$ref": "#/$defs/Version"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "membership_id",
+        "state",
+        "revision",
+        "source_personal_version",
+        "intervals",
+        "normalized_intervals",
+        "submitted_at",
+        "target_cycle_key",
+        "cycle_member_id",
+        "cycle_member_revision"
+      ],
+      "title": "BSubmissionOut"
+    },
+    "OutputContract3GetV2MeRaidRoomsRoomIdScheduleContext": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BTimeContext"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3GetV2MeRaidRoomsRoomIdScheduleContext"
+    },
+    "BTimeContext": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "members_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Members Revision"
+        },
+        "plan_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Plan Revision"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Evaluated At"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/BTimeMember"
+          },
+          "type": "array",
+          "title": "Members"
+        },
+        "target_session_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Session Id"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions7"
+        },
+        "target_cycle_key": {
+          "type": "string",
+          "title": "Target Cycle Key"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "members_revision",
+        "plan_revision",
+        "evaluated_at",
+        "members",
+        "target_session_id",
+        "permissions",
+        "target_cycle_key"
+      ],
+      "title": "BTimeContext"
+    },
+    "BTimeMember": {
+      "properties": {
+        "membership_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Membership Id"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Display"
+        },
+        "submission": {
+          "$ref": "#/$defs/BSubmissionOut"
+        },
+        "anonymous_busy": {
+          "$ref": "#/$defs/BAnonymousBusy"
+        },
+        "cycle_member_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Cycle Member Id"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "membership_id",
+        "display",
+        "submission",
+        "anonymous_busy",
+        "cycle_member_id"
+      ],
+      "title": "BTimeMember"
+    },
+    "OutputContract3GetV2RaidRoomApplicationsApplicationId": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BApplicationView"
+            },
+            {
+              "$ref": "#/$defs/BReview"
+            }
+          ],
+          "title": "Data"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3GetV2RaidRoomApplicationsApplicationId"
+    },
+    "BApplicationView": {
+      "properties": {
+        "application_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Application Id"
+        },
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "state": {
+          "type": "string",
+          "title": "State"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Created At"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expires At"
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ended At"
+        },
+        "display": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object",
+          "title": "Display"
+        },
+        "character_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Character Id"
+        },
+        "selected_role": {
+          "$ref": "#/$defs/SelectedRole"
+        },
+        "admission_origin": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object",
+          "title": "Admission Origin"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "target_generation": {
+          "$ref": "#/$defs/Version"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "application_id",
+        "room_id",
+        "revision",
+        "state",
+        "created_at",
+        "expires_at",
+        "ended_at",
+        "display",
+        "character_id",
+        "selected_role",
+        "admission_origin",
+        "target_cycle_key",
+        "target_generation"
+      ],
+      "title": "BApplicationView"
+    },
+    "BReview": {
+      "properties": {
+        "application": {
+          "$ref": "#/$defs/BApplicationView"
+        },
+        "room_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Room Revision"
+        },
+        "members_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Members Revision"
+        },
+        "plan_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Plan Revision"
+        },
+        "server_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Server Time"
+        },
+        "eligibility": {
+          "$ref": "#/$defs/BEligibility"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions5"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "application",
+        "room_revision",
+        "members_revision",
+        "plan_revision",
+        "server_time",
+        "eligibility",
+        "permissions"
+      ],
+      "title": "BReview"
+    },
+    "OutputContract3GetV2RaidRoomsRoomId": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BCard"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3GetV2RaidRoomsRoomId"
+    },
+    "OutputContract3GetV2RaidRoomsRoomIdApplications": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BApplicationPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3GetV2RaidRoomsRoomIdApplications"
+    },
+    "OutputContract3GetV2RaidRoomsRoomIdDetail": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BDetail"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3GetV2RaidRoomsRoomIdDetail"
+    },
+    "OutputContract3PostV2RaidRoomsSearch": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/BPage"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "OutputContract3PostV2RaidRoomsSearch"
+    },
+    "PresetDocument": {
+      "properties": {
+        "version": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Version"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/StoredPresetItem"
+          },
+          "type": "array",
+          "maxItems": 5,
+          "title": "Items"
+        },
+        "saved_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Saved At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "version",
+        "items",
+        "saved_at"
+      ],
+      "title": "PresetDocument"
+    },
+    "PresetPut": {
+      "properties": {
+        "expected_version": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Version"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PresetItem"
+          },
+          "type": "array",
+          "maxItems": 5,
+          "title": "Items"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "expected_version",
+        "items"
+      ],
+      "title": "PresetPut"
+    },
+    "PresetItem": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid4",
+          "title": "Id"
+        },
+        "text": {
+          "type": "string",
+          "title": "Text",
+          "description": "NFC then printable ASCII/Hangul validation, trim U+0020; at most 20 code points. Raw idempotency body preserved.",
+          "x-allowed-after-nfc": "U+AC00-D7A3,U+3131-3163,U+0020-U+007E",
+          "x-max-utf8-bytes": 4096,
+          "x-text-policy": "hangul-printable-ascii-1"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "title": "PresetItem"
+    },
+    "RecruitmentIdentity": {
+      "properties": {
+        "number": {
+          "type": "integer",
+          "maximum": 9007199254740991.0,
+          "minimum": 1.0,
+          "title": "Number"
+        },
+        "password": {
+          "type": "string",
+          "pattern": "^[0-9]{5}$",
+          "title": "Password"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "number",
+        "password"
+      ],
+      "title": "RecruitmentIdentity"
+    },
+    "ResumePlanContext": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/ResumePlanData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "ResumePlanContext"
+    },
+    "ResumePlanData": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Revision"
+        },
+        "members_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Members Revision"
+        },
+        "server_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Server Time"
+        },
+        "app_capacity": {
+          "$ref": "#/$defs/AppCapacity"
+        },
+        "game_items": {
+          "items": {
+            "$ref": "#/$defs/BGameItem"
+          },
+          "type": "array",
+          "title": "Game Items"
+        },
+        "schedule_state": {
+          "$ref": "#/$defs/ScheduleState"
+        },
+        "schedule_groups": {
+          "items": {
+            "$ref": "#/$defs/BGroup"
+          },
+          "type": "array",
+          "title": "Schedule Groups"
+        },
+        "sessions": {
+          "items": {
+            "$ref": "#/$defs/BSession"
+          },
+          "type": "array",
+          "title": "Sessions"
+        },
+        "session_segments": {
+          "items": {
+            "$ref": "#/$defs/BSegmentSet"
+          },
+          "type": "array",
+          "title": "Session Segments"
+        },
+        "my_membership": {
+          "$ref": "#/$defs/BAppRaidRoomsAdmissionSchemasMyMembership"
+        },
+        "my_assignments": {
+          "items": {
+            "$ref": "#/$defs/BAssignmentView"
+          },
+          "type": "array",
+          "title": "My Assignments"
+        },
+        "my_participations": {
+          "items": {
+            "$ref": "#/$defs/BAppRaidRoomsScheduleOutputParticipation"
+          },
+          "type": "array",
+          "title": "My Participations"
+        },
+        "proposals": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/BScheduleProposal"
+              },
+              {
+                "$ref": "#/$defs/ResumeProposalReview"
+              }
+            ]
+          },
+          "type": "array",
+          "title": "Proposals"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions4"
+        },
+        "leadership": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Leadership"
+        },
+        "my_target_role": {
+          "$ref": "#/$defs/MyTargetRole"
+        },
+        "formation_slots": {
+          "items": {
+            "$ref": "#/$defs/FormationSlot"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Formation Slots"
+        },
+        "formation_history": {
+          "items": {
+            "$ref": "#/$defs/FormationSlot"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Formation History"
+        },
+        "unplaced_assignments": {
+          "items": {
+            "$ref": "#/$defs/UnplacedAssignment"
+          },
+          "type": "array",
+          "maxItems": 40,
+          "minItems": 0,
+          "title": "Unplaced Assignments"
+        },
+        "target_cycle_key": {
+          "type": "string",
+          "title": "Target Cycle Key"
+        },
+        "target_state": {
+          "$ref": "#/$defs/TargetState"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "revision",
+        "members_revision",
+        "server_time",
+        "app_capacity",
+        "game_items",
+        "schedule_state",
+        "schedule_groups",
+        "sessions",
+        "session_segments",
+        "my_membership",
+        "my_assignments",
+        "my_participations",
+        "proposals",
+        "permissions",
+        "leadership",
+        "my_target_role",
+        "formation_slots",
+        "formation_history",
+        "unplaced_assignments",
+        "target_cycle_key",
+        "target_state"
+      ],
+      "title": "ResumePlanData"
+    },
+    "SettingsContext": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_group_schemas__Scope"
+        },
+        "data": {
+          "$ref": "#/$defs/SettingsContextData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "SettingsContext"
+    },
+    "SettingsContextData": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "context_token": {
+          "type": "string",
+          "title": "Context Token"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Issued At"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expires At"
+        },
+        "permission": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_group_schemas__Permission"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "context_token",
+        "issued_at",
+        "expires_at",
+        "permission"
+      ],
+      "title": "SettingsContextData"
+    },
+    "StoredPresetItem": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid4",
+          "title": "Id"
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^(?! )(?!.* $)[가-힣ㄱ-ㅣ\\x20-\\x7e]+$(?![\\s\\S])",
+          "title": "Text"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "title": "StoredPresetItem"
+    },
+    "GroupChange": {
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": [
+            "public",
+            "group"
+          ],
+          "title": "Scope"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Id"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Revision"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "group_id",
+        "expected_revision"
+      ],
+      "title": "GroupChange"
+    },
+    "TitleCommand": {
+      "properties": {
+        "expected_cycle_key": {
+          "type": "string",
+          "title": "Expected Cycle Key"
+        },
+        "expected_room_revision": {
+          "type": "integer",
+          "maximum": 2147483647.0,
+          "minimum": 1.0,
+          "title": "Expected Room Revision"
+        },
+        "context_token": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Context Token"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Title"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "expected_cycle_key",
+        "expected_room_revision",
+        "context_token",
+        "title"
+      ],
+      "title": "TitleCommand"
+    },
+    "TitleContext": {
+      "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
+        "scope": {
+          "$ref": "#/$defs/GlobalScope"
+        },
+        "data": {
+          "$ref": "#/$defs/TitleContextData"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "data"
+      ],
+      "title": "TitleContext"
+    },
+    "TitleContextData": {
+      "properties": {
+        "room_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Room Id"
+        },
+        "command": {
+          "$ref": "#/$defs/Command1"
+        },
+        "room_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "persistent_membership_revision": {
+          "$ref": "#/$defs/Version"
+        },
+        "context_token": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Context Token"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Issued At"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expires At"
+        },
+        "impact_cycles": {
+          "items": {
+            "$ref": "#/$defs/CommonImpact"
+          },
+          "type": "array",
+          "maxItems": 2,
+          "minItems": 0,
+          "title": "Impact Cycles"
+        },
+        "permission": {
+          "$ref": "#/$defs/app__raid_rooms__cycle_wire__Permission"
+        },
+        "expected_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "authorization_cycle_key": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CycleKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_settings": {
+          "$ref": "#/$defs/TitleSettings"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "room_id",
+        "command",
+        "room_revision",
+        "persistent_membership_revision",
+        "context_token",
+        "issued_at",
+        "expires_at",
+        "impact_cycles",
+        "permission",
+        "expected_cycle_key",
+        "authorization_cycle_key",
+        "current_settings"
+      ],
+      "title": "TitleContextData"
+    },
+    "TitleSettings": {
+      "properties": {
+        "title": {
+          "type": "string",
+          "title": "Title"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "title": "TitleSettings"
+    },
+    "app__raid_rooms__cycle_group_schemas__Permission": {
+      "properties": {
+        "allowed": {
+          "type": "boolean",
+          "title": "Allowed"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "next_change_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Change At"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "allowed",
+        "reason",
+        "next_change_at"
+      ],
+      "title": "Permission"
+    },
+    "app__raid_rooms__cycle_group_schemas__Scope": {
+      "properties": {
+        "server_now": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Server Now"
+        },
+        "current_cycle_key": {
+          "type": "string",
+          "format": "date",
+          "title": "Current Cycle Key"
+        },
+        "target_cycle_key": {
+          "type": "string",
+          "format": "date",
+          "title": "Target Cycle Key"
+        },
+        "playable_from": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Playable From"
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "current",
+            "future"
+          ],
+          "title": "Phase"
+        },
+        "target_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Revision"
+        },
+        "policy_version": {
+          "type": "string",
+          "title": "Policy Version"
+        },
+        "room_cycle_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Room Cycle Id"
+        },
+        "target_generation": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Generation"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "server_now",
+        "current_cycle_key",
+        "target_cycle_key",
+        "playable_from",
+        "phase",
+        "target_revision",
+        "policy_version",
+        "room_cycle_id",
+        "target_generation"
+      ],
+      "title": "Scope"
+    },
+    "app__raid_rooms__cycle_group_schemas__State": {
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": [
+            "public",
+            "group"
+          ],
+          "title": "Scope"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Id"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Revision"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scope",
+        "group_id"
+      ],
+      "title": "State"
+    },
+    "app__raid_rooms__cycle_wire__Scope": {
+      "properties": {
+        "server_now": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Server Now"
+        },
+        "current_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "target_cycle_key": {
+          "$ref": "#/$defs/CycleKey"
+        },
+        "playable_from": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Playable From"
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase1"
+        },
+        "target_revision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Version"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "policy_version": {
+          "type": "string",
+          "const": "two-cycle-contract-4",
+          "title": "Policy Version"
+        },
+        "room_cycle_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Room Cycle Id"
+        },
+        "target_generation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Version"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "server_now",
+        "current_cycle_key",
+        "target_cycle_key",
+        "playable_from",
+        "phase",
+        "target_revision",
+        "policy_version",
+        "room_cycle_id",
+        "target_generation"
+      ],
+      "title": "Scope"
+    },
+    "app__raid_rooms__cycle_wire__State": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected",
+        "withdrawn",
+        "expired",
+        "cancelled"
+      ],
+      "title": "State"
     }
   }
 }

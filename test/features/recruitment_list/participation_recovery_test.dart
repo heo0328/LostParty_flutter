@@ -603,7 +603,13 @@ void main() {
       test(
         '$action management replays frozen scope and exact affected cycles',
         () async {
-          api.respond = (_, _) async => management.managementWire(action);
+          api.respond = (_, _) async {
+            final raw = management.managementWire(action);
+            if (action == 'common') {
+              raw['data']['current_settings'] = {'title': '기존 제목'};
+            }
+            return raw;
+          };
           answer = (_) async =>
               throw const AccountReadException('NETWORK_UNAVAILABLE');
           final c = await controller();

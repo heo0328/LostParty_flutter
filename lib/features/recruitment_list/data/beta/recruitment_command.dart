@@ -135,7 +135,10 @@ class RecruitmentCommand {
     for (final t in targetCycles) {
       raidCycleKey(t);
     }
-    final contract = BetaContract(mode: contractMode);
+    final contract = BetaContract(
+      mode: contractMode,
+      original: !usesCycleGroupPolicy,
+    );
     final op = contract.operation(method, path);
     roleCheck(operation == op['id'] && method != 'GET');
     roleCheck(roleMap(op['responses']).containsKey('$expectedStatus'));
@@ -234,6 +237,9 @@ class RecruitmentCommand {
       }
     }
   }
+
+  bool get usesCycleGroupPolicy =>
+      query['group_policy_version'] == BetaContract.groupPolicyVersion;
 
   Map<String, dynamic> toJson() => {
     'version': version,

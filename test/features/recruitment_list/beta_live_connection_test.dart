@@ -158,7 +158,10 @@ void main() {
       for (final request in api.requests) {
         expect(request['body'], same(body));
         expect(request['key'], characterId);
-        expect(request['query'], {'contract_profile': BetaContract.profile});
+        expect(request['query'], {
+          'contract_profile': BetaContract.profile,
+          'group_policy_version': BetaContract.groupPolicyVersion,
+        });
         expect(
           (request['body'] as Map).containsKey('application_memo'),
           isFalse,
