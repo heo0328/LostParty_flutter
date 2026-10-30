@@ -173,6 +173,8 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 ## 7. 주차별 그룹 변경·승계의 연결 경계 (2026-10-31)
 
+현재 코드 연결은88a69fa7, 개방 보완은ffffc4e6·3ec0f54f에 보관했다. C/N 동시 생성·금주 외부 자동승계/일반 전환·N 보존, 기존 C에서 N 방 생성은 사용자 확인이며 전체 그룹 기기 인수 완료는 아니다. 남은 실제 조작/표시 결과·별도 서버 조회500·Penpot 검수는 NEXT_WORK의 담당/상태를 따르고, G-RECOVERY/G-OPS·종합 개선을 이번 미구현 기능으로 합치지 않는다.
+
 제품 단일 기준은 [그룹 제품 §9](../product/GROUP_PRODUCT_FLOW.md#9-그룹-레이드-생성), 데이터/명령·보존/검증 계약은 [모집37 §37.39.1](37-raid-scheduling-and-multi-raid-planning.md#cycle-group-policy)다. [Backend 고정 계약](https://github.com/heo0328/lostparty-backend/blob/b212ad0f45e36e1bd5c6c860bb1e118f590bbc79/docs/features/groups/cycle-group-policy.md)과 OpenAPI에서 일반 앱이 사용하는66동작을 추출한다. 생성 도구는 원본 blob hash를 검증하고 beta의 기존 필수 입력도 보존한다. 새 cycle-router 요청에 group_policy_version=cycle-group-policy-1을 넣으며 로그인/그룹 API에는 넣지 않는다.
 
 일반 앱 BackendApp의 기존 DI/Router→생성·상세→Controller/Repository→검토·명령→ACK/갱신 연결을 유지한다. 생성 public 선택은 group_id를 비우며 C/N 동시 생성은 한 번의 원명령으로 처리한다. 설정 편집은 위 §5의 주차별 경계를 따른다. 서버가 계산한 탈퇴/후보별 직접 위임/개방의 주차·후임·그룹 유지 또는 일반 전환을 기존 확인창에 표시한다. 앱이 승계 순서를 재계산하지 않으며 확인 서명·저장 검증 근거에 전후 정책을 보존한다. 모두 탈퇴의 두 주차도 독립 검증한다.
