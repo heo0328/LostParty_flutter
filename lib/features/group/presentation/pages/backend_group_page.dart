@@ -420,6 +420,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
     String hint,
     VoidCallback submit, {
     bool code = false,
+    String? helperText,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextField(
@@ -440,6 +441,8 @@ class _BackendGroupPageState extends State<BackendGroupPage>
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        helperText: helperText,
+        helperMaxLines: 2,
         border: const OutlineInputBorder(),
       ),
     ),
@@ -601,7 +604,12 @@ class _BackendGroupPageState extends State<BackendGroupPage>
         ];
       case GroupPageKind.create:
         return [
-          field('그룹 이름', '비워 두면 선택한 대표 캐릭터의 그룹으로 만듭니다.', create),
+          field(
+            '그룹 이름',
+            '비워 두면 선택한 대표 캐릭터의 그룹으로 만듭니다.',
+            create,
+            helperText: '직접 입력 1~20자 · 앞뒤 공백 제외',
+          ),
           button('대표 캐릭터 선택 후 만들기', create),
         ];
       case GroupPageKind.joinCode:
@@ -736,7 +744,12 @@ class _BackendGroupPageState extends State<BackendGroupPage>
             ? <String, dynamic>{}
             : groupMap(m.management!['permissions']);
         return [
-          field('그룹 이름', m.detail!.name, rename),
+          field(
+            '그룹 이름',
+            m.detail!.name,
+            rename,
+            helperText: '1~20자 · 앞뒤 공백 제외',
+          ),
           button('이름 변경', rename),
           button(
             '그룹 대표 변경',

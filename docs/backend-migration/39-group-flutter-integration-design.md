@@ -173,7 +173,7 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 ## 7. 주차별 그룹 변경·승계의 연결 경계 (2026-10-31)
 
-현재 코드 연결은88a69fa7, 개방 보완은ffffc4e6·3ec0f54f에 보관했다. C/N 동시 생성·금주 외부 자동승계/일반 전환·N 보존, 기존 C에서 N 방 생성은 사용자 확인이며 전체 그룹 기기 인수 완료는 아니다. 남은 실제 조작/표시 결과·별도 서버 조회500·Penpot 검수는 NEXT_WORK의 담당/상태를 따르고, G-RECOVERY/G-OPS·종합 개선을 이번 미구현 기능으로 합치지 않는다.
+현재 코드 연결은88a69fa7, 개방 보완은ffffc4e6·3ec0f54f에 보관했다. C/N 동시 생성·금주 외부 자동승계/일반 전환·N 보존, 기존 C에서 N 방 생성은 사용자 확인이며 전체 그룹 기기 인수 완료는 아니다. 이후 사용자가 일반→A→B→전체 공개·같은 그룹 승계·비그룹원 직접 위임도 이미 통과했다고 정정해 인수 완료로 반영했다. 생성/이름 변경에는 기존 이름1~20자 안내를 표시한다. 남은 실제 조작/표시 결과·별도 서버 조회500·Penpot 검수는 NEXT_WORK의 담당/상태를 따르고, G-RECOVERY/G-OPS·종합 개선을 이번 미구현 기능으로 합치지 않는다.
 
 제품 단일 기준은 [그룹 제품 §9](../product/GROUP_PRODUCT_FLOW.md#9-그룹-레이드-생성), 데이터/명령·보존/검증 계약은 [모집37 §37.39.1](37-raid-scheduling-and-multi-raid-planning.md#cycle-group-policy)다. [Backend 고정 계약](https://github.com/heo0328/lostparty-backend/blob/b212ad0f45e36e1bd5c6c860bb1e118f590bbc79/docs/features/groups/cycle-group-policy.md)과 OpenAPI에서 일반 앱이 사용하는66동작을 추출한다. 생성 도구는 원본 blob hash를 검증하고 beta의 기존 필수 입력도 보존한다. 새 cycle-router 요청에 group_policy_version=cycle-group-policy-1을 넣으며 로그인/그룹 API에는 넣지 않는다.
 

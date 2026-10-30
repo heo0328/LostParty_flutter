@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-31 — 그룹 변경/승계 인수 정정·그룹명 제한 표시·Backend 조회 오류 조사 요청
+
+사용자가 직전 브리핑의1번 일반→A/A→B/전체 공개 전환과2번 같은 그룹 승계/비그룹원 직접 위임은 이미 기기 통과했다고 정정했다. 현재 인수표/남은 작업에서 이 대기를 제거했으며 같은 정상 시험을 반복 요구하지 않는다. 그룹명·소속 배지/주차별 표시와 그룹 상속의 모든 조합·Penpot은 아직 별도로 확인한다.
+
+제품의 직접 입력1~20자(앞뒤 공백 제외)와 Backend476d1f31의 commands.normalize_name을 대조했다. 일반 앱의 BackendGroupPage 생성·info 이름 변경은 제한 안내가 없는 공용 field를 사용했고, 과거 GroupCreatePage에만 maxLength가 있었다. 실제 연결된 두 입력란에 helperText로 제한을 추가했다. 새로 가능한 흐름은 저장 전 이름 제한을 아는 것이며, 기존 빈 생성 이름의 자동명·기존 trim/서버 검증·원요청/키·검색/초대코드·화면 배치는 보존한다. 입력을 새로 잘라내거나 길이 계산/제한 정책을 바꾸지 않았다.
+
+[Issue16 인수 정정·GET500 조사 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529904340)을 게시·본문 일치 재조회했다. 상세 GET500 요청ID 두 건과 당시 UTC/실행 이미지를 전달하고 Backend가 원인/재현·영향·수정 필요성/근거·현재 실행 상태·Flutter 변경 필요 여부를 회신하도록 명시했다. 이전 근거 전달과 이번 조사 요청을 구분하며 실제 서버/실자료 변경은 요청에 포함하지 않았다. Penpot은 Backend 담당으로 넘기지 않는다.
+
+검증은 변경 페이지 포맷·flutter analyze 해당 페이지 No issues found·git diff --check·diff/제품·서버 계약 대조다. 안내 문구만 추가한 낮은 영향 변경으로 새 자동 UI 시험/전체 Flutter 시험은 반복하지 않는다. 미확인: 실제 기기의 새 안내와 남은 표시/상속 조합, Backend 오류 원인 회신·Penpot. 목적 브랜치에서 코드/문서를 보관하며 서버/DB·자료삭제·AWS/release·dev/main 통합·Issue 종료는 수행하지 않는다.
+
 ## 2026-10-31 — 네이티브 잔여 작업 대조·현재 문서 최신화
 
 사용자가 남은 네이티브 작업의 간단한 브리핑에 앞서 현재까지의 문서 최신화를 요청했다. feature/group-backend-integration/64b02e81·작업트리 clean, 코드88a69fa7/개방 수정ffffc4e6·3ec0f54f와 일반 BackendApp의 beta DI/관리 진입, Issue16 최신 댓글6529639375까지 대조했다. 새로운 Backend 반영/조회500 해소 회신은 없었다. NEXT_WORK를 코드 미구현·기기 결과 미확인·Backend 후속·디자인 도구 대기로 구분하고, AI_CONTEXT/설계39의 현재 상태와 연결을 정리했다. 상세 장기 후속은 기존 DETAIL_IMPROVEMENTS를 참조하며 새 실행 계획으로 승격하지 않았다.
