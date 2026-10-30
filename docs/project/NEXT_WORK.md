@@ -8,7 +8,7 @@
 
 ## 실제 상태·담당·다음 행동
 
-ffffc4e6 이후 기기 재실패의 두 번째 원인은 `_openingSchedule`의 UTC 문자열 비교였다. 실행 서버 DTO가 `.000Z`를 같은 시각의 `Z`로 직렬화하는 것을 합성값으로 확인했고 수정 전 open/reopen 양쪽 실패를 재현했다. 시각은 기존 DateTime 값, 조율 설정은 타입 값으로 비교하도록 최소 수정했으며 직접110PASS·전체 분석0이다. 원 body/token/key·예정 ID·회원 epoch·다른 일정/인원/그룹 변경 검증은 보존한다. 최근2시간 실행 로그는 opening-context GET200 37건·개방 POST0건으로, 확인 범위에서는 기존 명령이 서버에 도달하기 전 실패했다. 수정 앱의 기존 금주 방 개방 기기 재확인이 남아 있다. C/N 동시 생성·금주 자동승계/일반 전환·N 보존의 기존 사용자 인수는 유지한다.
+사용자가 기존 금주 방의 다음주도 함께하기에서 다음주 방 생성을 확인했다. 예정 ID 재조회·UTC 표기 비교 오류의 수정과 방 생성 기기 확인은 완료했다(코드3ec0f54f). 기존 C/N 동시 생성·금주 자동승계/일반 전환·N 보존 인수도 유지한다. 다음 행동은 아래 미확인 그룹 변경/승계·표시 항목이며, 이번 방 생성 확인을 N 참가·C 전체 설정 보존·그룹 상속의 모든 조합 통과로 확대하지 않는다.
 
 **Backend 고정 계약 소비·Flutter 네이티브 연결 완료 / 변경 경계 기기 인수·Penpot 검수 대기**다. [Backend 구현 인계](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6523975291)의 b212ad0f 계약을 소비한다. [실제 개발 반영 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6524503597)을 재조회했으며 실행 소스b8542ef7·DB0035, 후행 기록476d1f31이다. 새 group_policy_version·주차별 원본/효과·cycle_groups를 일반 앱 경로에 연결했다. 그룹 편집은 기존 모집 조건 변경, 공통 정보 변경은 제목만 제공한다. 새 요청과 과거 저장 원요청/ACK 검증을 분리하고 자동 query/본문 변환은 하지 않는다. 자동 검증 결과는 DEV_LOG에 기록하며 실제 인증 쓰기·기기 인수와 구분한다. 기존 기기 인수는 보존하되 과거 공개 왕복 시험을 새 정책 인수로 사용하지 않는다.
 
@@ -16,7 +16,6 @@ ffffc4e6 이후 기기 재실패의 두 번째 원인은 `_openingSchedule`의 U
 
 | 다음 작업 | 담당 | 완료 조건 |
 |---|---|---|
-| 기존 금주 방에서 다음주 개방 재확인 | 사용자 | 날짜/시각 선택→확인으로 N 생성·참가, C 설정 보존 확인 |
 | 나머지 변경 흐름 기기 인수 | 사용자 | 미확인 연결·교체·같은 그룹 승계/직접 위임·표시 결과 확인 |
 | 발견된 구체 차이 수정·결과 회신 | Flutter/Backend | 실패 구간의 요청/응답·계약 근거 대조 후 같은 Issue16에 결과 기록 |
 | Penpot03 실제 화면 대조·검수 | Flutter | 도구 제공 시 기존 보드 갱신. 기기·시각 검수 전02 이동 금지 |
@@ -27,8 +26,7 @@ ffffc4e6 이후 기기 재실패의 두 번째 원인은 `_openingSchedule`의 U
 
 - 현행 근거: [Issue16 서버 인계](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6503318794), [Flutter 기존 연결](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6503895060).
 - 새 정책 요청: [Issue16 확정 정책·구현 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6521839291), 게시 본문 재조회 확인. Backend b212ad0f 고정 계약·격리 검증 및 실행b8542ef7/DB0035 반영 인계 완료. [Flutter 연결·자동검증 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6527340458)의 본문을 재조회했다. 다음 담당 사용자는 아래 변경 경계 기기 확인, 양측은 구체 차이 수정이다.
-- [기기 일부 통과·없는 N 개방 수정 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6528974995): 본문 재조회 확인. 추가 Backend 변경 요청 없이 사용자 개방 재확인 대기.
-- [개방 재실패·UTC 비교 수정 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529532073): 본문 재조회 확인. 이번 개방의 앱 최소 수정과 별도 상세GET500 관찰을 분리했다. 개방은 사용자 재확인 대기, 조회500 원인 대조는 Backend 후속이다.
+- [다음주 방 생성 사용자 인수 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529639375): 본문 재조회 확인. 개방 오류의 기기 대기는 해소했다. 별도 상세GET500 원인 대조는 Backend 후속이다.
 - 모집·탈퇴 연계: [Issue13 출처 연결](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6521848149), 게시 본문 재조회 확인. completed 상태 유지·재개/종료 조작 없음.
 
 ## 회귀 보호·자동 검증
@@ -51,7 +49,7 @@ ffffc4e6 이후 기기 재실패의 두 번째 원인은 `_openingSchedule`의 U
 | 금주 탈퇴·외부 후임 자동승계 | 일반 전환·연결 해제·승계·탈퇴 한 번 처리 | 사용자 정상 확인 |
 | 비그룹원에게 직접 위임 | 확인 후 해당 주차 일반 전환과 위임 한 번 처리 | 기기 미실시 |
 | C/N 동시 생성·다른 캐릭터/그룹·금주 탈퇴 | 다음주 설정/참가·공대장 보존 | 사용자 정상 확인 |
-| 기존 금주 방에서 없는 다음주 개방 | 선택 일정으로 N 생성·C 보존·그룹 설정 상속 | 오류 수정·기기 재확인 대기 |
+| 기존 금주 방에서 없는 다음주 개방 | 선택 일정으로 N 생성·C 보존·그룹 설정 상속 | 방 생성 사용자 확인 / 참가·C 보존·상속 개별 확인 미완료 |
 | 이미 열린 다음주 보존·그룹 상속/일반 전환 | 기존 N 덮어쓰기 없음·서버 검토 결과 일치 | 추가 기기 확인 대기 |
 | 긴 그룹명·비그룹원 시점 배지 | 실제 주차의 이름·같은 참가자 소속 표시 일치 | 기존 제보 미해결·새 계약으로 확인 |
 
