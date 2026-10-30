@@ -92,6 +92,7 @@ UI 방향, 디자인 시스템과 시각적 적용 기준을 관리한다.
 
 ## 관리 원칙
 
+- 양쪽 저장소의 문서 역할·갱신·이관은 [공통 문서 운영 원본](https://github.com/heo0328/lostparty-backend/blob/c1fa205db709f97c1d34817c4417b84144a5dde3/docs/engineering/collaboration/api-collaboration.md#shared-document-operation)을 참조한다. 소비 기준은 Backend 문서 커밋 `c1fa205d`이며, 후속 공통 변경은 [Issue29](https://github.com/heo0328/lostparty-backend/issues/29) 등 관련 Issue에서 양측 영향을 확인한 뒤 고정 참조를 갱신한다. Flutter의 현재 분류·DETAIL_IMPROVEMENTS·legacy/history는 유지한다.
 - 작업 시작/설계·완료·Git의 실행 기준은 [AGENTS](../AGENTS.md)이며 상세 절차는 ai_rules다. 확정 제품/개발 정책을 실행계획이 덮지 못한다. '더 안전해 보인다'는 이유로 임의의 운영 전환/호환 단계를 추가하지 않는다.
 - NEXT_WORK는 현재 파트/유효 후속, AI_CONTEXT는 현재 지도/핵심 상태만 유지한다. 완료/해소된 대기·폐기 계획은 DEV_LOG/history로 옮기고 기존 문구를 교체한다. 이 지도에 버전/검증 수치/실행 대기를 중복 기록하지 않는다.
 - 문서·지침·버그기록·UI 보완은 진행 중 대단원 브랜치에서 처리한다. 한 파트 완료 시 커밋/푸시하며 질문/댓글/한 줄 변경마다 커밋하지 않는다. 통합은 별도 시점이다.

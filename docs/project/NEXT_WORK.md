@@ -42,6 +42,10 @@
 
 공통 단일 명령 원칙과 기존 사용자 인수 기록은9d1baa39에 보관했다. 이번 코드·시험·관련 문서는5f024e53으로 보관·푸시했다. 통계35와 기존 미추적 사용자 자료는 보존한다. 소분류 보관은 작업 브랜치 local/origin 일치로 판단하고 전체 완료/서버 반영/기기 인수와 구분한다.
 
+## 문서 운영 협업 — Issue29
+
+[Backend 원본 반영 인계](https://github.com/heo0328/lostparty-backend/issues/29#issuecomment-6517299322)의 문서 기준 `c1fa205d`를 소비한다. Flutter 문서 안내·ai_rules의 최소 참조 연결을 이번 문서 파트로 수행하며, 링크/내용·diff 검증 후 작업 브랜치에 보관하고 [Issue29](https://github.com/heo0328/lostparty-backend/issues/29)에 고정 커밋·게시 상태·검증 결과를 회신한다. 다음 담당은 Backend의 양측 반영 근거 대조이며, 그 확인 전에는 협업 전체 완료로 표시하지 않는다. 기존 그룹 기기 순서1~5와 Penpot 대기는 유지한다. AGENTS·코드·제품 정책·폴더 재배치·dev/main 통합은 이번 범위에 포함하지 않는다.
+
 ## 범위 밖
 
 G-RECOVERY 복구승계·운영정리/자료삭제·웹소켓/공지/통계는 제외. 나머지 보류/미채택 후속은 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md)에 통합하며 같은 내용을 새 문서로 늘리지 않는다. 완료 이력·기기 인수 출처는 [DEV_LOG](DEV_LOG.md), 디자인 작업 운영은 [공통 지침](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다.

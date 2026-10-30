@@ -120,7 +120,8 @@ lib/
 
 ### 4. 문서 교체와 파트 보관
 
-- NEXT_WORK는 현재 계획/유효 후속만, AI_CONTEXT는 현재 전체 지도/상태·상세 링크만 유지한다. 완료/해소된 대기·폐기 계획은 DEV_LOG 또는 출처가 있는 history로 옮기고 현재 지시에서 제거한다. 정정 문단을 상단에 덧붙이는 것으로 갱신을 대신하지 않는다.
+- 문서 역할·갱신/이관·검증 근거 재사용·실제 반영 상태 구분은 [공통 문서 운영 원본](https://github.com/heo0328/lostparty-backend/blob/c1fa205db709f97c1d34817c4417b84144a5dde3/docs/engineering/collaboration/api-collaboration.md#shared-document-operation)을 따른다. 소비 기준은 Backend 문서 커밋 `c1fa205d`이며 후속 변경은 관련 Issue에서 양측 영향을 확인하고 고정 참조를 갱신한다.
+- Flutter의 현재 계획은 NEXT_WORK, 현재 상태/지도는 AI_CONTEXT, 차후 개선안은 DETAIL_IMPROVEMENTS에서 관리한다. 완료/해소된 대기·폐기 계획은 DEV_LOG 또는 출처가 있는 history로 옮기고 현재 지시에서 제거한다. 정정 문단을 상단에 덧붙이는 것으로 갱신을 대신하지 않는다. 기존 분류·legacy/history 보관 방식을 유지하며 별도 ISSUE_TRACKER를 만들지 않는다.
 - 설계/제품 계약은 현재 정책을, DEV_LOG/history는 당시 결정/검증을 보관한다. 확정 제품/개발 정책·AGENTS/이 문서는 실행계획의 선행 조건이며 NEXT_WORK/AI_CONTEXT가 이를 덮지 못한다. 최신 사용자 변경은 충돌 조항을 교체해 반영한다.
 - 파트 완료 시 새로 가능한 흐름·보존 확인·미확인 실기기·실행 검증을 구분하고 코드/시험/문서를 목적 하나로 묶어 커밋·푸시한다. 메시지·회신·한 줄 수정마다 커밋하지 않는다. 독립된 지침 정리나 UI 수정 파트는 하나의 커밋이 될 수 있다.
 - 작업 브랜치 보관과 대단원 dev 통합/릴리즈는 별개다. 소분류 종료를 dev 병합이나 최종 종료 브랜치 dev의 조건으로 취급하지 않는다. 통합 절차는 AGENTS §3을 참조하며 여기서 중복 정의하지 않는다.
