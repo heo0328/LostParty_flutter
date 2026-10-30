@@ -1,0 +1,67 @@
+// Exercise the real Domain placement decisions through the preparation command.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {doc,writeBatch,serverTimestamp} from 'firebase/firestore';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+export async function run({env,seed,snapshot,check,now}){
+  const fixtures=JSON.parse(fs.readFileSync('coverage/rules-roster-rebalance/domain-fixtures.json','utf8'));
+  async function setup(f){
+    await seed(8);const before=await snapshot();
+    const entries=Object.fromEntries(f.entries.map(e=>[e.id,{...before.roster.entries[e.id],role:e.role,
+      classNameSnapshot:e.className,partyIndex:e.partyIndex,slotIndex:e.slotIndex}]));
+    const ids=f.entries.map(e=>e.id),supports=f.entries.filter(e=>e.role==='support').length;
+    await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore(),b=writeBatch(db);
+      b.update(doc(db,'recruitments/room'),{continueTogether:true,currentCycleStatus:'completed',currentCycleKey:'2026-10-07',
+        memberPlayerIds:ids,memberCount:ids.length,dealerCount:ids.length-supports,supportCount:supports,hasAvailableSlot:ids.length<8});
+      b.set(doc(db,'recruitments/room/roster/current'),{...before.roster,entries});
+      for(let i=0;i<8;i++)b.update(doc(db,`players/p${i}/raidStates/c${i}_raid`),{status:'completed',completedAt:now});
+      b.set(doc(db,'partyEvents/complete_room_8'),{type:'complete',completionTargets:ids.map(playerId=>({playerId,characterId:entries[playerId].characterId}))});
+      b.set(doc(db,'characters/prepared'),{ownerPlayerId:`p${f.target}`,status:'active',ownershipRevision:1,
+        gameAccountId:`a${f.target}`,characterName:'prepared-name',characterClassName:f.nextClass});
+      await b.commit();});return snapshot();
+  }
+  function operation(f,before,tamper=''){
+    const pid=`p${f.target}`,db=env.authenticatedContext(`u${f.target}`).firestore(),b=writeBatch(db),t=serverTimestamp();
+    const r=before.room,old=before.roster,previous=old.entries[pid],revision=r.revision+1,id=`characterChanged_room_${revision}`;
+    const e={...previous,characterId:'prepared',characterNameSnapshot:'prepared-name',classNameSnapshot:f.nextClass,
+      role:f.nextRole,partyIndex:f.partyIndex,slotIndex:f.slotIndex,updatedAt:t,characterChangedAt:t};
+    const proof={p0:r.memberPlayerIds.filter(p=>old.entries[p].partyIndex===0),p1:r.memberPlayerIds.filter(p=>old.entries[p].partyIndex===1),swap:[...f.swap]};
+    if(tamper==='missing-swap')proof.swap=[];
+    if(tamper==='leader-swap')proof.swap=['p0','p4'];
+    if(tamper==='same-party')proof.swap=['p1','p2'];
+    if(tamper==='foreign')proof.swap=['unknown','p4'];
+    if(tamper==='invalid-swap')proof.swap=['p1','p5'];
+    if(tamper==='omit-peer')proof.p0.pop();
+    if(tamper==='duplicate-peer')proof.p0[2]='p1';
+    if(tamper==='later-vacancy')e.slotIndex=3;
+    if(tamper==='skip-vacancy'){e.partyIndex=previous.partyIndex;e.slotIndex=previous.slotIndex;proof.swap=['p2','p7'];}
+    if(tamper==='unneeded-move'){e.partyIndex=1;e.slotIndex=1;}
+    const entries={...old.entries,[pid]:e};
+    if(tamper==='move-peer')entries.p4={...entries.p4,partyIndex:0,slotIndex:2,updatedAt:t};
+    b.update(doc(db,'recruitments/room'),{revision,rosterRevision:old.revision+1,commandType:'prepare',commandId:id,commandPlayerId:pid,updatedAt:t,
+      dealerCount:r.dealerCount-(previous.role==='dealer'?1:0)+(e.role==='dealer'?1:0),
+      supportCount:r.supportCount-(previous.role==='support'?1:0)+(e.role==='support'?1:0),placementProof:proof});
+    b.set(doc(db,'recruitments/room/roster/current'),{...old,revision:old.revision+1,entries});
+    b.set(doc(db,`partyEvents/${id}`),{schemaVersion:1,eventId:id,recruitmentId:'room',type:'characterChanged',commandId:id,
+      commandRevision:revision,audiencePlayerIds:r.memberPlayerIds,actorPlayerId:pid,occurredAt:t,
+      previousCharacterId:previous.characterId,nextCharacterId:'prepared',nextOwnershipRevision:1,cycleKey:r.currentCycleKey});
+    return b.commit();
+  }
+  for(const f of fixtures)await check(`prepare Domain ${f.name}: ${f.disposition}`,async()=>{
+    const before=await setup(f);
+    if(f.disposition==='rejected'){await assertRulesDenied(operation(f,before));assert.deepEqual(await snapshot(),before);}
+    else {await operation(f,before);const after=await snapshot(),pid=`p${f.target}`;
+      assert.equal(after.roster.entries[pid].partyIndex,f.partyIndex);assert.equal(after.roster.entries[pid].slotIndex,f.slotIndex);
+      assert.deepEqual(after.states,before.states);assert.deepEqual(after.events.find(e=>e.id==='complete_room_8'),before.events[0]);
+      assert.deepEqual(after.room.memberPlayerIds,before.room.memberPlayerIds);assert.equal(after.room.currentCycleStatus,'completed');
+      for(const p of before.room.memberPlayerIds)if(p!==pid)assert.deepEqual(after.roster.entries[p],before.roster.entries[p]);
+    }
+  });
+  for(const tamper of ['missing-swap','leader-swap','same-party','foreign','invalid-swap','omit-peer','duplicate-peer','move-peer'])await check(`prepare swap rejects ${tamper}`,async()=>{
+    const f=fixtures.find(x=>x.name==='full class collision swap'),before=await setup(f);
+    await assertRulesDenied(operation(f,before,tamper));assert.deepEqual(await snapshot(),before);
+  });
+  for(const [name,tamper] of [['first vacant seat','later-vacancy'],['first vacant seat','skip-vacancy'],['in place priority','unneeded-move']])await check(`prepare priority rejects ${tamper}`,async()=>{
+    const f=fixtures.find(x=>x.name===name),before=await setup(f);await assertRulesDenied(operation(f,before,tamper));assert.deepEqual(await snapshot(),before);
+  });
+}

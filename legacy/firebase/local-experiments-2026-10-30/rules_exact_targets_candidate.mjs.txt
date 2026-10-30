@@ -1,0 +1,31 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+import { rulesFunction } from './roster_complexity_candidate.mjs';
+import { compactExecutableRules } from './rules_executable_compact.mjs';
+const hash = s => createHash('sha256').update(s).digest('hex');
+export const targetFunctions = ['atomicRaidStateListedInTargets', 'atomicCommandIncludes'];
+export function exactTargetsCandidate(input) {
+  const baseline = compactExecutableRules(input).source;
+  assert.equal(hash(baseline), '18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61');
+  let readable = input;
+  for (const [name, arg, field] of [[targetFunctions[0], 'recruitment', 'raidStateTargets'],
+    [targetFunctions[1], 'data', 'commandTargets']]) {
+    const f = rulesFunction(readable, name);
+    readable = readable.slice(0, f.start) + `    function ${name}(${arg}, playerId, stateId) {
+      return ${arg}.${field}.size() <= 8
+        && ${arg}.${field}.hasAny([{'playerId': playerId, 'stateId': stateId}]);
+    }` + readable.slice(f.end);
+  }
+  const source = compactExecutableRules(readable).source;
+  return { readable, source, manifest: { baseline: hash(baseline), sha256: hash(source),
+    bytes: Buffer.byteLength(source), delta: Buffer.byteLength(source) - Buffer.byteLength(baseline) } };
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const result = exactTargetsCandidate(fs.readFileSync('coverage/rules-member-retirement/readable.rules', 'utf8'));
+  fs.mkdirSync('coverage/rules-exact-targets', { recursive: true });
+  for (const [name, value] of [['readable.rules', result.readable], ['candidate.rules', result.source],
+    ['manifest.json', JSON.stringify(result.manifest, null, 2)]]) fs.writeFileSync(`coverage/rules-exact-targets/${name}`, value);
+  console.log(JSON.stringify(result.manifest));
+}

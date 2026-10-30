@@ -25,7 +25,7 @@
 ### 다음 탭의 시작 순서
 
 1. AGENTS → ai_rules → NEXT_WORK → AI_CONTEXT → docs/README와 관련 계약·D08을 읽는다. 현재 checkout·HEAD·미커밋 변경·local/origin·관련 기존 브랜치를 확인하고, 두 저장소의 조사 기준 SHA와 전체 구조를 기록한다. 과거 SHA를 최신으로 가정하지 않는다.
-2. 인계 시 Flutter 브랜치는 `feature/group-backend-integration`이다. 기존 사용자 변경인 통계35, devtools_options.yaml, firestore.rules-backup1012/1013, tools/는 소유 확인 없이 수정·스테이징하지 않는다. 다른 탭과 동일 파일을 동시에 수정하지 않는다. 조사 자체를 위해 새 브랜치나 조기 dev 통합을 만들지 않는다.
+2. 인계 시 Flutter 브랜치는 `feature/group-backend-integration`이다. 이후 사용자 지시로 통계35의 유효 회신 기록은 보관하고, 미추적 Firebase 실험 소스·Rules 백업은 legacy/firebase/local-experiments-2026-10-30으로 원본 해시와 함께 이관했다. 빈 DevTools 설정·과거 tools 로그/의존성은 정리했다. 다음 탭은 당시 미커밋 목록을 재사용하지 말고 최신 상태를 확인한다. 다른 탭과 동일 파일을 동시에 수정하지 않는다. 조사 자체를 위해 새 브랜치나 조기 dev 통합을 만들지 않는다.
 3. Backend 최신 진단·계획과 관련 Issue의 최신 댓글을 먼저 읽고 중복 조사를 줄인다. 원격에서 확인할 수 없는 Backend 로컬 계획은 미확인으로 표시하고 필요한 내용만 협의한다. #29는 문서 운영 완료 근거이며 기능 개선 요청을 뒤섞지 않는다.
 4. 핵심 흐름과 조사 영역을 먼저 정리한 뒤 상세 조사한다. 대표 흐름은 Google 로그인/세션 복원, 원정대 등록·인증/캐릭터·활동, 모집 생성·검색·신청/참가, 배정·일정·완료/탈퇴, 그룹 연결·권한 변경이다. 사용자 행동 → 일반 앱 DI/Router → 요청/인증 → 서버 정책/트랜잭션/DB → 응답/오류 → 성공 후 화면·캐시 갱신을 실제 코드로 연결한다.
 

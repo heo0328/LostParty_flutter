@@ -1,0 +1,106 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {initializeTestEnvironment} from '@firebase/rules-unit-testing';
+import {doc,getDoc,writeBatch,serverTimestamp,Timestamp} from 'firebase/firestore';
+import {generateManualStubProbe,directory} from './rules_roster_manual_stub_probe.mjs';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+generateManualStubProbe();
+const baseline=process.env.ROSTER_MANUAL_BASELINE==='1';
+const rules=fs.readFileSync(baseline?'coverage/rules-member-retirement/candidate.rules':`${directory}/candidate.rules`,'utf8');
+const sha256=createHash('sha256').update(rules).digest('hex'),results=[];
+const env=await initializeTestEnvironment({projectId:'demo-party-group-cutover',firestore:{host:'127.0.0.1',port:8080,rules}});
+const cid='A'.repeat(20),cycle='2026-10-07',now=Timestamp.fromMillis(Date.now()-60000),end=Timestamp.fromMillis(now.toMillis()+7*86400000);
+const statePath=`players/p0/raidStates/${cid}_raid`,claimPath=`players/p0/weeklyRaidClaims/${cycle}_${cid}_raid`,assignmentPath=`players/p0/activeRaidAssignments/${cid}_raid`;
+const identity={playerId:'p0',characterId:cid,raidId:'raid',ownershipRevision:1};
+const guards={guardSchemaVersion:1,guardRecruitmentId:'room',guardRoomRevision:1,guardCycleKey:cycle,
+  guardCycleStartedAt:now,guardCycleEndsAt:end,guardSlotIndex:0,guardCheckedAt:now};
+const stub={...identity,...guards};
+const record=(revision=1)=>({...identity,ownershipRevision:revision});
+function completed(t=serverTimestamp()){return {...identity,schemaVersion:1,difficultyId:'hard',cycleKey:cycle,
+  status:'completed',source:'manual',recruitmentId:null,revision:1,cycleStartedAt:now,cycleEndsAt:end,completedAt:t,updatedAt:t};}
+function claim(t=now){const {status,recruitmentId,revision,...data}=completed(t);return data;}
+async function seed({state=stub,storedClaim=null,assignment=null,character={},account={},binding='active',generation=1}={}){
+  await env.clearFirestore();await env.withSecurityRulesDisabled(async ctx=>{
+    const db=ctx.firestore(),b=writeBatch(db);
+    b.set(doc(db,'authBindings/u0'),{playerId:'p0',status:binding});b.set(doc(db,'authBindings/u1'),{playerId:'p1',status:'active'});
+    b.set(doc(db,`characters/${cid}`),{ownerPlayerId:'p0',status:'active',gameAccountId:'a0',ownershipRevision:generation,...character});
+    b.set(doc(db,'gameAccounts/a0'),{ownerPlayerId:'p0',status:'active',ownershipRevision:generation,...account});
+    if(state)b.set(doc(db,statePath),state);if(storedClaim)b.set(doc(db,claimPath),storedClaim);if(assignment)b.set(doc(db,assignmentPath),assignment);
+    // Unrelated canonical completion must not be changed by the request.
+    b.set(doc(db,'players/p1/raidStates/other_raid'),{...completed(now),playerId:'p1',characterId:'other'});
+    await b.commit();
+  });
+}
+async function snapshot(){let value;await env.withSecurityRulesDisabled(async ctx=>{
+  value=await Promise.all([statePath,claimPath,assignmentPath,'players/p1/raidStates/other_raid']
+    .map(async p=>(await getDoc(doc(ctx.firestore(),p))).data()??null));});return value;}
+function write(patch={},actor='u0',extra='',path=statePath){
+  const db=actor===null?env.unauthenticatedContext().firestore():env.authenticatedContext(actor).firestore(),b=writeBatch(db);
+  b.set(doc(db,path),{...completed(),...patch});
+  if(extra==='claim-create')b.set(doc(db,claimPath),claim(serverTimestamp()));
+  if(extra==='claim-delete')b.delete(doc(db,claimPath));
+  if(extra==='assignment-delete')b.delete(doc(db,assignmentPath));
+  if(extra==='other-state')b.set(doc(db,'players/p1/raidStates/other_raid'),completed());
+  return b.commit();
+}
+async function denied(work){const before=await snapshot();await assertRulesDenied(work());assert.deepEqual(await snapshot(),before);}
+async function check(name,work){try{await work();results.push({name,passed:true});}
+  catch(e){results.push({name,passed:false,error:e.message});throw e;}
+  finally{fs.writeFileSync(`${directory}/${baseline?'baseline':'manual-stub'}-results.json`,JSON.stringify({sha256,results},null,2));}}
+try{
+  await check('stub becomes manual completion with no guards and replay rejected',async()=>{
+    await seed();const before=await snapshot();await write();const after=await snapshot();
+    assert.equal(after[0].status,'completed');assert.equal(after[0].recruitmentId,null);assert.equal(after[0].revision,1);
+    assert.deepEqual(Object.keys(after[0]).sort(),Object.keys(completed()).sort());assert.deepEqual(after.slice(1),before.slice(1));
+    await denied(()=>write());
+  });
+  for(const [name,options,patch] of [
+    ['old stub generation',{state:{...stub,ownershipRevision:0}},{}],
+    ['expired guard',{state:{...stub,guardCycleEndsAt:now}},{}],
+    ['other guard cycle',{state:{...stub,guardCycleKey:'2026-09-30',guardRecruitmentId:'other'}},{}],
+    ['older Claim',{storedClaim:{...claim(),ownershipRevision:0}},{}],
+    ['older assignment',{assignment:record(0)},{}],
+    ['live zero ownership',{generation:0,state:{...stub,ownershipRevision:0}},{ownershipRevision:0}],
+  ])await check(`allows ${name}`,async()=>{await seed(options);const before=await snapshot();await write(patch);const after=await snapshot();
+    assert.equal(after[0].ownershipRevision,patch.ownershipRevision??1);assert.deepEqual(after.slice(1),before.slice(1));});
+  for(const [name,options] of [
+    ['inactive binding',{binding:'inactive'}],['foreign character owner',{character:{ownerPlayerId:'other'}}],
+    ['foreign account owner',{account:{ownerPlayerId:'other'}}],['inactive character',{character:{status:'inactive'}}],
+    ['inactive account',{account:{status:'inactive'}}],['ownership mismatch',{account:{ownershipRevision:2}}],
+    ['current Claim',{storedClaim:claim()}],['future Claim',{storedClaim:{...claim(),ownershipRevision:2}}],
+    ['Claim identity mismatch',{storedClaim:{...claim(),playerId:'other',ownershipRevision:0}}],
+    ['current assignment',{assignment:record()}],['future assignment',{assignment:record(2)}],
+    ['assignment identity mismatch',{assignment:{...record(0),characterId:'other'}}],
+    ['stub identity player',{state:{...stub,playerId:'other'}}],['stub identity character',{state:{...stub,characterId:'other'}}],
+    ['stub identity raid',{state:{...stub,raidId:'other'}}],['stub extra',{state:{...stub,extra:true}}],
+    ['stub active',{state:{...stub,status:'active'}}],['stub completed',{state:{...stub,status:'completed'}}],
+    ['stub schema',{state:{...stub,guardSchemaVersion:2}}],
+  ])await check(`rejects ${name}`,async()=>{await seed(options);await denied(()=>write());});
+  for(const key of Object.keys(guards)){
+    await check(`rejects missing prior ${key}`,async()=>{const state={...stub};delete state[key];await seed({state});await denied(()=>write());});
+    await check(`rejects retained ${key}`,async()=>{await seed();await denied(()=>write({[key]:guards[key]}));});
+  }
+  for(const [key,value] of [['schemaVersion',2],['playerId','p1'],['characterId','other'],['raidId','other'],
+    ['ownershipRevision',0],['ownershipRevision',2],['status','active'],['source','party'],['recruitmentId','room'],
+    ['revision',2],['cycleStartedAt',end],['cycleEndsAt',now],['completedAt',now],['updatedAt',now],
+    ['cycleKey',null],['difficultyId',null],['extra',true]])await check(`rejects output ${key}=${value}`,async()=>{
+      await seed();await denied(()=>write({[key]:value}));});
+  await check('rejects wrong seven day window',async()=>{await seed();await denied(()=>write({cycleEndsAt:Timestamp.fromMillis(end.toMillis()+1)}));});
+  await check('rejects retaining all guards',async()=>{await seed();await denied(()=>write(guards));});
+  for(const actor of [null,'u1'])await check(`rejects actor ${actor}`,async()=>{await seed();await denied(()=>write({},actor));});
+  for(const extra of ['claim-create','assignment-delete','other-state'])await check(`rejects atomic ${extra}`,async()=>{
+    await seed(extra==='assignment-delete'?{assignment:record()}:{});await denied(()=>write({},'u0',extra));
+  });
+  // Existing C1 policy allows a valid Claim deletion and canonical completion in one atomic request.
+  await check('allows current Claim consumed by authorized delete',async()=>{
+    await seed({storedClaim:claim()});await write({},'u0','claim-delete');const after=await snapshot();
+    assert.equal(after[0].status,'completed');assert.equal(after[1],null);
+  });
+  if(!baseline){
+    for(const [name,state] of [['absent',null],['prior generation completed',{...completed(now),...guards,ownershipRevision:0}],
+      ['prior generation active',{...completed(now),...guards,status:'active',source:'party',recruitmentId:'room',ownershipRevision:0}]])
+      await check(`out of scope remains closed: ${name}`,async()=>{await seed({state});await denied(()=>write());});
+  }
+  console.log(`${results.length} manual stub checks passed (${baseline?'C1':'candidate'})`);
+}finally{await env.cleanup();}

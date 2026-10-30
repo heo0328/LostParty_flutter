@@ -1,0 +1,81 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {rulesFunction} from './roster_complexity_candidate.mjs';
+export const directory='coverage/rules-roster-complete';
+export function generateCompleteProbe(){
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  let source=fs.readFileSync('coverage/rules-roster-personal/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'8f009d3dcb6ebd98755df73d7618de1a50fe831859b570939cad60b3b5da6494');
+  source=source.replace(/^function /gm,'    function ');
+  function replace(old,next){assert.equal(source.split(old).length,2,old);source=source.replace(old,next);}
+  function set(name,change){const f=rulesFunction(source,name);source=source.slice(0,f.start)+change(f.text)+source.slice(f.end);}
+  set('sourceShape',s=>s.replace("['schemaVersion','recruitmentId'","['currentCycleStatus','continueTogether','schemaVersion','recruitmentId'")
+    .replace("&& r.schemaVersion == 3","&& r.get('currentCycleStatus','active') == 'active' && r.get('continueTogether',false) is bool && r.schemaVersion == 3"));
+  // Explicit dispatch: completed recurring rooms retain status=active but cannot run active-cycle commands.
+  replace("allow update: if request.resource.data.commandType == 'personalComplete'",
+    "allow update: if resource.data.get('currentCycleStatus','active') == 'active' ? (request.resource.data.commandType == 'complete' ? completeSource(id,resource.data,request.resource.data) : request.resource.data.commandType == 'personalComplete'");
+  replace('? positionSource(id,resource.data,request.resource.data) : false));',
+    '? positionSource(id,resource.data,request.resource.data) : false))) : false;');
+  replace("allow update: if getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'personalComplete'",
+    "allow update: if getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'complete' ? completeState(playerId,stateId,resource.data,request.resource.data) : getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'personalComplete'");
+  replace("allow create: if getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'personalComplete'",
+    "allow create: if getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'complete' ? completeEvent(id,request.resource.data) : getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'personalComplete'");
+  const added=`
+function completeFresh(id,r) { return r.commandType == 'complete' && r.updatedAt == request.time
+  && r.revision == get(roomPath(id)).data.revision + 1; }
+function completeTarget(r,es,i) {
+  return i >= r.memberPlayerIds.size() ? true : completedStateRequired(r,es[r.memberPlayerIds[i]],r.memberPlayerIds[i]);
+}
+function completedStateRequired(r,e,pid) {
+  let s = getAfter(changeStatePath(pid,e.characterId,r.raidId)).data;
+  return s.playerId == pid && s.characterId == e.characterId && s.recruitmentId == r.recruitmentId
+    && s.status == 'completed' && s.source == 'party' && s.updatedAt == request.time && s.completedAt == request.time;
+}
+function completeSource(id,b,r) {
+  let m = get(rosterPath(id)).data;
+  return completeFresh(id,r) ? (bound() && actor() == b.leaderPlayerId && r.commandPlayerId == b.leaderPlayerId
+    && b.schemaVersion == 3 && b.visibility == 'public' && b.groupId == null && b.status == 'active'
+    && request.time >= b.cycleStartedAt && request.time < b.cycleEndsAt
+    && r.diff(b).affectedKeys().hasOnly(['status','currentCycleStatus','revision','commandId','commandType','commandPlayerId','updatedAt'])
+    && r.currentCycleStatus == 'completed' && r.status == (b.get('continueTogether',false) ? 'active' : 'completed')
+    && m.revision == b.rosterRevision && m.entries.keys().toSet() == b.memberPlayerIds.toSet()
+    && b.memberPlayerIds.size() > 0 && b.memberPlayerIds.size() <= 8 && eventRequired(r)
+    && ${Array.from({length:8},(_,i)=>`completeTarget(r,m.entries,${i})`).join(' && ')}) : false;
+}
+function completeState(pid,stateId,b,s) {
+  let room = get(roomPath(b.recruitmentId)).data; let r = getAfter(roomPath(b.recruitmentId)).data;
+  let e = get(rosterPath(b.recruitmentId)).data.entries[pid];
+  return completeFresh(b.recruitmentId,r) ? (b.schemaVersion == 1 && b.playerId == pid && b.characterId == e.characterId
+    && stateId == e.characterId + '_' + room.raidId && b.recruitmentId == room.recruitmentId
+    && b.raidId == room.raidId && b.difficultyId == room.difficultyId && b.cycleKey == room.currentCycleKey
+    && b.ownershipRevision == e.ownershipRevision && b.get('role',e.role) == e.role && s.role == e.role
+    && b.status == 'active' && b.source == 'party' && currentStateOwnership(b)
+    && s.diff(b).affectedKeys().hasOnly(['status','role','completedAt','revision','updatedAt'])
+    && s.status == 'completed' && s.completedAt == request.time && s.updatedAt == request.time
+    && s.revision == b.revision + 1) : false;
+}
+function completionSnapshotAt(ts,ids,es,i) {
+  return i >= ids.size() || ts[i] == {'playerId':ids[i],'characterId':es[ids[i]].characterId};
+}
+function completeEvent(id,e) {
+  let r = getAfter(roomPath(e.recruitmentId)).data; let es = get(rosterPath(e.recruitmentId)).data.entries;
+  return completeFresh(e.recruitmentId,r) ? (e.keys().hasOnly(['schemaVersion','eventId','recruitmentId','type','commandId',
+    'commandRevision','audiencePlayerIds','actorPlayerId','raidId','difficultyId','cycleKey','completionTargets','occurredAt'])
+    && e.schemaVersion == 2 && id == 'complete_' + e.recruitmentId + '_' + string(r.revision)
+    && e.eventId == id && e.commandId == id && r.commandId == id && e.type == 'complete'
+    && e.commandRevision == r.revision && e.actorPlayerId == r.leaderPlayerId && e.audiencePlayerIds == r.memberPlayerIds
+    && e.raidId == r.raidId && e.difficultyId == r.difficultyId && e.cycleKey == r.currentCycleKey && e.occurredAt == request.time
+    && e.completionTargets is list && e.completionTargets.size() == r.memberPlayerIds.size()
+    && ${Array.from({length:8},(_,i)=>`completionSnapshotAt(e.completionTargets,r.memberPlayerIds,es,${i})`).join(' && ')}) : false;
+}
+`;
+  source=source.slice(0,source.lastIndexOf('} }'))+added+'} }';
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(directory+'/readable.rules',source);fs.writeFileSync(directory+'/candidate.rules',compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'8f009d3d',limitation:'Public whole-party completion; preparation/advance/group/reader not integrated.'};
+  fs.writeFileSync(directory+'/manifest.json',JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generateCompleteProbe());

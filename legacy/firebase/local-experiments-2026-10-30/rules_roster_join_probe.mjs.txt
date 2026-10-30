@@ -1,0 +1,214 @@
+// Isolated public-room schema3 create/join proof. NOT deployment rules.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+import { compactExecutableRules } from './rules_executable_compact.mjs';
+import { rulesFunction } from './roster_complexity_candidate.mjs';
+export const directory = 'coverage/rules-roster-join';
+const hash = s => createHash('sha256').update(s).digest('hex');
+export function generateJoinProbe() {
+  const baseline = fs.readFileSync('coverage/rules-member-retirement/readable.rules', 'utf8');
+  assert.equal(hash(compactExecutableRules(baseline).source), '18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61');
+  const reused = ['deOwnershipMatches', 'deOlderRecord', 'weeklyRaidClaimId', 'weeklyRaidClaimPath', 'deBlockingClaim'];
+  const source = `rules_version = '2'; service cloud.firestore { match /databases/{database}/documents {
+${reused.map(n => rulesFunction(baseline, n).text).join('\n')}
+function roomPath(id) { return /databases/$(database)/documents/recruitments/$(id); }
+function rosterPath(id) { return /databases/$(database)/documents/recruitments/$(id)/roster/current; }
+function actor() { return get(/databases/$(database)/documents/authBindings/$(request.auth.uid)).data.playerId; }
+function bound() { return request.auth != null && get(/databases/$(database)/documents/authBindings/$(request.auth.uid)).data.status == 'active'; }
+function text(value) { return value is string && value.size() > 0 && value.size() <= 256; }
+function count(value) { return value is int && value >= 0; }
+function build(s) {
+  return s == null || (s is map && s.keys().hasOnly(['schemaVersion','status','issueCodes','role','checkedAt','catalogVersion'])
+    && s.schemaVersion in [1,2] && s.status in ['clean','review','error','unavailable']
+    && s.role in ['dealer','support'] && s.checkedAt is timestamp
+    && (s.catalogVersion == null || text(s.catalogVersion)) && s.issueCodes is list && s.issueCodes.size() <= 7
+    && s.issueCodes.hasOnly(['gemSlotCount','foreignClassGem','unmatchedSkillGem','sameClassGemUnverified','gemUnavailable','arkGridMinimum','arkGridCondition'])
+    && (s.schemaVersion == 2 || !s.issueCodes.hasAny(['gemSlotCount','unmatchedSkillGem'])));
+}
+function gem(s) {
+  return s == null || (s is map && s.gemValidatedAt is timestamp && text(s.catalogVersion)
+    && count(s.foreignClassGemCount)
+    && (s.get('gemValidationSchemaVersion',1) == 1
+      ? (s.keys().hasOnly(['gemValidationStatus','foreignClassGemCount','unverifiedSameClassGemCount','gemValidatedAt','catalogVersion'])
+        && count(s.unverifiedSameClassGemCount) && s.gemValidationStatus in ['verified','error','sameClassTargetUnverified','foreignClass','unavailable'])
+      : (s.gemValidationSchemaVersion == 2
+        && s.keys().hasOnly(['gemValidationSchemaVersion','gemValidationStatus','equippedGemCount','foreignClassGemCount','unmatchedSkillGemCount','gemValidatedAt','catalogVersion'])
+        && (s.equippedGemCount == null || count(s.equippedGemCount)) && count(s.unmatchedSkillGemCount)
+        && s.gemValidationStatus in ['verified','error','sameClassTargetUnverified','unavailable'])));
+}
+function entryShape(e, r) {
+  return e is map && e.keys().hasOnly(['characterId','ownershipRevision','role','partyIndex','slotIndex',
+    'canApproveApplications','joinedAt','joinedBy','membershipOrder','countedAsNonGroupMember',
+    'characterNameSnapshot','classNameSnapshot','itemLevelSnapshot','combatPowerSnapshot',
+    'submittedBuildSnapshotId','gemValidationSnapshot','buildIntegritySnapshot','characterChangedAt','updatedAt'])
+    && text(e.characterId) && count(e.ownershipRevision) && e.role in ['dealer','support']
+    && count(e.partyIndex) && e.partyIndex < r.partyCount && count(e.slotIndex) && e.slotIndex < r.membersPerParty
+    && count(e.membershipOrder) && e.canApproveApplications is bool && e.countedAsNonGroupMember == false
+    && e.joinedAt == request.time && e.updatedAt == request.time && e.joinedBy == actor()
+    && text(e.characterNameSnapshot) && text(e.classNameSnapshot)
+    && e.itemLevelSnapshot is number && e.itemLevelSnapshot >= r.minItemLevel
+    && (e.combatPowerSnapshot == null || (e.combatPowerSnapshot is number && e.combatPowerSnapshot >= 0))
+    && (r.minCombatPower == null || (e.combatPowerSnapshot is number && e.combatPowerSnapshot >= r.minCombatPower))
+    && e.submittedBuildSnapshotId == null && e.characterChangedAt == null
+    && gem(e.gemValidationSnapshot) && build(e.buildIntegritySnapshot);
+}
+function sourceShape(r, id) {
+  return r.keys().hasOnly(['schemaVersion','recruitmentId','visibility','groupId','leaderPlayerId','memberPlayerIds',
+    'memberCount','dealerCount','supportCount','maxMemberCount','hasAvailableSlot','manualRecruitmentEnabled',
+    'partyCount','membersPerParty','supportsPerParty','maxDealersPerClassPerParty','minItemLevel','minCombatPower',
+    'raidId','difficultyId','currentCycleKey','cycleStartedAt','cycleEndsAt','status','approvalMode',
+    'revision','rosterRevision','commandId','commandType','commandPlayerId','updatedAt','createdAt','pendingApplicationCount'])
+    && r.schemaVersion == 3 && r.recruitmentId == id && r.visibility == 'public' && r.groupId == null
+    && r.status == 'active' && r.approvalMode in ['directJoin','leaderApproval']
+    && r.partyCount in [1,2] && r.membersPerParty == 4 && r.supportsPerParty == 1 && r.maxDealersPerClassPerParty == 1
+    && r.maxMemberCount == r.partyCount * r.membersPerParty && r.memberCount <= r.maxMemberCount
+    && r.memberCount == r.memberPlayerIds.size() && r.memberPlayerIds.toSet().size() == r.memberCount
+    && count(r.dealerCount) && count(r.supportCount) && r.dealerCount + r.supportCount == r.memberCount
+    && r.hasAvailableSlot == (r.memberCount < r.maxMemberCount) && r.manualRecruitmentEnabled == true
+    && r.minItemLevel is number && r.minItemLevel >= 0 && (r.minCombatPower == null || (r.minCombatPower is number && r.minCombatPower >= 0))
+    && text(r.raidId) && text(r.difficultyId) && text(r.currentCycleKey) && count(r.pendingApplicationCount)
+    && r.cycleStartedAt is timestamp && r.cycleEndsAt == r.cycleStartedAt + duration.value(7,'d')
+    && request.time >= r.cycleStartedAt && request.time < r.cycleEndsAt && r.updatedAt == request.time;
+}
+function rosterShape(m, r) {
+  return m.keys().hasOnly(['schemaVersion','recruitmentId','revision','entries']) && m.schemaVersion == 1
+    && m.recruitmentId == r.recruitmentId && m.revision == r.rosterRevision && m.entries is map
+    && m.entries.keys().toSet() == r.memberPlayerIds.toSet();
+}
+function peerCheck(ids, entries, e, i) {
+  return i >= ids.size() || (entries[ids[i]].characterId != e.characterId
+    && entries[ids[i]].membershipOrder < e.membershipOrder
+    && (entries[ids[i]].partyIndex != e.partyIndex || (entries[ids[i]].slotIndex != e.slotIndex
+      && !(e.role == 'dealer' && entries[ids[i]].role == 'dealer' && entries[ids[i]].classNameSnapshot == e.classNameSnapshot))));
+}
+function roleAt(ids, entries, e, i) {
+  return i < ids.size() && entries[ids[i]].partyIndex == e.partyIndex && entries[ids[i]].role == e.role ? 1 : 0;
+}
+function placement(ids, entries, e, r) {
+  return ${Array.from({length:8},(_,i)=>`peerCheck(ids, entries, e, ${i})`).join(' && ')}
+    && (${Array.from({length:8},(_,i)=>`roleAt(ids, entries, e, ${i})`).join(' + ')}) < (e.role == 'support' ? r.supportsPerParty : r.membersPerParty - r.supportsPerParty);
+}
+function fresh(id, after) {
+  return after.updatedAt == request.time && (after.commandType == 'create'
+    ? (!exists(roomPath(id)) && after.revision == 1)
+    : (after.commandType in ['join','approve'] && after.revision == get(roomPath(id)).data.revision + 1));
+}
+function stateRequired(r, e) {
+  let stateId = e.characterId + '_' + r.raidId;
+  let s = getAfter(/databases/$(database)/documents/players/$(r.commandPlayerId)/raidStates/$(stateId)).data;
+  return s.recruitmentId == r.recruitmentId && s.playerId == r.commandPlayerId && s.characterId == e.characterId
+    && s.role == e.role && s.ownershipRevision == e.ownershipRevision && s.raidId == r.raidId
+    && s.difficultyId == r.difficultyId && s.cycleKey == r.currentCycleKey
+    && s.status == 'active' && s.source == 'party' && s.revision == 1 && s.updatedAt == request.time;
+}
+function eventRequired(r) {
+  let path = /databases/$(database)/documents/partyEvents/$(r.commandId);
+  return !exists(path) && getAfter(path).data.commandRevision == r.revision
+    && getAfter(path).data.occurredAt == request.time;
+}
+function createSource(id, r) {
+  let m = getAfter(rosterPath(id)).data;
+  let e = m.entries[r.commandPlayerId];
+  return bound() && !exists(rosterPath(id)) && sourceShape(r,id) && m.revision == r.rosterRevision
+    && r.commandType == 'create' && r.commandPlayerId == actor() && r.leaderPlayerId == actor()
+    && r.memberPlayerIds == [actor()] && r.revision == 1 && r.rosterRevision == 1 && r.createdAt == request.time
+    && r.pendingApplicationCount == 0 && e.membershipOrder == 0 && e.partyIndex == 0 && e.slotIndex == 0
+    && e.canApproveApplications == true && r.dealerCount == (e.role == 'dealer' ? 1 : 0)
+    && r.supportCount == (e.role == 'support' ? 1 : 0) && stateRequired(r,e) && eventRequired(r);
+}
+function approval(r, beforeRoster, e) {
+  let path = /databases/$(database)/documents/recruitments/$(r.recruitmentId)/applications/$(r.commandPlayerId);
+  let a = get(path).data;
+  let next = getAfter(path).data;
+  return (actor() == r.leaderPlayerId || beforeRoster.entries[actor()].canApproveApplications == true)
+    && a.status == 'pending' && a.characterId == e.characterId && a.ownershipRevision == e.ownershipRevision
+    && a.requestedRole == e.role && a.cycleKey == r.currentCycleKey
+    && a.combatPowerSnapshot == e.combatPowerSnapshot && a.gemValidationSnapshot == e.gemValidationSnapshot
+    && a.buildIntegritySnapshot == e.buildIntegritySnapshot
+    && next.status == 'approved' && next.revision == a.revision + 1 && next.updatedAt == request.time;
+}
+function joinSource(id, before, r) {
+  let old = get(rosterPath(id)).data;
+  let next = getAfter(rosterPath(id)).data;
+  let e = next.entries[r.commandPlayerId];
+  return bound() && old.revision == before.rosterRevision && next.revision == r.rosterRevision
+    && before.schemaVersion == 3 && before.status == 'active' && before.manualRecruitmentEnabled == true
+    && request.time >= before.cycleStartedAt && request.time < before.cycleEndsAt && r.updatedAt == request.time
+    && before.memberCount < before.maxMemberCount
+    && r.diff(before).affectedKeys().hasOnly(['memberPlayerIds','memberCount','dealerCount','supportCount','hasAvailableSlot',
+      'revision','rosterRevision','commandId','commandType','commandPlayerId','updatedAt','pendingApplicationCount'])
+    && r.revision == before.revision + 1 && r.rosterRevision == before.rosterRevision + 1
+    && r.memberPlayerIds == before.memberPlayerIds.concat([r.commandPlayerId])
+    && r.memberCount == before.memberCount + 1 && r.memberCount <= before.maxMemberCount
+    && r.hasAvailableSlot == (r.memberCount < r.maxMemberCount)
+    && next.entries.diff(old.entries).addedKeys() == [r.commandPlayerId].toSet()
+    && next.entries.diff(old.entries).changedKeys().size() == 0 && next.entries.diff(old.entries).removedKeys().size() == 0
+    && e.canApproveApplications == false
+    && r.dealerCount == before.dealerCount + (e.role == 'dealer' ? 1 : 0)
+    && r.supportCount == before.supportCount + (e.role == 'support' ? 1 : 0)
+    && (r.commandType == 'join'
+      ? (before.approvalMode == 'directJoin' && r.commandPlayerId == actor() && r.pendingApplicationCount == before.pendingApplicationCount)
+      : (r.commandType == 'approve' && approval(r,old,e) && r.pendingApplicationCount == before.pendingApplicationCount - 1))
+    && stateRequired(r,e) && eventRequired(r);
+}
+match /recruitments/{id} {
+  allow create: if !exists(roomPath(id)) ? createSource(id,request.resource.data) : false;
+  allow update: if request.resource.data.commandType in ['join','approve']
+    && request.resource.data.revision == resource.data.revision + 1
+    ? joinSource(id,resource.data,request.resource.data) : false;
+  match /roster/{name} {
+    allow create,update: if name == 'current' && fresh(id,getAfter(roomPath(id)).data)
+      && rosterShape(request.resource.data,getAfter(roomPath(id)).data)
+      && rosterPlacement(id,request.resource.data,getAfter(roomPath(id)).data);
+  }
+  match /applications/{playerId} {
+    allow update: if fresh(id,getAfter(roomPath(id)).data)
+      && getAfter(roomPath(id)).data.commandType == 'approve' && getAfter(roomPath(id)).data.commandPlayerId == playerId
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','revision','updatedAt']);
+  }
+}
+function rosterPlacement(id,m,r) {
+  return r.commandType == 'create' ? true : placement(get(roomPath(id)).data.memberPlayerIds,
+    get(rosterPath(id)).data.entries,m.entries[r.commandPlayerId],r);
+}
+match /players/{playerId}/raidStates/{stateId} {
+  allow create: if validNewState(playerId,stateId,request.resource.data);
+}
+function validNewState(playerId,stateId,s) {
+  let r = getAfter(roomPath(s.recruitmentId)).data;
+  let e = getAfter(rosterPath(s.recruitmentId)).data.entries[playerId];
+  let c = get(/databases/$(database)/documents/characters/$(s.characterId)).data;
+  let a = get(/databases/$(database)/documents/gameAccounts/$(c.gameAccountId)).data;
+  return s.keys().hasOnly(['schemaVersion','playerId','characterId','ownershipRevision','recruitmentId','raidId','difficultyId',
+    'cycleKey','role','status','source','revision','createdAt','updatedAt'])
+    && fresh(s.recruitmentId,r) && r.commandPlayerId == playerId && s.playerId == playerId && s.schemaVersion == 1
+    && stateId == s.characterId + '_' + s.raidId && s.characterId == e.characterId && s.createdAt == request.time
+    && entryShape(e,r) && deOwnershipMatches(s,c,a) && c.status == 'active' && a.status == 'active'
+    && e.characterNameSnapshot == c.characterName && e.classNameSnapshot == c.characterClassName
+    && !deBlockingClaim(playerId,s.cycleKey,s.characterId,s.raidId,s.ownershipRevision);
+}
+match /partyEvents/{id} {
+  allow create: if validEvent(id,request.resource.data);
+}
+function validEvent(id,e) {
+  let r = getAfter(roomPath(e.recruitmentId)).data;
+  let kind = r.commandType == 'create' ? 'partyCreated' : 'memberJoined';
+  return e.keys().hasOnly(['schemaVersion','eventId','recruitmentId','type','commandId','commandRevision','audiencePlayerIds','actorPlayerId','occurredAt'])
+    && fresh(e.recruitmentId,r) && e.schemaVersion == 1 && id == kind + '_' + e.recruitmentId + '_' + string(r.revision)
+    && id == r.commandId && e.eventId == id && e.commandId == id && e.type == kind
+    && e.commandRevision == r.revision && e.audiencePlayerIds == r.memberPlayerIds
+    && e.actorPlayerId == actor() && e.occurredAt == request.time;
+}
+} }`;
+  fs.mkdirSync(directory,{recursive:true});
+  fs.writeFileSync(`${directory}/readable.rules`,source);
+  const compact = compactExecutableRules(source).source;
+  fs.writeFileSync(`${directory}/candidate.rules`,compact);
+  const manifest = { diagnosticOnly:true, reused, sha256:hash(compact), bytes:Buffer.byteLength(compact),
+    limitation:'Public create/join slice only. No group/listing, legacy state consumption, readers, full application workflow or lifecycle integration.' };
+  fs.writeFileSync(`${directory}/manifest.json`,JSON.stringify(manifest,null,2));
+  return manifest;
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) console.log(generateJoinProbe());

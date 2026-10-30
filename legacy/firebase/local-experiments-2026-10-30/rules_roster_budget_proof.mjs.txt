@@ -1,0 +1,129 @@
+// Diagnostic only: measure the first required maximum-size schema3 transition.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
+import { doc, getDoc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { directory, writeBudgetProbes } from './rules_roster_budget_probe.mjs';
+import { assertRulesDenied } from './assert_rules_denied.mjs';
+const results = [];
+const players = Array.from({ length: 8 }, (_, i) => `p${i}`);
+const paths = ['recruitments/room', 'recruitments/room/roster/current', 'partyEvents/next',
+  ...[...players, 'outsider'].map(p => `players/${p}/raidStates/c${p}_raid`), 'partyEvents/stale', 'recruitments/other'];
+const deniedCases = ['omit-state', 'omit-event', 'omit-source', 'source-only', 'state-only', 'event-only',
+  'roster-only', 'changed-roster', 'unlisted-state', 'foreign-state', 'wrong-character', 'wrong-generation',
+  'changed-role', 'forged-revision', 'forged-actor', 'inactive-binding', 'nonleader', 'unauthenticated',
+  'character-transferred', 'account-transferred', 'account-generation', 'missing-account',
+  'stale-event', 'old-command', 'wrong-cycle', 'extra-source-field', 'extra-event-field'];
+for (const variant of writeBudgetProbes()) {
+  const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover', firestore: {
+    host: '127.0.0.1', port: 8080, rules: fs.readFileSync(`${directory}/${variant.name}.rules`, 'utf8') } });
+  try {
+    for (const test of variant.options.ownership === false ? ['valid'] : ['valid', ...deniedCases]) {
+    try {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      const batch = writeBatch(db);
+      batch.set(doc(db, 'authBindings/actor'), { status: test === 'inactive-binding' ? 'inactive' : 'active', playerId: 'p0' });
+      batch.set(doc(db, 'authBindings/nonleader'), { status: 'active', playerId: 'p7' });
+      batch.set(doc(db, 'recruitments/room'), { schemaVersion: 3, revision: 1, status: 'active', leaderPlayerId: 'p0',
+        rosterRevision: 1, memberPlayerIds: players, raidId: 'raid', cycleKey: 'cycle', commandId: 'previous' });
+      batch.set(doc(db, 'recruitments/other'), { schemaVersion: 3, revision: 1, status: 'active', commandId: 'previous' });
+      batch.set(doc(db, 'partyEvents/stale'), { recruitmentId: 'room', revision: 2, actorPlayerId: 'p0', createdAt: Timestamp.fromMillis(1) });
+      batch.set(doc(db, 'recruitments/room/roster/current'), { schemaVersion: 1, recruitmentId: 'room', revision: 1,
+        entries: Object.fromEntries(players.map((p, i) => [p, { characterId: `c${p}`, ownershipRevision: 1,
+          role: i % 4 === 3 ? 'support' : 'dealer', membershipOrder: i, partyIndex: Math.floor(i / 4), slotIndex: i % 4 }])) });
+      for (const [i, p] of [...players, 'outsider'].entries()) {
+        batch.set(doc(db, `characters/c${p}`), { ownerPlayerId: test === 'character-transferred' && p === 'p7' ? 'new-owner' : p,
+          gameAccountId: `a${p}`, ownershipRevision: 1 });
+        if (!(test === 'missing-account' && p === 'p7')) batch.set(doc(db, `gameAccounts/a${p}`), {
+          ownerPlayerId: test === 'account-transferred' && p === 'p7' ? 'new-owner' : p,
+          ownershipRevision: test === 'account-generation' && p === 'p7' ? 2 : 1 });
+        batch.set(doc(db, `players/${p}/raidStates/c${p}_raid`), { playerId: p, characterId: `c${p}`, ownershipRevision: 1,
+          recruitmentId: test === 'foreign-state' && p === 'p7' ? 'other' : 'room', raidId: 'raid', cycleKey: 'cycle', status: 'active', revision: 1,
+          role: i % 4 === 3 ? 'support' : 'dealer' });
+      }
+      await batch.commit();
+    });
+    async function snapshot() {
+      let result;
+      await env.withSecurityRulesDisabled(async context => {
+        result = await Promise.all(paths.map(async path => {
+          const snap = await getDoc(doc(context.firestore(), path)); return { path, data: snap.data() ?? null };
+        }));
+      });
+      return result;
+    }
+    const before = await snapshot();
+    const db = test === 'unauthenticated' ? env.unauthenticatedContext().firestore()
+      : env.authenticatedContext(test === 'nonleader' ? 'nonleader' : 'actor').firestore();
+    const batch = writeBatch(db);
+    const commandId = test === 'old-command' ? 'previous' : test === 'stale-event' ? 'stale' : 'next';
+    if (!['omit-source', 'state-only', 'event-only', 'roster-only'].includes(test)) {
+      batch.update(doc(db, 'recruitments/room'), { revision: test === 'forged-revision' ? 3 : 2, status: 'completed', commandId,
+        commandType: 'complete', updatedAt: serverTimestamp(), ...(test === 'extra-source-field' ? { untrusted: true } : {}) });
+    }
+    if (!['omit-event', 'source-only', 'state-only', 'roster-only', 'stale-event'].includes(test)) {
+      batch.set(doc(db, `partyEvents/${commandId}`), { recruitmentId: 'room', revision: 2,
+        actorPlayerId: test === 'forged-actor' ? 'p7' : 'p0', createdAt: serverTimestamp(),
+        ...(test === 'extra-event-field' ? { untrusted: true } : {}) });
+    }
+    if (!['source-only', 'event-only', 'roster-only'].includes(test)) {
+      for (const p of test === 'unlisted-state' ? [...players, 'outsider'] : players) {
+        if (test === 'omit-state' && p === 'p7') continue;
+        const patch = { revision: 2, status: 'completed', commandId, updatedAt: serverTimestamp() };
+        if (p === 'p7') {
+          if (test === 'wrong-character') patch.characterId = 'forged';
+          if (test === 'wrong-generation') patch.ownershipRevision = 2;
+          if (test === 'changed-role') patch.role = 'dealer';
+          if (test === 'wrong-cycle') patch.cycleKey = 'forged';
+        }
+        batch.update(doc(db, `players/${p}/raidStates/c${p}_raid`), patch);
+      }
+    }
+    if (['roster-only', 'changed-roster'].includes(test)) batch.update(doc(db, 'recruitments/room/roster/current'), {
+      'entries.p7.canApproveApplications': true });
+    if (test !== 'valid') {
+      await assertRulesDenied(batch.commit());
+      assert.deepEqual(await snapshot(), before, 'failed atomic write must leave all documents unchanged');
+    } else {
+      await batch.commit(); const after = await snapshot();
+      assert.equal(after[0].data.status, 'completed');
+      assert.deepEqual(after[1], before[1]);
+      for (const state of after.slice(3, 11)) assert.equal(state.data.status, 'completed');
+      assert.equal(after[2].data.revision, 2);
+      assert.deepEqual(after.slice(11), before.slice(11), 'unrelated documents must stay unchanged');
+      if (variant.options.ownership !== false) {
+        for (const replay of ['state-after-complete', 'event-overwrite', 'concurrent-old-revision']) {
+          const second = writeBatch(db);
+          if (replay === 'state-after-complete') {
+            second.update(doc(db, 'players/p7/raidStates/cp7_raid'), { revision: 3, updatedAt: serverTimestamp() });
+          } else if (replay === 'event-overwrite') {
+            second.update(doc(db, 'partyEvents/next'), { createdAt: serverTimestamp() });
+          } else {
+            // The second contender commits after the first, using the same expected revision.
+            second.update(doc(db, 'recruitments/room'), { revision: 2, commandId: 'second', updatedAt: serverTimestamp() });
+            second.set(doc(db, 'partyEvents/second'), { recruitmentId: 'room', revision: 2,
+              actorPlayerId: 'p0', createdAt: serverTimestamp() });
+          }
+          await assertRulesDenied(second.commit());
+          assert.deepEqual(await snapshot(), after);
+          await env.withSecurityRulesDisabled(async context => {
+            assert.equal((await getDoc(doc(context.firestore(), 'partyEvents/second'))).exists(), false);
+          });
+          results.push({ name: variant.name, test: replay, passed: true });
+        }
+      }
+    }
+    results.push({ name: variant.name, test, passed: true });
+    console.log(JSON.stringify(results.at(-1)));
+    } catch (e) {
+      results.push({ name: variant.name, test, passed: false, error: e.message });
+      throw e;
+    } finally { fs.writeFileSync(`${directory}/results.json`, JSON.stringify(results, null, 2)); }
+    }
+  } finally {
+    await env.cleanup();
+    fs.writeFileSync(`${directory}/results.json`, JSON.stringify(results, null, 2));
+  }
+}

@@ -1,0 +1,167 @@
+import assert from 'node:assert/strict';
+import {doc,writeBatch,serverTimestamp,Timestamp,deleteField} from 'firebase/firestore';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+export async function run({env,seed,snapshot,check,now}){
+  const end=Timestamp.fromMillis(now.toMillis()+7*86400000),old=Timestamp.fromMillis(now.toMillis()-7*86400000);
+  const guards=['guardSchemaVersion','guardRecruitmentId','guardRoomRevision','guardCycleKey','guardCycleStartedAt','guardCycleEndsAt','guardSlotIndex','guardCheckedAt'];
+  const core=s=>s===null?null:Object.fromEntries(Object.entries(s).filter(([k])=>!guards.includes(k)));
+  async function admin(work){await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore(),b=writeBatch(db);work(b,db);await b.commit();});}
+  async function setup(kind='completed'){
+    await seed(8);await admin((b,db)=>{
+      b.update(doc(db,'recruitments/room'),{currentCycleKey:'2026-09-30',cycleStartedAt:old,cycleEndsAt:now,
+        continueTogether:true,currentCycleStatus:kind==='active'?'active':'completed'});
+      for(let i=0;i<8;i++){
+        if(kind==='missing'){b.delete(doc(db,`players/p${i}/raidStates/c${i}_raid`));continue;}
+        b.update(doc(db,`players/p${i}/raidStates/c${i}_raid`),{cycleKey:'2026-09-30',status:kind==='active'?'active':'completed',
+          ...(kind==='active'?{}:{completedAt:old}),...(kind==='foreign'?{recruitmentId:'other',difficultyId:'normal',role:'support'}:{}),
+          ...(kind==='manual'?{recruitmentId:null,source:'manual',role:deleteField()}:{}),updatedAt:old});
+      }
+      b.set(doc(db,'partyEvents/complete_room_8'),{type:'complete',completionTargets:Array.from({length:8},(_,i)=>({playerId:`p${i}`,characterId:`c${i}`}))});
+    });
+  }
+  function certify(before,i,tamper=''){
+    const db=tamper==='anonymous'?env.unauthenticatedContext().firestore():env.authenticatedContext(tamper==='nonleader'?'u7':'u0').firestore(),b=writeBatch(db);
+    const pid=`p${i}`,e=before.roster.entries[pid];
+    const s={playerId:pid,characterId:e.characterId,raidId:'raid',ownershipRevision:e.ownershipRevision,
+      guardSchemaVersion:1,guardRecruitmentId:'room',guardRoomRevision:before.room.revision,guardCycleKey:'2026-10-07',
+      guardCycleStartedAt:now,guardCycleEndsAt:end,guardSlotIndex:i,guardCheckedAt:serverTimestamp()};
+    if(tamper==='revision')s.guardRoomRevision--;
+    if(tamper==='index')s.guardSlotIndex=(i+1)%8;
+    if(tamper==='generation')s.ownershipRevision++;
+    if(tamper==='past-cycle')s.guardCycleKey='2026-09-30';
+    if(tamper==='bad-cycle')s.guardCycleKey='future';
+    if(tamper==='future-window')s.guardCycleStartedAt=end;
+    if(tamper==='long-window')s.guardCycleEndsAt=Timestamp.fromMillis(end.toMillis()+86400000);
+    if(tamper==='core-status')s.status='active';
+    if(tamper==='core-revision')s.revision=99;
+    if(tamper==='extra')s.trusted=true;
+    b.set(doc(db,`players/${pid}/raidStates/${e.characterId}_raid`),s,{merge:true});
+    if(tamper==='source-write')b.update(doc(db,'recruitments/room'),{revision:before.room.revision+1});
+    if(tamper==='roster-write')b.update(doc(db,'recruitments/room/roster/current'),{revision:99});
+    if(tamper==='delete-claim')b.delete(doc(db,`players/${pid}/weeklyRaidClaims/2026-10-07_${e.characterId}_raid`));
+    return b.commit();
+  }
+  async function all(){const before=await snapshot();for(let i=0;i<8;i++)await certify(before,i);return snapshot();}
+  function advance(before,tamper=''){
+    const db=env.authenticatedContext(tamper==='nonleader'?'u7':'u0').firestore(),b=writeBatch(db),t=serverTimestamp();
+    const r=before.room,revision=r.revision+1,id=`advanceCycle_room_${revision}`;
+    const patch={revision,commandType:'advanceCycle',commandId:id,commandPlayerId:'p0',updatedAt:t,
+      currentCycleKey:'2026-10-07',cycleStartedAt:now,cycleEndsAt:end,currentCycleStatus:'active'};
+    if(tamper==='cycle')patch.currentCycleKey='2026-10-14';
+    if(tamper==='revision')patch.revision++;
+    if(tamper==='source-extra')patch.memberCount=1;
+    if(tamper!=='omit-source')b.update(doc(db,'recruitments/room'),patch);
+    for(let i=0;i<8;i++){
+      if(tamper==='omit-state'&&i===7)continue;
+      const pid=`p${i}`,e=before.roster.entries[pid],s=before.states[i];
+      const sp={schemaVersion:1,playerId:pid,characterId:e.characterId,ownershipRevision:e.ownershipRevision,raidId:'raid',difficultyId:'hard',
+        recruitmentId:'room',cycleKey:'2026-10-07',role:e.role,status:'active',source:'party',revision:(s?.revision??0)+1,updatedAt:t,completedAt:deleteField()};
+      if(i===7){
+        if(tamper==='state-role')sp.role='dealer';
+        if(tamper==='state-source')sp.source='manual';
+        if(tamper==='state-revision')sp.revision=99;
+        if(tamper==='keep-completed')sp.completedAt=now;
+        if(tamper==='guard-change')sp.guardRoomRevision=99;
+        if(tamper==='guard-remove')sp.guardCheckedAt=deleteField();
+        if(tamper==='state-generation')sp.ownershipRevision++;
+      }
+      b.set(doc(db,`players/${pid}/raidStates/${e.characterId}_raid`),sp,{merge:true});
+    }
+    const event={schemaVersion:1,eventId:id,recruitmentId:'room',type:'advanceCycle',commandId:id,commandRevision:revision,
+      audiencePlayerIds:r.memberPlayerIds,actorPlayerId:'p0',occurredAt:t,placementProof:{p0:r.memberPlayerIds.filter(p=>before.roster.entries[p].partyIndex===0),
+        p1:r.memberPlayerIds.filter(p=>before.roster.entries[p].partyIndex===1),swap:[]}};
+    if(tamper==='event-audience')event.audiencePlayerIds=['p0'];
+    if(tamper!=='omit-event')b.set(doc(db,`partyEvents/${id}`),event);
+    if(tamper==='roster-write')b.update(doc(db,'recruitments/room/roster/current'),{revision:before.roster.revision+1});
+    return b.commit();
+  }
+  for(const kind of ['completed','foreign','manual','active','missing'])await check(`8 targets ${kind} certify preserve then atomic advance`,async()=>{
+    await setup(kind);const before=await snapshot(),certified=await all();
+    assert.deepEqual(certified.room,before.room);assert.deepEqual(certified.roster,before.roster);assert.deepEqual(certified.events,before.events);
+    for(let i=0;i<8;i++)if(kind==='missing')assert.deepEqual(Object.keys(core(certified.states[i])).sort(),['characterId','ownershipRevision','playerId','raidId']);
+      else assert.deepEqual(core(certified.states[i]),before.states[i]);
+    await advance(certified);const after=await snapshot();assert.equal(after.room.currentCycleStatus,'active');assert.equal(after.room.revision,9);
+    assert.deepEqual(after.roster,before.roster);assert.ok(after.states.every(s=>s.status==='active'&&s.source==='party'&&s.cycleKey==='2026-10-07'&&!('completedAt'in s)));
+    assert.deepEqual(after.events.find(e=>e.id==='complete_room_8'),before.events[0]);
+    await assertRulesDenied(advance(certified));assert.deepEqual(await snapshot(),after);
+  });
+  for(const tamper of ['nonleader','anonymous','revision','index','generation','past-cycle','bad-cycle','future-window','long-window','core-status','core-revision','extra','source-write','roster-write'])await check(`certification rejects ${tamper}`,async()=>{
+    await setup();const before=await snapshot();await assertRulesDenied(certify(before,7,tamper));assert.deepEqual(await snapshot(),before);
+  });
+  for(const kind of ['new-completed','foreign-active','bad-completed','owner','account','claim','assignment','not-recurring','inactive-binding'])await check(`certification rejects before ${kind}`,async()=>{
+    await setup();await admin((b,db)=>{
+      const p=doc(db,'players/p7/raidStates/c7_raid');
+      if(kind==='new-completed')b.update(p,{cycleKey:'2026-10-07'});
+      if(kind==='foreign-active')b.update(p,{status:'active',recruitmentId:'other',completedAt:deleteField()});
+      if(kind==='bad-completed')b.update(p,{completedAt:deleteField()});
+      if(kind==='owner')b.update(doc(db,'characters/c7'),{ownerPlayerId:'other'});
+      if(kind==='account')b.update(doc(db,'gameAccounts/a7'),{ownershipRevision:2});
+      if(kind==='claim'||kind==='assignment')b.set(doc(db,`players/p7/${kind==='claim'?'weeklyRaidClaims/2026-10-07_c7_raid':'activeRaidAssignments/c7_raid'}`),{playerId:'p7',characterId:'c7',raidId:'raid',ownershipRevision:1});
+      if(kind==='not-recurring')b.update(doc(db,'recruitments/room'),{continueTogether:false});
+      if(kind==='inactive-binding')b.update(doc(db,'authBindings/u0'),{status:'inactive'});
+    });const before=await snapshot();await assertRulesDenied(certify(before,7));assert.deepEqual(await snapshot(),before);
+  });
+  for(const tamper of ['nonleader','omit-source','omit-state','omit-event','cycle','revision','source-extra','state-role','state-source','state-revision','keep-completed','guard-change','guard-remove','state-generation','event-audience','roster-write'])await check(`advance rejects ${tamper}`,async()=>{
+    await setup();const certified=await all();await assertRulesDenied(advance(certified,tamper));assert.deepEqual(await snapshot(),certified);
+  });
+  await check('partial certification failure preserves core and prevents advance',async()=>{
+    await setup();const before=await snapshot();for(let i=0;i<7;i++)await certify(before,i);
+    await admin((b,db)=>b.update(doc(db,'players/p7/raidStates/c7_raid'),{cycleKey:'2026-10-07'}));
+    const partial=await snapshot();await assertRulesDenied(certify(partial,7));await assertRulesDenied(advance(partial));assert.deepEqual(await snapshot(),partial);
+    assert.deepEqual(partial.room,before.room);for(let i=0;i<7;i++)assert.deepEqual(core(partial.states[i]),before.states[i]);
+  });
+  for(const kind of ['revision','owner','account'])await check(`advance rejects post-certification ${kind}`,async()=>{
+    await setup();await all();await admin((b,db)=>{
+      if(kind==='revision')b.update(doc(db,'recruitments/room'),{revision:9});
+      if(kind==='owner')b.update(doc(db,'characters/c7'),{ownerPlayerId:'other'});
+      if(kind==='account')b.update(doc(db,'gameAccounts/a7'),{ownershipRevision:2});
+    });const before=await snapshot();await assertRulesDenied(advance(before));assert.deepEqual(await snapshot(),before);
+  });
+  await check('uncertified advance denied',async()=>{await setup();const before=await snapshot();await assertRulesDenied(advance(before));assert.deepEqual(await snapshot(),before);});
+  await check('followup repeat certification changes only checked time',async()=>{
+    await setup();let before=await snapshot();await certify(before,7);before=await snapshot();await certify(before,7);
+    const after=await snapshot();assert.deepEqual(core(after.states[7]),core(before.states[7]));assert.deepEqual(after.room,before.room);
+  });
+  await check('followup old-generation stub refreshed without participation',async()=>{
+    await setup('missing');let before=await snapshot();await certify(before,7);
+    await admin((b,db)=>{b.update(doc(db,'characters/c7'),{ownershipRevision:2});b.update(doc(db,'gameAccounts/a7'),{ownershipRevision:2});
+      b.update(doc(db,'recruitments/room/roster/current'),{'entries.p7.ownershipRevision':2});});
+    before=await snapshot();await certify(before,7);const after=await snapshot();assert.equal(after.states[7].ownershipRevision,2);
+    assert.ok(!('status'in after.states[7]));assert.deepEqual(after.room,before.room);
+  });
+  await check('followup older-generation Claim and assignment accepted',async()=>{
+    await setup();await admin((b,db)=>{for(const path of ['weeklyRaidClaims/2026-10-07_c7_raid','activeRaidAssignments/c7_raid'])
+      b.set(doc(db,`players/p7/${path}`),{playerId:'p7',characterId:'c7',raidId:'raid',ownershipRevision:0});});
+    const before=await snapshot();await certify(before,7);assert.deepEqual(core((await snapshot()).states[7]),before.states[7]);
+  });
+  await check('followup Claim removal cannot accompany certification',async()=>{
+    await setup();await admin((b,db)=>b.set(doc(db,'players/p7/weeklyRaidClaims/2026-10-07_c7_raid'),{playerId:'p7',characterId:'c7',raidId:'raid',ownershipRevision:1}));
+    const before=await snapshot();await assertRulesDenied(certify(before,7,'delete-claim'));assert.deepEqual(await snapshot(),before);
+  });
+  await check('followup simultaneous advance commits once',async()=>{
+    await setup();const before=await all(),attempts=await Promise.allSettled([advance(before),advance(before)]);
+    assert.equal(attempts.filter(x=>x.status==='fulfilled').length,1);await assertRulesDenied(Promise.reject(attempts.find(x=>x.status==='rejected').reason));
+    assert.equal((await snapshot()).room.revision,before.room.revision+1);
+  });
+  await check('followup prepared roster invalidates prior certification',async()=>{
+    await setup();const certified=await all(),db=env.authenticatedContext('u1').firestore(),b=writeBatch(db),t=serverTimestamp();
+    const r=certified.room,oldRoster=certified.roster,previous=oldRoster.entries.p1,revision=r.revision+1,id=`characterChanged_room_${revision}`;
+    b.update(doc(db,'recruitments/room'),{revision,rosterRevision:oldRoster.revision+1,commandId:id,commandType:'prepare',commandPlayerId:'p1',updatedAt:t,
+      placementProof:{p0:['p0','p1','p2','p3'],p1:['p4','p5','p6','p7'],swap:[]}});
+    b.set(doc(db,'recruitments/room/roster/current'),{...oldRoster,revision:oldRoster.revision+1,entries:{...oldRoster.entries,p1:{...previous,
+      characterId:'next1',characterNameSnapshot:'next-name',classNameSnapshot:'next-class',characterChangedAt:t,updatedAt:t}}});
+    b.set(doc(db,`partyEvents/${id}`),{schemaVersion:1,eventId:id,recruitmentId:'room',type:'characterChanged',commandId:id,commandRevision:revision,
+      audiencePlayerIds:r.memberPlayerIds,actorPlayerId:'p1',occurredAt:t,previousCharacterId:'c1',nextCharacterId:'next1',nextOwnershipRevision:1,cycleKey:r.currentCycleKey});
+    await b.commit();const prepared=await snapshot();assert.deepEqual(prepared.states,certified.states);
+    await assertRulesDenied(advance(prepared));assert.deepEqual(await snapshot(),prepared);
+    // New certification is mandatory for every target, including unchanged entries.
+    for(let i=0;i<8;i++)await certify(prepared,i);
+    const ready=await snapshot();ready.states[1]=ready.nextState;await advance(ready);
+    const after=await snapshot();assert.equal(after.nextState.status,'active');assert.deepEqual(after.states[1],certified.states[1]);
+  });
+  for(const kind of ['class','slot','support'])await check(`followup invalid ${kind} composition blocks advance`,async()=>{
+    await setup();await admin((b,db)=>b.update(doc(db,'recruitments/room/roster/current'),
+      kind==='class'?{'entries.p2.classNameSnapshot':'class0'}:kind==='slot'?{'entries.p2.slotIndex':1}:{'entries.p2.role':'support'}));
+    const before=await all();await assertRulesDenied(advance(before));assert.deepEqual(await snapshot(),before);
+  });
+}

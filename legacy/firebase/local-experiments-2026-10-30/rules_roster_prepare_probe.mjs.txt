@@ -1,0 +1,73 @@
+// Preparation slice only. Authentication/advance remain a separate proof gate.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {rulesFunction} from './roster_complexity_candidate.mjs';
+export const directory='coverage/rules-roster-prepare';
+export function generatePrepareProbe(){
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  let source=fs.readFileSync('coverage/rules-roster-complete/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'7a3a3e26d7ff5b2b25d0933d9c9fed1bfb426665a1cbf9c9082a48e327c77562');
+  const base=fs.readFileSync('coverage/rules-member-retirement/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(base).source),'18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61');
+  source=source.replace(/^function /gm,'    function ');
+  function replace(old,next){assert.equal(source.split(old).length,2,old);source=source.replace(old,next);}
+  function set(name,change){const f=rulesFunction(source,name);source=source.slice(0,f.start)+change(f.text)+source.slice(f.end);}
+  replace("allow update: if resource.data.get('currentCycleStatus','active')", "allow update: if request.resource.data.commandType == 'prepare' ? changeSource(id,resource.data,request.resource.data,true) : resource.data.get('currentCycleStatus','active')");
+  replace('changeSource(id,resource.data,request.resource.data) :','changeSource(id,resource.data,request.resource.data,false) :');
+  set('changeSource',s=>s.replace('changeSource(id,b,r)','changeSource(id,b,r,preparing)')
+    .replace('request.time >= b.cycleStartedAt && request.time < b.cycleEndsAt',"(preparing ? b.get('continueTogether',false) == true && b.get('currentCycleStatus','active') == 'completed' : request.time >= b.cycleStartedAt && request.time < b.cycleEndsAt)")
+    .replace('(e.characterId != previous.characterId || e.role != previous.role)',"(preparing ? e.characterId != previous.characterId : e.characterId != previous.characterId || e.role != previous.role)")
+    .replace('changeStateRequired(r,previous,e)','(preparing ? entryShape(e,r) && prepareOwnership(previous,e,r) : changeStateRequired(r,previous,e))'));
+  set('fresh',s=>s.replace("['join','approve','change']","['join','approve','change','prepare']"));
+  set('entryShape',s=>s.replaceAll("r.commandType == 'change'","r.commandType in ['change','prepare']"));
+  set('validNewState',s=>s.replace('return s.keys()',"return r.commandType != 'prepare' && s.keys()"));
+  // The exact target path and mandatory current-request update bind this state.
+  // completeState owns identity/source validation; do not repeat it eight times in source.
+  set('completedStateRequired',s=>s.replace("s.playerId == pid && s.characterId == e.characterId && s.recruitmentId == r.recruitmentId\n    && s.status == 'completed' && s.source == 'party'", "s.status == 'completed'"));
+  set('rosterPlacement',s=>s.replace("r.commandType == 'change'", "r.commandType in ['change','prepare']"));
+  replace("allow create: if getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'complete'",
+    "allow create: if getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'prepare' ? prepareEvent(id,request.resource.data) : getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'complete'");
+  const added=`
+${rulesFunction(base,'sealIdle').text}
+${rulesFunction(base,'sparkPrepKnownCompleted').text}
+${rulesFunction(base,'bug24Unchanged').text}
+function prepareOwnership(previous,e,r) {
+  let c = get(/databases/$(database)/documents/characters/$(e.characterId)).data;
+  let a = get(/databases/$(database)/documents/gameAccounts/$(c.gameAccountId)).data;
+  return currentStateOwnership({'playerId':r.commandPlayerId,'characterId':previous.characterId,'ownershipRevision':previous.ownershipRevision})
+    && deOwnershipMatches({'playerId':r.commandPlayerId,'ownershipRevision':e.ownershipRevision},c,a) && c.status == 'active' && a.status == 'active'
+    && e.characterNameSnapshot == c.characterName && e.classNameSnapshot == c.characterClassName;
+}
+function prepareEvent(id,e) {
+  let r = getAfter(roomPath(e.recruitmentId)).data; let old = get(rosterPath(e.recruitmentId)).data.entries;
+  let next = getAfter(rosterPath(e.recruitmentId)).data.entries[r.commandPlayerId];
+  let path = changeStatePath(r.commandPlayerId,next.characterId,r.raidId);
+  let assignment = /databases/$(database)/documents/players/$(r.commandPlayerId)/activeRaidAssignments/$(next.characterId + '_' + r.raidId);
+  return fresh(e.recruitmentId,r) ? (e == {'schemaVersion':1,'eventId':id,'recruitmentId':r.recruitmentId,
+    'type':'characterChanged','commandId':id,'commandRevision':r.revision,'audiencePlayerIds':r.memberPlayerIds,
+    'actorPlayerId':r.commandPlayerId,'occurredAt':request.time,'previousCharacterId':old[r.commandPlayerId].characterId,
+    'nextCharacterId':next.characterId,'nextOwnershipRevision':next.ownershipRevision,'cycleKey':r.currentCycleKey}
+    && id == 'characterChanged_' + r.recruitmentId + '_' + string(r.revision) && r.commandId == id
+    && proofShape(r.placementProof,old,r,next)
+    && (!exists(assignment) || deOlderRecord(get(assignment).data,r.commandPlayerId,next.characterId,r.raidId,next.ownershipRevision))
+    && bug24Unchanged(changeStatePath(r.commandPlayerId,old[r.commandPlayerId].characterId,r.raidId)) && bug24Unchanged(path)
+    && (!exists(path) || (sealIdle(get(path).data) && get(path).data.playerId == r.commandPlayerId
+      && get(path).data.characterId == next.characterId && get(path).data.raidId == r.raidId
+      && get(path).data.ownershipRevision == next.ownershipRevision)
+      || sparkPrepKnownCompleted(get(path).data,r.commandPlayerId,next.characterId,r.raidId,next.ownershipRevision))) : false;
+}
+`;
+  // No state/Claim/assignment/event update/delete grant exists for preparation.
+  // State before/after equality also closes writes coupled to another room command.
+  // Claim/assignment writers must be checked again when full legacy rules are composed.
+  source=source.slice(0,source.lastIndexOf('} }'))+added+'} }';
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(directory+'/readable.rules',source);fs.writeFileSync(directory+'/candidate.rules',compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'7a3a3e26',
+    limitation:'Public preparation only. Certification/advance and full legacy writer composition not yet integrated.'};
+  fs.writeFileSync(directory+'/manifest.json',JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generatePrepareProbe());

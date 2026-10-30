@@ -1,0 +1,55 @@
+import 'dart:convert';
+import 'dart:io';
+import '../lib/features/recruitment_list/domain/entities/party_recruitment.dart';
+import '../lib/features/recruitment_list/domain/policies/party_composition_policy.dart';
+
+// Run the app's actual policy; output consumed by the Firestore boundary proof.
+void main() {
+  const policy = PartyCompositionPolicy(RecruitmentPartyRules(
+    partyCount: 2, membersPerParty: 4, supportsPerParty: 1,
+    maxDealersPerClassPerParty: 1,
+  ));
+  final cases = <Map<String, dynamic>>[];
+  void add(String name, {int target = 2, String nextClass = 'class0',
+    String nextRole = 'dealer', List<int> omit = const [],
+    Map<int, String> classes = const {}, Map<int, String> roles = const {}}) {
+    final entries = [for (var i = 0; i < 8; i++) if (!omit.contains(i)) {
+      'id': 'p$i', 'className': classes[i] ?? 'class${i % 4}',
+      'role': roles[i] ?? (i % 4 == 3 ? 'support' : 'dealer'),
+      'partyIndex': i ~/ 4, 'slotIndex': i % 4,
+    }];
+    final existing = [for (final e in entries) OccupiedPartyMember(
+      id: e['id'] as String, className: e['className'] as String,
+      role: e['role'] == 'support' ? PartyRole.support : PartyRole.dealer,
+      partyIndex: e['partyIndex'] as int, slotIndex: e['slotIndex'] as int,
+      isLeader: e['id'] == 'p0',
+    )];
+    final plan = policy.planReplacement(replaceMemberId: 'p$target',
+      className: nextClass, role: nextRole == 'support' ? PartyRole.support : PartyRole.dealer,
+      existing: existing);
+    final pair = [...plan.suggestedSwapMemberIds];
+    pair.sort((a,b) => existing.firstWhere((m)=>m.id==a).partyIndex.compareTo(existing.firstWhere((m)=>m.id==b).partyIndex));
+    cases.add({'name': name, 'target': target, 'entries': entries,
+      'nextClass': nextClass, 'nextRole': nextRole, 'disposition': plan.disposition.name,
+      'swap': pair, 'partyIndex': plan.destination?.partyIndex ?? target ~/ 4,
+      'slotIndex': plan.destination?.slotIndex ?? target % 4});
+  }
+  add('full class collision swap', classes: {4:'unique4',5:'unique5',6:'unique6'});
+  add('full impossible duplicate');
+  add('leader collision others swap',target:0,nextClass:'class1',classes:{4:'unique4',5:'unique5',6:'unique6'});
+  add('support overflow swap',nextClass:'support',nextRole:'support',roles:{7:'dealer'},classes:{7:'unique7'});
+  add('support impossible',nextClass:'support',nextRole:'support');
+  add('first vacant seat',nextClass:'support',nextRole:'support',omit:[5,7]);
+  add('in place priority',nextClass:'unique',omit:[5,7]);
+  add('opposite direction vacant',target:6,nextClass:'support',nextRole:'support',omit:[1,3]);
+  add('pending collision repaired',target:2,nextClass:'unique',classes:{2:'class0'});
+  add('pending collision unrelated swap',target:6,nextClass:'unique6',classes:{2:'class0',4:'unique4',5:'unique5'});
+  add('pending two collisions impossible',target:6,nextClass:'class0',classes:{2:'class0'});
+  add('leader cannot use vacancy',target:0,nextClass:'support',nextRole:'support',omit:[7]);
+  add('support to dealer vacant',target:3,nextClass:'unique',omit:[6]);
+  add('single party vacant does not fix class',nextClass:'class0',omit:[1]);
+  final out = File('coverage/rules-roster-rebalance/domain-fixtures.json');
+  out.parent.createSync(recursive:true);
+  out.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(cases));
+  print('${cases.length} actual Domain fixtures generated');
+}

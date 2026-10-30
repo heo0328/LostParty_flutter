@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { exactTargetsCandidate, targetFunctions } from './rules_exact_targets_candidate.mjs';
+import { rulesFunction } from './roster_complexity_candidate.mjs';
+const input = fs.readFileSync('coverage/rules-member-retirement/readable.rules', 'utf8');
+const { readable } = exactTargetsCandidate(input);
+test('all source, state, event and ownership validators except the two searches are unchanged', () => {
+  for (const [, name] of input.matchAll(/function (\w+)\(/g)) {
+    if (!targetFunctions.includes(name)) assert.equal(rulesFunction(readable, name).text, rulesFunction(input, name).text, name);
+  }
+  const allows = s => [...s.matchAll(/\ballow\s+[\s\S]*?;/g)].map(m => m[0]);
+  assert.deepEqual(allows(readable), allows(input));
+});
+test('input drift and double conversion are rejected', () => {
+  assert.throws(() => exactTargetsCandidate(readable));
+  assert.throws(() => exactTargetsCandidate(input.replace('atomicCommandIncludes', 'changed')));
+});

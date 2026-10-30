@@ -1,0 +1,102 @@
+// Public schema3 active personal completion; isolated from firebase.json/production.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {rulesFunction} from './roster_complexity_candidate.mjs';
+export const directory='coverage/rules-roster-personal';
+export function generatePersonalProbe(){
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  let source=fs.readFileSync('coverage/rules-roster-rebalance/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'e922fc4d2ffe648500211427b43b81d197449871de2b49e5d1d6d0a97450f923');
+  source=source.replace(/^function /gm,'    function ');
+  function replace(old,next){assert.equal(source.split(old).length,2,old);source=source.replace(old,next);}
+  function set(name,change){const f=rulesFunction(source,name);source=source.slice(0,f.start)+change(f.text)+source.slice(f.end);}
+  replace("allow update: if request.resource.data.commandType in ['join','approve']",
+    "allow update: if request.resource.data.commandType == 'personalComplete' ? personalSource(id,resource.data,request.resource.data) : request.resource.data.commandType in ['join','approve']");
+  replace("name == 'current' && (getAfter(roomPath(id)).data.commandType == 'position'",
+    "name == 'current' && (getAfter(roomPath(id)).data.commandType == 'personalComplete' ? personalFresh(id,getAfter(roomPath(id)).data) : getAfter(roomPath(id)).data.commandType == 'position'");
+  set('rosterPlacement',s=>s.replace('return ',"return r.commandType == 'personalComplete' ? personalRoster(id,m,r) : "));
+  replace("allow update: if getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'change'",
+    "allow update: if getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'personalComplete' ? personalState(playerId,stateId,resource.data,request.resource.data) : getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'change'");
+  replace('allow create: if validEvent(id,request.resource.data);',
+    "allow create: if getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'personalComplete' ? personalEvent(id,request.resource.data) : validEvent(id,request.resource.data);");
+  set('changeSource',s=>s.replace('(e.partyIndex == 0 && e.slotIndex == 0)',
+    '(e.partyIndex == previous.partyIndex && e.slotIndex == previous.slotIndex)'));
+  const added=`
+function personalFresh(id,r) { return r.commandType == 'personalComplete' && r.updatedAt == request.time
+  && r.revision == get(roomPath(id)).data.revision + 1; }
+function personalSource(id,b,r) {
+  let old = get(rosterPath(id)).data; let next = getAfter(rosterPath(id)).data;
+  let e = old.entries[r.commandPlayerId]; let remaining = b.memberPlayerIds.removeAll([r.commandPlayerId]);
+  let transfer = b.leaderPlayerId == r.commandPlayerId && remaining.size() > 0;
+  let s = getAfter(changeStatePath(r.commandPlayerId,e.characterId,b.raidId)).data;
+  return personalFresh(id,r) ? (bound() && actor() == r.commandPlayerId && b.schemaVersion == 3
+    && b.visibility == 'public' && b.groupId == null && b.status == 'active'
+    && request.time >= b.cycleStartedAt && request.time < b.cycleEndsAt
+    && r.diff(b).affectedKeys().hasOnly(['memberPlayerIds','memberCount','dealerCount','supportCount','hasAvailableSlot',
+      'manualRecruitmentEnabled','status','leaderPlayerId','leaderCharacterNameSnapshot','leaderClassNameSnapshot',
+      'revision','rosterRevision','commandId','commandType','commandPlayerId','updatedAt'])
+    && r.commandPlayerId in b.memberPlayerIds && r.memberPlayerIds == remaining && r.memberCount == b.memberCount - 1
+    && r.dealerCount == b.dealerCount - (e.role == 'dealer' ? 1 : 0)
+    && r.supportCount == b.supportCount - (e.role == 'support' ? 1 : 0)
+    && r.status == (remaining.size() == 0 ? 'disbanded' : 'active')
+    && r.hasAvailableSlot == (remaining.size() > 0)
+    && r.manualRecruitmentEnabled == (remaining.size() == 0 ? false : b.manualRecruitmentEnabled)
+    && r.leaderPlayerId == (transfer ? remaining[0] : b.leaderPlayerId)
+    && (transfer ? (r.leaderCharacterNameSnapshot == old.entries[remaining[0]].characterNameSnapshot
+      && r.leaderClassNameSnapshot == old.entries[remaining[0]].classNameSnapshot)
+      : (r.get('leaderCharacterNameSnapshot',null) == b.get('leaderCharacterNameSnapshot',null)
+        && r.get('leaderClassNameSnapshot',null) == b.get('leaderClassNameSnapshot',null)))
+    && old.revision == b.rosterRevision && r.rosterRevision == b.rosterRevision + 1 && next.revision == r.rosterRevision
+    && s.playerId == r.commandPlayerId && s.characterId == e.characterId && s.recruitmentId == id
+    && s.status == 'completed' && s.source == 'manual' && s.completedAt == request.time && s.updatedAt == request.time
+    && s.revision == get(changeStatePath(r.commandPlayerId,e.characterId,b.raidId)).data.revision + 1
+    && eventRequired(r)) : false;
+}
+function personalRoster(id,m,r) {
+  let b = get(roomPath(id)).data; let old = get(rosterPath(id)).data.entries;
+  let transfer = b.leaderPlayerId == r.commandPlayerId && r.memberCount > 0;
+  let changed = m.entries.diff(old);
+  return changed.removedKeys() == [r.commandPlayerId].toSet() && changed.addedKeys().size() == 0
+    && (transfer ? (changed.changedKeys() == [r.leaderPlayerId].toSet()
+      && successorEntry(old[r.leaderPlayerId],m.entries[r.leaderPlayerId],r.leaderPlayerId))
+      : changed.changedKeys().size() == 0);
+}
+function successorEntry(b,e,pid) {
+  let c = get(/databases/$(database)/documents/characters/$(e.characterId)).data;
+  let a = get(/databases/$(database)/documents/gameAccounts/$(c.gameAccountId)).data;
+  return e.diff(b).affectedKeys().hasOnly(['canApproveApplications','updatedAt'])
+    && e.canApproveApplications == true && e.updatedAt == request.time
+    && deOwnershipMatches({'playerId':pid,'ownershipRevision':e.ownershipRevision},c,a)
+    && c.status == 'active' && a.status == 'active';
+}
+function personalState(pid,stateId,b,s) {
+  let room = get(roomPath(b.recruitmentId)).data; let r = getAfter(roomPath(b.recruitmentId)).data;
+  let e = get(rosterPath(b.recruitmentId)).data.entries[pid];
+  return personalFresh(b.recruitmentId,r) ? (r.commandPlayerId == pid
+    && oldStateMatches(pid,stateId,b,room,e) && currentStateOwnership(b)
+    && s.diff(b).affectedKeys().hasOnly(['status','source','completedAt','revision','updatedAt'])
+    && s.status == 'completed' && s.source == 'manual' && s.completedAt == request.time && s.updatedAt == request.time
+    && s.revision == b.revision + 1) : false;
+}
+function personalEvent(id,e) {
+  let b = get(roomPath(e.recruitmentId)).data; let r = getAfter(roomPath(e.recruitmentId)).data;
+  return personalFresh(e.recruitmentId,r) ? (e.keys().hasOnly(['schemaVersion','eventId','recruitmentId','type',
+    'commandId','commandRevision','audiencePlayerIds','actorPlayerId','targetPlayerId','reason','occurredAt'])
+    && e.schemaVersion == 1 && id == 'memberLeft_' + e.recruitmentId + '_' + string(r.revision)
+    && e.eventId == id && e.commandId == id && r.commandId == id && e.commandRevision == r.revision
+    && e.type == 'memberLeft' && e.reason == 'weeklyRaidCompleted'
+    && e.audiencePlayerIds == b.memberPlayerIds && e.actorPlayerId == r.commandPlayerId
+    && e.targetPlayerId == r.commandPlayerId && e.occurredAt == request.time) : false;
+}
+`;
+  source=source.slice(0,source.lastIndexOf('} }'))+added+'} }';
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(directory+'/readable.rules',source);fs.writeFileSync(directory+'/candidate.rules',compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'e922fc4d',
+    limitation:'Public current active personal completion; group/legacy/manual reset/full-party completion integration remains open.'};
+  fs.writeFileSync(directory+'/manifest.json',JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generatePersonalProbe());

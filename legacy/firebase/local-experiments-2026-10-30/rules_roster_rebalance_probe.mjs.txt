@@ -1,0 +1,114 @@
+// Isolated bounded witness experiment. Never writes production rules.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {rulesFunction} from './roster_complexity_candidate.mjs';
+export const directory='coverage/rules-roster-rebalance';
+export function generateRebalanceProbe(){
+  let source=fs.readFileSync('coverage/rules-roster-change/readable.rules','utf8');
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  assert.equal(hash(compactExecutableRules(source).source),'61420d3f80e7d4dff2db66b6e8fd306bc8fd1867e8a79c410c58d444de6dbc8a');
+  source=source.replace(/^function /gm,'    function ');
+  function set(name,text){const f=rulesFunction(source,name);source=source.slice(0,f.start)+text.replace(/^function /,'    function ')+source.slice(f.end);}
+  set('changeSource',rulesFunction(source,'changeSource').text.replace("['dealerCount','supportCount'","['placementProof','dealerCount','supportCount'"));
+  // The source requires a new immutable event; validate witness binding there.
+  set('validEvent',rulesFunction(source,'validEvent').text.replace('return ',"return (r.commandType != 'change' || proofShape(r.placementProof,get(rosterPath(r.recruitmentId)).data.entries,r,getAfter(rosterPath(r.recruitmentId)).data.entries[r.commandPlayerId])) && "));
+  set('rosterPlacement',`function rosterPlacement(id,m,r) {
+    return r.commandType == 'create' ? true : (r.commandType == 'change'
+      ? placementDecision(r.placementProof,get(rosterPath(id)).data.entries,r,m.entries[r.commandPlayerId])
+      : placement(get(roomPath(id)).data.memberPlayerIds,get(rosterPath(id)).data.entries,m.entries[r.commandPlayerId],r));
+  }`);
+  set('changePeer','');set('changePlacement','');
+  source=source.replace('? changeSource(id,resource.data,request.resource.data) : false);',
+    `? changeSource(id,resource.data,request.resource.data) : (request.resource.data.commandType == 'position'
+      ? positionSource(id,resource.data,request.resource.data) : false));`);
+  source=source.replace("name == 'current' && fresh(id,getAfter(roomPath(id)).data)",
+    "name == 'current' && (getAfter(roomPath(id)).data.commandType == 'position' ? positionFresh(id,getAfter(roomPath(id)).data) : fresh(id,getAfter(roomPath(id)).data))");
+  set('rosterPlacement',rulesFunction(source,'rosterPlacement').text.replace("return r.commandType == 'create'", "return r.commandType == 'position' ? positionLayout(m.entries,r) : r.commandType == 'create'"));
+  set('validEvent',rulesFunction(source,'validEvent').text
+    .replace("let kind = r.commandType == 'create'", "let kind = r.commandType == 'position' ? 'membersRepositioned' : r.commandType == 'create'")
+    .replace('return ',"return (r.commandType != 'position' || proofShape(r.placementProof,getAfter(rosterPath(r.recruitmentId)).data.entries,r,getAfter(rosterPath(r.recruitmentId)).data.entries[r.commandPlayerId])) && ")
+    .replace('&& fresh(e.recruitmentId,r)',"&& (r.commandType == 'position' ? positionFresh(e.recruitmentId,r) : fresh(e.recruitmentId,r))"));
+  set('validEvent',rulesFunction(source,'validEvent').text
+    .replace('return ',"return (r.commandType == 'position' ? positionFresh(e.recruitmentId,r) : fresh(e.recruitmentId,r)) ? (")
+    .replace(/;\s*}$/,') : false;\n  }'));
+  const added=`
+function token(e) { return e.role == 'support' ? 'S' : 'D' + e.classNameSnapshot; }
+function tokensAt(ids,es,i) { return i < ids.size() ? [es[ids[i]].role == 'support' ? 'S' : 'D' + es[ids[i]].classNameSnapshot] : []; }
+function tokens(ids,es) { return tokensAt(ids,es,0).concat(tokensAt(ids,es,1)).concat(tokensAt(ids,es,2)).concat(tokensAt(ids,es,3)); }
+function validParty(ts) { return ts.size() <= 4 && ts.toSet().size() == ts.size() && ts.removeAll(['S']).size() <= 3; }
+function proofMember(ids,es,p,i,r,e) { return i >= ids.size() || (es[ids[i]].partyIndex == p
+  && (ids[i] == r.commandPlayerId || es[ids[i]].characterId != e.characterId)); }
+function proofParty(ids,es,p,r,e) { return ids is list && ids.size() <= 4
+  && proofMember(ids,es,p,0,r,e) && proofMember(ids,es,p,1,r,e) && proofMember(ids,es,p,2,r,e) && proofMember(ids,es,p,3,r,e); }
+function proofShape(w,es,r,e) { return w is map && w.keys().hasOnly(['p0','p1','swap'])
+  && proofParty(w.p0,es,0,r,e) && proofParty(w.p1,es,1,r,e) && w.swap is list
+  && w.p0.concat(w.p1).size() == r.memberPlayerIds.size()
+  && w.p0.concat(w.p1).toSet() == r.memberPlayerIds.toSet(); }
+function slotAt(ids,es,i) { return i < ids.size() ? [es[ids[i]].slotIndex] : []; }
+function firstFree(ids,es) { let used = slotAt(ids,es,0).concat(slotAt(ids,es,1)).concat(slotAt(ids,es,2)).concat(slotAt(ids,es,3));
+  return !(0 in used) ? 0 : (!(1 in used) ? 1 : (!(2 in used) ? 2 : (!(3 in used) ? 3 : -1))); }
+// Remove exactly one occurrence, including a temporarily duplicated dealer class.
+function removeOne(ts,t) { let rest = ts.removeAll([t]); let count = ts.size() - rest.size();
+  return rest.concat(count == 1 ? [] : (count == 2 ? [t] : (count == 3 ? [t,t] : [t,t,t]))); }
+function swapValid(w,es,r,e,a,b) {
+  let left = w.swap[0]; let right = w.swap[1];
+  let le = left == r.commandPlayerId ? e : es[left];
+  let re = right == r.commandPlayerId ? e : es[right];
+  let lt = token(le); let rt = token(re);
+  return left != right && left != r.leaderPlayerId && right != r.leaderPlayerId
+    && es[left].partyIndex == 0 && es[right].partyIndex == 1
+    && validParty(removeOne(a,lt).concat([rt])) && validParty(removeOne(b,rt).concat([lt]));
+}
+function placementDecision(w,es,r,e) {
+  let old = es[r.commandPlayerId]; let t = token(e);
+  let a = tokens(w.p0.removeAll([r.commandPlayerId]),es);
+  let b = tokens(w.p1.removeAll([r.commandPlayerId]),es);
+  let same = e.partyIndex == old.partyIndex && e.slotIndex == old.slotIndex;
+  let ipA = a.concat(old.partyIndex == 0 ? [t] : []);
+  let ipB = b.concat(old.partyIndex == 1 ? [t] : []);
+  let move = r.commandPlayerId != r.leaderPlayerId
+    && validParty(a.concat(old.partyIndex == 1 ? [t] : []))
+    && validParty(b.concat(old.partyIndex == 0 ? [t] : []));
+  return validParty(ipA) && validParty(ipB) ? (same && w.swap.size() == 0)
+    : (move ? (w.swap.size() == 0 && e.partyIndex == 1 - old.partyIndex
+      && e.slotIndex == firstFree(old.partyIndex == 0 ? w.p1 : w.p0,es))
+    : (same && w.swap.size() == 2 && swapValid(w,es,r,e,ipA,ipB)));
+}
+function positionFresh(id,r) { return r.updatedAt == request.time && r.revision == get(roomPath(id)).data.revision + 1; }
+function positionEntry(before,after,p,s) { return after.diff(before).affectedKeys().hasOnly(['partyIndex','slotIndex','updatedAt'])
+  && after.partyIndex == p && after.slotIndex == s && after.updatedAt == request.time; }
+function positionSource(id,b,r) {
+  let old = get(rosterPath(id)).data; let next = getAfter(rosterPath(id)).data;
+  let q = r.positionTarget; let e = old.entries[r.commandPlayerId];
+  return bound() && actor() == b.leaderPlayerId && b.schemaVersion == 3 && b.status == 'active'
+    && request.time >= b.cycleStartedAt && request.time < b.cycleEndsAt && positionFresh(id,r)
+    && r.diff(b).affectedKeys().hasOnly(['revision','rosterRevision','commandId','commandType','commandPlayerId','updatedAt','positionTarget','placementProof'])
+    && r.rosterRevision == b.rosterRevision + 1 && old.revision == b.rosterRevision && next.revision == r.rosterRevision
+    && q.keys().hasOnly(['partyIndex','slotIndex','other']) && q.partyIndex is int && q.slotIndex is int
+    && q.partyIndex >= 0 && q.partyIndex < b.partyCount && q.slotIndex >= 0 && q.slotIndex < 4
+    && r.commandPlayerId != b.leaderPlayerId && (q.partyIndex != e.partyIndex || q.slotIndex != e.slotIndex)
+    && next.entries.diff(old.entries).affectedKeys() == (q.other == null ? [r.commandPlayerId] : [r.commandPlayerId,q.other]).toSet()
+    && positionEntry(e,next.entries[r.commandPlayerId],q.partyIndex,q.slotIndex)
+    && (q.other == null ? true : (q.other != b.leaderPlayerId && q.other != r.commandPlayerId
+      && old.entries[q.other].partyIndex == q.partyIndex && old.entries[q.other].slotIndex == q.slotIndex
+      && positionEntry(old.entries[q.other],next.entries[q.other],e.partyIndex,e.slotIndex)))
+    && eventRequired(r);
+}
+function uniqueSlots(ids,es) { let ss = slotAt(ids,es,0).concat(slotAt(ids,es,1)).concat(slotAt(ids,es,2)).concat(slotAt(ids,es,3));
+  return ss.toSet().size() == ss.size(); }
+function positionLayout(es,r) { let w = r.placementProof;
+  return w.swap.size() == 0
+    && validParty(tokens(w.p0,es)) && validParty(tokens(w.p1,es))
+    && uniqueSlots(w.p0,es) && uniqueSlots(w.p1,es);
+}
+`;
+  source=source.slice(0,source.lastIndexOf('} }'))+added+'} }';
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(directory+'/readable.rules',source);fs.writeFileSync(directory+'/candidate.rules',compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'61420d3f',limitation:'Bounded public two-party composition witness; no production/app adoption.'};
+  fs.writeFileSync(directory+'/manifest.json',JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generateRebalanceProbe());

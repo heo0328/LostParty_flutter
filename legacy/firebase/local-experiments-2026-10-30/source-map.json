@@ -1,0 +1,182 @@
+[
+  {
+    "source": "tools/roster_rebalance_domain_fixtures.dart",
+    "archive": "roster_rebalance_domain_fixtures.dart.txt",
+    "sha256": "5EDFACAEA7497197B7FBB740BE4DF8FDEFE1061F1239B818D5B503A08E49D224"
+  },
+  {
+    "source": "tools/rules_bug024_scope_candidate.mjs",
+    "archive": "rules_bug024_scope_candidate.mjs.txt",
+    "sha256": "0F6FE8BBD48E97D9464463B6C7F7373E89F603D7E56792033DB2EFF9FEDAD64C"
+  },
+  {
+    "source": "tools/rules_bug024_scope_candidate.test.mjs",
+    "archive": "rules_bug024_scope_candidate.test.mjs.txt",
+    "sha256": "E0736ADED6D07B6E165BB91D07E2D94C4D8D262043BAEB2A2495C7E93148B296"
+  },
+  {
+    "source": "tools/rules_claim_race_diagnostic.mjs",
+    "archive": "rules_claim_race_diagnostic.mjs.txt",
+    "sha256": "CE3417615F7853581294683A1CB81F36BC3D4D1C43F3045CA539274A76195730"
+  },
+  {
+    "source": "tools/rules_exact_targets_candidate.mjs",
+    "archive": "rules_exact_targets_candidate.mjs.txt",
+    "sha256": "7887658BA4C9B2AADD7EBCEE263EF92EDF8AA8D5706D715D3DBD45F6BC0679ED"
+  },
+  {
+    "source": "tools/rules_exact_targets_candidate.test.mjs",
+    "archive": "rules_exact_targets_candidate.test.mjs.txt",
+    "sha256": "A57B7D0C01D20A61FECB6CE6C28ECFA1DF3CB442B57C9C0DBAA129BB96401C30"
+  },
+  {
+    "source": "tools/rules_exact_targets_proof.mjs",
+    "archive": "rules_exact_targets_proof.mjs.txt",
+    "sha256": "0DD3388AB6F4BBBD0182508954A6B7676E3527EF65AAF0BEDC5980B27BD9B926"
+  },
+  {
+    "source": "tools/rules_lifecycle_closing_proof.mjs",
+    "archive": "rules_lifecycle_closing_proof.mjs.txt",
+    "sha256": "0DDB0DD12B74BD24E18F4D9125257978BDEF7A0372A4C60294B968D917FEAECA"
+  },
+  {
+    "source": "tools/rules_roster_access_calibration.mjs",
+    "archive": "rules_roster_access_calibration.mjs.txt",
+    "sha256": "7029EDC7158451510E7112BB8EA485B78BA636BC3A0F387DE1BE9D6EAEF4832A"
+  },
+  {
+    "source": "tools/rules_roster_advance_probe.mjs",
+    "archive": "rules_roster_advance_probe.mjs.txt",
+    "sha256": "0970B8F6BDD162671C3403E95F82112B77AA279E7AB92A3E2A61D5FA80776B03"
+  },
+  {
+    "source": "tools/rules_roster_advance_suite.mjs",
+    "archive": "rules_roster_advance_suite.mjs.txt",
+    "sha256": "B90F9ADC2E140374F8B7470775ABBB78C3E7A8B68D2CC44B328168187185B3A0"
+  },
+  {
+    "source": "tools/rules_roster_budget_probe.mjs",
+    "archive": "rules_roster_budget_probe.mjs.txt",
+    "sha256": "D1B9E92121BC1997850DDF75C1D751B7249F8F2A036CC94458B69CB8E185B0EC"
+  },
+  {
+    "source": "tools/rules_roster_budget_proof.mjs",
+    "archive": "rules_roster_budget_proof.mjs.txt",
+    "sha256": "CCA462A7C2E61DB81F52A00DD02B245CC7FE7BAA757F58D13B4CEC5FF57343AF"
+  },
+  {
+    "source": "tools/rules_roster_change_probe.mjs",
+    "archive": "rules_roster_change_probe.mjs.txt",
+    "sha256": "3FA2A696E0847194910647C62593C222B9EA7E02F50DF44A0DAF26F456248240"
+  },
+  {
+    "source": "tools/rules_roster_change_proof.mjs",
+    "archive": "rules_roster_change_proof.mjs.txt",
+    "sha256": "6933B405BF6C2F07D36D76248329BF69177BE593560A1889B0DF87598E1BC513"
+  },
+  {
+    "source": "tools/rules_roster_change_stub_probe.mjs",
+    "archive": "rules_roster_change_stub_probe.mjs.txt",
+    "sha256": "4DD1CFFE404F92C7D5B1324C43FC1AF750EF30D8F8D9EAC02B270DFED2EA7E74"
+  },
+  {
+    "source": "tools/rules_roster_change_stub_suite.mjs",
+    "archive": "rules_roster_change_stub_suite.mjs.txt",
+    "sha256": "1477C9A610E997E01C6E168CEA8225DC494EE47953F460A659B9B3A4CF477FA5"
+  },
+  {
+    "source": "tools/rules_roster_claim_probe.mjs",
+    "archive": "rules_roster_claim_probe.mjs.txt",
+    "sha256": "75EAF521F35D0C9203D889F55F9F72707530533BBB6C178AE521ED00B558394C"
+  },
+  {
+    "source": "tools/rules_roster_claim_proof.mjs",
+    "archive": "rules_roster_claim_proof.mjs.txt",
+    "sha256": "AD9EC06B2D3AC493FE6C4A321E511DE3DF255470A5EE8AF452DE748EE83A8C31"
+  },
+  {
+    "source": "tools/rules_roster_complete_probe.mjs",
+    "archive": "rules_roster_complete_probe.mjs.txt",
+    "sha256": "0FAA40FDC05690BECFDBB9A58981BD6BBC7109FE8028087FFBF4277303F6F134"
+  },
+  {
+    "source": "tools/rules_roster_complete_suite.mjs",
+    "archive": "rules_roster_complete_suite.mjs.txt",
+    "sha256": "966C51490CDC41011DC261C3EB86773C75655B76FEA82F0755166B9FD9D57A00"
+  },
+  {
+    "source": "tools/rules_roster_join_probe.mjs",
+    "archive": "rules_roster_join_probe.mjs.txt",
+    "sha256": "F0A2AE057D9057AECC6E68AF2BC73E39DBCDEB9D6271E9EB9FAD377B9E5414C4"
+  },
+  {
+    "source": "tools/rules_roster_join_proof.mjs",
+    "archive": "rules_roster_join_proof.mjs.txt",
+    "sha256": "0E456498B9FCDF6E76E23F1E23EA6B3AEA7DFA670D7CDE0EDDFACD8B82525559"
+  },
+  {
+    "source": "tools/rules_roster_manual_stub_probe.mjs",
+    "archive": "rules_roster_manual_stub_probe.mjs.txt",
+    "sha256": "F67CE42823BC12545C80C8738ED3138575C2CD0B050B446E948A4228DF417264"
+  },
+  {
+    "source": "tools/rules_roster_manual_stub_proof.mjs",
+    "archive": "rules_roster_manual_stub_proof.mjs.txt",
+    "sha256": "BCFB96CA5913CDEC8DC30252A0F66F465ED80F00290BCE88489EE126913BA32B"
+  },
+  {
+    "source": "tools/rules_roster_personal_guard_suite.mjs",
+    "archive": "rules_roster_personal_guard_suite.mjs.txt",
+    "sha256": "C2D8926E29F2B670A769F21A365B51CBA21822A56B226FA0D322AF16D03F9599"
+  },
+  {
+    "source": "tools/rules_roster_personal_probe.mjs",
+    "archive": "rules_roster_personal_probe.mjs.txt",
+    "sha256": "CB1DA55DED0A8C0FEEC68FE69BB6A28EE46D68434A7BF64DBEDDFF438E1AC521"
+  },
+  {
+    "source": "tools/rules_roster_personal_proof.mjs",
+    "archive": "rules_roster_personal_proof.mjs.txt",
+    "sha256": "64B07ABDB6AA83AF052FE812C45E28A49899858D08085ACB62FF3294766578A5"
+  },
+  {
+    "source": "tools/rules_roster_prepare_placement_suite.mjs",
+    "archive": "rules_roster_prepare_placement_suite.mjs.txt",
+    "sha256": "2E9D14D8C0C7C8E680DA69E38D21BBF2797FC69ABB4F4875035D5577FB9A1121"
+  },
+  {
+    "source": "tools/rules_roster_prepare_probe.mjs",
+    "archive": "rules_roster_prepare_probe.mjs.txt",
+    "sha256": "207670968F44D702EBAF10B89A14AB969E53336D6A8C434499EBAE970FDA10F4"
+  },
+  {
+    "source": "tools/rules_roster_prepare_suite.mjs",
+    "archive": "rules_roster_prepare_suite.mjs.txt",
+    "sha256": "F67297DC698C87388D36ABADC0C429BD52ECD58E648B4F1984A4E1AADE085E7F"
+  },
+  {
+    "source": "tools/rules_roster_rebalance_probe.mjs",
+    "archive": "rules_roster_rebalance_probe.mjs.txt",
+    "sha256": "5A9134EB1854CED45E45DD6645EBC60DFC279A9FA82B751090B0FA9BC6B7A6E2"
+  },
+  {
+    "source": "tools/rules_roster_stub_probe.mjs",
+    "archive": "rules_roster_stub_probe.mjs.txt",
+    "sha256": "1233ECF513D0CFEF82CA767B8F6E5578DBAA8E58EC0540D3DAA3B7E7951575F8"
+  },
+  {
+    "source": "tools/rules_roster_stub_suite.mjs",
+    "archive": "rules_roster_stub_suite.mjs.txt",
+    "sha256": "3992630CE9C290C57834615D759BFD091AAA3ED40BD322FA453DB1B1AB2F9A42"
+  },
+  {
+    "source": "firestore.rules-backup1012",
+    "archive": "firestore.rules-backup1012.txt",
+    "sha256": "F0664E60001ED4668F238251C8209AFDC37A5ED4CF8FBAD81D7A18EF934BBE3C"
+  },
+  {
+    "source": "firestore.rules-backup1013",
+    "archive": "firestore.rules-backup1013.txt",
+    "sha256": "C23925B0CB34902BDB8E67E6ADE4B614D768E8DEDB0113E91C2096EAC4A5AE31"
+  }
+]

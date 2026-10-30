@@ -1,0 +1,86 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { rulesFunction } from './roster_complexity_candidate.mjs';
+import { assertRulesDenied } from './assert_rules_denied.mjs';
+import { authUid, playerId, recruitmentId, disbandApprovedRoomTxn } from './party_group_cutover_rules_test.mjs';
+const dir = 'coverage/rules-exact-targets';
+const results = [];
+async function check(name, work) {
+  try { await work(); results.push({ name, passed: true }); }
+  catch (e) { results.push({ name, passed: false, error: e.message }); throw e; }
+}
+const expected = { playerId: 'p', stateId: 's' };
+try {
+  // Isolate the exact source helpers to observe their contract, not authorization.
+  for (const version of process.env.TARGET_FULL_ONLY === '1' ? [] : ['baseline', 'candidate']) {
+    const source = fs.readFileSync(version === 'baseline' ? 'coverage/rules-member-retirement/readable.rules' : `${dir}/readable.rules`, 'utf8');
+    const helpers = ['atomicRaidStateListedInTargets', 'atomicCommandIncludes'].map(n => rulesFunction(source, n).text).join('\n');
+    const rules = `rules_version = '2'; service cloud.firestore { match /databases/{database}/documents {
+      ${helpers}
+      match /probe/{id} { allow create: if atomicRaidStateListedInTargets(request.resource.data, 'p', 's')
+        && atomicCommandIncludes(request.resource.data, 'p', 's'); }
+    } }`;
+    const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover', firestore: { host: '127.0.0.1', port: 8080, rules } });
+    try {
+      await env.clearFirestore(); const db = env.unauthenticatedContext().firestore();
+      const cases = [
+        ['eighth', [...Array.from({ length: 7 }, (_, i) => ({ playerId: `p${i}`, stateId: `s${i}` })), expected], true],
+        ['reordered', [expected, { playerId: 'x', stateId: 'y' }], true],
+        ['duplicate-helper-only', [expected, expected], true],
+        ['empty', [], false], ['wrong-pair', [{ playerId: 'p', stateId: 'wrong' }], false],
+        ['extra-key', [{ ...expected, extra: true }], version === 'baseline'],
+        ['nine', [expected, ...Array.from({ length: 8 }, (_, i) => ({ playerId: `p${i}`, stateId: `s${i}` }))], version === 'baseline'],
+      ];
+      for (const [name, targets, allowed] of cases) await check(`${version} helper ${name}`, async () => {
+        const op = setDoc(doc(db, 'probe', name), { raidStateTargets: targets, commandTargets: targets });
+        if (allowed) await op; else await assertRulesDenied(op);
+      });
+    } finally { await env.cleanup(); }
+  }
+  const fullRules = process.env.TARGET_FULL_RULES || `${dir}/candidate.rules`;
+  process.env.ROSTER_TRACKED_RULES = '1'; process.env.ROSTER_COMPLEXITY_RULES_FILE = fullRules;
+  const { seedRoom, lifecycle, inspectAll } = await import('./roster_ownership_rules_proof.mjs');
+  const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover', firestore: {
+    host: '127.0.0.1', port: 8080, rules: fs.readFileSync(fullRules, 'utf8') } });
+  const db = env.authenticatedContext(authUid).firestore();
+  async function seed() {
+    await seedRoom(env, db);
+    // seedRoom sets slot/state generation 1 but predates authoritative account
+    // and membership generations. Match the current writer, as BUG024 proof does.
+    await env.withSecurityRulesDisabled(async ctx => {
+      const admin = ctx.firestore();
+      const room = (await getDoc(doc(admin, 'recruitments', recruitmentId))).data();
+      for (const slot of room.partySlots) {
+        const accountId = `target-proof-${slot.playerId}`;
+        await setDoc(doc(admin, 'gameAccounts', accountId), { ownerPlayerId: slot.playerId, status: 'active', ownershipRevision: 1 });
+        await updateDoc(doc(admin, 'characters', slot.characterId), { gameAccountId: accountId });
+        await updateDoc(doc(admin, 'recruitments', recruitmentId, 'members', slot.playerId), { ownershipRevision: 1 });
+      }
+    });
+  }
+  try {
+    await check('full Rules eight-member complete', async () => {
+      await seed(); await lifecycle(db, 'complete', { completionRole: true });
+      assert.equal((await getDoc(doc(db, 'recruitments', recruitmentId))).data().currentCycleStatus, 'completed');
+    });
+    for (const tamper of ['omit-state', 'target-player', 'target-state', 'character', 'revision-forged']) {
+      await check(`full Rules complete rejects ${tamper}`, async () => {
+        await seed(); const before = await inspectAll(env);
+        await assertRulesDenied(lifecycle(db, 'complete', { tamper, completionRole: true }));
+        assert.deepEqual(await inspectAll(env), before);
+      });
+    }
+    await check('full Rules eight-member active disband', async () => {
+      await seed(); await disbandApprovedRoomTxn(db);
+      assert.equal((await getDoc(doc(db, 'recruitments', recruitmentId))).data().status, 'disbanded');
+    });
+    await check('full Rules completed disband with empty targets', async () => {
+      await seed(); await lifecycle(db, 'complete', { completionRole: true });
+      await disbandApprovedRoomTxn(db);
+      assert.deepEqual((await getDoc(doc(db, 'recruitments', recruitmentId))).data().commandTargets, []);
+    });
+  } finally { await env.cleanup(); }
+} finally { fs.writeFileSync(`${dir}/${process.env.TARGET_RESULT || 'results'}.json`, JSON.stringify(results, null, 2)); }
+console.log(`${results.length} target checks passed`);

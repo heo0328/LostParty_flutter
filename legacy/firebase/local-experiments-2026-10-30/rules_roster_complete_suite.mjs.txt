@@ -1,0 +1,89 @@
+// Uses the authenticated create/join and snapshot harness shared with personal completion.
+import assert from 'node:assert/strict';
+import {doc,writeBatch,serverTimestamp,deleteField} from 'firebase/firestore';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+export async function run({env,seed,snapshot,personal,join,successorChange,check,now}){
+  async function prepare(recurring=false,tamper=''){
+    await seed(8,tamper,7);
+    await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore(),b=writeBatch(db);
+      b.update(doc(db,'recruitments/room'),{continueTogether:recurring,currentCycleStatus:tamper==='cycle-completed'?'completed':'active'});
+      if(tamper==='leader-binding')b.update(doc(db,'authBindings/u0'),{status:'inactive'});
+      if(tamper==='roster-mismatch')b.update(doc(db,'recruitments/room/roster/current'),{revision:99});
+      if(tamper==='old-event')b.set(doc(db,'partyEvents/complete_room_9'),{preserve:true});
+      if(tamper==='already-completed')b.update(doc(db,'players/p7/raidStates/c7_raid'),{status:'completed',completedAt:now});
+      if(tamper==='missing-role')b.update(doc(db,'players/p7/raidStates/c7_raid'),{role:deleteField()});
+      if(tamper==='existing-role')b.update(doc(db,'players/p7/raidStates/c7_raid'),{role:'dealer'});
+      await b.commit();});
+  }
+  function complete(before,tamper=''){
+    const db=tamper==='unauthenticated'?env.unauthenticatedContext().firestore():env.authenticatedContext(tamper==='nonleader'?'u7':'u0').firestore();
+    const b=writeBatch(db),t=serverTimestamp(),r=before.room,revision=r.revision+1,id=`complete_room_${revision}`;
+    const patch={status:r.continueTogether?'active':'completed',currentCycleStatus:'completed',revision,commandId:id,commandType:'complete',commandPlayerId:r.leaderPlayerId,updatedAt:t};
+    if(tamper==='wrong-status')patch.status=r.continueTogether?'completed':'active';
+    if(tamper==='cycle-active')patch.currentCycleStatus='active';
+    if(tamper==='source-extra')patch.untrusted=true;
+    if(tamper==='source-counter')patch.memberCount=1;
+    if(tamper==='source-revision')patch.revision++;
+    if(tamper==='source-actor')patch.commandPlayerId='p7';
+    if(tamper==='source-cycle')patch.currentCycleKey='next';
+    if(!['omit-source','states-only','event-only'].includes(tamper))b.update(doc(db,'recruitments/room'),patch);
+    for(const pid of r.memberPlayerIds){
+      if(['omit-states','event-only'].includes(tamper)||tamper==='omit-last'&&pid==='p7')continue;
+      const i=Number(pid.slice(1)),s=before.states[i],sp={status:'completed',role:before.roster.entries[pid].role,completedAt:t,updatedAt:t,revision:(s?.revision??0)+1};
+      if(pid==='p7'){
+        if(tamper==='state-revision')sp.revision=99;
+        if(tamper==='state-source')sp.source='manual';
+        if(tamper==='state-cycle')sp.cycleKey='other';
+        if(tamper==='state-character')sp.characterId='other';
+        if(tamper==='state-role')sp.role='dealer';
+        if(tamper==='state-owner-revision')sp.ownershipRevision=99;
+      }
+      b.update(doc(db,`players/${pid}/raidStates/${before.roster.entries[pid].characterId}_raid`),sp);
+    }
+    const targets=r.memberPlayerIds.map(pid=>({playerId:pid,characterId:before.roster.entries[pid].characterId}));
+    if(tamper==='target-missing')targets.pop();
+    if(tamper==='target-duplicate')targets[7]=targets[0];
+    if(tamper==='target-extra')targets[7].ownershipRevision=1;
+    if(tamper==='target-order')targets.reverse();
+    const event={schemaVersion:2,eventId:id,recruitmentId:'room',type:'complete',commandId:id,commandRevision:revision,
+      audiencePlayerIds:r.memberPlayerIds,actorPlayerId:r.leaderPlayerId,raidId:r.raidId,difficultyId:r.difficultyId,
+      cycleKey:r.currentCycleKey,completionTargets:targets,occurredAt:t};
+    if(tamper==='event-audience')event.audiencePlayerIds=['p0'];
+    if(tamper==='event-cycle')event.cycleKey='next';
+    if(tamper==='event-actor')event.actorPlayerId='p7';
+    if(!['omit-event','states-only'].includes(tamper))b.set(doc(db,`partyEvents/${id}`),event);
+    if(tamper==='roster-write')b.set(doc(db,'recruitments/room/roster/current'),{...before.roster,revision:before.roster.revision+1});
+    if(tamper==='foreign-state')b.set(doc(db,'players/foreign/raidStates/foreign_raid'),{...before.states[0],playerId:'foreign',characterId:'foreign',status:'completed',updatedAt:t});
+    return b.commit();
+  }
+  for(const recurring of [false,true])await check(`whole completion ${recurring?'recurring':'one-shot'} and replay`,async()=>{
+    await prepare(recurring);const before=await snapshot();await complete(before);const after=await snapshot();
+    assert.equal(after.room.status,recurring?'active':'completed');assert.equal(after.room.currentCycleStatus,'completed');
+    assert.deepEqual(after.roster,before.roster);assert.equal(after.room.rosterRevision,before.room.rosterRevision);
+    assert.ok(after.states.every(s=>s.status==='completed'&&s.source==='party'&&s.revision===2));
+    assert.equal(after.events[0].completionTargets.length,8);
+    await assertRulesDenied(complete(before));assert.deepEqual(await snapshot(),after);
+  });
+  for(const tamper of ['omit-source','omit-states','omit-last','omit-event','states-only','event-only','nonleader','unauthenticated',
+    'leader-binding','owner','generation','inactive-character','missing-account','foreign-state','already-completed','existing-role',
+    'cycle-completed','expired','completed-room','roster-mismatch','old-event','wrong-status','cycle-active','source-extra',
+    'source-counter','source-revision','source-actor','source-cycle','state-revision','state-source','state-character','state-cycle',
+    'state-role','state-owner-revision','target-missing','target-duplicate','target-extra','target-order','event-audience',
+    'event-cycle','event-actor','roster-write'])await check(`complete rejects ${tamper}`,async()=>{
+      // Seed tampering and request tampering are intentionally distinct for role/cycle/foreign-state.
+      await prepare(false,['state-role','state-cycle','foreign-state'].includes(tamper)?'':tamper);
+      const before=await snapshot();await assertRulesDenied(complete(before,tamper));assert.deepEqual(await snapshot(),before);
+    });
+  await check('completed recurring room blocks personal completion',async()=>{await prepare(true);await complete(await snapshot());const before=await snapshot();
+    await assertRulesDenied(personal(before,7));assert.deepEqual(await snapshot(),before);});
+  await check('completed recurring room blocks character change',async()=>{await prepare(true);await complete(await snapshot());const before=await snapshot();
+    await assertRulesDenied(successorChange(before));assert.deepEqual(await snapshot(),before);});
+  await check('concurrent full completion one winner',async()=>{await prepare();const before=await snapshot();
+    const outcomes=await Promise.allSettled([complete(before),complete(before)]);assert.equal(outcomes.filter(o=>o.status==='fulfilled').length,1);
+    await assertRulesDenied(Promise.reject(outcomes.find(o=>o.status==='rejected').reason));});
+  await check('authenticated create join eight then whole complete',async()=>{await seed(0);for(let i=0;i<8;i++)await join(i);
+    const before=await snapshot();await complete(before);const after=await snapshot();assert.deepEqual(after.roster,before.roster);
+    assert.equal(after.events.length,9);assert.ok(after.states.every(s=>s.status==='completed'&&s.source==='party'));});
+  await check('missing legacy role filled from roster only',async()=>{await prepare(false,'missing-role');await complete(await snapshot());
+    assert.equal((await snapshot()).states[7].role,'support');});
+}
