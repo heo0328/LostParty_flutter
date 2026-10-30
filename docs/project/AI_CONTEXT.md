@@ -8,11 +8,11 @@
 
 ## 현재 작업과 실제 코드 상태
 
-현재는 기존 그룹 기능 사용자 전체 정상 인수 이후 레이드 모집의 그룹 연결·표시 변경5f024e53을 디바이스로 인수하는 구간이다. 앱 연결·자동검증·커밋/푸시·Issue12/16 인계는 완료했고, 다음 행동은 NEXT_WORK의 순서1~5 사용자 테스트다. 생성 기본값9d1baa39를 유지하고, Backend 계약6dac5ab2·실행2602e459/DB0034에 맞춰 공통설정 최초 연결과 서버 목록 그룹명/상태를 Flutter에 연결했다. 비그룹원 소속 배지는 세 프로필의 대상별 값 보존을 검증했지만 제보된 실제 기기 증상은 미재현으로 남긴다. 현재 다음 행동/인수·Penpot 도구 대기는 NEXT_WORK, 장기 계약은 그룹 제품/모집37·연결39, 검증 경과는 DEV_LOG를 따른다. 기존 그룹 인수는 유지하며 그룹원 누구나 개설하고 해당 레이드 공대장이 관리한다.
+현재 작업은 사용자 승인한 **주차별 그룹 연결/교체/해제·공대장 승계**다. 확정 정책은 그룹 제품 §9와 모집37 §37.39.1, 실행 순서·협업 대기는 NEXT_WORK를 따른다. 실제 코드는 아직 Flutter5f024e53/Backend6dac5ab2·실행2602e459/DB0034의 방 공통 최초 연결·연결 유지 공개 전환이다. 새 주차별 계약/Backend 구현 인계가 선행하며 화면만 열거나 구API 순차 호출로 대체하지 않는다. 기존 그룹 기본 기능 인수는 보존하되 구계약의 기기 순서1~5로 새 정책 완료를 판정하지 않는다. 비그룹원 배지 제보·긴 그룹명·Penpot 검수는 새 계약 연결 후 확인할 미완료다. 생성 후 연결 UI가 실제 기기에서 보이지 않는 직접 원인은 아직 미확인이다.
 
 모집 1차 구현·보고된 정상 흐름 인수와 dev/main 통합은 bdfe0edf로 완료했다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
 
-사용자가 안내된 모집 정상 흐름과 후속 수정을 기기로 확인했다. **당시 모집 인수 범위는 통과했으며, 이번 그룹 연결 변경의 추가 기기 시험은 NEXT_WORK 순서1~5가 남아 있다.** 세부 인수표·정확한 Backend/협업 근거는 [설계37 현재 구현·인수 상태](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027), 당시 구현/자동검증은 각 절과 DEV_LOG를 따른다.
+사용자가 안내된 모집 정상 흐름과 후속 수정을 기기로 확인했다. **당시 모집 인수 범위는 통과했으며, 새 주차별 그룹 변경의 기기 인수는 Backend·앱 연결 후 NEXT_WORK 기준으로 진행한다.** 세부 인수표·정확한 Backend/협업 근거는 [설계37 현재 구현·인수 상태](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027), 당시 구현/자동검증은 각 절과 DEV_LOG를 따른다.
 
 | 영역 | 현재 상태 |
 |---|---|
@@ -38,7 +38,7 @@
 
 ## 기타 기준과 이력
 
-다른 탭에서 이어갈 첫 공개 베타·포트폴리오 기술 진단/개선의 범위·시작 순서·미확인 후보·작업 그룹 기준은 [기술 진단 인계](../product/DETAIL_IMPROVEMENTS.md#technical-review-handoff)에 둔다. 공통 문서 운영 합의는 양측 반영·대조 완료이며, 개별 기술 개선은 아직 완료로 판정하지 않는다. 현재 실행 안내는 NEXT_WORK를 따른다.
+다른 탭에서 이어갈 첫 공개 베타·포트폴리오 기술 진단/개선의 범위·시작 순서·미확인 후보·작업 그룹 기준은 [기술 진단 인계](../product/DETAIL_IMPROVEMENTS.md#technical-review-handoff)에 둔다. 공통 문서 운영 합의는 양측 반영·대조 완료이며, 개별 기술 개선은 아직 완료로 판정하지 않는다. 종합 기술 개선은 이번 그룹 기능 정리 후 별도 착수하며 현재 실행 안내는 NEXT_WORK를 따른다.
 
 [계정 연결30](../backend-migration/30-scoped-storage-write-contract.md), [원정대 정책09](../backend-migration/09-migration-decisions.md), [인증36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), [한도34](../backend-migration/34-member-limits-and-room-restrictions.md), [통계35](../backend-migration/35-weekly-member-and-group-statistics.md), [버그](BUG_REPORTS.md). 현재 그룹 작업의 경계/담당은 NEXT_WORK, 실행 구간 밖의 남은 수정안/보류·다음 행동은 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md)에서 관리한다.
 
