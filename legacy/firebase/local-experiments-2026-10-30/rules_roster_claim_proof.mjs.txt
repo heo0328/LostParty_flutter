@@ -1,0 +1,126 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {initializeTestEnvironment} from '@firebase/rules-unit-testing';
+import {doc,getDoc,writeBatch,serverTimestamp,Timestamp,deleteField} from 'firebase/firestore';
+import {generateClaimProbe,directory} from './rules_roster_claim_probe.mjs';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {rulesFunction} from './roster_complexity_candidate.mjs';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+generateClaimProbe();
+const baseline=process.env.ROSTER_CLAIM_BASELINE==='1';
+const selected=baseline?'coverage/rules-member-retirement/candidate.rules':process.env.ROSTER_CLAIM_RULES||`${directory}/candidate.rules`;
+const rules=fs.readFileSync(selected,'utf8'),sha256=createHash('sha256').update(rules).digest('hex'),results=[];
+const env=await initializeTestEnvironment({projectId:'demo-party-group-cutover',firestore:{host:'127.0.0.1',port:8080,rules}});
+const cid='A'.repeat(20),cycle='2026-10-07',now=Timestamp.fromMillis(Date.now()-60000),end=Timestamp.fromMillis(now.toMillis()+7*86400000);
+const old=Timestamp.fromMillis(now.toMillis()-7*86400000);
+const statePath=`players/p0/raidStates/${cid}_raid`,claimPath=`players/p0/weeklyRaidClaims/${cycle}_${cid}_raid`;
+const assignmentPath=`players/p0/activeRaidAssignments/${cid}_raid`;
+const guard={playerId:'p0',characterId:cid,raidId:'raid',ownershipRevision:1,guardSchemaVersion:1,
+  guardRecruitmentId:'room',guardRoomRevision:1,guardCycleKey:cycle,guardCycleStartedAt:now,guardCycleEndsAt:end,guardSlotIndex:0,guardCheckedAt:now};
+const guardKeys=Object.keys(guard).filter(k=>k.startsWith('guard'));
+function claim(t=serverTimestamp()){return {schemaVersion:1,playerId:'p0',characterId:cid,raidId:'raid',cycleKey:cycle,
+  difficultyId:'hard',source:'manual',cycleStartedAt:now,cycleEndsAt:end,completedAt:t,updatedAt:t,ownershipRevision:1};}
+function entry(t=now){return {characterId:cid,ownershipRevision:1,role:'dealer',partyIndex:0,slotIndex:0,canApproveApplications:true,
+  joinedAt:t,joinedBy:'p0',membershipOrder:0,countedAsNonGroupMember:false,characterNameSnapshot:'name',classNameSnapshot:'class',
+  itemLevelSnapshot:1700,combatPowerSnapshot:100,submittedBuildSnapshotId:null,gemValidationSnapshot:null,buildIntegritySnapshot:null,
+  characterChangedAt:null,updatedAt:t};}
+function room(t=now){return {schemaVersion:3,recruitmentId:'room',visibility:'public',groupId:null,leaderPlayerId:'p0',memberPlayerIds:['p0'],
+  memberCount:1,dealerCount:1,supportCount:0,maxMemberCount:8,hasAvailableSlot:true,manualRecruitmentEnabled:true,partyCount:2,membersPerParty:4,
+  supportsPerParty:1,maxDealersPerClassPerParty:1,minItemLevel:1600,minCombatPower:50,raidId:'raid',difficultyId:'hard',
+  currentCycleKey:cycle,cycleStartedAt:now,cycleEndsAt:end,status:'active',approvalMode:'directJoin',revision:1,rosterRevision:1,
+  commandId:'partyCreated_room_1',commandType:'create',commandPlayerId:'p0',createdAt:t,updatedAt:t,pendingApplicationCount:0};}
+async function admin(work){await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore(),b=writeBatch(db);work(b,db);await b.commit();});}
+async function seed({generation=1,state=null,storedClaim=null,assignment=false,character={},account={},binding='active'}={}){
+  await env.clearFirestore();await admin((b,db)=>{
+    b.set(doc(db,'authBindings/u0'),{status:binding,playerId:'p0'});b.set(doc(db,'authBindings/u1'),{status:'active',playerId:'p1'});
+    b.set(doc(db,`characters/${cid}`),{status:'active',ownerPlayerId:'p0',ownershipRevision:generation,gameAccountId:'a0',characterName:'name',characterClassName:'class',...character});
+    b.set(doc(db,'gameAccounts/a0'),{status:'active',ownerPlayerId:'p0',ownershipRevision:generation,...account});
+    if(state)b.set(doc(db,statePath),state);if(storedClaim)b.set(doc(db,claimPath),storedClaim);
+    if(assignment)b.set(doc(db,assignmentPath),{playerId:'p0',characterId:cid,raidId:'raid',ownershipRevision:1});
+  });
+}
+async function snapshot(){let value;await env.withSecurityRulesDisabled(async ctx=>{
+  value=await Promise.all([statePath,claimPath,assignmentPath,'recruitments/room','recruitments/room/roster/current','partyEvents/partyCreated_room_1']
+    .map(async p=>[p,(await getDoc(doc(ctx.firestore(),p))).data()??null]));});return value;}
+function batch(actor='u0'){const db=actor===null?env.unauthenticatedContext().firestore():env.authenticatedContext(actor).firestore();return {db,b:writeBatch(db)};}
+function create(patch={},actor='u0',path=claimPath){const {db,b}=batch(actor);b.set(doc(db,path),{...claim(),...patch});return b.commit();}
+function remove(actor='u0'){const {db,b}=batch(actor);b.delete(doc(db,claimPath));return b.commit();}
+async function denied(work){const before=await snapshot();await assertRulesDenied(work());assert.deepEqual(await snapshot(),before);}
+async function check(name,work){if(process.env.ROSTER_CLAIM_RACE && !name.startsWith('concurrent certification'))return;
+  try{await work();results.push({name,passed:true});}catch(e){results.push({name,passed:false,error:e.message});throw e;}
+  finally{fs.writeFileSync(`${directory}/${process.env.ROSTER_CLAIM_RACE?'race':baseline?'baseline':'claim'}-results.json`,JSON.stringify({sha256,results},null,2));}}
+async function load(content){const response=await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-party-group-cutover:securityRules',{
+  method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({rules:{files:[{content}]}})});
+  assert.equal(response.status,200);const body=await response.json();assert.deepEqual(body,{});}
+// The different source cycle isolates the before guard from the state's same-cycle Claim check.
+function replacement(withClaim=false,retain={}){const {db,b}=batch(),t=serverTimestamp(),r={...room(t),currentCycleKey:'2026-10-08'};
+  b.set(doc(db,'recruitments/room'),r);b.set(doc(db,'recruitments/room/roster/current'),{schemaVersion:1,recruitmentId:'room',revision:1,entries:{p0:entry(t)}});
+  b.set(doc(db,statePath),{schemaVersion:1,playerId:'p0',characterId:cid,ownershipRevision:1,recruitmentId:'room',raidId:'raid',difficultyId:'hard',
+    cycleKey:r.currentCycleKey,role:'dealer',status:'active',source:'party',revision:1,createdAt:t,updatedAt:t,...retain});
+  b.set(doc(db,'partyEvents/partyCreated_room_1'),{schemaVersion:1,eventId:r.commandId,recruitmentId:'room',type:'partyCreated',commandId:r.commandId,
+    commandRevision:1,audiencePlayerIds:['p0'],actorPlayerId:'p0',occurredAt:t});
+  if(withClaim)b.set(doc(db,claimPath),claim(t));return b.commit();}
+async function readyCertify(){await seed();await admin((b,db)=>{
+  b.set(doc(db,'recruitments/room'),{...room(),currentCycleKey:'2026-09-30',cycleStartedAt:old,cycleEndsAt:now,continueTogether:true,currentCycleStatus:'completed'});
+  b.set(doc(db,'recruitments/room/roster/current'),{schemaVersion:1,recruitmentId:'room',revision:1,entries:{p0:entry()}});
+});}
+function certify(withClaim=false){const {db,b}=batch(),t=serverTimestamp();b.set(doc(db,statePath),{...guard,guardCheckedAt:t});
+  if(withClaim)b.set(doc(db,claimPath),claim(t));return b.commit();}
+try{
+  await check('legacy manual create then delete',async()=>{await seed();await create();await remove();assert.equal((await snapshot())[1][1],null);});
+  await check('missing generation allowed only at live zero',async()=>{await seed({generation:0});const s=claim();delete s.ownershipRevision;
+    const {db,b}=batch();b.set(doc(db,claimPath),s);await b.commit();await remove();});
+  for(const [name,options] of Object.entries({owner:{character:{ownerPlayerId:'other'}},accountOwner:{account:{ownerPlayerId:'other'}},
+    inactiveCharacter:{character:{status:'inactive'}},inactiveAccount:{account:{status:'inactive'}},generation:{account:{ownershipRevision:2}},
+    binding:{binding:'inactive'},assignment:{assignment:true}}))await check(`create rejects ${name}`,async()=>{await seed(options);await denied(()=>create());});
+  for(const [name,patch] of Object.entries({oldGeneration:{ownershipRevision:0},futureGeneration:{ownershipRevision:2},stringGeneration:{ownershipRevision:'1'},
+    source:{source:'party'},extra:{extra:true},schema:{schemaVersion:2},player:{playerId:'p1'},character:{characterId:'short'},raid:{raidId:'BAD'},
+    difficulty:{difficultyId:'BAD'},cycle:{cycleKey:'bad'},window:{cycleEndsAt:now},future:{cycleStartedAt:end},
+    completedAt:{completedAt:now},updatedAt:{updatedAt:now}}))await check(`create rejects ${name}`,async()=>{await seed();await denied(()=>create(patch));});
+  await check('create rejects missing generation at live one',async()=>{await seed();await denied(()=>{const {db,b}=batch(),s=claim();delete s.ownershipRevision;b.set(doc(db,claimPath),s);return b.commit();});});
+  for(const actor of ['u1',null])await check(`create rejects actor ${actor}`,async()=>{await seed();await denied(()=>create({},actor));});
+  await check('create rejects wrong id',async()=>{await seed();await denied(()=>create({},'u0',claimPath+'_wrong'));});
+  await check('claim updates stay closed',async()=>{await seed({storedClaim:claim(now)});await denied(()=>create());});
+  for(const [name,options] of Object.entries({oldGeneration:{storedClaim:{...claim(now),ownershipRevision:0}},
+    owner:{character:{ownerPlayerId:'other'}},inactive:{account:{status:'inactive'}},expired:{storedClaim:{...claim(now),cycleStartedAt:old,cycleEndsAt:now}}}))
+    await check(`delete rejects ${name}`,async()=>{await seed({storedClaim:claim(now),...options});await denied(()=>remove());});
+  for(const actor of ['u1',null])await check(`delete rejects actor ${actor}`,async()=>{await seed({storedClaim:claim(now)});await denied(()=>remove(actor));});
+  await check('C1 delete retains nonmanual historical source compatibility',async()=>{await seed({storedClaim:{...claim(now),source:'party'}});await remove();});
+  await check('current guard blocks new Claim',async()=>{await seed({state:guard});await denied(()=>create());});
+  await check('expired guard does not block Claim',async()=>{await seed({state:{...guard,guardCycleStartedAt:old,guardCycleEndsAt:now}});await create();});
+  await check('different cycle guard does not block Claim',async()=>{await seed({state:{...guard,guardCycleKey:'2026-09-30'}});await create();});
+  await check('current guard still blocks with older ownership marker',async()=>{await seed({state:{...guard,ownershipRevision:0}});await denied(()=>create());});
+  await check('guard does not prevent valid Claim clearing',async()=>{await seed({state:guard,storedClaim:claim(now)});await remove();assert.deepEqual((await snapshot())[0][1],guard);});
+  await check('assignment create and update remain closed',async()=>{await seed();await denied(()=>{const {db,b}=batch();b.set(doc(db,assignmentPath),{});return b.commit();});
+    await seed({assignment:true});await denied(()=>{const {db,b}=batch();b.update(doc(db,assignmentPath),{revision:2});return b.commit();});});
+  if(!baseline){
+    await check('valid certification then Claim rejected',async()=>{await readyCertify();await certify();await denied(()=>create());});
+    await check('existing Claim blocks certification',async()=>{await readyCertify();await create();await denied(()=>certify());});
+    await check('same request certification and Claim rejected by after guard',async()=>{await readyCertify();await denied(()=>certify(true));});
+    await check('normal stub replacement remains allowed',async()=>{await seed({state:guard});await replacement();});
+    await check('normal stub replacement plus Claim rejected by before guard',async()=>{await seed({state:guard});await denied(()=>replacement(true));});
+    for(const key of guardKeys)await check(`replacement plus Claim retaining ${key} rejected`,async()=>{await seed({state:guard});await denied(()=>replacement(true,{[key]:guard[key]}));});
+    await check('bare guard removal plus Claim rejected',async()=>{await seed({state:guard});await denied(()=>{const {db,b}=batch();
+      b.update(doc(db,statePath),Object.fromEntries(guardKeys.map(k=>[k,deleteField()])));b.set(doc(db,claimPath),claim());return b.commit();});});
+    await check('delete stub plus Claim rejected',async()=>{await seed({state:guard});await denied(()=>{const {db,b}=batch();b.delete(doc(db,statePath));b.set(doc(db,claimPath),claim());return b.commit();});});
+    // Diagnostic only: emulator cross-document concurrent reads can fail with Service call error.
+    // Never classify that as a permission-policy pass. Run separately with ROSTER_CLAIM_RACE=1.
+    if(process.env.ROSTER_CLAIM_RACE)await check('concurrent certification and Claim have one winner',async()=>{await readyCertify();const outcomes=await Promise.allSettled([certify(),create()]);
+      fs.writeFileSync(`${directory}/race-outcomes.json`,JSON.stringify({sha256,outcomes:outcomes.map(o=>({status:o.status,
+        ...(o.status==='rejected'?{code:o.reason.code,message:o.reason.message}:{})})),snapshot:await snapshot()},null,2));
+      assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1);await assertRulesDenied(Promise.reject(outcomes.find(x=>x.status==='rejected').reason));});
+    // Prove each denied composition really depends on the selected before/after check.
+    const readable=fs.readFileSync(path.join(path.dirname(selected),'readable.rules'),'utf8'),original=rulesFunction(readable,'sealBlocksClaimAt').text;
+    for(const side of ['before','after'])await check(`mutation removing ${side} guard admits isolated bypass`,async()=>{
+      const after=side==='before',get=after?'getAfter':'get',exists=after?'existsAfter':'exists';
+      const replacementFn=`    function sealBlocksClaimAt(path,cycle) { return ${exists}(path) && ${get}(path).data.get('guardSchemaVersion',0) == 1 && ${get}(path).data.guardCycleKey == cycle && request.time < ${get}(path).data.guardCycleEndsAt; }`;
+      const mutant=compactExecutableRules(readable.replace(original,replacementFn)).source;
+      fs.writeFileSync(`${directory}/without-${side}.rules`,mutant);await load(mutant);
+      try{if(side==='before'){await seed({state:guard});await replacement(true);}else{await readyCertify();await certify(true);}}
+      finally{await load(rules);}
+    });
+  }
+  console.log(`${results.length} ${baseline?'baseline':'candidate'} legacy Claim checks passed`);
+}finally{await env.cleanup();}

@@ -1,0 +1,38 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {rulesFunction} from './roster_complexity_candidate.mjs';
+export const directory='coverage/rules-roster-claim';
+export function generateClaimProbe(){
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  let source=fs.readFileSync('coverage/rules-roster-stub/readable.rules','utf8');
+  const base=fs.readFileSync('coverage/rules-member-retirement/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'3dafcf0a7737a2d7fd5f65c27eeb6109d5c8217c67648f7ad036cac8971ee0c4');
+  assert.equal(hash(compactExecutableRules(base).source),'18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61');
+  // Bound player == data.playerId; currentStateOwnership includes active character ownership.
+  const adapt=s=>s.replaceAll('hasActiveBinding()', 'bound()').replaceAll('currentPlayerId()', 'actor()')
+    .replace('ownsActiveCharacter(data.characterId) && deManualCurrentOwnership(data)','currentStateOwnership(data)')
+    .replaceAll('deManualCurrentOwnership(data)','currentStateOwnership(data)');
+  const added=`
+${rulesFunction(base,'assignmentPath').text}
+${rulesFunction(base,'sealBlocksClaimAt').text}
+${adapt(rulesFunction(base,'validManualWeeklyRaidClaimCreate').text)}
+${adapt(rulesFunction(base,'validManualWeeklyRaidClaimDelete').text)}
+match /players/{playerId}/weeklyRaidClaims/{claimId} {
+  allow create: if !sealBlocksClaimAt(changeStatePath(playerId,request.resource.data.characterId,request.resource.data.raidId),request.resource.data.cycleKey)
+    && validManualWeeklyRaidClaimCreate(playerId,claimId,request.resource.data);
+  allow update: if false;
+  allow delete: if validManualWeeklyRaidClaimDelete(playerId,claimId,resource.data);
+}
+`;
+  source=source.slice(0,source.lastIndexOf('} }'))+added+'} }';
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(`${directory}/readable.rules`,source);
+  fs.writeFileSync(`${directory}/candidate.rules`,compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'3dafcf0a',
+    limitation:'C1 manual legacy Claim create/delete only; assignment writes/read integration and remaining guard transitions excluded.'};
+  fs.writeFileSync(`${directory}/manifest.json`,JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generateClaimProbe());

@@ -14,12 +14,14 @@
 
 ## 기능·기술 계약 지도
 
+- [그룹 제품 흐름](product/GROUP_PRODUCT_FLOW.md)·[그룹 연결 설계39](backend-migration/39-group-flutter-integration-design.md): 전체 UX·기존 구현/현재 서버·미연결/미제공·단계별 완료 조건.
+
 - [모집·일정 통합37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md): 최신 두 주차/단일 기본 출발·조기조율·번호·신청메모 계약. [현재 구현·기기 인수표](backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027)에서 통과·남은 경계·베타 이후 개선을 구분한다.
 - [비활성 기능](project/INACTIVE_FEATURES.md): IF-001/002/003의 제품 제외·실제 차단 상태 구분
 - [계정/캐시/복원30](backend-migration/30-scoped-storage-write-contract.md), [등록19](backend-migration/19-account-registration-flutter-contract.md), [키25](backend-migration/25-member-lostark-key-request.md), [인증36](backend-migration/36-roster-ownership-dispute-flutter-design.md)
 - [한도34](backend-migration/34-member-limits-and-room-restrictions.md)·[통계35](backend-migration/35-weekly-member-and-group-statistics.md)·[분야별 요청32](backend-migration/32-backend-domain-prework-requests.md)
 - [계정 후속14](backend-migration/14-my-account-flutter-integration-plan.md)·[DB 검토24](backend-migration/24-database-design-review.md)·[백엔드 문서목록](backend-migration/00-overview.md)
-- Penpot03은 승인 목표 흐름/02는 실제 앱 대조 후 갱신/04는 이전 시안 보관. 현재 식별자·기준은 설계37 §37.65
+- Penpot03 작업 중/02 구현 완료, 메인 보드·섹션별 하위 보드 수정과 완료 후 동일 보드 이동은 [디자인 공통 지침](design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다. 과거 시안 식별자/운영 이력은 설계37 §37.65.
 
 완료/검증 이력은 [DEV_LOG](project/DEV_LOG.md), 버그는 [BUG_REPORTS](project/BUG_REPORTS.md), 지시문 감사는 [보고서](project/INSTRUCTION_AUDIT_2026-10-25.md). 과거 Firebase 기술/배포 자료는 [레거시 지도](../legacy/firebase/README.md)에 보관하며 신규 실행 지시로 재사용하지 않는다.
 
@@ -30,7 +32,7 @@
 - [`product/MVP.md`](product/MVP.md): 초기 제품 범위
 - [`product/PARTY_PARTICIPATION_RULES.md`](product/PARTY_PARTICIPATION_RULES.md): 신청, 참가 충돌과 캐릭터 변경 규칙
 - [`product/RAID_CATALOG_DATA.md`](product/RAID_CATALOG_DATA.md): 레이드 정적 카탈로그 기준
-- [`product/DETAIL_IMPROVEMENTS.md`](product/DETAIL_IMPROVEMENTS.md): 후속 세부 개선 후보
+- [`product/DETAIL_IMPROVEMENTS.md`](product/DETAIL_IMPROVEMENTS.md): 차후 수정안 통합 대장(현재 유지/변경 목표·확정/보류·담당·완료 조건)
 - [`product/CLASS_SYNERGY_CATALOG.md`](product/CLASS_SYNERGY_CATALOG.md): 30개 직업·특성별 시너지 원본, 코드 사용법과 신청자 스펙 표시 비용 검토
 - [`product/BUILD_MEMO_SHARING.md`](product/BUILD_MEMO_SHARING.md): 직업·깨달음·질서 해달별 계층 메모, 파티 카드 표시와 JSON/서버 공유 구상
 
@@ -90,6 +92,7 @@ UI 방향, 디자인 시스템과 시각적 적용 기준을 관리한다.
 
 ## 관리 원칙
 
+- 양쪽 저장소의 문서 역할·갱신·이관은 [공통 문서 운영 원본](https://github.com/heo0328/lostparty-backend/blob/c1fa205db709f97c1d34817c4417b84144a5dde3/docs/engineering/collaboration/api-collaboration.md#shared-document-operation)을 참조한다. 소비 기준은 Backend 문서 커밋 `c1fa205d`이며, 후속 공통 변경은 [Issue29](https://github.com/heo0328/lostparty-backend/issues/29) 등 관련 Issue에서 양측 영향을 확인한 뒤 고정 참조를 갱신한다. Flutter의 현재 분류·DETAIL_IMPROVEMENTS·legacy/history는 유지한다.
 - 작업 시작/설계·완료·Git의 실행 기준은 [AGENTS](../AGENTS.md)이며 상세 절차는 ai_rules다. 확정 제품/개발 정책을 실행계획이 덮지 못한다. '더 안전해 보인다'는 이유로 임의의 운영 전환/호환 단계를 추가하지 않는다.
 - NEXT_WORK는 현재 파트/유효 후속, AI_CONTEXT는 현재 지도/핵심 상태만 유지한다. 완료/해소된 대기·폐기 계획은 DEV_LOG/history로 옮기고 기존 문구를 교체한다. 이 지도에 버전/검증 수치/실행 대기를 중복 기록하지 않는다.
 - 문서·지침·버그기록·UI 보완은 진행 중 대단원 브랜치에서 처리한다. 한 파트 완료 시 커밋/푸시하며 질문/댓글/한 줄 변경마다 커밋하지 않는다. 통합은 별도 시점이다.

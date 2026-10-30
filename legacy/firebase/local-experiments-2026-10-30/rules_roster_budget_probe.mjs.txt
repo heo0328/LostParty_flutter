@@ -1,0 +1,118 @@
+// D-X1 preflight only. This is an incomplete, isolated schema3 completion contract,
+// not a replacement ruleset and never an input to firebase.json or deployment.
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+import { compactExecutableRules } from './rules_executable_compact.mjs';
+import { rulesFunction } from './roster_complexity_candidate.mjs';
+
+export const directory = 'coverage/rules-roster-budget';
+export function completionBudgetProbe({ bindingAtEvent = false, ownership = true } = {}) {
+  const baseline = fs.readFileSync('coverage/rules-member-retirement/readable.rules', 'utf8');
+  const baselineHash = createHash('sha256').update(compactExecutableRules(baseline).source).digest('hex');
+  if (baselineHash !== '18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61') {
+    throw new Error('D-X1 requires the verified C1 baseline');
+  }
+  return `rules_version = '2';
+service cloud.firestore { match /databases/{database}/documents {
+  ${rulesFunction(baseline, 'deOwnershipMatches').text}
+  function actor(playerId) {
+    let binding = get(/databases/$(database)/documents/authBindings/$(request.auth.uid)).data;
+    return request.auth != null && binding.status == 'active' && binding.playerId == playerId;
+  }
+  function freshSource(roomId) {
+    let before = get(/databases/$(database)/documents/recruitments/$(roomId)).data;
+    let after = getAfter(/databases/$(database)/documents/recruitments/$(roomId)).data;
+    return before.schemaVersion == 3 && after.schemaVersion == 3
+      && after.revision == before.revision + 1 && before.status == 'active'
+      && after.status == 'completed' && after.commandType == 'complete'
+      && after.commandId != before.commandId && after.updatedAt == request.time;
+  }
+  function completedTarget(source, roster, index) {
+    let playerId = source.memberPlayerIds[index];
+    let entry = roster.entries[playerId];
+    let stateId = entry.characterId + '_' + source.raidId;
+    let state = getAfter(/databases/$(database)/documents/players/$(playerId)/raidStates/$(stateId)).data;
+    return state.playerId == playerId && state.characterId == entry.characterId
+      && state.ownershipRevision == entry.ownershipRevision && state.role == entry.role
+      && state.recruitmentId == 'room' && state.raidId == source.raidId
+      && state.cycleKey == source.cycleKey && state.status == 'completed'
+      && state.commandId == source.commandId && state.updatedAt == request.time;
+  }
+  function completeSource() {
+    let before = resource.data;
+    let after = request.resource.data;
+    let roster = get(/databases/$(database)/documents/recruitments/room/roster/current).data;
+    let event = getAfter(/databases/$(database)/documents/partyEvents/$(after.commandId)).data;
+    return ${bindingAtEvent ? 'request.auth != null' : 'actor(before.leaderPlayerId)'}
+      && before.schemaVersion == 3 && before.status == 'active'
+      && after.diff(before).affectedKeys().hasOnly(['revision', 'status', 'commandId', 'commandType', 'updatedAt'])
+      && after.revision == before.revision + 1 && after.status == 'completed'
+      && after.commandType == 'complete' && after.commandId != before.commandId
+      && after.updatedAt == request.time && roster.revision == after.rosterRevision
+      && after.memberPlayerIds.size() == 8 && after.memberPlayerIds.toSet().size() == 8
+      && after.memberPlayerIds.hasAny([after.leaderPlayerId])
+      && roster.entries.keys().toSet() == after.memberPlayerIds.toSet()
+      && event.recruitmentId == 'room' && event.revision == after.revision
+      && event.createdAt == request.time && event.actorPlayerId == after.leaderPlayerId
+      && ${Array.from({ length: 8 }, (_, i) => `completedTarget(after, roster, ${i})`).join('\n      && ')};
+  }
+  function currentOwnership(data) {
+    let character = get(/databases/$(database)/documents/characters/$(data.characterId)).data;
+    let account = get(/databases/$(database)/documents/gameAccounts/$(character.gameAccountId)).data;
+    return deOwnershipMatches(data, character, account);
+  }
+  function listedState(data) {
+    let source = getAfter(/databases/$(database)/documents/recruitments/$(data.recruitmentId)).data;
+    let roster = get(/databases/$(database)/documents/recruitments/$(data.recruitmentId)/roster/current).data;
+    return source.memberPlayerIds.hasAny([data.playerId])
+      && roster.entries[data.playerId].characterId == data.characterId
+      && roster.entries[data.playerId].ownershipRevision == data.ownershipRevision
+      && data.raidId == source.raidId && data.cycleKey == source.cycleKey;
+  }
+  match /recruitments/{id} { allow update: if id == 'room' && completeSource(); }
+  // Completion keeps the roster unchanged. All roster writes are closed here.
+  match /players/{playerId}/raidStates/{stateId} {
+    allow update: if freshSource(resource.data.recruitmentId)
+      && listedState(resource.data)
+      ${ownership ? '&& currentOwnership(resource.data)' : '// UNSAFE CONTROL: ownership reads deliberately omitted.'}
+      && playerId == resource.data.playerId
+      && stateId == resource.data.characterId + '_' + resource.data.raidId
+      && resource.data.status == 'active' && request.resource.data.status == 'completed'
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'revision', 'commandId', 'updatedAt'])
+      && request.resource.data.revision == resource.data.revision + 1
+      && request.resource.data.commandId == getAfter(/databases/$(database)/documents/recruitments/$(resource.data.recruitmentId)).data.commandId
+      && request.resource.data.updatedAt == request.time;
+  }
+  match /partyEvents/{id} {
+    allow create: if ${bindingAtEvent ? 'actor(request.resource.data.actorPlayerId) && ' : ''}freshSource(request.resource.data.recruitmentId)
+      && id == getAfter(/databases/$(database)/documents/recruitments/$(request.resource.data.recruitmentId)).data.commandId
+      && request.resource.data.keys().hasOnly(['recruitmentId', 'revision', 'createdAt', 'actorPlayerId'])
+      && request.resource.data.revision == getAfter(/databases/$(database)/documents/recruitments/$(request.resource.data.recruitmentId)).data.revision
+      && request.resource.data.actorPlayerId == getAfter(/databases/$(database)/documents/recruitments/$(request.resource.data.recruitmentId)).data.leaderPlayerId
+      && request.resource.data.createdAt == request.time;
+  }
+} }
+`;
+}
+export function writeBudgetProbes() {
+  fs.mkdirSync(directory, { recursive: true });
+  const variants = [
+    ['central', {}],
+    ['binding-at-event', { bindingAtEvent: true }],
+    ['unsafe-no-ownership-control', { bindingAtEvent: true, ownership: false }],
+  ];
+  const manifest = variants.map(([name, options]) => {
+    const readable = completionBudgetProbe(options);
+    const compact = compactExecutableRules(readable).source;
+    fs.writeFileSync(`${directory}/${name}.rules`, readable);
+    return { name, options, diagnosticOnly: true, compactBytes: Buffer.byteLength(compact),
+      compactSha256: createHash('sha256').update(compact).digest('hex'),
+      sha256: createHash('sha256').update(readable).digest('hex') };
+  });
+  fs.writeFileSync(`${directory}/manifest.json`, JSON.stringify(manifest, null, 2));
+  return manifest;
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  console.log(JSON.stringify(writeBudgetProbes(), null, 2));
+}

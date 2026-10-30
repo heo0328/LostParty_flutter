@@ -1,0 +1,27 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {rulesFunction} from './roster_complexity_candidate.mjs';
+export const directory='coverage/rules-roster-manual-stub';
+export function generateManualStubProbe(){
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  let source=fs.readFileSync('coverage/rules-roster-change-stub/readable.rules','utf8');
+  const base=fs.readFileSync('coverage/rules-member-retirement/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'0409798737d52518db6426668668ce15e3ff84e98503cdf8be25f52938edf584');
+  assert.equal(hash(compactExecutableRules(base).source),'18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61');
+  const from="&& getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType in ['create','join','approve','change']\n      && validNewState(playerId,stateId,request.resource.data))";
+  assert.equal(source.split(from).length,2);
+  source=source.replace(from,"&& (request.resource.data.get('source','') == 'manual'\n        ? validManualRaidStateCreate(playerId,stateId,request.resource.data)\n        : getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType in ['create','join','approve','change']\n          && validNewState(playerId,stateId,request.resource.data)))");
+  const manual=rulesFunction(base,'validManualRaidStateCreate').text
+    .replaceAll('hasActiveBinding()','bound()').replaceAll('currentPlayerId()','actor()')
+    .replaceAll('deManualCurrentOwnership(data)','currentStateOwnership(data)');
+  source=source.slice(0,source.lastIndexOf('} }'))+'\n'+manual+'\n'+rulesFunction(base,'deManualAssignmentAvailable').text+'\n} }';
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(`${directory}/readable.rules`,source);fs.writeFileSync(`${directory}/candidate.rules`,compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'04097987',
+    limitation:'Strict stub to manual completion only; absent/prior completed replacement, deletion, app and production excluded.'};
+  fs.writeFileSync(`${directory}/manifest.json`,JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generateManualStubProbe());

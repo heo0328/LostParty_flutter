@@ -135,7 +135,10 @@ class RecruitmentCommand {
     for (final t in targetCycles) {
       raidCycleKey(t);
     }
-    final contract = BetaContract(mode: contractMode);
+    final contract = BetaContract(
+      mode: contractMode,
+      original: !usesCycleGroupPolicy,
+    );
     final op = contract.operation(method, path);
     roleCheck(operation == op['id'] && method != 'GET');
     roleCheck(roleMap(op['responses']).containsKey('$expectedStatus'));
@@ -235,6 +238,9 @@ class RecruitmentCommand {
     }
   }
 
+  bool get usesCycleGroupPolicy =>
+      query['group_policy_version'] == BetaContract.groupPolicyVersion;
+
   Map<String, dynamic> toJson() => {
     'version': version,
     if (version >= 2) 'validation_snapshot': validationSnapshot,
@@ -309,6 +315,8 @@ bool definiteRecruitmentRejection(Object? status, Object? code) =>
       'CONTEXT_INVALID',
       'REQUEST_TOO_LARGE',
       'COMMAND_CONTEXT_EXPIRED',
+      'TARGET_CONTEXT_STALE',
+      'TARGET_LEADER_REQUIRED',
       'REVISION_CONFLICT',
       'CYCLE_CHANGED',
       'CATALOG_VERSION_CONFLICT',

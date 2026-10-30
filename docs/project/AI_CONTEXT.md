@@ -8,9 +8,11 @@
 
 ## 현재 작업과 실제 코드 상태
 
-모집 1차 구현·보고된 정상 흐름 기기 인수를 마감했고 사용자 지시로 `feature/raid-recruitment-scheduling`을 dev→main에 통합한다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
+현재 그룹·레이드 주차별 변경/해제·공대장 승계 작업은 네이티브 연결·자동 검증 후 사용자의 “앱 테스트 전부 통과” 확인으로 앱 기기 인수를 마쳤다. Backend 고정 계약b212ad0f, 마지막 확인 실행b8542ef7/DB0035를 소비하며 코드 기준은055e0608이다. 그룹 변경/승계/위임·C/N 독립/상속·다음주 개방·그룹명/소속 배지·제한 안내의 기존 미확인을 해소했다. 별도 상세 GET500은 Backend 조사1be55a7d에서 현재 미재현·원인 미확정이며 당시 앱 입력 기록도 확인하지 못해 자연 재발 근거 대기로 전환했다. 현재 추가 앱 코드/API 변경 근거는 없다. Penpot은 도구 제공 후 시각 검수가 남아 있다. 실제 서버500 해소·Penpot02 이동·dev/main 통합·다른 보류 기능 완료로 확대하지 않는다. 근거와 다음 행동은 NEXT_WORK를 따른다.
 
-사용자가 안내된 모집 정상 흐름과 후속 수정을 기기로 확인했다. **현재 안내 범위에서 추가 필수 기기 시험은 없다.** 세부 인수표·정확한 Backend/협업 근거는 [설계37 현재 구현·인수 상태](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027), 당시 구현/자동검증은 각 절과 DEV_LOG를 따른다.
+모집 1차 구현·보고된 정상 흐름 인수와 dev/main 통합은 bdfe0edf로 완료했다. 앱 구현 기준은 `cf75ea75`, 문서 정리는 `bd3b6e58` 및 후속 보류 정정이다. 일반 main→BackendApp/DI→생성·상세·검색/후보·참가 명령·일정/그래프·메모/문구·필터·영속 복구가 연결돼 있다. `beta-recruitment-wire-2`를 일반 앱이 사용하며 별도 legacy 운영 전환 대기가 아니다.
+
+사용자가 안내된 모집 정상 흐름과 후속 수정을 기기로 확인했다. **당시 모집 인수와 이후 주차별 그룹 변경의 앱 기기 인수는 모두 통과했다. 별도 서버 조사·디자인 검수는 NEXT_WORK에서 구분한다.** 세부 인수표·정확한 Backend/협업 근거는 [설계37 현재 구현·인수 상태](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027), 당시 구현/자동검증은 각 절과 DEV_LOG를 따른다.
 
 | 영역 | 현재 상태 |
 |---|---|
@@ -21,21 +23,23 @@
 | 원요청 복구 | v3 영속 복구·원ACK·저장/실패/수명 경계 자동검증 유지. 재현 없는 미확인 배너를 강제 기기 과제로 남기지 않음 |
 | 차후 보완·현재 착수 안 함 | 제안 정밀도의 실제 BetaSchedule.session_id 판정1건. 미수정 기록은 유지하되 현재 작업/즉시 다음 작업·현재 베타 인수 선행 조건이 아님. 별도 재착수 시 검토 |
 | 사용자 보류 | 다음주 개방 알럿 로그·제안 확인/수락 발견성, 베타 이후 개선 시 원인 조사/UX 대안 협의. 웹소켓은 별도 작업 |
-| 디자인 | 승인 Penpot03과 화면 대조/복원 이력 유지.02 실구현 최신화는 별도, 이번 문서 작업으로 보드 갱신 완료를 주장하지 않음 |
-| 계정/로그인 | 자체 Google/Backend 세션·원정대 등록/인증·캐시/복원·개별 갱신 연결 유지. BUG-025와 계정/출시 경계는 NEXT_WORK의 별도 후속 |
+| 디자인 | 현재03은 작업 중 화면,02는 구현 완료 화면. 메인 보드/섹션별 하위 보드를 수정하고 완료 후 같은 묶음을02로 이동. 운영 기준은 디자인 공통 지침, 과거 모집 시안/복원은 DEV_LOG·설계37 이력 |
+| 계정/로그인 | 자체 Google/Backend 세션·원정대 등록/인증·캐시/복원·개별 갱신 연결 유지. BUG-025와 계정/출시 경계는 DETAIL_IMPROVEMENTS의 별도 후속 |
 
-이번 사용자 지시는 dev/main Git 통합이며 release/tag·서비스 배포는 아니다. Backend [Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6438046779)도 사용자 승인으로 completed 종료했다. 보류한 네이티브 보완·웹소켓/디자인·그룹/통계·계정/출시 후속을 실행하거나 완료로 확대하지 않는다. 기존 코드/시험·기기 결과는 그대로 보존하며 후속 재착수 조건은 [NEXT_WORK](NEXT_WORK.md)에서 관리한다.
+그룹 1차 API 요청 이후 Flutter 기본 연결과 기존 그룹 기능의 사용자 인수를 마쳤다. release/tag·운영배포는 실행하지 않았다. Backend [Issue13](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6438046779)도 사용자 승인으로 completed 종료했다. 보류한 네이티브 보완·웹소켓/디자인·통계·계정/출시 후속을 실행하거나 완료로 확대하지 않는다. 그룹 연결의 현재 변경 구간과 미확인은 위 현재 작업을 따른다. 기존 코드/시험·기기 결과는 그대로 보존하며 후속 재착수 조건은 [NEXT_WORK](NEXT_WORK.md)에서 관리한다.
 
 ## 제품·디자인 지도
 
 - [모집·일정37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md): 두 주차와 최신 기본출발/조기조율·개인표·메모·번호 계약 및 구현 이력. C/N 생성은 한 명령으로 원자 확정하되 이후 참가·권한·탈퇴·완료는 실제 주차별 독립이다.
 - [비활성 기능](INACTIVE_FEATURES.md): IF-001 미완료 종료/같은 주차 재개는 비활성. IF-002 다일/다중후보, IF-003 미정 생성은 일반 생성에서 제외됐다. 일반 일정/개방/제안에서도 다일·미정 편집을 노출하지 않는다.
-- Penpot03은 승인된 최신 목표 흐름,02는 실제 앱 대조 후 갱신,04는 이전 시안 보관. 식별자/운영은 설계37 §37.65. 그림 존재를 앱 구현 완료로 해석하지 않는다.
+- Penpot 현재03/02 운영은 [디자인 공통 지침](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다. 기존 파일/보드 식별자와 이전 시안은 설계37 §37.65의 당시 이력이며 현재 페이지 확인을 대신하지 않는다. 그림 존재를 앱 구현 완료로 해석하지 않는다.
 - 계정 카드3열 균등/체크 중앙·우측i, 4인1~4/8인1-1~2-4의 실제 편성번호, 기능별 상세 버튼 위치를 유지한다. 표시/정렬에 이미 받은 유효 자료를 먼저 사용하고 확정 권한/동시성은 서버에서 검증한다.
 - [품질/UX](../architecture/DEVELOPMENT_QUALITY_AND_UX_STANDARD.md)·[디자인](../design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md): 사용자 이해/예측 가능성, 로컬 우선, 데이터 소유·갱신·비동기 수명, 근거 있는 검증. 즉시 전면 리팩토링 지시는 아님.
 
 ## 기타 기준과 이력
 
-[계정 연결30](../backend-migration/30-scoped-storage-write-contract.md), [원정대 정책09](../backend-migration/09-migration-decisions.md), [인증36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), [한도34](../backend-migration/34-member-limits-and-room-restrictions.md), [통계35](../backend-migration/35-weekly-member-and-group-statistics.md), [버그](BUG_REPORTS.md). 별도 남은 경계/담당은 NEXT_WORK에서 관리한다.
+다른 탭에서 이어갈 첫 공개 베타·포트폴리오 기술 진단/개선의 범위·시작 순서·미확인 후보·작업 그룹 기준은 [기술 진단 인계](../product/DETAIL_IMPROVEMENTS.md#technical-review-handoff)에 둔다. 공통 문서 운영 합의는 양측 반영·대조 완료이며, 개별 기술 개선은 아직 완료로 판정하지 않는다. 종합 기술 개선은 이번 그룹 기능 정리 후 별도 착수하며 현재 실행 안내는 NEXT_WORK를 따른다.
+
+[계정 연결30](../backend-migration/30-scoped-storage-write-contract.md), [원정대 정책09](../backend-migration/09-migration-decisions.md), [인증36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), [한도34](../backend-migration/34-member-limits-and-room-restrictions.md), [통계35](../backend-migration/35-weekly-member-and-group-statistics.md), [버그](BUG_REPORTS.md). 현재 그룹 작업의 경계/담당은 NEXT_WORK, 실행 구간 밖의 남은 수정안/보류·다음 행동은 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md)에서 관리한다.
 
 완료 경과·검증/커밋·실제 사용자 관찰은 [DEV_LOG](DEV_LOG.md). 정리 전 누적 원문은 [이력](history/instruction-state-before-normalization-2026-10-25.md), 감사 발견은 [보고서](INSTRUCTION_AUDIT_2026-10-25.md). 이력의 과거 대기/다음 행동은 현재 실행 지시가 아니다. [전체 문서지도](../README.md).

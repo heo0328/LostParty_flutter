@@ -1,0 +1,106 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+import {rulesFunction} from './roster_complexity_candidate.mjs';
+export const directory='coverage/rules-roster-advance';
+export function generateAdvanceProbe(){
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  let source=fs.readFileSync('coverage/rules-roster-prepare/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'0d13d7e07197ec588270bb9ab8df2852afdf882ced5b700302eba708d61e9e12');
+  const base=fs.readFileSync('coverage/rules-member-retirement/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(base).source),'18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61');
+  source=source.replace(/^function /gm,'    function ');
+  function replace(a,b){assert.equal(source.split(a).length,2,a);source=source.replace(a,b);}
+  const guards="['guardSchemaVersion','guardRecruitmentId','guardRoomRevision','guardCycleKey','guardCycleStartedAt','guardCycleEndsAt','guardSlotIndex','guardCheckedAt']";
+  replace("allow update: if request.resource.data.commandType == 'prepare'", "allow update: if request.resource.data.commandType == 'advanceCycle' ? advanceSource(id,resource.data,request.resource.data) : request.resource.data.commandType == 'prepare'");
+  replace('allow create: if validNewState(playerId,stateId,request.resource.data);',
+    `allow create: if request.resource.data.keys().hasAny(${guards}) ? sealIdle(request.resource.data) && certify(playerId,stateId,request.resource.data) : validNewState(playerId,stateId,request.resource.data);`);
+  replace("allow update: if getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'complete'",
+    `allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(${guards}) ? certifyUpdate(playerId,stateId,resource.data,request.resource.data) : request.resource.data.get('guardSchemaVersion',0) == 1 && getAfter(roomPath(request.resource.data.get('recruitmentId',''))).data.commandType == 'advanceCycle' ? advanceState(playerId,stateId,resource.data,request.resource.data) : getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'complete'`);
+  replace("allow create: if getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'prepare'",
+    "allow create: if getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'advanceCycle' ? advanceEvent(id,request.resource.data) : getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType == 'prepare'");
+  const update=rulesFunction(base,'sealAuditUpdate').text.replace('sealAuditUpdate','certifyUpdate').replaceAll('recruitmentPath(','roomPath(')
+    .replace('get(roomPath(data.guardRecruitmentId)).data.partySlots[data.guardSlotIndex].role','get(rosterPath(data.guardRecruitmentId)).data.entries[playerId].role')
+    .replace('sealAudit(playerId, stateId, data)','certify(playerId, stateId, data)');
+  const added=`
+${rulesFunction(base,'sealAvailableBefore').text}
+${update}
+function certify(pid,stateId,s) {
+  let r = get(roomPath(s.guardRecruitmentId)).data;
+  let m = get(rosterPath(s.guardRecruitmentId)).data;
+  let e = m.entries[pid]; let i = s.guardSlotIndex;
+  return bound() && actor() == r.leaderPlayerId && r.schemaVersion == 3 && r.status == 'active'
+    && r.visibility == 'public' && r.groupId == null && r.continueTogether == true
+    && r == getAfter(roomPath(s.guardRecruitmentId)).data && m == getAfter(rosterPath(s.guardRecruitmentId)).data
+    && m.revision == r.rosterRevision && s.guardRoomRevision == r.revision
+    && s.guardSchemaVersion == 1 && s.guardCheckedAt == request.time
+    && s.guardCycleKey is string && s.guardCycleKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && s.guardCycleKey > r.currentCycleKey
+    && s.guardCycleStartedAt is timestamp && s.guardCycleStartedAt >= r.cycleEndsAt
+    && s.guardCycleEndsAt == s.guardCycleStartedAt + duration.value(7,'d')
+    && request.time >= s.guardCycleStartedAt && request.time < s.guardCycleEndsAt
+    && i is int && i >= 0 && i < r.memberPlayerIds.size() && r.memberPlayerIds[i] == pid
+    && s.playerId == pid && s.characterId == e.characterId && s.ownershipRevision == e.ownershipRevision
+    && s.raidId == r.raidId && stateId == s.characterId + '_' + s.raidId && currentStateOwnership(s)
+    && sealAvailableBefore(/databases/$(database)/documents/players/$(pid)/activeRaidAssignments/$(stateId),s)
+    && sealAvailableBefore(weeklyRaidClaimPath(pid,s.guardCycleKey,s.characterId,s.raidId),s);
+}
+function advanceFresh(id,r) { return r.commandType == 'advanceCycle' && r.updatedAt == request.time
+  && r.revision == get(roomPath(id)).data.revision + 1; }
+function advanceTarget(r,es,i) {
+  return i >= r.memberPlayerIds.size() ? true : advancedRequired(r,es[r.memberPlayerIds[i]],r.memberPlayerIds[i]);
+}
+function advancedRequired(r,e,pid) {
+  let s = getAfter(changeStatePath(pid,e.characterId,r.raidId)).data;
+  return s.status == 'active' && s.cycleKey == r.currentCycleKey && s.updatedAt == request.time;
+}
+function advanceSource(id,b,r) {
+  let m = get(rosterPath(id)).data;
+  return advanceFresh(id,r) ? (bound() && actor() == b.leaderPlayerId && r.commandPlayerId == b.leaderPlayerId
+    && b.schemaVersion == 3 && b.visibility == 'public' && b.groupId == null && b.status == 'active' && b.continueTogether == true
+    && b.get('currentCycleStatus','active') in ['active','completed']
+    && r.diff(b).affectedKeys().hasOnly(['currentCycleKey','cycleStartedAt','cycleEndsAt','currentCycleStatus','revision','commandId','commandType','commandPlayerId','updatedAt'])
+    && r.currentCycleStatus == 'active' && r.currentCycleKey is string && r.currentCycleKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+    && r.currentCycleKey > b.currentCycleKey && r.cycleStartedAt >= b.cycleEndsAt
+    && r.cycleEndsAt == r.cycleStartedAt + duration.value(7,'d') && request.time >= r.cycleStartedAt && request.time < r.cycleEndsAt
+    && m.revision == b.rosterRevision && m.entries.keys().toSet() == b.memberPlayerIds.toSet()
+    && b.memberPlayerIds.size() > 0 && b.memberPlayerIds.size() <= 8 && eventRequired(r)
+    && ${Array.from({length:8},(_,i)=>`advanceTarget(r,m.entries,${i})`).join(' && ')}) : false;
+}
+function advanceState(pid,stateId,b,s) {
+  let r = getAfter(roomPath(s.recruitmentId)).data; let e = get(rosterPath(s.recruitmentId)).data.entries[pid];
+  let i = b.guardSlotIndex;
+  return advanceFresh(s.recruitmentId,r) ? (b.guardSchemaVersion == 1 && b.guardRecruitmentId == r.recruitmentId
+    && b.guardRoomRevision == r.revision - 1 && b.guardCycleKey == r.currentCycleKey
+    && b.guardCycleStartedAt == r.cycleStartedAt && b.guardCycleEndsAt == r.cycleEndsAt
+    && i is int && i >= 0 && i < r.memberPlayerIds.size() && r.memberPlayerIds[i] == pid
+    && s.diff(b).affectedKeys().hasOnly(['schemaVersion','difficultyId','recruitmentId','cycleKey','role','status','source','revision','updatedAt','completedAt'])
+    && s.playerId == pid && s.characterId == e.characterId && stateId == e.characterId + '_' + r.raidId
+    && s.ownershipRevision == e.ownershipRevision && currentStateOwnership(s)
+    && s.schemaVersion == 1 && s.raidId == r.raidId && s.difficultyId == r.difficultyId && s.role == e.role
+    && s.cycleKey == r.currentCycleKey && s.status == 'active' && s.source == 'party' && !('completedAt' in s)
+    && s.revision == b.get('revision',0) + 1 && s.updatedAt == request.time) : false;
+}
+function advanceEvent(id,e) {
+  let r = getAfter(roomPath(e.recruitmentId)).data; let es = get(rosterPath(e.recruitmentId)).data.entries; let w = e.placementProof;
+  return advanceFresh(e.recruitmentId,r) ? (id == 'advanceCycle_' + r.recruitmentId + '_' + string(r.revision) && r.commandId == id
+    && e == {'schemaVersion':1,'eventId':id,'recruitmentId':r.recruitmentId,'type':'advanceCycle','commandId':id,
+      'commandRevision':r.revision,'audiencePlayerIds':r.memberPlayerIds,'actorPlayerId':r.leaderPlayerId,'occurredAt':request.time,'placementProof':w}
+    && w.keys().hasOnly(['p0','p1','swap']) && w.swap == []
+    && w.p0.concat(w.p1).size() == r.memberPlayerIds.size() && w.p0.concat(w.p1).toSet() == r.memberPlayerIds.toSet()
+    && advanceParty(w.p0,es,0) && advanceParty(w.p1,es,1)) : false;
+}
+function advanceParty(ids,es,p) {
+  return ids is list && ids.size() <= 4 && validParty(tokens(ids,es)) && uniqueSlots(ids,es)
+    && (ids.size() < 1 || es[ids[0]].partyIndex == p) && (ids.size() < 2 || es[ids[1]].partyIndex == p)
+    && (ids.size() < 3 || es[ids[2]].partyIndex == p) && (ids.size() < 4 || es[ids[3]].partyIndex == p);
+}
+`;
+  source=source.slice(0,source.lastIndexOf('} }'))+added+'} }';
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(directory+'/readable.rules',source);fs.writeFileSync(directory+'/candidate.rules',compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'0d13d7e0',limitation:'Public certification/advance probe. Full legacy writers, guard consumption and app connection remain separate.'};
+  fs.writeFileSync(directory+'/manifest.json',JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generateAdvanceProbe());

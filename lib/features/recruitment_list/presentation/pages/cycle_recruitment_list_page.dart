@@ -24,6 +24,7 @@ class CycleRecruitmentListPage extends StatefulWidget {
     required this.onRoom,
     required this.onCreate,
     required this.onLogin,
+    this.groupChanges,
     super.key,
   });
   final CycleInteractionGateway gateway;
@@ -34,6 +35,7 @@ class CycleRecruitmentListPage extends StatefulWidget {
   final void Function(String, String) onRoom;
   final void Function(String?) onCreate;
   final VoidCallback onLogin;
+  final Listenable? groupChanges;
   @override
   State<CycleRecruitmentListPage> createState() =>
       _CycleRecruitmentListPageState();
@@ -47,6 +49,7 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     m = CycleSearchViewModel(
+      groupChanges: widget.groupChanges,
       gateway: widget.gateway,
       session: widget.session,
       changes: widget.changes,
@@ -274,6 +277,8 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
 
     final leader = room.wire['leader_display'] as Map?;
     final schedule = room.betaData?['beta_schedule'] as Map?;
+    final groupId = room.wire['group_id'] as String?;
+    final groupName = retainedGroupLabel(room.betaData);
     final state = schedule?['coordination_state'];
     final effective =
         betaEffectiveStart(room.betaData) ?? room.starts.firstOrNull;
@@ -314,27 +319,73 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (schedule != null)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+                if (schedule != null || groupId != null)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: schedule == null
+                            ? const SizedBox.shrink()
+                            : Align(
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: recruitmentSelectionFill,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    betaScheduleLabel(room.betaData!),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
                       ),
-                      decoration: BoxDecoration(
-                        color: recruitmentSelectionFill,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        betaScheduleLabel(room.betaData!),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.primary,
+                      if (groupId != null) ...[
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: recruitmentSelectionFill,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  '그룹',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                groupName ?? '그룹명 확인 불가',
+                                textAlign: TextAlign.end,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
+                      ],
+                    ],
                   ),
                 Text(
                   room.title,
@@ -370,7 +421,7 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${room.wire['group_id'] == null ? '' : '그룹 · '}${room.wire['admission_mode'] == 'direct_join' ? '바로 참가' : '공대장 승인'}${leader?['character_name'] == null ? '' : ' · ${leader!['character_name']}'}',
+                  '${room.wire['admission_mode'] == 'direct_join' ? '바로 참가' : '공대장 승인'}${leader?['character_name'] == null ? '' : ' · ${leader!['character_name']}'}',
                   style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary,

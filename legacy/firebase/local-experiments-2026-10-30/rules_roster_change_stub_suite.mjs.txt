@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {doc,writeBatch} from 'firebase/firestore';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+export async function run({env,seed,snapshot,operation,check,now,end}){
+  const guards={guardSchemaVersion:1,guardRecruitmentId:'other',guardRoomRevision:1,guardCycleKey:'2026-10-07',
+    guardCycleStartedAt:now,guardCycleEndsAt:end,guardSlotIndex:0,guardCheckedAt:now};
+  async function setup(mode='character',tamper='',mutate=s=>s){await seed(mode,tamper);const i=mode==='leader'?0:mode==='rebalance'?2:7;
+    await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore(),b=writeBatch(db);
+      b.set(doc(db,`players/p${i}/raidStates/new_raid`),mutate({playerId:`p${i}`,characterId:'new',raidId:'raid',ownershipRevision:1,...guards}));await b.commit();});}
+  async function reject(work){const before=await snapshot();await assertRulesDenied(work());assert.deepEqual(await snapshot(),before);}
+  for(const mode of ['character','leader','rebalance'])await check(`${mode} replaces stub and rejects replay`,async()=>{
+    await setup(mode);const before=await snapshot();await operation(mode);const after=await snapshot(),i=mode==='leader'?0:mode==='rebalance'?2:7;
+    assert.equal(after.find(x=>x.path===`players/p${i}/raidStates/c${i}_raid`).data,null);
+    const state=after.at(-1).data;assert.equal(state.status,'active');assert.equal(state.revision,1);
+    assert.ok(Object.keys(guards).every(k=>!(k in state)));
+    for(const item of before.filter(x=>x.path.includes('/raidStates/c')&&x.path!==`players/p${i}/raidStates/c${i}_raid`))
+      assert.deepEqual(after.find(x=>x.path===item.path),item);
+    await reject(()=>operation(mode));
+  });
+  for(const tamper of ['omit-source','omit-roster','omit-new','omit-delete','omit-event','state-only','roster-only',
+    'missing-old','old-owner','old-generation','new-owner','new-generation','new-inactive','claim','inactive-binding',
+    'unauthenticated','other-actor','state-cycle','generation','counter','other-entry','event-audience','unrelated-delete'])
+    await check(`stub change rejects ${tamper}`,async()=>{await setup('character',tamper);await reject(()=>operation('character',tamper));});
+  for(const key of Object.keys(guards)){
+    await check(`stub change rejects prior missing ${key}`,async()=>{await setup('character','',s=>{delete s[key];return s;});await reject(()=>operation('character'));});
+    await check(`stub change rejects partial retained ${key}`,async()=>{await setup();await reject(()=>operation('character','',{[key]:guards[key]}));});
+  }
+  for(const [key,value] of [['playerId','other'],['characterId','other'],['raidId','other'],['guardSchemaVersion',2],
+    ['status','active'],['status','completed'],['source','manual'],['extra',true]])await check(`stub change rejects prior ${key}=${value}`,async()=>{
+      await setup('character','',s=>({...s,[key]:value}));await reject(()=>operation('character'));});
+  await check('stub change uses live generation over old stub',async()=>{await setup('character','',s=>({...s,ownershipRevision:0}));await operation('character');});
+  await check('stub change ignores older Claim',async()=>{await setup('character','older-claim');await operation('character');});
+}

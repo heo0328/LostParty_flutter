@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { relocateNamedRootFunctions, bug024Destinations } from './rules_bug024_scope_candidate.mjs';
+const root = '/databases/{database}/documents';
+test('reject narrowing a helper needed by another collection or a root caller', () => {
+  const source = `service cloud.firestore { match ${root} {
+    function shared() { return true; }
+    function caller() { return shared(); }
+    match /a/{id} { allow read: if caller(); }
+    match /b/{id} { allow read: if shared(); }
+  } }`;
+  assert.throws(() => relocateNamedRootFunctions(source, { shared: root + '/a/{id}' }), /cannot resolve/);
+});
+test('reject new lexical wildcard capture; allow a parameter with the same name', () => {
+  const source = `service cloud.firestore { match ${root} {
+    function sample() { return id == 'x'; }
+    match /a/{id} { allow read: if sample(); }
+  } }`;
+  assert.throws(() => relocateNamedRootFunctions(source, { sample: root + '/a/{id}' }), /wildcard capture/);
+  const bound = source.replace('sample()', 'sample(id)');
+  assert.equal(relocateNamedRootFunctions(bound, { sample: root + '/a/{id}' }).placements.length, 1);
+});
+test('full BUG-024 candidate preserves all predicates and only moves 17 named declarations', () => {
+  execFileSync(process.execPath, ['tools/integrate_roster_rules.mjs', '--check', '--review']);
+  const input = fs.readFileSync('coverage/rules-executable/review/readable.rules', 'utf8');
+  const result = relocateNamedRootFunctions(input, bug024Destinations);
+  assert.equal(result.functionCount, 296);
+  assert.equal(result.allowCount, 118);
+  assert.equal(result.placements.length, 17);
+  for (const name of ['sealIdle', 'sparkPrepKnownCompleted', 'bug24PrepState', 'bug24PrepDispatch'])
+    assert.ok(!result.placements.some(p => p.name === name), 'shared helpers stay at root');
+});

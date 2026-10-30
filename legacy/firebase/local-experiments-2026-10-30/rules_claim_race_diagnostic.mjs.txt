@@ -1,0 +1,68 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {initializeTestEnvironment} from '@firebase/rules-unit-testing';
+import {doc,getDoc,writeBatch,serverTimestamp,Timestamp} from 'firebase/firestore';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+const directory='coverage/rules-claim-race';fs.mkdirSync(directory,{recursive:true});
+const cid='A'.repeat(20),cycle='2026-10-07',statePath=`players/p0/raidStates/${cid}_raid`,claimPath=`players/p0/weeklyRaidClaims/${cycle}_${cid}_raid`;
+const now=Timestamp.fromMillis(Date.now()-60000),end=Timestamp.fromMillis(now.toMillis()+7*86400000),old=Timestamp.fromMillis(now.toMillis()-7*86400000);
+const header="rules_version = '2'; service cloud.firestore { match /databases/{database}/documents {";
+const minimal=header+`match /probe/a { allow create: if request.auth != null && !exists(/databases/$(database)/documents/probe/b); }
+match /probe/b { allow create: if request.auth != null && !exists(/databases/$(database)/documents/probe/a); } } }`;
+const control=header+`match /probe/{id} { allow create: if request.auth != null && id in ['a','b']; } } }`;
+const guardMinimal=header+`match /probe/a { allow create: if request.auth != null && !exists(/databases/$(database)/documents/probe/b); }
+match /probe/b { allow create: if request.auth != null && !exists(/databases/$(database)/documents/probe/a) && !existsAfter(/databases/$(database)/documents/probe/a); } } }`;
+const prefix=header+`function identity() { let a = get(/databases/$(database)/documents/shared/identity).data; let b = get(/databases/$(database)/documents/shared/account).data; return a.active && b.active; }
+match /probe/a { allow create: if request.auth != null && identity() && !exists(/databases/$(database)/documents/probe/b); }
+match /probe/b { allow create: if request.auth != null && !exists(/databases/$(database)/documents/probe/a) && !existsAfter(/databases/$(database)/documents/probe/a) && identity(); } } }`;
+const c1=fs.readFileSync('coverage/rules-member-retirement/candidate.rules','utf8');
+assert.equal(createHash('sha256').update(c1).digest('hex'),'18cf2c09344823c6d749a82077213d0e8a88a2381c4e2d9a2a04e1f3f96a3d61');
+const results=[];
+async function variant(label,rules){
+  fs.writeFileSync(`${directory}/${label}.rules`,rules);
+  const env=await initializeTestEnvironment({projectId:'demo-party-group-cutover',firestore:{host:'127.0.0.1',port:8080,rules}});
+  const paths=label==='c1'?[statePath,claimPath]:['probe/a','probe/b'];
+  async function setup(){await env.clearFirestore();
+    if(label==='prefix'){await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore(),b=writeBatch(db);
+      b.set(doc(db,'shared/identity'),{active:true});b.set(doc(db,'shared/account'),{active:true});await b.commit();});return;}
+    if(label!=='c1')return;
+    await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore(),b=writeBatch(db);
+      b.set(doc(db,'authBindings/u0'),{status:'active',playerId:'p0'});
+      b.set(doc(db,`characters/${cid}`),{status:'active',ownerPlayerId:'p0',ownershipRevision:1,gameAccountId:'a0'});
+      b.set(doc(db,'gameAccounts/a0'),{status:'active',ownerPlayerId:'p0',ownershipRevision:1});
+      b.set(doc(db,'recruitments/room'),{schemaVersion:2,status:'active',continueTogether:true,leaderPlayerId:'p0',revision:1,
+        currentCycleKey:'2026-09-30',cycleStartedAt:old,cycleEndsAt:now,raidId:'raid',partySlots:[{playerId:'p0',characterId:cid,ownershipRevision:1}]});
+      await b.commit();});
+  }
+  function write(index){const db=env.authenticatedContext('u0').firestore(),b=writeBatch(db),t=serverTimestamp();
+    const data=label!=='c1'?{value:index}:index===0?{
+      playerId:'p0',characterId:cid,raidId:'raid',ownershipRevision:1,guardSchemaVersion:1,guardRecruitmentId:'room',guardRoomRevision:1,
+      guardCycleKey:cycle,guardCycleStartedAt:now,guardCycleEndsAt:end,guardSlotIndex:0,guardCheckedAt:t
+    }:{schemaVersion:1,playerId:'p0',characterId:cid,raidId:'raid',cycleKey:cycle,difficultyId:'hard',source:'manual',
+      cycleStartedAt:now,cycleEndsAt:end,completedAt:t,updatedAt:t,ownershipRevision:1};
+    b.set(doc(db,paths[index]),data);return b.commit();
+  }
+  async function state(){let data;await env.withSecurityRulesDisabled(async ctx=>{data=await Promise.all(paths.map(async p=>({path:p,data:(await getDoc(doc(ctx.firestore(),p))).data()??null})));});return data;}
+  const record={label,sha256:createHash('sha256').update(rules).digest('hex'),bytes:Buffer.byteLength(rules),serial:[],concurrent:null};
+  results.push(record);
+  try{
+    for(const first of [0,1]){await setup();await write(first);
+      if(label==='control')await write(1-first);else await assertRulesDenied(write(1-first));
+      record.serial.push({first,passed:true,state:await state()});}
+    await setup();const start=Date.now();
+    const outcomes=await Promise.allSettled([write(0),write(1)]);
+    record.concurrent={elapsedMs:Date.now()-start,outcomes:outcomes.map(o=>o.status==='fulfilled'?{status:'fulfilled'}:
+      {status:'rejected',code:o.reason.code,message:o.reason.message,serviceError:/service call error/i.test(o.reason.message)}),state:await state()};
+    const saved=record.concurrent.state.filter(s=>s.data!==null).length;
+    record.concurrent.saved=saved;
+    record.concurrent.oneWinnerVerified=saved===1&&outcomes.filter(o=>o.status==='fulfilled').length===1&&
+      outcomes.filter(o=>o.status==='rejected').every(o=>o.reason.code==='permission-denied'&&!/service call error|maximum|evaluation limit/i.test(o.reason.message));
+    assert.equal(saved,outcomes.filter(o=>o.status==='fulfilled').length,'persisted state must match write acknowledgements');
+    if(label==='control')assert.equal(saved,2);else assert.ok(saved<=1,'mutual exclusion must not allow both writes');
+    console.log(`${label}: ${JSON.stringify({bytes:record.bytes,elapsedMs:record.concurrent.elapsedMs,saved,oneWinnerVerified:record.concurrent.oneWinnerVerified,serviceErrors:record.concurrent.outcomes.filter(o=>o.serviceError).length})}`);
+  }catch(e){record.failure=e.message;throw e;}
+  finally{fs.writeFileSync(`${directory}/${process.env.RACE_DIAGNOSTIC_FOLLOWUP?'followup-results':'results'}.json`,JSON.stringify({emulator:'1.22.0',results},null,2));await env.cleanup();}
+}
+if(process.env.RACE_DIAGNOSTIC_FOLLOWUP){await variant('guard-minimal',guardMinimal);await variant('prefix',prefix);}
+else {await variant('c1',c1);await variant('minimal',minimal);await variant('control',control);}

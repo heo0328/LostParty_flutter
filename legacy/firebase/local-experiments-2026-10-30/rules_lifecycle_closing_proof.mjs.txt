@@ -1,0 +1,57 @@
+// Exact deployment source, demo Emulator only. No diagnostic permission bypass.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {doc,getDoc,updateDoc,setDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {recruitmentId,playerId,raidId,disbandApprovedRoomTxn} from './party_group_cutover_rules_test.mjs';
+process.env.BUG024_IMPORT_ONLY='1';
+process.env.BUG024_RULES_FILE='firestore.rules';
+const {env,db,admin,snapshot,seed,denied}=await import('./bug024_preparation_proof.mjs');
+const results=[];
+async function active() {
+  await seed();
+  await admin(async adb=>{
+    const ref=doc(adb,'recruitments',recruitmentId);
+    const room=(await getDoc(ref)).data();
+    const after={...room,currentCycleStatus:'active',continueTogether:false};
+    await setDoc(ref,after);
+    await setDoc(doc(adb,'groups',room.groupId,'raidListings',recruitmentId),after);
+    for(const slot of room.partySlots) await updateDoc(doc(adb,'players',slot.playerId,
+      'raidStates',`${slot.characterId}_${raidId}`),{status:'active'});
+  });
+}
+try {
+  await seed(); const completed=await snapshot();
+  await disbandApprovedRoomTxn(db);
+  assert.deepEqual((await snapshot()).states,completed.states);
+  results.push('completed disband empty targets preserves all completion states');
+  await active(); await disbandApprovedRoomTxn(db);
+  assert.ok((await snapshot()).states.every(states=>states.length===0));
+  results.push('active disband deletes all eight target states');
+  await active();
+  await denied(()=>disbandApprovedRoomTxn(env.authenticatedContext('stranger-auth').firestore()));
+  results.push('nonleader disband rejected atomically');
+  const before=await snapshot();
+  await runTransaction(db,async tx=>{
+    const ref=doc(db,'recruitments',recruitmentId);const room=(await tx.get(ref)).data();
+    const gr=doc(db,'groups',room.groupId);const group=(await tx.get(gr)).data();
+    const eventId=`incompleteEnd_${recruitmentId}_${room.revision}`;
+    tx.update(ref,{status:'incompleteEnded',currentCycleStatus:'incompleteEnded',
+      manualRecruitmentEnabled:false,hasAvailableSlot:false,commandTargets:[],
+      groupActiveRecruitmentCountAfter:group.activeRecruitmentCount-1,revision:room.revision+1,
+      lastCommandId:eventId,lastCommandType:'incompleteEnd',lastCommandActorPlayerId:playerId,
+      lastCommandAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    tx.update(gr,{activeRecruitmentCount:group.activeRecruitmentCount-1,lastRecruitmentId:recruitmentId,
+      revision:group.revision+1,updatedAt:serverTimestamp()});
+    tx.delete(doc(db,'groups',room.groupId,'raidListings',recruitmentId));
+    tx.set(doc(db,'partyEvents',eventId),{schemaVersion:2,eventId,recruitmentId,
+      type:'partyIncompleteEnded',commandId:eventId,commandRevision:room.revision+1,
+      audiencePlayerIds:room.memberPlayerIds,actorPlayerId:playerId,occurredAt:serverTimestamp(),
+      raidId:room.raidId,difficultyId:room.difficultyId,cycleKey:room.currentCycleKey,
+      completionTargets:room.partySlots.map(s=>({playerId:s.playerId,characterId:s.characterId}))});
+  });
+  assert.deepEqual((await snapshot()).states,before.states);
+  results.push('expired incompleteEnd empty targets preserves past states');
+} finally {await env.cleanup();}
+fs.mkdirSync('coverage/rules-lifecycle-targets',{recursive:true});
+fs.writeFileSync('coverage/rules-lifecycle-targets/closing-results.json',JSON.stringify(results,null,2));
+console.log(`Exact-source closing boundaries passed: ${results.length}`);

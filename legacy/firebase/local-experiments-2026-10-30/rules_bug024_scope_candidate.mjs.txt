@@ -1,0 +1,118 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+import { compactExecutableRules } from './rules_executable_compact.mjs';
+
+// Relocate an explicit set of root helpers. Existing scopes and every predicate
+// remain untouched; unlike scopeFunctions this accepts an already scoped input.
+export function relocateNamedRootFunctions(source, destinations) {
+  const mask = source.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
+    text => text.replace(/[^\n]/g, ' '));
+  function close(open) {
+    let depth = 1, index = open + 1;
+    while (depth && index < mask.length) {
+      if (mask[index] === '{') depth++;
+      if (mask[index] === '}') depth--;
+      index++;
+    }
+    assert.equal(depth, 0, 'balanced scope');
+    return index;
+  }
+  const matches = [...mask.matchAll(/\bmatch\s+([^\n]+?)\s+\{/g)].map(m => ({
+    path: m[1].trim(), start: m.index, open: m.index + m[0].length - 1,
+    end: close(m.index + m[0].length - 1),
+  }));
+  const scopes = pos => matches.filter(m => m.start < pos && pos < m.end);
+  const path = scope => scopes(scope.open + 1).map(m => m.path).join('');
+  const root = matches.find(m => m.path === '/databases/{database}/documents');
+  assert.ok(root);
+  const functions = [...mask.matchAll(/\bfunction\s+(\w+)\s*\(([^)]*)\)/g)].map(m => {
+    const open = mask.indexOf('{', m.index), end = close(open);
+    return { name: m[1], args: m[2].split(',').map(s => s.trim()), start: m.index, end,
+      text: source.slice(m.index, end), body: mask.slice(open + 1, end),
+      scope: scopes(m.index).at(-1) };
+  });
+  const names = new Map(functions.map(f => [f.name, f]));
+  assert.equal(names.size, functions.length, 'unique helper names');
+  const calls = text => [...text.matchAll(/\b(\w+)\s*\(/g)].map(m => m[1]).filter(n => names.has(n));
+  const ancestor = (a, b) => a.start <= b.start && a.end >= b.end;
+  const placements = [];
+  for (const [name, destination] of Object.entries(destinations)) {
+    const helper = names.get(name);
+    assert.ok(helper, `missing helper ${name}`);
+    assert.equal(helper.scope, root, `${name} must originate at root`);
+    const targets = matches.filter(m => path(m) === destination);
+    assert.equal(targets.length, 1, `unique destination for ${name}`);
+    const target = targets[0];
+    assert.notEqual(target, root, 'destination must narrow scope');
+    const bindings = new Set([...helper.args,
+      ...[...helper.body.matchAll(/\blet\s+(\w+)\s*=/g)].map(m => m[1])]);
+    const wildcards = scopes(target.open + 1).filter(m => m !== root)
+      .flatMap(m => [...m.path.matchAll(/\{(\w+)/g)].map(x => x[1]));
+    const tokens = helper.body.match(/[A-Za-z_][A-Za-z_0-9]*|[^\s]/g) || [];
+    for (const wildcard of wildcards) {
+      const free = tokens.some((t, i) => t === wildcard && tokens[i - 1] !== '.');
+      assert.ok(bindings.has(wildcard) || !free, `${name}: wildcard capture ${wildcard}`);
+    }
+    helper.scope = target;
+    placements.push({ name, destination });
+  }
+  // Includes non-moved callers: a root caller must never lose a callee.
+  for (const f of functions) for (const n of calls(f.body))
+    assert.ok(ancestor(names.get(n).scope, f.scope), `${f.name} cannot resolve ${n}`);
+  const allows = [...mask.matchAll(/\ballow\s+[^:]+:\s*if\s*([\s\S]*?);/g)];
+  for (const a of allows) for (const n of calls(a[1]))
+    assert.ok(ancestor(names.get(n).scope, scopes(a.index).at(-1)), `allow cannot resolve ${n}`);
+  const edits = [];
+  for (const target of matches) {
+    const moved = functions.filter(f => destinations[f.name] && f.scope === target);
+    if (!moved.length) continue;
+    edits.push({ start: target.open + 1, end: target.open + 1,
+      text: '\n' + moved.map(f => '    ' + f.text).join('\n\n') + '\n' });
+    for (const f of moved) edits.push({ start: f.start, end: f.end, text: '' });
+  }
+  let result = source;
+  for (const edit of edits.sort((a, b) => b.start - a.start))
+    result = result.slice(0, edit.start) + edit.text + result.slice(edit.end);
+  for (const f of functions) assert.equal(result.split(f.text).length, 2, `${f.name}: exact declaration`);
+  const allowText = s => [...s.matchAll(/\ballow\s+[^:]+:\s*if\s*[\s\S]*?;/g)].map(m => m[0]);
+  assert.deepEqual(allowText(result), allowText(source), 'allow contracts unchanged');
+  // Removing all declarations makes the surrounding match/allow source equal.
+  const shell = s => {
+    for (const f of functions) s = s.replace(f.text, '');
+    return s.replace(/\s+/g, '');
+  };
+  assert.equal(shell(result), shell(source), 'only declarations relocated');
+  return { source: result, placements, functionCount: functions.length, allowCount: allows.length };
+}
+
+const rootPath = '/databases/{database}/documents';
+const states = rootPath + '/players/{playerId}/raidStates/{stateId}';
+const room = rootPath + '/recruitments/{recruitmentId}';
+export const bug024Destinations = Object.freeze(Object.fromEntries([
+  ...['sealAvailableBefore', 'sealAudit', 'sealAuditUpdate', 'sealPrepared', 'sealAdvanceIdle',
+    'bug24Advancing', 'bug24KnownCompleted', 'bug24CommandIncludes'].map(n => [n, states]),
+  ['sealBlocksClaimAt', rootPath + '/players/{playerId}/weeklyRaidClaims/{claimId}'],
+  ...['bug24Unchanged', 'sparkPrepRecords'].map(n => [n, rootPath + '/partyEvents/{eventId}']),
+  ...['bug24PrepListing', 'bug24PrepEvent', 'bug24PrepPair', 'bug24PrepAggregate'].map(n => [n, room]),
+  ...['bug24AssignmentAvailable', 'bug24PrepMember'].map(n => [n, room + '/members/{playerId}']),
+]));
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  assert.ok(process.argv.includes('--generate'), 'explicit --generate required');
+  const input = fs.readFileSync('coverage/rules-executable/review/readable.rules', 'utf8');
+  assert.equal(compactExecutableRules(input).source, fs.readFileSync('firestore.rules', 'utf8'),
+    'review source must match tracked Rules');
+  const result = relocateNamedRootFunctions(input, bug024Destinations);
+  const compact = compactExecutableRules(result.source);
+  const directory = 'coverage/bug024/publish-scope';
+  fs.mkdirSync(directory, { recursive: true });
+  fs.writeFileSync(directory + '/readable.rules', result.source);
+  fs.writeFileSync(directory + '/candidate.rules', compact.source);
+  const manifest = { bytes: Buffer.byteLength(compact.source),
+    sha256: createHash('sha256').update(compact.source).digest('hex'),
+    placements: result.placements, functionCount: result.functionCount, allowCount: result.allowCount };
+  fs.writeFileSync(directory + '/manifest.json', JSON.stringify(manifest, null, 2));
+  console.log(JSON.stringify(manifest));
+}

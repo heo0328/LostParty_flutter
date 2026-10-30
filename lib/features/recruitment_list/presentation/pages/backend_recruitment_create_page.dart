@@ -520,7 +520,7 @@ class _BackendRecruitmentCreatePageState
                       ChoiceChip(
                         label: const Text('전체 공개'),
                         selected: !d.groupOnly,
-                        onSelected: (_) => m.update(d.copy(groupOnly: false)),
+                        onSelected: (_) => m.update(d.copy(clearGroup: true)),
                       ),
                       ChoiceChip(
                         label: const Text('그룹 전용'),
@@ -1075,7 +1075,13 @@ class _BackendRecruitmentCreatePageState
     if (mounted &&
         value != null &&
         binding == (m.session.userId, m.session.generation, m.editGeneration)) {
-      m.update(m.draft.copy(groupId: value, clearGroup: value.isEmpty));
+      m.update(
+        m.draft.copy(
+          groupId: value,
+          clearGroup: value.isEmpty,
+          groupOnly: value.isNotEmpty,
+        ),
+      );
     }
   }
 

@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict';
+import {doc,writeBatch,deleteField} from 'firebase/firestore';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+
+// Active-party completion uses update, unlike outside-party manual completion's set.
+export async function run({env,seed,snapshot,personal,check,now,end}){
+  const guards={guardSchemaVersion:1,guardRecruitmentId:'room',guardRoomRevision:7,guardCycleKey:'cycle',
+    guardCycleStartedAt:now,guardCycleEndsAt:end,guardSlotIndex:7,guardCheckedAt:now};
+  async function setup(size=8,i=7,tamper='',patch={}){
+    await seed(size,tamper,i);
+    await env.withSecurityRulesDisabled(async ctx=>{
+      const db=ctx.firestore(),b=writeBatch(db);
+      b.update(doc(db,`players/p${i}/raidStates/c${i}_raid`),{...guards,guardRoomRevision:size-1,guardSlotIndex:i,...patch});
+      await b.commit();
+    });
+  }
+  async function reject(before,i,tamper='',patch={}){
+    await assertRulesDenied(personal(before,i,tamper,patch));
+    assert.deepEqual(await snapshot(),before);
+  }
+  for(const [name,size,i] of [['member',8,7],['leader',8,0],['last',1,0]]){
+    await check(`guard ${name} completion preserves certificate and rejects replay`,async()=>{
+      await setup(size,i);const before=await snapshot();await personal(before,i);const after=await snapshot();
+      for(const key of Object.keys(guards))assert.deepEqual(after.states[i][key],before.states[i][key]);
+      assert.equal(after.states[i].status,'completed');assert.equal(after.states[i].source,'manual');
+      assert.equal(after.states[i].revision,before.states[i].revision+1);
+      assert.equal(after.room.memberCount,size-1);assert.equal(after.roster.entries[`p${i}`],undefined);
+      assert.equal(after.events.length,1);assert.equal(after.events[0].reason,'weeklyRaidCompleted');
+      for(let j=0;j<8;j++)if(j!==i)assert.deepEqual(after.states[j],before.states[j]);
+      if(name==='leader'){assert.equal(after.room.leaderPlayerId,'p1');assert.equal(after.roster.entries.p1.slotIndex,1);}
+      if(name==='last'){assert.equal(after.room.status,'disbanded');assert.deepEqual(after.roster.entries,{});}
+      await assertRulesDenied(personal(before,i));assert.deepEqual(await snapshot(),after);
+    });
+    await check(`guard ${name} rejects full certificate removal atomically`,async()=>{
+      await setup(size,i);await reject(await snapshot(),i,'',Object.fromEntries(Object.keys(guards).map(k=>[k,deleteField()])));
+    });
+  }
+  for(const key of Object.keys(guards)){
+    await check(`guard completion rejects deletion ${key}`,async()=>{
+      await setup();await reject(await snapshot(),7,'',{[key]:deleteField()});
+    });
+    await check(`guard completion rejects mutation ${key}`,async()=>{
+      await setup();await reject(await snapshot(),7,'',{[key]:null});
+    });
+  }
+  for(const tamper of ['omit-source','omit-roster','omit-state','omit-event','state-only',
+    'owner','generation','inactive-character','inactive-binding','other-actor',
+    'completed-state','foreign-state','state-cycle','state-role','other-state']){
+    await check(`guard completion rejects ${tamper}`,async()=>{
+      await setup(8,7,tamper);await reject(await snapshot(),7,tamper);
+    });
+  }
+  for(const patch of [{guardRecruitmentId:'old-room',guardCycleKey:'old-cycle'},
+    {guardCycleStartedAt:now,guardCycleEndsAt:now}]){
+    await check(`guard completion preserves stale certificate ${Object.keys(patch)[0]}`,async()=>{
+      await setup(8,7,'',patch);const before=await snapshot();await personal(before,7);const after=await snapshot();
+      for(const key of Object.keys(guards))assert.deepEqual(after.states[7][key],before.states[7][key]);
+      assert.equal(after.states[7].status,'completed');
+    });
+  }
+}

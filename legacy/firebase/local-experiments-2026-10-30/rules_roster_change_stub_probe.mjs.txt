@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+export const directory='coverage/rules-roster-change-stub';
+export function generateChangeStubProbe(){
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  let source=fs.readFileSync('coverage/rules-roster-claim/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'f2741903927409dc923dd57228373225ff83675c789d5d77a444528ca126aa50');
+  function replace(from,to){assert.equal(source.split(from).length,2);source=source.replace(from,to);}
+  replace(".data.commandType in ['create','join','approve']",".data.commandType in ['create','join','approve','change']");
+  // next.updatedAt == request.time forces an actual write, whose grant owns the before-state boundary.
+  replace('exists(oldPath) && !existsAfter(oldPath) && !exists(nextPath) && next.revision == 1',
+    'exists(oldPath) && !existsAfter(oldPath) && next.revision == 1');
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(`${directory}/readable.rules`,source);fs.writeFileSync(`${directory}/candidate.rules`,compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'f2741903',limitation:'Public change target stub replacement only; remaining guard transitions and app/production integration excluded.'};
+  fs.writeFileSync(`${directory}/manifest.json`,JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generateChangeStubProbe());

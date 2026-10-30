@@ -347,8 +347,10 @@ class ApplicationDisplayReader
   ApplicationDisplayReader(
     this.api, {
     this.contractMode = RecruitmentContractMode.legacy,
+    this.includeGroupState = false,
   });
   final RecruitmentContractMode contractMode;
+  final bool includeGroupState;
   final BackendRegistrationApi api;
   Future<T> _read<T>(Future<T> Function() action) async {
     try {
@@ -371,6 +373,7 @@ class ApplicationDisplayReader
     final result = await readRecruitment(
       api: api,
       mode: contractMode,
+      includeGroupState: includeGroupState,
       path: '/v2/raid-rooms/$room/detail',
       query: {
         'target_cycle_key': target,

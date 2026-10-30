@@ -6,6 +6,7 @@ import '../cycle_interaction_repository.dart';
 import '../cycle_member_actions.dart';
 import '../membership_actions.dart';
 import 'beta_contract.dart';
+import 'cycle_group_policy.dart';
 
 /// ACK expectations, not a restored permission/context or a screen snapshot.
 class ParticipationCommandEvidence {
@@ -13,7 +14,7 @@ class ParticipationCommandEvidence {
     : wire = betaFreeze(json) as Map<String, dynamic> {
     roleShape(
       wire,
-      'kind room target scope application_id application_state affected_targets global_ack submission_ack details request_hash checksum',
+      'kind room target scope application_id application_state affected_targets global_ack submission_ack details request_hash checksum${wire.containsKey('group_policy_effects') ? ' group_policy_effects' : ''}',
     );
     roleCheck(wire['checksum'] == _digest({...wire}..remove('checksum')));
     roleId(room);
@@ -83,6 +84,7 @@ class ParticipationCommandEvidence {
   }
   factory ParticipationCommandEvidence.create({
     required String kind,
+    List<Map<String, dynamic>> groupEffects = const [],
     required String room,
     required String target,
     required Map<String, dynamic> scope,
@@ -102,6 +104,7 @@ class ParticipationCommandEvidence {
   }) {
     final j = <String, dynamic>{
       'kind': kind,
+      if (groupEffects.isNotEmpty) 'group_policy_effects': groupEffects,
       'room': room,
       'target': target,
       'scope': scope,
@@ -220,7 +223,37 @@ class ParticipationCommandEvidence {
     required int status,
     required RecruitmentContractMode mode,
     required String rawBody,
+    bool original = false,
   }) {
+    final expectedEffects = cycleGroupEffects(wire['group_policy_effects']);
+    final actualEffects = cycleGroupEffects(raw);
+    if (expectedEffects.isNotEmpty) {
+      for (final actual in actualEffects) {
+        roleCheck(
+          expectedEffects.any(
+            (e) =>
+                e['room_id'] == actual['room_id'] &&
+                e['room_cycle_id'] == actual['room_cycle_id'] &&
+                e['generation'] == actual['generation'] &&
+                e['target_cycle_key'] == actual['target_cycle_key'],
+          ),
+        );
+      }
+    }
+    for (final expected in expectedEffects) {
+      final matches = actualEffects
+          .where(
+            (x) =>
+                x['room_cycle_id'] == expected['room_cycle_id'] &&
+                x['generation'] == expected['generation'] &&
+                x['target_cycle_key'] == expected['target_cycle_key'],
+          )
+          .toList();
+      roleCheck(matches.isNotEmpty);
+      for (final actual in matches) {
+        CycleGroupEffect(expected).validateAck(actual);
+      }
+    }
     final decoded = mode == RecruitmentContractMode.betaWire2
         ? BetaResponse.parse(
             method: method,
@@ -228,6 +261,7 @@ class ParticipationCommandEvidence {
             status: status,
             json: raw,
             parseLegacy: (v) => v,
+            original: original,
           )
         : null;
     final j = decoded?.value ?? raw;

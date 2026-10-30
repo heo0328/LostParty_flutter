@@ -576,9 +576,11 @@ class CycleInteractionRepository
   CycleInteractionRepository({
     required this.api,
     required this.recruitment,
+    this.includeGroupList = false,
     this.contractMode = RecruitmentContractMode.legacy,
   });
   final RecruitmentContractMode contractMode;
+  final bool includeGroupList;
   @override
   bool get applicationMessagesEnabled =>
       contractMode == RecruitmentContractMode.betaWire2;
@@ -616,8 +618,19 @@ class CycleInteractionRepository
       _decode(() async {
         roleId(room);
         raidCycleKey(view);
+        final path = '/v2/raid-rooms/$room/membership-action-context';
+        if (interactionApi is BetaInteractionApi) {
+          final decoded = await (interactionApi as BetaInteractionApi)
+              .requestDecoded(path, query: {'target_cycle_key': view});
+          return MembershipActionContext(
+            room,
+            view,
+            decoded.value,
+            groupPolicyData: decoded.metadata,
+          );
+        }
         final raw = await interactionApi.request(
-          '/v2/raid-rooms/$room/membership-action-context',
+          path,
           query: {'target_cycle_key': view},
         );
         return MembershipActionContext(room, view, raw!);
@@ -683,10 +696,20 @@ class CycleInteractionRepository
     roleId(room);
     raidCycleKey(target);
     roleId(round);
-    final raw = await interactionApi.request(
-      '/v2/raid-rooms/$room/personal-completion-departure-context',
-      query: {'target_cycle_key': target, 'round_id': round},
-    );
+    final path = '/v2/raid-rooms/$room/personal-completion-departure-context';
+    final query = {'target_cycle_key': target, 'round_id': round};
+    if (interactionApi is BetaInteractionApi) {
+      final decoded = await (interactionApi as BetaInteractionApi)
+          .requestDecoded(path, query: query);
+      return DeparturePreview(
+        room,
+        target,
+        round,
+        decoded.value,
+        groupPolicyData: decoded.metadata,
+      );
+    }
+    final raw = await interactionApi.request(path, query: query);
     return DeparturePreview(room, target, round, raw!);
   });
   @override
@@ -829,6 +852,7 @@ class CycleInteractionRepository
       api: api,
       mode: contractMode,
       path: '/v2/raid-rooms/search',
+      includeGroupList: includeGroupList,
       method: 'POST',
       body: filter.body(target, cursor: cursor),
       parse: (j) => CycleSearchPage(j, target),
@@ -836,7 +860,11 @@ class CycleInteractionRepository
     if (result.metadata != null) {
       final items = result.metadata!['items'] as List;
       for (var i = 0; i < result.value.rows.length; i++) {
-        result.value.rows[i].betaData = betaDisplayData(roleMap(items[i]));
+        result.value.rows[i].betaData = listDisplayData(
+          result.metadata,
+          roleMap(items[i]),
+          result.value.rows[i].id,
+        );
       }
     }
     return result.value;

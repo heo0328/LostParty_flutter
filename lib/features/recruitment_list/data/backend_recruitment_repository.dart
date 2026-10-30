@@ -25,12 +25,14 @@ class BackendRecruitmentRepository
         ApplicationDisplayGateway {
   BackendRecruitmentRepository({
     required this.api,
+    this.includeGroupState = false,
     required this.accounts,
     required this.raids,
     this.twoCycleEnabled = false,
     this.preferredRoles,
     this.contractMode = RecruitmentContractMode.legacy,
   });
+  final bool includeGroupState;
   final BackendRegistrationApi api;
   final RecruitmentContractMode contractMode;
   @override
@@ -49,8 +51,12 @@ class BackendRecruitmentRepository
     String room,
     String target, {
     bool includeCoordinationWait = false,
-  }) => ApplicationDisplayReader(api, contractMode: contractMode)
-      .applicationDisplayDetail(
+  }) =>
+      ApplicationDisplayReader(
+        api,
+        contractMode: contractMode,
+        includeGroupState: includeGroupState,
+      ).applicationDisplayDetail(
         room,
         target,
         includeCoordinationWait: includeCoordinationWait,
@@ -324,6 +330,7 @@ class BackendRecruitmentRepository
         final result = await readRecruitment(
           api: api,
           mode: contractMode,
+          includeGroupState: includeGroupState,
           path: '/v2/raid-rooms/$id/detail',
           query: {'target_cycle_key': target},
           parse: (j) => parseCycleDetail(j, id, target),

@@ -18,14 +18,17 @@ class CycleSearchViewModel extends ChangeNotifier {
     required this.scopeKey,
     this.mutations,
     this.searchEnabled = true,
+    this.groupChanges,
   }) {
     _binding = scopeKey();
     session.addListener(_access);
     changes.addListener(_access);
     mutations?.addListener(_mutation);
+    groupChanges?.addListener(_groupChanged);
   }
   final CycleInteractionGateway gateway;
   final bool searchEnabled;
+  final Listenable? groupChanges;
   final AccountReadSession session;
   final Listenable changes;
   final String Function() scopeKey;
@@ -200,6 +203,42 @@ class CycleSearchViewModel extends ChangeNotifier {
     _timer?.cancel();
     _emit();
     if (session.isAuthenticated && searchEnabled) unawaited(load());
+  }
+
+  Future<void> _groupChanged() async {
+    if (_disposed || !session.isAuthenticated) return;
+    _epoch++;
+    _groupEpoch++;
+    loading = groupLoading = false;
+    _pages.clear();
+    _cursors.clear();
+    _candidateCache.clear();
+    _clearCandidates();
+    rows = [];
+    cursor = null;
+    final groupEpoch = _groupEpoch, binding = _binding;
+    groupFailure = null;
+    await loadGroups();
+    if (_disposed ||
+        groupEpoch != _groupEpoch ||
+        binding != scopeKey() ||
+        !session.isAuthenticated ||
+        groupFailure != null) {
+      return;
+    }
+    final allowed = groups.map((g) => g.id).toSet();
+    final selected = filter.groupIds.intersection(allowed);
+    final group = selected.length == 1 ? selected.single : null;
+    if (group != null) {
+      if (filter.groupId != group) {
+        filter = filter.copy(clearGroup: true, groupIds: selected);
+      }
+      await selectGroup(group, preserve: true, pruneInvalid: true);
+    } else {
+      groupContext = null;
+      filter = filter.copy(clearGroup: true, groupIds: selected);
+      await refresh();
+    }
   }
 
   void _mutation() {
@@ -410,6 +449,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     String? group, {
     bool preserve = false,
     bool recovered = false,
+    bool pruneInvalid = false,
   }) async {
     final previous = filter,
         previousContext = groupContext ?? _candidateCache[group]?.$1;
@@ -454,6 +494,7 @@ class CycleSearchViewModel extends ChangeNotifier {
                   .firstOrNull
                   ?.key;
         if (ref == null) {
+          if (pruneInvalid) continue;
           throw const AccountReadException('FILTER_CONTEXT_STALE');
         }
         members[ref] = selected.value;
@@ -465,6 +506,29 @@ class CycleSearchViewModel extends ChangeNotifier {
       await loadCandidates();
       if (_disposed || e != _groupEpoch || binding != scopeKey()) return;
       if (candidateFailure != null) return;
+      if (pruneInvalid) {
+        while (candidateCursor != null && candidateFailure == null) {
+          await loadCandidates(more: true);
+          if (_disposed || e != _groupEpoch || binding != scopeKey()) return;
+        }
+        if (candidateFailure != null) return;
+        final kept = <String, Set<String>>{};
+        for (final entry in filter.members.entries) {
+          final member = candidateMembers
+              .where((m) => m.ref == entry.key)
+              .firstOrNull;
+          if (member == null) continue;
+          if (entry.value.isEmpty) {
+            kept[entry.key] = {};
+            continue;
+          }
+          final ids = member.characters.map((c) => c.id).toSet();
+          final selected = entry.value.intersection(ids);
+          if (selected.isNotEmpty) kept[entry.key] = selected;
+        }
+        filter = filter.copy(members: kept);
+        selectionPending = false;
+      }
       _filters[target!] = filter;
       await search(recovered: recovered);
     } on AccountReadException catch (error) {
@@ -625,6 +689,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     session.removeListener(_access);
     changes.removeListener(_access);
     mutations?.removeListener(_mutation);
+    groupChanges?.removeListener(_groupChanged);
     super.dispose();
   }
 }

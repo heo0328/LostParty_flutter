@@ -1,0 +1,121 @@
+// Extend the verified public create/join slice, never the production rules.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+import { compactExecutableRules } from './rules_executable_compact.mjs';
+import { rulesFunction } from './roster_complexity_candidate.mjs';
+export const directory='coverage/rules-roster-change';
+const hash=s=>createHash('sha256').update(s).digest('hex');
+export function generateChangeProbe() {
+  let source=fs.readFileSync('coverage/rules-roster-join/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'17ca538febf84481cb6aa4a374b8bf24b9d858ea8f92baef77dd9e203b3b742f');
+  // The existing extractor expects four-space function declarations.
+  source=source.replace(/^function /gm,'    function ');
+  function replace(old,next) {assert.equal(source.split(old).length,2,old);source=source.replace(old,next);}
+  function replaceFunction(name,change) {const f=rulesFunction(source,name);source=source.slice(0,f.start)+change(f.text)+source.slice(f.end);}
+  replaceFunction('fresh',s=>s.replace("['join','approve']","['join','approve','change']"));
+  replaceFunction('entryShape',s=>s
+    .replace('e.joinedAt == request.time',"(r.commandType == 'change' ? e.joinedAt is timestamp : e.joinedAt == request.time)")
+    .replace('e.joinedBy == actor()',"(r.commandType == 'change' ? text(e.joinedBy) : e.joinedBy == actor())")
+    .replace('e.characterChangedAt == null',"(r.commandType == 'change' ? e.characterChangedAt == request.time : e.characterChangedAt == null)"));
+  replace("? joinSource(id,resource.data,request.resource.data) : false;",`? joinSource(id,resource.data,request.resource.data)
+    : (request.resource.data.commandType == 'change' && request.resource.data.revision == resource.data.revision + 1
+      ? changeSource(id,resource.data,request.resource.data) : false);`);
+  replaceFunction('rosterPlacement',s=>s.replace("r.commandType == 'create' ? true : placement",`r.commandType == 'create' ? true : (r.commandType == 'change'
+    ? changePlacement(get(roomPath(id)).data.memberPlayerIds.removeAll([r.commandPlayerId]),
+      get(rosterPath(id)).data.entries,m.entries[r.commandPlayerId],r)
+    : placement`).replace('m.entries[r.commandPlayerId],r);','m.entries[r.commandPlayerId],r));'));
+  replace('allow create: if validNewState(playerId,stateId,request.resource.data);',`allow create: if validNewState(playerId,stateId,request.resource.data);
+  allow update: if getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'change'
+    ? changeSameState(playerId,stateId,resource.data,request.resource.data) : false;
+  allow delete: if getAfter(roomPath(resource.data.recruitmentId)).data.commandType == 'change'
+    ? changeOldState(playerId,stateId,resource.data) : false;`);
+  replaceFunction('validEvent',s=>s.replace("r.commandType == 'create' ? 'partyCreated' : 'memberJoined'",
+    "r.commandType == 'create' ? 'partyCreated' : (r.commandType == 'change' ? 'characterChanged' : 'memberJoined')"));
+  const peer=rulesFunction(source,'peerCheck').text.replace('function peerCheck','function changePeer')
+    .replace('    && entries[ids[i]].membershipOrder < e.membershipOrder\n','');
+  const placement=rulesFunction(source,'placement').text.replace('function placement','function changePlacement')
+    .replaceAll('peerCheck(','changePeer(');
+  const added=`
+${peer}
+${placement}
+function changeStatePath(pid,characterId,raidId) {
+  return /databases/$(database)/documents/players/$(pid)/raidStates/$(characterId + '_' + raidId);
+}
+function changeSource(id,b,r) {
+  let old = get(rosterPath(id)).data;
+  let next = getAfter(rosterPath(id)).data;
+  let previous = old.entries[r.commandPlayerId];
+  let e = next.entries[r.commandPlayerId];
+  return bound() && r.commandPlayerId == actor() && b.schemaVersion == 3 && b.status == 'active'
+    && request.time >= b.cycleStartedAt && request.time < b.cycleEndsAt && r.updatedAt == request.time
+    && r.diff(b).affectedKeys().hasOnly(['dealerCount','supportCount','revision','rosterRevision','commandId','commandType','commandPlayerId','updatedAt'])
+    && r.revision == b.revision + 1 && r.rosterRevision == b.rosterRevision + 1
+    && old.revision == b.rosterRevision && next.revision == r.rosterRevision
+    && next.entries.diff(old.entries).affectedKeys() == [r.commandPlayerId].toSet()
+    && e.diff(previous).affectedKeys().hasOnly(['characterId','ownershipRevision','role','partyIndex','slotIndex',
+      'characterNameSnapshot','classNameSnapshot','itemLevelSnapshot','combatPowerSnapshot','gemValidationSnapshot','buildIntegritySnapshot','characterChangedAt','updatedAt'])
+    && (e.characterId != previous.characterId || e.role != previous.role)
+    && (r.commandPlayerId != r.leaderPlayerId || (e.partyIndex == 0 && e.slotIndex == 0))
+    && r.dealerCount == b.dealerCount - (previous.role == 'dealer' ? 1 : 0) + (e.role == 'dealer' ? 1 : 0)
+    && r.supportCount == b.supportCount - (previous.role == 'support' ? 1 : 0) + (e.role == 'support' ? 1 : 0)
+    && changeStateRequired(r,previous,e) && eventRequired(r);
+}
+function changeStateRequired(r,previous,e) {
+  let oldPath = changeStatePath(r.commandPlayerId,previous.characterId,r.raidId);
+  let nextPath = changeStatePath(r.commandPlayerId,e.characterId,r.raidId);
+  let next = getAfter(nextPath).data;
+  return next.recruitmentId == r.recruitmentId && next.playerId == r.commandPlayerId && next.characterId == e.characterId
+    && next.raidId == r.raidId && next.difficultyId == r.difficultyId && next.cycleKey == r.currentCycleKey
+    && next.ownershipRevision == e.ownershipRevision && next.role == e.role
+    && next.status == 'active' && next.source == 'party' && next.updatedAt == request.time
+    && (previous.characterId == e.characterId
+      ? next.revision == get(oldPath).data.revision + 1
+      : (exists(oldPath) && !existsAfter(oldPath) && !exists(nextPath) && next.revision == 1));
+}
+function currentStateOwnership(s) {
+  let c = get(/databases/$(database)/documents/characters/$(s.characterId)).data;
+  let a = get(/databases/$(database)/documents/gameAccounts/$(c.gameAccountId)).data;
+  return deOwnershipMatches(s,c,a) && c.status == 'active' && a.status == 'active';
+}
+function oldStateMatches(pid,stateId,s,b,e) {
+  return s.schemaVersion == 1 && s.playerId == pid && s.characterId == e.characterId
+    && stateId == e.characterId + '_' + b.raidId && s.recruitmentId == b.recruitmentId
+    && s.raidId == b.raidId && s.difficultyId == b.difficultyId && s.cycleKey == b.currentCycleKey
+    && s.ownershipRevision == e.ownershipRevision && s.role == e.role && s.status == 'active' && s.source == 'party';
+}
+function changeOldState(pid,stateId,s) {
+  let b = get(roomPath(s.recruitmentId)).data;
+  let r = getAfter(roomPath(s.recruitmentId)).data;
+  let previous = get(rosterPath(s.recruitmentId)).data.entries[pid];
+  let next = getAfter(rosterPath(s.recruitmentId)).data.entries[pid];
+  return fresh(s.recruitmentId,r) && r.commandType == 'change' && r.commandPlayerId == pid
+    && previous.characterId != next.characterId && oldStateMatches(pid,stateId,s,b,previous) && currentStateOwnership(s);
+}
+function changeSameState(pid,stateId,before,s) {
+  let b = get(roomPath(before.recruitmentId)).data;
+  let r = getAfter(roomPath(before.recruitmentId)).data;
+  let previous = get(rosterPath(before.recruitmentId)).data.entries[pid];
+  let e = getAfter(rosterPath(before.recruitmentId)).data.entries[pid];
+  let c = get(/databases/$(database)/documents/characters/$(s.characterId)).data;
+  return fresh(before.recruitmentId,r) && r.commandType == 'change' && r.commandPlayerId == pid
+    && oldStateMatches(pid,stateId,before,b,previous) && previous.characterId == e.characterId
+    && before.role != s.role && s.role == e.role && s.ownershipRevision == e.ownershipRevision
+    && s.diff(before).affectedKeys().hasOnly(['role','revision','updatedAt'])
+    && s.revision == before.revision + 1 && s.updatedAt == request.time
+    && entryShape(e,r) && currentStateOwnership(s)
+    && e.characterNameSnapshot == c.characterName && e.classNameSnapshot == c.characterClassName
+    && !deBlockingClaim(pid,s.cycleKey,s.characterId,s.raidId,s.ownershipRevision);
+}
+`;
+  source=source.slice(0,source.lastIndexOf('} }'))+added+'} }';
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(`${directory}/readable.rules`,source);
+  fs.writeFileSync(`${directory}/candidate.rules`,compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,
+    baseline:'17ca538febf84481cb6aa4a374b8bf24b9d858ea8f92baef77dd9e203b3b742f',
+    limitation:'Public create/join plus in-place/free-slot character or same-state role change. Rebalance witness, group, legacy replacement and lifecycle integration remain open.'};
+  fs.writeFileSync(`${directory}/manifest.json`,JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generateChangeProbe());

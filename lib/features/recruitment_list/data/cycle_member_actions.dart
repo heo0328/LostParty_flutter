@@ -1,3 +1,4 @@
+import 'beta/cycle_group_policy.dart';
 import 'dart:convert';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/member_cycle_models.dart';
@@ -416,8 +417,17 @@ void validateRemovalEvidenceResult(
 /// Immutable confirmation evidence; never uses an independently fetched plan
 /// to supply the names or effects that the user approves.
 class DeparturePreview {
-  DeparturePreview(this.room, this.target, this.round, Map<String, dynamic> raw)
-    : wire = _freeze(jsonDecode(jsonEncode(raw))) as Map<String, dynamic> {
+  DeparturePreview(
+    this.room,
+    this.target,
+    this.round,
+    Map<String, dynamic> raw, {
+    Map<String, dynamic>? groupPolicyData,
+  }) : groupPolicyData = groupPolicyData == null
+           ? null
+           : _freeze(jsonDecode(jsonEncode(groupPolicyData)))
+                 as Map<String, dynamic>,
+       wire = _freeze(jsonDecode(jsonEncode(raw))) as Map<String, dynamic> {
     roleId(room);
     raidCycleKey(target);
     roleId(round);
@@ -633,7 +643,11 @@ class DeparturePreview {
   late final Map<String, dynamic>? confirmation;
   late final CyclePermission permission;
   String get path => '/v2/raid-rooms/$room/personal-completion-departures';
+  final Map<String, dynamic>? groupPolicyData;
+  List<Map<String, dynamic>> get groupEffects =>
+      cycleGroupEffects(groupPolicyData);
   String get signature => scheduleStable({
+    'group_policy_effects': groupEffects,
     'scope': {
       for (final e in scope.entries)
         if (e.key != 'server_now') e.key: e.value,

@@ -1,0 +1,31 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {compactExecutableRules} from './rules_executable_compact.mjs';
+export const directory='coverage/rules-roster-stub';
+export function generateStubProbe(){
+  const hash=s=>createHash('sha256').update(s).digest('hex');
+  let source=fs.readFileSync('coverage/rules-roster-advance/readable.rules','utf8');
+  assert.equal(hash(compactExecutableRules(source).source),'1a5d402c138ce51118af5741dc5b2c8a7104ea91942d2abdef4f15e020f67647');
+  const guards="['guardSchemaVersion','guardRecruitmentId','guardRoomRevision','guardCycleKey','guardCycleStartedAt','guardCycleEndsAt','guardSlotIndex','guardCheckedAt']";
+  const from='? certifyUpdate(playerId,stateId,resource.data,request.resource.data) :';
+  assert.equal(source.split(from).length,2);
+  source=source.replace(from,`? (request.resource.data.keys().hasAny(${guards})
+    ? certifyUpdate(playerId,stateId,resource.data,request.resource.data)
+    : sealIdle(resource.data) && request.resource.data.playerId == resource.data.playerId
+      && request.resource.data.characterId == resource.data.characterId && request.resource.data.raidId == resource.data.raidId
+      && getAfter(roomPath(request.resource.data.recruitmentId)).data.commandType in ['create','join','approve']
+      && validNewState(playerId,stateId,request.resource.data)) :`);
+  const late="&& entryShape(e,r) && deOwnershipMatches(s,c,a) && c.status == 'active' && a.status == 'active'\n    && e.characterNameSnapshot == c.characterName && e.classNameSnapshot == c.characterClassName\n    && !deBlockingClaim(playerId,s.cycleKey,s.characterId,s.raidId,s.ownershipRevision)";
+  assert.equal(source.split(late).length,2);
+  source=source.replace(late,"&& !deBlockingClaim(playerId,s.cycleKey,s.characterId,s.raidId,s.ownershipRevision)\n    && deOwnershipMatches(s,c,a) && c.status == 'active' && a.status == 'active'\n    && entryShape(e,r) && e.characterNameSnapshot == c.characterName && e.classNameSnapshot == c.characterClassName");
+  const compact=compactExecutableRules(source).source;
+  fs.mkdirSync(directory,{recursive:true});
+  fs.writeFileSync(`${directory}/readable.rules`,source);
+  fs.writeFileSync(`${directory}/candidate.rules`,compact);
+  const manifest={sha256:hash(compact),bytes:Buffer.byteLength(compact),diagnosticOnly:true,baseline:'1a5d402c',
+    limitation:'Public create/join/approve strict stub replacement only. Legacy writers and other guard consumption remain separate.'};
+  fs.writeFileSync(`${directory}/manifest.json`,JSON.stringify(manifest,null,2));return manifest;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(generateStubProbe());

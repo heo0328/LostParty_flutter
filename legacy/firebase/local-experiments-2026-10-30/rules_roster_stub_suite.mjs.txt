@@ -1,0 +1,56 @@
+import assert from 'node:assert/strict';
+import {doc,writeBatch} from 'firebase/firestore';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+export async function run({env,seed,snapshot,operation,check,now,end}){
+  const guards={guardSchemaVersion:1,guardRecruitmentId:'previous-room',guardRoomRevision:1,
+    guardCycleKey:'2026-10-07',guardCycleStartedAt:now,guardCycleEndsAt:end,guardSlotIndex:0,guardCheckedAt:now};
+  async function stub(kind,mutate=s=>s,tamper=''){
+    await seed(kind,tamper);const i=kind==='create'?0:7;
+    await env.withSecurityRulesDisabled(async ctx=>{
+      const b=writeBatch(ctx.firestore());b.set(doc(ctx.firestore(),`players/p${i}/raidStates/c${i}_raid`),
+        mutate({playerId:`p${i}`,characterId:`c${i}`,raidId:'raid',ownershipRevision:1,...guards}));await b.commit();
+    });
+  }
+  for(const kind of ['create','join','approve']){
+    await check(`${kind} consumes exact stub and rejects replay`,async()=>{
+      await stub(kind);await operation(kind);const after=await snapshot();
+      const s=after.find(x=>x.path===`players/p${kind==='create'?0:7}/raidStates/c${kind==='create'?0:7}_raid`).data;
+      assert.equal(s.status,'active');assert.equal(s.source,'party');
+      assert.ok(Object.keys(guards).every(k=>!(k in s)));
+      await assertRulesDenied(operation(kind));assert.deepEqual(await snapshot(),after);
+    });
+    for(const tamper of ['omit-source','omit-roster','omit-state','omit-event'])await check(`${kind} stub rejects ${tamper}`,async()=>{
+      await stub(kind);const before=await snapshot();await assertRulesDenied(operation(kind,tamper));assert.deepEqual(await snapshot(),before);
+    });
+  }
+  for(const key of Object.keys(guards)){
+    await check(`stub rejects missing prior ${key}`,async()=>{
+      await stub('join',s=>{delete s[key];return s;});const before=await snapshot();
+      await assertRulesDenied(operation('join'));assert.deepEqual(await snapshot(),before);
+    });
+    await check(`stub rejects retaining only ${key}`,async()=>{
+      await stub('join');const before=await snapshot();await assertRulesDenied(operation('join','',undefined,{[key]:guards[key]}));
+      assert.deepEqual(await snapshot(),before);
+    });
+  }
+  for(const [key,value] of [['playerId','other'],['characterId','other'],['raidId','other'],['guardSchemaVersion',2],
+    ['status','active'],['status','completed'],['source','manual'],['extra',true]])await check(`stub rejects prior ${key}=${value}`,async()=>{
+      await stub('join',s=>({...s,[key]:value}));const before=await snapshot();
+      await assertRulesDenied(operation('join'));assert.deepEqual(await snapshot(),before);
+    });
+  for(const tamper of ['claim','character-owner','account-owner','account-generation','inactive-binding','unauthenticated'])await check(`stub retains ${tamper} rejection`,async()=>{
+    await stub('join',s=>s,tamper);const before=await snapshot();await assertRulesDenied(operation('join',tamper));assert.deepEqual(await snapshot(),before);
+  });
+  await check('stub approval still requires application transition',async()=>{
+    await stub('approve');const before=await snapshot();await assertRulesDenied(operation('approve','omit-application'));assert.deepEqual(await snapshot(),before);
+  });
+  await check('stub delegated approval succeeds',async()=>{await stub('approve');await operation('approve','','p1');});
+  await check('old ownership stub uses current ownership of new state',async()=>{
+    await stub('join',s=>({...s,ownershipRevision:0}));await operation('join');
+  });
+  await check('stub replacement concurrent final slot has one winner',async()=>{
+    await stub('join');const outcomes=await Promise.allSettled([operation('join'),operation('join')]);
+    assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1);
+    await assertRulesDenied(Promise.reject(outcomes.find(x=>x.status==='rejected').reason));
+  });
+}

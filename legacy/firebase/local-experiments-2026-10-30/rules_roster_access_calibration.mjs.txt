@@ -1,0 +1,41 @@
+// Calibrate Emulator access-limit enforcement; never deploy these diagnostic rules.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
+import { doc, writeBatch } from 'firebase/firestore';
+const directory = 'coverage/rules-roster-budget';
+const results = [];
+for (const [name, operations, readsPerOperation] of [
+  ['single-10', 1, 10], ['single-11', 1, 11], ['batch-20', 2, 10], ['batch-21', 3, 7],
+]) {
+  // Separate, seeded, read-only paths: no repeated paths or getAfter/write cache.
+  const checks = Array.from({ length: readsPerOperation }, (_, i) =>
+    `get(/databases/$(database)/documents/calibrationData/$(id + '_${i}')).data.valid == true`).join(' && ');
+  const rules = `rules_version = '2'; service cloud.firestore { match /databases/{database}/documents {
+    match /calibrationWrites/{id} { allow create: if ${checks}; }
+  } }`;
+  fs.writeFileSync(`${directory}/calibration-${name}.rules`, rules);
+  const env = await initializeTestEnvironment({ projectId: 'demo-party-group-cutover', firestore: {
+    host: '127.0.0.1', port: 8080, rules } });
+  try {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(async ctx => {
+      const db = ctx.firestore(); const batch = writeBatch(db);
+      for (let n = 0; n < operations; n++) for (let i = 0; i < readsPerOperation; i++) {
+        batch.set(doc(db, `calibrationData/op${n}_${i}`), { valid: true });
+      }
+      await batch.commit();
+    });
+    const db = env.unauthenticatedContext().firestore(); const batch = writeBatch(db);
+    for (let n = 0; n < operations; n++) batch.set(doc(db, `calibrationWrites/op${n}`), { valid: true });
+    let error;
+    try { await batch.commit(); } catch (caught) { error = caught; }
+    if (name === 'single-10' || name === 'batch-20') assert.equal(error, undefined, 'within-limit control must pass');
+    results.push({ name, operations, readsPerOperation, distinctReads: operations * readsPerOperation,
+      allowed: !error, error: error ? { code: error.code, message: error.message } : null });
+    console.log(JSON.stringify(results.at(-1)));
+  } finally {
+    await env.cleanup();
+    fs.writeFileSync(`${directory}/access-calibration.json`, JSON.stringify(results, null, 2));
+  }
+}

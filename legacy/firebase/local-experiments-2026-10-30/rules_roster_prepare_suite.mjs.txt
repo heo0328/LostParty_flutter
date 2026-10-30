@@ -1,0 +1,134 @@
+import assert from 'node:assert/strict';
+import {doc,writeBatch,serverTimestamp,getDoc} from 'firebase/firestore';
+import {assertRulesDenied} from './assert_rules_denied.mjs';
+export async function run({env,seed,snapshot,join,check,now}){
+  async function admin(work){await env.withSecurityRulesDisabled(async ctx=>{const db=ctx.firestore(),b=writeBatch(db);work(b,db);await b.commit();});}
+  const statePath='players/p1/raidStates/next1_raid';
+  const stub={playerId:'p1',characterId:'next1',raidId:'raid',ownershipRevision:1,guardSchemaVersion:1,
+    guardRecruitmentId:'room',guardRoomRevision:9,guardCycleKey:'2026-10-14',guardCycleStartedAt:now,guardCycleEndsAt:now,guardSlotIndex:1,guardCheckedAt:now};
+  async function baseline(kind='none'){
+    await seed(8);await admin((b,db)=>{
+      b.update(doc(db,'recruitments/room'),{continueTogether:true,currentCycleStatus:'completed',currentCycleKey:'2026-10-07'});
+      for(let i=0;i<8;i++)b.update(doc(db,`players/p${i}/raidStates/c${i}_raid`),{status:'completed',completedAt:now,cycleKey:'2026-10-07'});
+      b.set(doc(db,'partyEvents/complete_room_8'),{schemaVersion:2,type:'complete',completionTargets:Array.from({length:8},(_,i)=>({playerId:`p${i}`,characterId:`c${i}`}))});
+      b.set(doc(db,'characters/next2'),{ownerPlayerId:'p1',status:'active',ownershipRevision:1,gameAccountId:'a1',characterName:'next2-name',characterClassName:'next2-class'});
+      if(kind==='stub'||kind==='bad-stub')b.set(doc(db,statePath),{...stub,...(kind==='bad-stub'?{revision:1}:{})});
+      else if(kind!=='none')b.set(doc(db,statePath),{schemaVersion:1,playerId:kind==='wrong-player'?'p7':'p1',characterId:'next1',raidId:'raid',
+        ownershipRevision:kind==='wrong-generation'?2:1,recruitmentId:'other',difficultyId:'normal',role:kind==='bad-role'?'unknown':'support',
+        status:kind==='active'?'active':'completed',source:kind==='manual'?'manual':'party',revision:1,
+        cycleKey:kind==='bad-cycle'?'unknown':kind==='current'?'2026-10-07':'2026-09-30',createdAt:now,updatedAt:now,completedAt:now});
+    });
+  }
+  function prepare(before,tamper='',character='next1',pid='p1'){
+    const db=tamper==='unauthenticated'?env.unauthenticatedContext().firestore():env.authenticatedContext(tamper==='actor'?'u7':`u${pid.slice(1)}`).firestore();
+    const b=writeBatch(db),t=serverTimestamp(),r=before.room,old=before.roster,previous=old.entries[pid],revision=r.revision+1,id=`characterChanged_room_${revision}`;
+    const e={...previous,characterId:character,characterNameSnapshot:character==='next1'?'next-name':'next2-name',
+      classNameSnapshot:character==='next1'?'next-class':'next2-class',characterChangedAt:t,updatedAt:t};
+    if(tamper==='same-character'){e.characterId=previous.characterId;e.characterNameSnapshot=previous.characterNameSnapshot;e.classNameSnapshot=previous.classNameSnapshot;e.role='support';}
+    if(tamper==='entry-owner')e.ownershipRevision=99;
+    if(tamper==='entry-name')e.characterNameSnapshot='forged';
+    if(tamper==='entry-class')e.classNameSnapshot='forged';
+    if(tamper==='entry-minimum')e.itemLevelSnapshot=1;
+    if(tamper==='entry-permission')e.canApproveApplications=true;
+    if(tamper==='entry-order')e.membershipOrder=99;
+    if(tamper==='entry-joined')e.joinedAt=t;
+    if(tamper==='entry-seat')e.slotIndex=0;
+    const entries={...old.entries,[pid]:e};
+    if(tamper==='other-entry')entries.p2={...entries.p2,characterNameSnapshot:'forged'};
+    const proof={p0:r.memberPlayerIds.filter(p=>old.entries[p].partyIndex===0),p1:r.memberPlayerIds.filter(p=>old.entries[p].partyIndex===1),swap:[]};
+    if(tamper==='proof')proof.p0=['p0','p1','p2','p7'];
+    const patch={revision,rosterRevision:old.revision+1,commandId:id,commandType:tamper==='ordinary'?'change':'prepare',commandPlayerId:pid,updatedAt:t,placementProof:proof};
+    if(tamper==='counter')patch.dealerCount=99;
+    if(tamper==='cycle')patch.currentCycleKey='2026-10-14';
+    if(tamper==='cycle-status')patch.currentCycleStatus='active';
+    if(tamper==='revision')patch.revision++;
+    if(tamper==='roster-revision')patch.rosterRevision++;
+    if(tamper==='leader')patch.leaderPlayerId='p1';
+    if(tamper==='extra')patch.trusted=true;
+    if(tamper!=='omit-source')b.update(doc(db,'recruitments/room'),patch);
+    if(tamper!=='omit-roster')b.set(doc(db,'recruitments/room/roster/current'),{...old,revision:old.revision+1,entries});
+    const event={schemaVersion:1,eventId:id,recruitmentId:'room',type:'characterChanged',commandId:id,commandRevision:revision,
+      audiencePlayerIds:r.memberPlayerIds,actorPlayerId:pid,occurredAt:t,previousCharacterId:previous.characterId,
+      nextCharacterId:e.characterId,nextOwnershipRevision:e.ownershipRevision,cycleKey:r.currentCycleKey};
+    if(tamper==='event-old')event.previousCharacterId='forged';
+    if(tamper==='event-next')event.nextCharacterId='forged';
+    if(tamper==='event-audience')event.audiencePlayerIds=['p1'];
+    if(tamper==='event-cycle')event.cycleKey='future';
+    if(tamper==='event-extra')event.extra=true;
+    if(tamper!=='omit-event')b.set(doc(db,`partyEvents/${id}`),event);
+    if(tamper==='delete-old')b.delete(doc(db,'players/p1/raidStates/c1_raid'));
+    if(tamper==='update-old')b.update(doc(db,'players/p1/raidStates/c1_raid'),{status:'active'});
+    if(tamper==='write-next')b.set(doc(db,statePath),{...before.states[1],characterId:'next1',status:'active',revision:1,createdAt:t,updatedAt:t});
+    if(tamper==='delete-next')b.delete(doc(db,statePath));
+    if(tamper==='old-event')b.update(doc(db,'partyEvents/complete_room_8'),{completionTargets:[]});
+    if(tamper==='claim')b.set(doc(db,'players/p1/weeklyRaidClaims/2026-10-07_next1_raid'),{playerId:'p1'});
+    if(tamper==='assignment')b.set(doc(db,'players/p1/activeRaidAssignments/next1_raid'),{playerId:'p1'});
+    return b.commit();
+  }
+  for(const kind of ['none','current','historical','manual','stub'])await check(`prepare preserves ${kind} records and replay`,async()=>{
+    await baseline(kind);const before=await snapshot();await prepare(before);const after=await snapshot();
+    assert.equal(after.roster.entries.p1.characterId,'next1');assert.equal(after.room.currentCycleStatus,'completed');
+    assert.deepEqual(after.states,before.states);assert.deepEqual(after.nextState,before.nextState);
+    assert.deepEqual(after.events.find(e=>e.id==='complete_room_8'),before.events[0]);
+    await assertRulesDenied(prepare(before));assert.deepEqual(await snapshot(),after);
+    await prepare(after,'','next2');const twice=await snapshot();assert.equal(twice.roster.entries.p1.characterId,'next2');
+    assert.deepEqual(twice.states,before.states);assert.deepEqual(twice.nextState,before.nextState);
+  });
+  for(const kind of ['active','bad-stub','wrong-player','wrong-generation','bad-role','bad-cycle'])await check(`prepare rejects ${kind} target`,async()=>{
+    await baseline(kind);const before=await snapshot();await assertRulesDenied(prepare(before));assert.deepEqual(await snapshot(),before);
+  });
+  for(const tamper of ['actor','unauthenticated','same-character','entry-owner','entry-name','entry-class','entry-minimum','entry-permission','entry-order','entry-joined','entry-seat','other-entry',
+    'proof','counter','cycle','cycle-status','revision','roster-revision','leader','extra','ordinary','omit-source','omit-roster','omit-event',
+    'event-old','event-next','event-audience','event-cycle','event-extra','delete-old','update-old','write-next','delete-next','old-event','claim','assignment'])await check(`prepare rejects ${tamper}`,async()=>{
+    await baseline('current');const before=await snapshot();await assertRulesDenied(prepare(before,tamper));assert.deepEqual(await snapshot(),before);
+  });
+  for(const tamper of ['not-recurring','active-cycle','closed','old-owner','new-owner','account-generation','binding','legacy-assignment'])await check(`prepare rejects baseline ${tamper}`,async()=>{
+    await baseline();await admin((b,db)=>{
+      if(tamper==='not-recurring')b.update(doc(db,'recruitments/room'),{continueTogether:false});
+      if(tamper==='active-cycle')b.update(doc(db,'recruitments/room'),{currentCycleStatus:'active'});
+      if(tamper==='closed')b.update(doc(db,'recruitments/room'),{status:'completed'});
+      if(tamper==='old-owner'||tamper==='new-owner')b.update(doc(db,`characters/${tamper==='old-owner'?'c1':'next1'}`),{ownerPlayerId:'other'});
+      if(tamper==='account-generation')b.update(doc(db,'gameAccounts/a1'),{ownershipRevision:2});
+      if(tamper==='binding')b.update(doc(db,'authBindings/u1'),{status:'inactive'});
+      if(tamper==='legacy-assignment')b.set(doc(db,'players/p1/activeRaidAssignments/next1_raid'),{playerId:'p1',characterId:'next1',raidId:'raid',ownershipRevision:1});
+    });const before=await snapshot();await assertRulesDenied(prepare(before));assert.deepEqual(await snapshot(),before);
+  });
+  await check('prepare after expired cycle with absent previous state and existing Claim',async()=>{
+    await baseline();await admin((b,db)=>{
+      b.update(doc(db,'recruitments/room'),{cycleEndsAt:now});b.delete(doc(db,'players/p1/raidStates/c1_raid'));
+      b.set(doc(db,'players/p1/weeklyRaidClaims/2026-10-07_next1_raid'),{playerId:'p1',characterId:'next1',raidId:'raid',ownershipRevision:1});
+    });const before=await snapshot();await prepare(before);const after=await snapshot();assert.deepEqual(after.states,before.states);
+    await env.withSecurityRulesDisabled(async ctx=>assert.deepEqual((await getDoc(doc(ctx.firestore(),'players/p1/weeklyRaidClaims/2026-10-07_next1_raid'))).data(),
+      {playerId:'p1',characterId:'next1',raidId:'raid',ownershipRevision:1}));
+  });
+  await check('leader preparation keeps leader seat and permissions',async()=>{
+    await baseline();await admin((b,db)=>b.update(doc(db,'characters/next1'),{ownerPlayerId:'p0',gameAccountId:'a0'}));
+    const before=await snapshot();await prepare(before,'','next1','p0');const after=await snapshot();
+    assert.equal(after.room.leaderPlayerId,'p0');assert.equal(after.roster.entries.p0.slotIndex,0);
+    assert.equal(after.roster.entries.p0.canApproveApplications,true);assert.deepEqual(after.states,before.states);
+  });
+  await check('older ownership legacy assignment does not block preparation',async()=>{
+    await baseline();await admin((b,db)=>b.set(doc(db,'players/p1/activeRaidAssignments/next1_raid'),
+      {playerId:'p1',characterId:'next1',raidId:'raid',ownershipRevision:0}));
+    await prepare(await snapshot());
+  });
+  await check('two preparations from one revision commit once',async()=>{
+    await baseline();const before=await snapshot();const attempts=await Promise.allSettled([prepare(before),prepare(before)]);
+    assert.equal(attempts.filter(x=>x.status==='fulfilled').length,1);
+    await assertRulesDenied(Promise.reject(attempts.find(x=>x.status==='rejected').reason));
+    const after=await snapshot();assert.equal(after.room.revision,before.room.revision+1);assert.deepEqual(after.states,before.states);
+  });
+  await check('real create join complete prepare preserves completion audience',async()=>{
+    await seed(0);for(let i=0;i<8;i++)await join(i);
+    await admin((b,db)=>b.update(doc(db,'recruitments/room'),{continueTogether:true}));
+    const before=await snapshot(),db=env.authenticatedContext('u0').firestore(),b=writeBatch(db),t=serverTimestamp(),revision=before.room.revision+1,id=`complete_room_${revision}`;
+    b.update(doc(db,'recruitments/room'),{currentCycleStatus:'completed',revision,commandId:id,commandType:'complete',commandPlayerId:'p0',updatedAt:t});
+    for(let i=0;i<8;i++)b.update(doc(db,`players/p${i}/raidStates/c${i}_raid`),{status:'completed',role:before.roster.entries[`p${i}`].role,completedAt:t,updatedAt:t,revision:2});
+    b.set(doc(db,`partyEvents/${id}`),{schemaVersion:2,eventId:id,recruitmentId:'room',type:'complete',commandId:id,commandRevision:revision,
+      audiencePlayerIds:before.room.memberPlayerIds,actorPlayerId:'p0',raidId:'raid',difficultyId:'hard',cycleKey:'cycle',
+      completionTargets:before.room.memberPlayerIds.map(playerId=>({playerId,characterId:before.roster.entries[playerId].characterId})),occurredAt:t});
+    await b.commit();const completed=await snapshot();await prepare(completed);const after=await snapshot();
+    assert.deepEqual(after.states,completed.states);assert.deepEqual(after.events.find(e=>e.id===id),completed.events.find(e=>e.id===id));
+    assert.equal(after.room.revision,10);assert.equal(after.roster.revision,9);
+  });
+}

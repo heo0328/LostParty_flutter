@@ -353,6 +353,11 @@ class _BackendRecruitmentDetailPageState
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
+        if (retainedGroupLabel(value.betaData) case final label?)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(label),
+          ),
         if (!m.readOnly && value.betaData?['recruitment_identity'] != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -873,7 +878,11 @@ class _BackendRecruitmentDetailPageState
             ),
           ),
           if (groupLinked)
-            RecruitmentBadge(member['group_member'] == true ? '그룹원' : '비그룹'),
+            RecruitmentBadge(switch (member['group_member']) {
+              true => '그룹원',
+              false => '비그룹원',
+              _ => '소속 확인 불가',
+            }),
           if (_canManage &&
               m.target != null &&
               _canLead &&

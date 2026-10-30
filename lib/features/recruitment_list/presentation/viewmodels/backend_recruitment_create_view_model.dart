@@ -33,10 +33,12 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     DateTime Function()? now,
     this.scopeKey,
     this.commandTransport,
+    this.groupChanges,
     this.onActiveRoomsChanged,
   }) : now = now ?? DateTime.now {
     session.addListener(_access);
     accessChanges.addListener(_access);
+    groupChanges?.addListener(_groupsChanged);
     _binding = (session.userId, session.generation);
     _scopeBinding = scopeKey?.call();
     _eligible = session.isAuthenticated && hasVerifiedAccount();
@@ -48,6 +50,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
   final void Function(String commandKey)? onActiveRoomsChanged;
   final AccountReadSession session;
   final Listenable accessChanges;
+  final Listenable? groupChanges;
   final bool Function() hasVerifiedAccount;
   final DateTime Function() now;
   final String Function()? scopeKey;
@@ -562,6 +565,25 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _emit();
   }
 
+  Future<void> _groupsChanged() async {
+    if (_disposed || !session.isAuthenticated) return;
+    // Preserve an uncertain creation request and unrelated draft fields.
+    if (hasPending || busy) {
+      groups = [];
+      return;
+    }
+    selection = null;
+    _contextGeneration++;
+    contextLoading = false;
+    final epoch = _epoch;
+    await loadGroups();
+    if (!_current(epoch) || groupFailure != null) return;
+    if (draft.groupId != null && !groups.any((g) => g.id == draft.groupId)) {
+      update(draft.copy(clearGroup: true));
+    }
+    await refreshContext();
+  }
+
   Future<void> loadGroups() async {
     if (!editable || groupsLoading) return;
     final epoch = _epoch;
@@ -1008,6 +1030,7 @@ class BackendRecruitmentCreateViewModel extends ChangeNotifier {
     _cycleTimer?.cancel();
     session.removeListener(_access);
     accessChanges.removeListener(_access);
+    groupChanges?.removeListener(_groupsChanged);
     super.dispose();
   }
 }
@@ -1071,6 +1094,7 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'TARGET_CONTEXT_STALE' => '이 주차의 참가 정보가 변경되었습니다. 참가 조건을 다시 확인해 주세요.',
   'ROOM_LAST_MEMBER_REQUIRED' => '다른 참가자가 남아 있어 모집 전체를 종료할 수 없습니다.',
   'LEADERSHIP_RESOLUTION_REQUIRED' => '영향받는 주차의 공대장 승계를 먼저 확인해 주세요.',
+  'GROUP_FEATURE_NOT_READY' => '서버의 그룹 기능을 준비 중입니다. 잠시 후 다시 확인해 주세요.',
   'CLIENT_UPGRADE_REQUIRED' => '앱과 서버의 기능 버전이 맞지 않습니다. 앱 버전을 확인해 주세요.',
   'TARGET_CYCLE_OUT_OF_RANGE' => '대상 주차가 바뀌었습니다. 주차를 다시 선택해 주세요.',
   'TARGET_NOT_OPEN' => '이 주차에는 열린 모집이 없습니다.',

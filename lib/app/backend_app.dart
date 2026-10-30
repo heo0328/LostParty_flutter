@@ -1,7 +1,12 @@
+import '../features/group/data/backend/group_repository.dart';
+import '../features/group/data/backend/group_models.dart';
+import '../features/group/presentation/pages/backend_group_page.dart';
+import '../features/group/presentation/viewmodels/backend_group_view_model.dart';
 import '../features/recruitment_list/presentation/widgets/cycle_member_action_widgets.dart';
 import '../features/recruitment_list/data/raid_room_usage_repository.dart';
 import '../features/recruitment_list/presentation/viewmodels/raid_room_usage_controller.dart';
 import 'dart:async';
+import 'dart:convert';
 import '../features/recruitment_list/data/beta/beta_contract.dart';
 import '../features/recruitment_list/data/beta/recruitment_command_store.dart';
 import '../features/recruitment_list/data/beta/recruitment_command_transport.dart';
@@ -105,6 +110,7 @@ class BackendApp extends StatefulWidget {
 }
 
 class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
+  final _groupChanges = GroupChanges();
   MemberLostArkKey? _memberKey;
   ApiCooldown? _cooldown;
   AccountDatabase? _database;
@@ -422,6 +428,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     final cycleReads = CycleReadRepository(
       accountApi,
+      includeGroupList: true,
       membershipProfile: true,
       contractMode: widget.recruitmentContractMode,
     );
@@ -435,6 +442,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     final membershipReads = MembershipReadRepository(
       accountApi,
+      includeGroupState: true,
       contractMode: widget.recruitmentContractMode,
     );
     String cycleScopeKey() =>
@@ -445,7 +453,58 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       scopeKey: cycleScopeKey,
       changes: _memberAccount?.model ?? auth,
     );
+    final groupRepository = GroupRepository(_dio!, readSession, _groupChanges);
+    Future<List<GroupCharacterChoice>> groupCharacters() async {
+      final runtime = lifecycle.runtime;
+      if (runtime == null) {
+        throw const AccountReadException('ACCOUNT_READ_NOT_READY');
+      }
+      final roster = await runtime.loadMemberRoster();
+      final choices = <GroupCharacterChoice>[];
+      for (final r in roster.rosters) {
+        final reg = r.registration;
+        for (final c in r.characters) {
+          if (c.usable != true ||
+              c.lifecycleState != 'active' ||
+              c.lifecycleRevision == null ||
+              !reg.settings.activityIds.contains(c.characterId)) {
+            continue;
+          }
+          choices.add(
+            GroupCharacterChoice(
+              '${c.characterName} · ${c.serverName}',
+              {
+                'registration_id': reg.registrationId,
+                'character_id': c.characterId,
+                'expected_registration_version': reg.version,
+                'expected_ownership_revision': reg.ownershipRevision,
+                'expected_roster_revision': reg.rosterRevision,
+                'expected_lifecycle_revision': c.lifecycleRevision,
+              },
+              itemLevel: double.tryParse(
+                '${groupMap(jsonDecode(c.profileJson))['item_level']}',
+              ),
+            ),
+          );
+        }
+      }
+      return choices;
+    }
+
+    Widget groupPage(
+      BuildContext context,
+      GroupPageKind kind, {
+      String? groupId,
+    }) => BackendGroupPage(
+      key: ValueKey((kind, groupId)),
+      repository: groupRepository,
+      kind: kind,
+      groupId: groupId,
+      characters: groupCharacters,
+      onLogin: () => showLoginRequired(context, auth),
+    );
     final recruitmentGateway = BackendRecruitmentRepository(
+      includeGroupState: true,
       contractMode: widget.recruitmentContractMode,
       api: accountApi,
       accounts: serverAccounts,
@@ -465,6 +524,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       },
     );
     final cycleInteractions = CycleInteractionRepository(
+      includeGroupList: true,
       contractMode: widget.recruitmentContractMode,
       api: accountApi,
       recruitment: recruitmentGateway,
@@ -472,6 +532,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final participation = _participation = CycleParticipationController(
       commandTransport: commandTransport,
       onActiveRoomsChanged: raidUsage.commandApplied,
+      onGroupConnectionChanged: _groupChanges.applied,
       gateway: cycleInteractions,
       session: readSession,
       changes: _memberAccount?.model ?? auth,
@@ -487,6 +548,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     final recruitmentCreate = _recruitmentCreate =
         BackendRecruitmentCreateViewModel(
+          groupChanges: _groupChanges,
           commandTransport: commandTransport,
           onActiveRoomsChanged: raidUsage.commandApplied,
           gateway: recruitmentGateway,
@@ -758,6 +820,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                   path: '/recruitments',
                   builder: (context, _) => readSession.isAuthenticated
                       ? CycleRecruitmentListPage(
+                          groupChanges: _groupChanges,
                           gateway: cycleInteractions,
                           session: readSession,
                           changes: _memberAccount?.model ?? auth,
@@ -837,19 +900,49 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
               routes: [
                 GoRoute(
                   path: '/groups',
-                  builder: (_, _) => pending('그룹'),
+                  builder: (context, _) =>
+                      groupPage(context, GroupPageKind.home),
                   routes: [
                     GoRoute(
                       path: 'search',
-                      builder: (_, _) => pending('그룹 검색', protected: false),
+                      builder: (context, _) =>
+                          groupPage(context, GroupPageKind.search),
                     ),
                     GoRoute(
                       path: 'create',
-                      builder: (_, _) => pending('그룹 만들기', alertOnEntry: true),
+                      builder: (context, _) =>
+                          groupPage(context, GroupPageKind.create),
                     ),
                     GoRoute(
                       path: 'join-by-code',
-                      builder: (_, _) => pending('그룹 가입', alertOnEntry: true),
+                      builder: (context, _) =>
+                          groupPage(context, GroupPageKind.joinCode),
+                    ),
+                    GoRoute(
+                      path: ':groupId',
+                      builder: (context, state) => groupPage(
+                        context,
+                        GroupPageKind.detail,
+                        groupId: state.pathParameters['groupId'],
+                      ),
+                      routes: [
+                        for (final entry in {
+                          'invite': GroupPageKind.invite,
+                          'requests': GroupPageKind.requests,
+                          'code': GroupPageKind.code,
+                          'info': GroupPageKind.info,
+                          'blocked': GroupPageKind.blocked,
+                          'raids': GroupPageKind.raids,
+                        }.entries)
+                          GoRoute(
+                            path: entry.key,
+                            builder: (context, state) => groupPage(
+                              context,
+                              entry.value,
+                              groupId: state.pathParameters['groupId'],
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -960,6 +1053,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _entryGate.dispose();
     _raidUsage?.dispose();
     _recruitmentCreate?.dispose();
+    _groupChanges.dispose();
     _participation?.dispose();
     unawaited(_recruitmentCommands?.dispose());
     _memberAccount?.dispose();

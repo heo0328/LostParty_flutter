@@ -5,6 +5,7 @@ import '../../data/application_messages.dart';
 import 'application_messages_controller.dart';
 import '../../data/beta/recruitment_command_transport.dart';
 import '../../data/beta/beta_contract.dart';
+import '../../data/beta/cycle_group_policy.dart';
 import '../../data/beta/recruitment_command.dart';
 import '../../data/beta/participation_command_evidence.dart';
 import '../../../account/domain/member_raid_models.dart' show raidList;
@@ -44,6 +45,7 @@ class _CycleCommand {
     this.removal,
     this.removalMode,
     this.membership,
+    this.groupEffects = const [],
   }) : evidence = Map.unmodifiable(evidence),
        encoded = jsonEncode(body),
        key = newScopedCommandKey();
@@ -71,7 +73,8 @@ class _CycleCommand {
       departure = null,
       removal = null,
       removalMode = null,
-      membership = null;
+      membership = null,
+      groupEffects = cycleGroupEffects(info.wire['group_policy_effects']);
   RecruitmentCommand? journal;
   ParticipationCommandEvidence? storedEvidence;
   ParticipationCommandEvidence freeze(RecruitmentContractMode mode) {
@@ -95,6 +98,7 @@ class _CycleCommand {
         : 'basic';
     final frozen = ParticipationCommandEvidence.create(
       kind: kind,
+      groupEffects: groupEffects,
       room: room,
       target: target,
       scope: evidence,
@@ -137,6 +141,7 @@ class _CycleCommand {
     return frozen;
   }
 
+  final List<Map<String, dynamic>> groupEffects;
   final String path, encoded, key, room, target;
   final String? applicationId, applicationState;
   final String method;
@@ -162,6 +167,7 @@ class CycleParticipationController extends ChangeNotifier {
     required this.changes,
     required this.scopeKey,
     this.onMutation,
+    this.onGroupConnectionChanged,
     this.onRelationEnded,
     this.onActiveRoomsChanged,
     this.commandTransport,
@@ -194,12 +200,14 @@ class CycleParticipationController extends ChangeNotifier {
   final Listenable changes;
   final String Function() scopeKey;
   final Future<void> Function(String)? onMutation;
+  final VoidCallback? onGroupConnectionChanged;
   final Future<void> Function(List<String>)? onRelationEnded;
   final void Function(String commandKey)? onActiveRoomsChanged;
   final DateTime Function() now;
   late String _binding;
   bool _disposed = false, busy = false;
   int _epoch = 0, mutationVersion = 0;
+  final _managementEpochs = Expando<int>();
   String? failure, lastRoom, lastTarget, notice;
   _CycleCommand? _pending;
   bool restoring = false;
@@ -344,6 +352,8 @@ class CycleParticipationController extends ChangeNotifier {
     return null;
   }
 
+  Future<List<RecruitmentGroupChoice>?> groups() => _read(gateway.groups);
+
   Future<List<RecruitmentCharacter>?> characters() => _read(gateway.characters);
   Future<MembershipActionContext?> membershipContext(
     String room,
@@ -384,6 +394,7 @@ class CycleParticipationController extends ChangeNotifier {
         createdAt: now(),
         evidence: context.scope,
         membership: fresh,
+        groupEffects: fresh.groupEffects,
         affectedTargets: fresh.affected,
       );
       key = _pending!.key;
@@ -569,6 +580,7 @@ class CycleParticipationController extends ChangeNotifier {
         createdAt: now(),
         evidence: fresh.scope,
         departure: fresh,
+        groupEffects: fresh.groupEffects,
       );
       onPrepared?.call(_pending!.key);
       await _send(e);
@@ -731,7 +743,14 @@ class CycleParticipationController extends ChangeNotifier {
     String target,
     String action, {
     Map<String, dynamic> query = const {},
-  }) => _read(() => gateway.management(room, target, action, query: query));
+  }) async {
+    final epoch = _epoch;
+    final preview = await _read(
+      () => gateway.management(room, target, action, query: query),
+    );
+    if (preview != null) _managementEpochs[preview] = epoch;
+    return preview;
+  }
 
   Future<void> manage(
     CycleManagementPreview preview,
@@ -744,12 +763,22 @@ class CycleParticipationController extends ChangeNotifier {
     failure = notice = null;
     _emit();
     try {
-      final fresh = await gateway.management(
-        preview.room,
-        preview.target,
-        preview.action,
-        query: preview.query,
-      );
+      if (preview.opening &&
+          preview.scope['room_cycle_id'] == null &&
+          _managementEpochs[preview] != e) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      // An absent cycle gets new prospective IDs on every GET. Submit the
+      // confirmed context seed; the server revalidates its token, policy and
+      // source revisions atomically before creating anything.
+      final fresh = preview.opening && preview.scope['room_cycle_id'] == null
+          ? preview
+          : await gateway.management(
+              preview.room,
+              preview.target,
+              preview.action,
+              query: preview.query,
+            );
       if (!_valid(e)) return;
       if (fresh.signature != preview.signature) {
         throw const AccountReadException('REVISION_CONFLICT');
@@ -767,6 +796,7 @@ class CycleParticipationController extends ChangeNotifier {
         method: fresh.method,
         globalAck: fresh.global ? fresh.action : null,
         affectedTargets: List.unmodifiable(fresh.affected),
+        groupEffects: fresh.effectsFor(frozenInput['candidate'] as String?),
       );
       await _send(e);
     } on AccountReadException catch (error) {
@@ -1062,6 +1092,7 @@ class CycleParticipationController extends ChangeNotifier {
     try {
       String? resumeOutcome;
       MembershipActionResult? membershipResult;
+      var groupPolicyChanged = command.groupEffects.isNotEmpty;
       if (commandTransport != null) {
         final info = command.freeze(commandTransport!.mode),
             journal = command.journal!;
@@ -1076,10 +1107,13 @@ class CycleParticipationController extends ChangeNotifier {
               status: journal.expectedStatus,
               mode: journal.contractMode,
               rawBody: journal.rawBody,
+              original: !journal.usesCycleGroupPolicy,
             );
           },
         );
         if (!_valid(e)) return;
+        groupPolicyChanged =
+            groupPolicyChanged || cycleGroupEffects(raw).isNotEmpty;
         command.journal = journal.transition(
           state: RecruitmentCommandState.acknowledged,
           rawAck: jsonEncode(raw),
@@ -1092,6 +1126,7 @@ class CycleParticipationController extends ChangeNotifier {
           status: journal.expectedStatus,
           mode: journal.contractMode,
           rawBody: journal.rawBody,
+          original: !journal.usesCycleGroupPolicy,
         );
       } else if (command.membership != null) {
         membershipResult = await (gateway as MembershipActionGateway)
@@ -1231,6 +1266,12 @@ class CycleParticipationController extends ChangeNotifier {
         'personal-completion-departures',
       }.contains(command.path.split('/').last)) {
         onActiveRoomsChanged?.call(command.key);
+      }
+      if (groupPolicyChanged ||
+          (commandTransport == null &&
+              command.path.endsWith('/common-settings') &&
+              (jsonDecode(command.encoded) as Map)['group_id'] != null)) {
+        onGroupConnectionChanged?.call();
       }
       for (final target in command.affectedTargets ?? [command.target]) {
         if (!_valid(e)) return;

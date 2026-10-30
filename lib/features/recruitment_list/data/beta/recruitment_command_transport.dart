@@ -249,8 +249,9 @@ class RecruitmentCommandTransport {
         }
         _current(binding, scope);
         if (mode == RecruitmentContractMode.betaWire2) {
-          const BetaContract(
+          BetaContract(
             mode: RecruitmentContractMode.betaWire2,
+            original: !saved.usesCycleGroupPolicy,
           ).validateResponse(
             saved.method,
             saved.path,

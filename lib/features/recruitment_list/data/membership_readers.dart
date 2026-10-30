@@ -554,8 +554,10 @@ class MembershipReadRepository implements MembershipReadGateway {
   MembershipReadRepository(
     this.api, {
     this.contractMode = RecruitmentContractMode.legacy,
+    this.includeGroupState = false,
   });
   final RecruitmentContractMode contractMode;
+  final bool includeGroupState;
   final BackendRegistrationApi api;
   Future<MembershipReadView> _read(
     String room,
@@ -574,6 +576,7 @@ class MembershipReadRepository implements MembershipReadGateway {
         api: api,
         mode: contractMode,
         path: path,
+        includeGroupState: includeGroupState,
         query: {
           'target_cycle_key': target,
           'reader_profile': membershipReaderProfile,

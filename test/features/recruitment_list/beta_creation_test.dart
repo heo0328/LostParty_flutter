@@ -228,7 +228,10 @@ void main() {
           body['beta_schedule_targets'][1]['base_starts_at'],
           '2026-11-02T11:17:00.000Z',
         );
-        expect(c.query, {'contract_profile': BetaContract.profile});
+        expect(c.query, {
+          'contract_profile': BetaContract.profile,
+          'group_policy_version': BetaContract.groupPolicyVersion,
+        });
         expect(
           gateway.api.requests.last['query']['next_early_additional_members'],
           2,
