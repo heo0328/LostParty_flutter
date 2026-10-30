@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-31 — 그룹1차 dev 병합·dev/main 동일 시점 정렬
+
+사용자가 그룹 기능1차 완료를 확인하고 미커밋이 없으면 dev 병합·push 및 dev/main 동일 시점 정렬을 지시했다. 마지막 표현의 대상은 비동기 질문에서 사용자가 dev와 main으로 명시했다. 착수 feature/group-backend-integration/8fc38e0e·미커밋 없음·origin 동일, 최신 origin/dev/main bdfe0edf와 dev 단독 변경0건을 확인했다. 그룹의35개 커밋에 기능·수정·계약/인수·레거시 선별 보관 이력을 포함한다. 다른 worktree/브랜치는 변경하지 않았다.
+
+최종 검증은 동일 코드8fc38e0e에서 전체 flutter test **2,730 PASS**, 전체 flutter analyze **No issues found**, 통합 diff/작업 diff check·일반 앱/계약·기기 인수 근거 대조다. 코드/포맷을 바꾸지 않았으며 과거 원본 해시/줄바꿈 보존용 legacy 자료는 임의 재포맷하지 않았다. 최신 dev를 기준으로 일반 merge **d5bc724e4f49e67a923fbb78d8ee96ca955f8eaa**를 만들었고 충돌 없음·검증 코드와 트리 동일성을 확인했다. 후행 통합 문서를 목적 브랜치에서 보관한 뒤 dev/main/그룹 브랜치를 최종 같은 커밋으로 fast-forward 정렬하고 강제push 없이 원격에 반영하는 파트다. 최종 SHA·원격 확인은 [Issue16 통합 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530680059)에서 확인한다. 이 문서만 바뀐 후 전체 기능 시험을 반복하지 않는다.
+
+새로 가능한 흐름: 그룹1차 기능과 인수/협업 기록을 dev/main의 같은 통합 기준에서 이어 개발한다. 보존 확인: 사용자 앱 전체 통과·원요청/ACK·주차별 독립·그룹 관리/모집 흐름과 별도 보류/후속. 미확인: 과거 상세GET500 원인(현재 미재현·자연 재발 근거 대기), Penpot 도구/시각 검수·02 이관. 이를 해결 완료로 바꾸지 않았다. 릴리즈 workflow는 tag/manual 트리거이며 이번에 tag/운영배포·Backend/DB·자료초기화·기기 조작·브랜치 삭제·Issue 종료는 수행하지 않는다. 목적 브랜치는 통합 시점으로 보존한다.
+
 ## 2026-10-31 — Backend 상세GET500 조사 회신 확인·당시 입력 기록 대조
 
 [Backend 조사 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530073442)과 고정 집계1be55a7d를 확인했다. 과거 두 request_id의500/internal·후속server_event 및 같은 시간창 추가1건은 확인됐으나 안전 로그에는 예외 class/traceback·query/room/actor가 없어 원인·당시 profile/세대를 복원하지 못했다. 실행b8542ef7/이미지930c25f8/DB0035의 현재 자료를 READ ONLY/provider 차단으로 서비스 직접호출·응답모델 대조해 현재 C/N456호출(316정상/140예상거절), 과거 anchor140호출(95정상/45예상거절)에서 예상외예외0이었다. 이 조합은 중복되며 자동시험/인증HTTP/기기검증·원인 수정완료로 합산하지 않는다. 코드·계약·서버/DB 변경은 없었다.
