@@ -7,6 +7,7 @@ import 'package:drift/native.dart';
 import 'package:lost_party/features/account/domain/account_read_session.dart';
 import 'package:lost_party/features/account/domain/scoped_cache_models.dart';
 import 'package:lost_party/features/recruitment_list/data/beta/beta_contract.dart';
+import 'package:lost_party/features/recruitment_list/data/beta/participation_command_evidence.dart';
 import 'package:lost_party/features/recruitment_list/data/beta/recruitment_command.dart';
 import 'package:lost_party/features/recruitment_list/data/beta/recruitment_command_store.dart';
 import 'package:lost_party/features/recruitment_list/data/beta/recruitment_command_transport.dart';
@@ -656,6 +657,155 @@ void main() {
           expect(writes.last.sameOriginal(original), isTrue);
           expect(api.requests, isEmpty);
           expect(mutations, original.validationSnapshot!['affected_targets']);
+        },
+      );
+    }
+    test(
+      'absent N opening submits the confirmed seed and recovers that original ACK',
+      () async {
+        var reads = 0;
+        late Map<String, dynamic> confirmed;
+        api.respond = (_, _) async {
+          final raw = beta_schedule.openingWire('open');
+          final seed = management.id(100 + ++reads);
+          raw['data']['prospective_room_cycle_id'] = seed;
+          raw['data']['context_token'] = 'opening-seed-$reads';
+          raw['data']['targets'][0]['round_id'] = management.id(200 + reads);
+          raw['data']['session_display']['room_cycle_id'] = seed;
+          raw['data']['session_display']['display_revision'] = reads
+              .toRadixString(16)
+              .padLeft(64, '0');
+          raw['data']['group_policy_effect'] = {
+            'room_id': base.roomId,
+            'target_cycle_key': interaction.n,
+            'room_cycle_id': seed,
+            'generation': 2,
+            'before': {'scope': 'public', 'group_id': null, 'revision': 5},
+            'after': {'scope': 'public', 'group_id': null},
+          };
+          return raw;
+        };
+        answer = (_) async =>
+            throw const AccountReadException('NETWORK_UNAVAILABLE');
+        final c = await controller();
+        final p = await c.management(
+          base.roomId,
+          interaction.n,
+          'open',
+          query: beta_schedule.config,
+        );
+        expect(p, isNotNull);
+        confirmed = jsonDecode(
+          jsonEncode({
+            ...p!.data,
+            'group_policy_effect': p.effectsFor().single,
+          }),
+        );
+        await c.manage(p, {'beta_schedule': beta_schedule.config});
+        expect(writes, hasLength(1));
+        expect(reads, 1);
+        expect(c.failure, 'NETWORK_UNAVAILABLE');
+        final original = writes.single;
+        final body = jsonDecode(original.rawBody);
+        expect(body['context_token'], confirmed['context_token']);
+        expect(body['target_items'], confirmed['targets']);
+        late Map<String, dynamic> actualAck;
+        stop(c);
+        api.requests.clear();
+        final next = await controller();
+        expect(next.recoveryIssue, isNull);
+        expect(next.pendingRequestKey, original.key);
+        answer = (cmd) async {
+          final ack = cycles.envelope(interaction.n, {
+            'command_id': cmd.key,
+            'outcome': 'applied',
+            'executed_at': cycles.nowStamp,
+            'room_id': base.roomId,
+            'target_cycle_key': interaction.n,
+            'revisions': [
+              {
+                'resource': 'target',
+                'id': confirmed['prospective_room_cycle_id'],
+                'revision': 1,
+              },
+            ],
+          }, created: true);
+          ack['scope']['room_cycle_id'] =
+              confirmed['prospective_room_cycle_id'];
+          ack['scope']['target_generation'] = 2;
+          ack['scope']['target_revision'] = 1;
+          ack['group_policy_effects'] = [
+            <String, dynamic>{
+              ...confirmed['group_policy_effect'],
+              'after': {'scope': 'public', 'group_id': null, 'revision': 1},
+            },
+          ];
+          actualAck = ack;
+          return ack;
+        };
+        await next.retry();
+        expect(writes, hasLength(2));
+        ParticipationCommandEvidence(original.validationSnapshot!).validate(
+          actualAck,
+          method: original.method,
+          path: original.path,
+          key: original.key,
+          status: original.expectedStatus,
+          mode: original.contractMode,
+          rawBody: original.rawBody,
+        );
+        expect(next.failure, isNull);
+        expect(next.hasPending, false);
+        expect(writes.last.sameOriginal(original), true);
+        expect(api.requests, isEmpty);
+        expect(mutations, [interaction.n]);
+      },
+    );
+
+    test(
+      'absent N review from previous member generation cannot submit',
+      () async {
+        api.respond = (_, _) async => beta_schedule.openingWire('open');
+        final c = await controller();
+        final p = await c.management(
+          base.roomId,
+          interaction.n,
+          'open',
+          query: beta_schedule.config,
+        );
+        session.generation++;
+        session.notifyListeners();
+        await ready(c);
+        await c.manage(p!, {'beta_schedule': beta_schedule.config});
+        expect(c.failure, 'REVISION_CONFLICT');
+        expect(writes, isEmpty);
+        expect(c.hasPending, false);
+      },
+    );
+
+    for (final failure in [
+      ('TARGET_CONTEXT_STALE', 409),
+      ('TARGET_LEADER_REQUIRED', 403),
+    ]) {
+      test(
+        'opening ${failure.$1} clears rejected original and requires explicit new confirmation',
+        () async {
+          api.respond = (_, _) async => beta_schedule.openingWire('open');
+          answer = (_) async =>
+              throw AccountReadException(failure.$1, status: failure.$2);
+          final c = await controller();
+          final p = await c.management(
+            base.roomId,
+            interaction.n,
+            'open',
+            query: beta_schedule.config,
+          );
+          await c.manage(p!, {'beta_schedule': beta_schedule.config});
+          expect(c.failure, failure.$1);
+          expect(c.hasPending, false);
+          expect(mutations, isEmpty);
+          await c.retry();
+          expect(writes, hasLength(1));
         },
       );
     }

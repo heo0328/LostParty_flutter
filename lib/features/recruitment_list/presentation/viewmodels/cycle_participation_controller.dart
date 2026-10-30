@@ -207,6 +207,7 @@ class CycleParticipationController extends ChangeNotifier {
   late String _binding;
   bool _disposed = false, busy = false;
   int _epoch = 0, mutationVersion = 0;
+  final _managementEpochs = Expando<int>();
   String? failure, lastRoom, lastTarget, notice;
   _CycleCommand? _pending;
   bool restoring = false;
@@ -742,7 +743,14 @@ class CycleParticipationController extends ChangeNotifier {
     String target,
     String action, {
     Map<String, dynamic> query = const {},
-  }) => _read(() => gateway.management(room, target, action, query: query));
+  }) async {
+    final epoch = _epoch;
+    final preview = await _read(
+      () => gateway.management(room, target, action, query: query),
+    );
+    if (preview != null) _managementEpochs[preview] = epoch;
+    return preview;
+  }
 
   Future<void> manage(
     CycleManagementPreview preview,
@@ -755,12 +763,22 @@ class CycleParticipationController extends ChangeNotifier {
     failure = notice = null;
     _emit();
     try {
-      final fresh = await gateway.management(
-        preview.room,
-        preview.target,
-        preview.action,
-        query: preview.query,
-      );
+      if (preview.opening &&
+          preview.scope['room_cycle_id'] == null &&
+          _managementEpochs[preview] != e) {
+        throw const AccountReadException('REVISION_CONFLICT');
+      }
+      // An absent cycle gets new prospective IDs on every GET. Submit the
+      // confirmed context seed; the server revalidates its token, policy and
+      // source revisions atomically before creating anything.
+      final fresh = preview.opening && preview.scope['room_cycle_id'] == null
+          ? preview
+          : await gateway.management(
+              preview.room,
+              preview.target,
+              preview.action,
+              query: preview.query,
+            );
       if (!_valid(e)) return;
       if (fresh.signature != preview.signature) {
         throw const AccountReadException('REVISION_CONFLICT');

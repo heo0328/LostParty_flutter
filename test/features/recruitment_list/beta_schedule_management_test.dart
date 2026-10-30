@@ -17,6 +17,7 @@ import 'cycle_recruitment_test.dart' as cycles;
 import 'cycle_management_test.dart' as management;
 import 'cycle_schedule_test.dart' as schedule;
 import 'beta_foundation_test.dart' as foundation;
+import 'session_display_fixtures.dart' as display;
 
 Map<String, dynamic> clone(Map<String, dynamic> value) =>
     jsonDecode(jsonEncode(value));
@@ -201,11 +202,17 @@ void main() {
       );
     },
   );
-  test('fresh metadata change prevents opening POST', () async {
+  test('already-open N still rejects changed metadata before POST', () async {
     final api = base.Api();
     var reads = 0;
     api.respond = (_, q) async {
       final raw = openingWire('open');
+      raw['scope'] = cycles.envelope(cycles.n, {}, created: true)['scope'];
+      raw['data']['opening_effect'] = 'already_open';
+      raw['data']['session_display'] = display.displayWire(
+        raw['scope'],
+        kind: 'none',
+      );
       if (reads++ > 0) {
         raw['data']['beta_schedule_config']['early_additional_members'] = 3;
       }

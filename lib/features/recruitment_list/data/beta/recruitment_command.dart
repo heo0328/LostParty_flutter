@@ -315,6 +315,8 @@ bool definiteRecruitmentRejection(Object? status, Object? code) =>
       'CONTEXT_INVALID',
       'REQUEST_TOO_LARGE',
       'COMMAND_CONTEXT_EXPIRED',
+      'TARGET_CONTEXT_STALE',
+      'TARGET_LEADER_REQUIRED',
       'REVISION_CONFLICT',
       'CYCLE_CHANGED',
       'CATALOG_VERSION_CONFLICT',

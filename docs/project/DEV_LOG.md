@@ -1,5 +1,19 @@
 # 개발 이력
 
+## 2026-10-31 — 기존 금주 방의 다음주 개방 오판 수정·일부 기기 인수
+
+사용자는 초기 C/N 동시 생성은 가능하지만 기존 금주만 있는 방의 다음주 함께하기에서 날짜/옵션 선택 후 선택 정보 변경 오류로 진행되지 않는다고 제보했다. 첨부 화면은 2026-11-04 주차/11월8일20:00 선택 후 변경 오류다. 별도로 C/N 각각 다른 캐릭터 공대장·서로 다른 그룹에서 금주만 탈퇴하면 자동승계·금주 전체 공개 전환·다음주 기존 상태 보존이 정상이라고 확인했다. 이 사용자 인수만 통과로 반영하며 같은 그룹 유지승계·직접 위임·그룹명/배지까지 확대하지 않았다.
+
+원인: Backend 실행b8542ef7의 app/raid_rooms/cycle_opening.py prepare는 아직 없는 N에 매 GET uuid4 seed를 만들고 prospective 회차/round ID·group_policy_effect와 session_display의 ref/hash를 파생한다. execute는 사용자가 받은 token.seed를 재사용해 require_match·현재 권한/CAS·만료를 원자 검증한다. Flutter manage는 확인 직전 별도 GET의 새 seed까지 같은 서명이어야 한다고 판단해 실제 변경이 없어도 POST 전에 거절했다. 최신 Issue16·고정 계약·서버 원본과 직전88a69fa7 diff/일반 앱 경로를 대조했다. 같은 서버 조건의 합성 회귀에서 수정 전 쓰기0으로 재현했다.
+
+새로 가능해진 흐름: 없는 N 개방은 확인한 원검토/ID·그룹 효과를 현 Controller 회원/환경 epoch에 결합해 한 원명령에 저장한다. 무관한 GET 비교나 예정 ID/표시 hash 정규화 대신 서버 토큰의 기존 원자 검증을 사용한다. TARGET_CONTEXT_STALE409·TARGET_LEADER_REQUIRED403을 확정 거절로 정리하고 기존 화면 재조회 후 별도 사용자 확인을 기다린다. 성공 ACK 전에는 성공을 표시하지 않는다.
+
+보존 확인: 이미 존재하는 N과 다른 관리의 fresh 검토 비교, 그룹 설정 변경/승계·주차 격리, 개방 원 token/body/key·ACK 유실 후 새 Controller의 원형 복구, 회원/환경 세대 변경 뒤 과거 검토 전송 차단을 검증했다. 생성·서버/DB·저장 스키마·원요청 변환·승계 정책·Router/DI는 변경하지 않는다. 실기기에서 정상 확인된 동시 생성/금주 외부승계·N 보존을 회귀 대기로 되돌리지 않는다.
+
+실행 검증: 개방/주차별 관리·참여 원요청 복구·그룹 정책 직접108PASS, 전체 flutter analyze No issues found, 변경4 Dart 포맷·git diff --check·diff 검토. 합성 복구 ACK의 metadata 분리/Map 타입을 실제 JSON 형태로 맞춘 뒤 통과했다. 저장/공용 DTO·DI는 그대로이며 좁은 개방 분기와 확정 거절을 직접 회귀로 설명할 수 있어 이 파트 전체 flutter test는 반복하지 않았다. 기반 전체2,724PASS는88a69fa7의 이전 검증임을 구분한다.
+
+미확인 기기: 수정 앱에서 기존 금주 방의 다음주 개방→N 생성/참가·C 보존. 나머지 그룹 기기·Penpot 미검수는 NEXT_WORK에 남긴다. Backend/DB·AWS/release·dev/main 통합·자료초기화·기기 조작·Issue 상태는 변경하지 않았다. [사용자 인수·개방 수정 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6528974995)을 게시하고 본문을 재조회했다. 같은 댓글에서 최종 커밋·push SHA를 확인한다.
+
 ## 2026-10-31 — 네이티브 주차별 그룹 변경·승계 연결·전체 자동 검증
 
 사용자 승인 네이티브 구현 계획을 feature/group-backend-integration/78e53aa0에서 이어갔다. Backend 고정 계약 b212ad0f45e36e1bd5c6c860bb1e118f590bbc79의 실제66동작과 연결 스키마를 wire projection으로 갱신했다. 원본 OpenAPI blob hash·재생성 동일성을 확인했으며 beta의 기존 필수 개방 날짜 등은 보존한다. 과거 저장 요청 전용 snapshot은 변경 전 wire와 동일함을 검증했다. [Backend 개발 반영 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6524503597)을 재조회해 실행b8542ef7·이미지930c25f8·DB0035와 기록476d1f31, 계약 shape 유지·실회원 쓰기/새 기기 미실시를 구분했다.
