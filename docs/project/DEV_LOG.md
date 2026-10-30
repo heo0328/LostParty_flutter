@@ -1,5 +1,16 @@
 # 개발 이력
 
+## 2026-10-31 — 모집 상세 로딩 중 C/N 탭 전환 방지
+
+사용자가 N 정보가 뜨기 전에 C로 빠르게 복귀하며 오류창을 한 번 봤다고 회상했고, 추가 Backend 확인 요청 대신 네이티브 대응을 지시했다. 당시 GET500 request_id와의 대응/원인은 미확정이다. Backend 후속6530965340·조사6279daf5의 HTTP 경계228대조도 현재 미재현이며 서버 수정/원인 해소 근거가 아니다. 사용자 단서는 Issue16의6531090992/6531137779에 전달돼 있다.
+
+최신 dev b8b20b50과 origin 동일·작업트리 clean에서 fix/recruitment-cycle-tab-loading을 분기했다. 실제 BackendApp Router→BackendRecruitmentDetailPage→상세 ViewModel/조회 경로를 확인했다. ViewModel에는 이미 epoch·회원/환경별 늦은 성공/오류 폐기가 있지만 페이지 주차 선택기는 loading을 반영하지 않았다. NEXT_WORK에 범위/수명/보호/검증을 먼저 기록한 뒤 기존 선택기의 enabled를 !loading에 연결하고 이전 프레임 콜백도 현재 loading으로 차단했다. 별도 캐시/통신 취소·추가 조회·오류 숨기기·ViewModel 명시 선택 계약 변경은 없다.
+
+- 새로 가능: 선택 주차의 상세·부속 조회가 끝날 때까지 탭 왕복을 막고 성공/실패 후 다시 선택한다. 지연 N 성공/500 실패 각각에서 C 재선택 무효·추가 조회 없음·완료 후 C 복귀와 오류 표시 회복을 실제 페이지 자동 시험으로 확인했다.
+- 보존 확인: 기존 늦은 C 응답 폐기·회원 전환/로그아웃·과거 anchor 읽기전용·신청 상태·승계/완료 후 이동 경계. 그룹1차 정상 앱 인수·원요청/ACK·C/N 독립과 dev/main b8b20b50은 그대로다.
+- 검증: 직접 영향6시험파일152PASS(신규2 포함), 변경 Dart2파일 flutter analyze No issues found·dart format 0변경. 최초 신규 시험의 envelope fixture 전달 누락을 바로잡은 후 위 최종 검증을 수행했다. SDK lockfile 접근 제한은 승인된 실행으로 해결했다. 공용 Domain/DTO/저장·DI/Router를 변경하지 않아 전체 Flutter 시험은 반복하지 않는다. 로그 .dart_tool/detail-cycle-loading-tests.log.
+- 미확인: 이 수정의 실제 기기 조작, Penpot 시각 검수/02 이관, 과거 서버500 원인. 사용자 정상 시험 반복이나 Backend 재현 확인을 완료 조건으로 요청하지 않는다. 서버/DB·AWS/배포·dev/main 통합·Issue 종료·브랜치 삭제는 수행하지 않는다.
+
 ## 2026-10-31 — 그룹1차 dev 병합·dev/main 동일 시점 정렬
 
 사용자가 그룹 기능1차 완료를 확인하고 미커밋이 없으면 dev 병합·push 및 dev/main 동일 시점 정렬을 지시했다. 마지막 표현의 대상은 비동기 질문에서 사용자가 dev와 main으로 명시했다. 착수 feature/group-backend-integration/8fc38e0e·미커밋 없음·origin 동일, 최신 origin/dev/main bdfe0edf와 dev 단독 변경0건을 확인했다. 그룹의35개 커밋에 기능·수정·계약/인수·레거시 선별 보관 이력을 포함한다. 다른 worktree/브랜치는 변경하지 않았다.

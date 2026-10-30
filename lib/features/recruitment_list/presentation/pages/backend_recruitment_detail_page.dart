@@ -208,7 +208,10 @@ class _BackendRecruitmentDetailPageState
               child: MemberCycleSelector(
                 cycles: m.cycles!,
                 value: m.target!,
-                onChanged: m.selectCycle,
+                enabled: !m.loading,
+                onChanged: (target) {
+                  if (!m.loading) m.selectCycle(target);
+                },
               ),
             ),
           Expanded(
