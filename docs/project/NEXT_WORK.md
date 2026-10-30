@@ -1,19 +1,23 @@
-# NEXT WORK — 주차 탭 보호 인수·dev 통합 기준
+# NEXT WORK — Penpot03 그룹 화면 갱신·검토 기준
 
-## 완료한 작업
+## 현재 상태
 
-2026-10-31 사용자가 모집 상세의 로딩 중 주차 탭 보호를 정상 적용으로 확인하고 dev 병합을 지시했다. 수정 코드 `8c17d827`은 기존 선택기를 상세/부속 조회 중 비활성화하고 이전 프레임의 콜백도 차단한다. 성공/실패 완료 후 다시 선택할 수 있으며 ViewModel의 늦은 응답·회원/환경 epoch 보호와 기존 오류 안내를 유지한다. [구현·검증 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6531287833)을 따른다.
+사용자 지시에 따라03의 기존 **그룹 · 사용자 흐름과 화면** 메인 보드와01~08/공통 상태9개 섹션을 네이티브 dev4a0bf962 기준으로 갱신했다. 기존16개 화면 프레임/메인·섹션 ID를 유지하고08 안에6개 다른 상태를 추가해 총22개390×844 화면을 정리했다. 버전별 메인 사본은 만들지 않았고 무관한 Board·다른 페이지는 수정하지 않았다.
 
-직접 영향6파일152PASS(신규 지연 성공/500 실패2경계 포함)·변경2파일 분석0·포맷 통과와 이번 사용자 기기 인수를 완료 기준으로 사용한다. 이후 변경은 인수/통합 문서뿐이며 같은 시험을 반복하지 않는다. 최신 origin/dev b8b20b50·분기 차이1커밋·미커밋 없음에서 검토했다. 인수 기록을 목적 브랜치에서 보관한 뒤 dev에 일반 merge·push하고 main b8b20b50은 유지한다. 최종 통합 SHA·원격 일치는 Git 이력과 [Issue16](https://github.com/heo0328/lostparty-backend/issues/16)에 기록한다. 목적 브랜치는 보존한다.
+[Penpot03 그룹 보드](https://design.penpot.app/?screen=workspace&file-id=cd444aaf-0d8c-801b-8008-d058e3181ffd&page-id=0f0035d1-2d8f-8071-8008-dba78bf41adc&board-id=0f0035d1-2d8f-8071-8008-dbabf5c8d408)에서 검토한다. 요청 대상03에 유지하며02 이관은 하지 않았다. 이번 결과의 사용자 디자인 확인·02 이관은 남아 있다.
 
-그룹1차 주차별 변경/해제·승계/위임·C/N 독립·개방/상속·표시의 기존 앱 인수와 통합 b8b20b50은 보존한다. 제품/기술 원본은 [그룹 §9](../product/GROUP_PRODUCT_FLOW.md#9-그룹-레이드-생성)·[모집37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#cycle-group-policy)·[설계39](../backend-migration/39-group-flutter-integration-design.md)다.
+## 반영·검증 완료
 
-## 별도 남은 항목·다음 행동
+- 실제 BackendGroupPage의 요청 분류·검색·이름 입력/제한·캐릭터 선택 진입·공개 상세/코드 가입·그룹원 메뉴·정보/코드·신청 금지·그룹장 이전/탈퇴를 반영했다. 앱에 없는 생성 전 대표 드롭다운/미리보기·상세 즉시 공개 토글을 제거했다.
+- 08은 실제 주차 목록→상세→모집 조건 변경/공개·그룹 단일 선택, 같은 그룹/외부 후임 탈퇴, 직접 위임, 다음주 설정 상속을 구분한다. 일반 전환=연결 해제, C/N 독립·기존 자료 보존을 화면 밖에서 설명한다. 다이얼로그는 그룹 영향 중심 발췌이며 모든 공통 일정/캐릭터 선택창 상태나 클릭 프로토타입을 추가 복제하지 않았다.
+- SDK Material 글리프12종을 SVG로 변환해 임시 문자 아이콘을 교체했다.390×844·반경16·안쪽1px 테두리·v1 색상/Noto Sans KR을 유지한다. 디자인 단위 코드 대조이며 실제 기기 픽셀 측정/완전 동일성의 주장은 아니다.
+- 01~06/08/공통 섹션 PNG·07의 두 개별 화면 PNG·전체 보드 PNG를 눈검수했다.07 섹션 export의 일시적500/timeout은 개별 화면 export로 확인했다. 전체/프레임 경계 이탈0·텍스트 넘침0·03/다른 최상위 보드 보존을 재조회했다.
+- 앱 코드·서버·DB·계약 변경 없음. 문서 diffcheck·내용/diff 검토를 적용하고 Flutter 시험/분석은 반복하지 않는다. 디자인은 Penpot에 저장됐으며 문서는 docs/group-native-design에서 commit/push한다.
 
-| 항목 | 현재 상태·담당 | 다음 행동 |
-|---|---|---|
-| 과거 상세 GET500 | Backend 조사6279daf5에서 현재 미재현·원인 미확정/미해결 | [HTTP 후속 조사](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530965340) 유지. 자연 재발 근거가 생기면 대조한다. 이번 네이티브 인수를 서버 원인 해소로 확대하거나 추가 확인·기기 반복 시험을 요구하지 않는다. |
-| Penpot03 시각 검수·02 이관 | Flutter / 도구 대기 | 도구 제공 시 기존 보드 갱신·시각 검수 후 같은 묶음02 이관. 앱 인수로 대신 완료 처리하지 않는다. |
-| 종합 기술 진단·기타 네이티브 보류 | 별도 작업, 자동 착수 안 함 | [차후 수정안](../product/DETAIL_IMPROVEMENTS.md)의 담당·착수 조건을 따른다. BUG-025·제안 정밀도·개방 알럿 반복 로그·제안 발견성·웹소켓을 이번 병합에 포함하지 않는다. |
+## 보존·별도 후속
 
-현재 탭 보호에 남은 코드/기기 인수 작업은 없다. Backend 고정 계약 b212ad0f·마지막 확인 실행 b8542ef7/DB0035는 유지한다. 이번 dev 병합 외 main 정렬·release/AWS 배포·DB/서버 변경·자료 초기화·Issue 종료·브랜치 삭제는 실행하지 않는다. 로컬 기능 개발 후 AWS 준비·정책09 D08을 유지한다.
+그룹1차 앱 인수/통합b8b20b50과 탭 보호8c17d827의 직접152PASS·분석0·사용자 인수·dev4a0bf962 통합을 보존한다. main은b8b20b50이다. 실제 제품/기술은 [그룹 §9](../product/GROUP_PRODUCT_FLOW.md#9-그룹-레이드-생성)·[모집37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#cycle-group-policy)·[설계39](../backend-migration/39-group-flutter-integration-design.md)를 따른다.
+
+과거GET500은 [Backend 후속](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530965340)의 현재 미재현·원인 미확정/미해결 기록을 유지한다. 추가 회신/반복 시험을 디자인 완료 조건으로 요구하지 않는다. 종합 진단·BUG-025·제안 정밀도·개방 알럿 반복 로그·제안 발견성·웹소켓은 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md)의 별도 착수 조건을 따른다.
+
+이번에 앱 구현 수정·02 이동·dev/main 재통합·AWS/release 배포·서버/DB 변경·자료 초기화·Issue 종료·브랜치 삭제는 하지 않는다. 로컬 기능 개발 후 AWS 준비와 정책09 D08을 유지한다.
