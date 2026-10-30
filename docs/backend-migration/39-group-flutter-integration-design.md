@@ -120,7 +120,7 @@ actor는 서버 세션, 그룹은 group_id, 현재 가입은 membership_id, 요�
 |---|---|---|---|
 | G-DISPLAY | 연결·기존 그룹 인수 완료 | 표시/활동/집계 제공, 과거 보석 count 재현 요구 불필요 | Flutter / 기존 인수 보존. 새 표시 변경의 기기 확인만 NEXT_WORK에서 진행 |
 | G-MANAGE | 연결·기존 그룹 인수 완료 | 해산/추방/대표 제공, 복구승계는 별도 | Flutter / 기존 관리 인수 보존, 복구승계는 G-RECOVERY에서 별도 관리 |
-| G-RAID | 기본 그룹 인수 보존·주차별 앱 연결 완료 | b212ad0f 소비·실행b8542ef7/DB0035 반영 확인 | 사용자 / 새 정책 기기 확인, Flutter·Backend / 구체 차이 대응 |
+| G-RAID | 기본 그룹 인수 보존·주차별 앱 연결 완료 | b212ad0f 소비·실행b8542ef7/DB0035 반영 확인 | 앱 기기 인수 완료. 별도 서버 조사/디자인 후속은 NEXT_WORK |
 | G-RECOVERY | 제품 결정이 필요할 수 있는 후속 | 계정자격 상실 후 유효 후임이 없는 그룹의 운영 복구 | Backend가 현재 lifecycle 보장/기존 정책과의 차이를 먼저 제시한 뒤 필요한 사용자 결정만 질문. 임의 그룹삭제/승격 금지 |
 | G-OPS | 별도 운영 후속 | §17 보관·정리 요구와 현재 감사/이력 원장 대응 | 운영 파트에서 정책/개인정보·보관 차이 검토, 이번에 자동삭제/DB변환 안 함 |
 
@@ -140,7 +140,7 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 모집 조건 변경에서 선택 주차의 공개범위·가입 그룹을 편집한다. settings 조회와 command-context/edit_group_policy의 target_group_id(생략=일반)를 검토한 뒤 기존 PUT settings 한 번에 group_policy(scope/group_id/expected_revision)+context_token을 보낸다. 그룹 외 설정만 바꾸면 해당 입력을 생략한다. 그룹 변경/재조회 중 초안을 보존하고 수정하지 않은 전투력 입력 모드도 유지한다. 공통 정보 변경은 기존 G1 권한의 제목만 남긴다. 대상·권한·revision·전후 영향 변경은 재확인하며 미확정 명령의 원본문·키는 유지한다. 성공 ACK 후 실제 영향 주차와 GroupChanges의 그룹/필터/context/후보·목록을 갱신한다. 후속 조회 실패는 성공 명령 재실행 대신 조회 재시도로 처리한다.
 
-소속 배지는 일반/application-display의 data.members와 membership-actions의 data.content.data.members를 같은 상세 변환·렌더링으로 전달한다. 조회자 소속에 따른 숨김은 확인되지 않았다. 대상별 true/false 보존, null/누락 거절과 history content=null 유지를 시험한다. 해당 제보의 실기기 재현 없이 해결 완료로 판정하지 않으며 현재 결과는 DEV_LOG/기기 인수는 NEXT_WORK에서 관리한다.
+소속 배지는 일반/application-display의 data.members와 membership-actions의 data.content.data.members를 같은 상세 변환·렌더링으로 전달한다. 조회자 소속에 따른 숨김은 확인되지 않았다. 대상별 true/false 보존, null/누락 거절과 history content=null 유지를 시험한다. 이후 사용자 앱 테스트 전체 통과로 표시 제보의 기기 확인도 해소했다. 실제 원인별 경과는 DEV_LOG, 별도 후속은 NEXT_WORK에서 관리한다.
 
 ## 6. 구현 단계·회귀와 인수
 
@@ -173,7 +173,7 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 ## 7. 주차별 그룹 변경·승계의 연결 경계 (2026-10-31)
 
-현재 코드 연결은88a69fa7, 개방 보완은ffffc4e6·3ec0f54f에 보관했다. C/N 동시 생성·금주 외부 자동승계/일반 전환·N 보존, 기존 C에서 N 방 생성은 사용자 확인이며 전체 그룹 기기 인수 완료는 아니다. 이후 사용자가 일반→A→B→전체 공개·같은 그룹 승계·비그룹원 직접 위임도 이미 통과했다고 정정해 인수 완료로 반영했다. 생성/이름 변경에는 기존 이름1~20자 안내를 표시한다. 남은 실제 조작/표시 결과·별도 서버 조회500·Penpot 검수는 NEXT_WORK의 담당/상태를 따르고, G-RECOVERY/G-OPS·종합 개선을 이번 미구현 기능으로 합치지 않는다.
+현재 코드 연결은88a69fa7, 개방 보완은ffffc4e6·3ec0f54f, 그룹명 제한 안내는055e0608에 보관했다. 사용자의 앱 테스트 전체 통과 확인으로 그룹 변경·승계/위임·C/N 독립/상속·개방·그룹명/소속 배지의 앱 기기 인수를 완료했다. 남은 별도 서버 조회500 조사·Penpot 검수는 NEXT_WORK의 담당/상태를 따르고, G-RECOVERY/G-OPS·종합 개선을 이번 완료 범위에 합치지 않는다.
 
 제품 단일 기준은 [그룹 제품 §9](../product/GROUP_PRODUCT_FLOW.md#9-그룹-레이드-생성), 데이터/명령·보존/검증 계약은 [모집37 §37.39.1](37-raid-scheduling-and-multi-raid-planning.md#cycle-group-policy)다. [Backend 고정 계약](https://github.com/heo0328/lostparty-backend/blob/b212ad0f45e36e1bd5c6c860bb1e118f590bbc79/docs/features/groups/cycle-group-policy.md)과 OpenAPI에서 일반 앱이 사용하는66동작을 추출한다. 생성 도구는 원본 blob hash를 검증하고 beta의 기존 필수 입력도 보존한다. 새 cycle-router 요청에 group_policy_version=cycle-group-policy-1을 넣으며 로그인/그룹 API에는 넣지 않는다.
 
@@ -185,4 +185,4 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 과거 저장 원요청은 기존 snapshot을 고정해 method/path/query/body/key·검증 근거와 원ACK를 당시 계약으로 검증한다. 신규 실행 실패의 구계약 fallback은 없다. CLIENT_UPGRADE_REQUIRED는 확정 거절로 슬롯을 정리하고 별도 사용자 명령에서 최신 상태를 검토한다. GROUP_FEATURE_NOT_READY는 준비 미완료로 안내한다. 저장 스키마 변경·원요청 자동 변환·개발자료 이중 운영을 추가하지 않는다.
 
-직접 경계 시험은 C/N·과거 세대 매핑, 세 가지 변경의 한 번 저장/영향 주차 갱신, 위임 후보8명·개방의 서버 효과, unavailable/잘못된 식별자·revision·권한·만료, 원요청/원ACK 복구, 회원 전환 중 늦은 응답, 초안 보존·취소 시 쓰기 없음을 검증한다. 최종 전체 시험·분석과 실제 실행 결과는 DEV_LOG에 기록한다. 서버의 권한·승계 원자성 검증은 Backend 인계 근거이며 Flutter의 실제 인증 쓰기/기기 결과로 합산하지 않는다. 비그룹원 배지·긴 이름·Penpot03 검수는 결과 전까지 미완료다.
+직접 경계 시험은 C/N·과거 세대 매핑, 세 가지 변경의 한 번 저장/영향 주차 갱신, 위임 후보8명·개방의 서버 효과, unavailable/잘못된 식별자·revision·권한·만료, 원요청/원ACK 복구, 회원 전환 중 늦은 응답, 초안 보존·취소 시 쓰기 없음을 검증한다. 최종 전체 시험·분석과 실제 실행 결과는 DEV_LOG에 기록한다. 서버의 권한·승계 원자성 검증은 Backend 인계 근거이며 Flutter의 실제 인증 쓰기/기기 결과로 합산하지 않는다. 비그룹원 배지·긴 이름은 사용자 앱 인수 통과이며 Penpot03 시각 검수는 도구 대기로 미완료다.
