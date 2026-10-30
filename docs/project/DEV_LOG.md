@@ -1,5 +1,13 @@
 # 개발 이력
 
+## 2026-10-30 — Issue29 상호 대조 완료·기술 개선 작업 인계
+
+[Backend 최종 회신](https://github.com/heo0328/lostparty-backend/issues/29#issuecomment-6520322169)에서 Flutter `4bdec0e6`의 4파일·고정 링크·원격 SHA와 Backend `c1fa205d`를 대조해 문서 운영 합의/양측 최소 반영 완료 조건 충족을 확인했다. 추가 문서·API·기능 시험 요청은 없으며 반복 회신도 필요하지 않다고 명시했다. NEXT_WORK의 완료된 상호 대조 대기를 제거했다. Issue OPEN 상태는 유지하며 종료를 실행하지 않았다.
+
+사용자 요청에 따라 기존 DETAIL_IMPROVEMENTS에 다른 탭용 기술 진단·개선 인계를 기록하고 NEXT_WORK/AI_CONTEXT에서 연결했다. 조사8영역·핵심 사용자 흐름·기준 커밋 재확인·단계별 담당/의존성·발견 기록 요건·구현 권한을 명시했다. 과거 대화의 후보는 현재 코드 근거가 없는 미확인 대상으로 표시했으며 이번 문서 작업을 종합 진단/개선 완료로 확대하지 않았다.
+
+새로 가능한 흐름은 채팅 전문 없이 기존 문서에서 개선 조사를 재개하는 것이다. 그룹 기기1~5/Penpot 대기·기존 보류·사용자 미커밋 자료를 보존했다. 미확인 기기 상태는 변경하지 않았으며 코드 변경 없이 내용·링크/앵커·diff check를 검증하는 문서 파트다. Flutter/Backend 기능 시험·배포·DB/데이터 변경·dev/main 통합은 수행하지 않는다.
+
 ## 2026-10-30 — 공통 문서 운영 기준 Flutter 참조 연결
 
 [Issue29 Backend 인계](https://github.com/heo0328/lostparty-backend/issues/29#issuecomment-6517299322)의 고정 문서 커밋 `c1fa205db709f97c1d34817c4417b84144a5dde3`와 `shared-document-operation` 절을 직접 읽고 수용 의견과 대조했다. docs/README와 ai_rules §8-1에 해당 원본을 연결하고 Flutter 고유 배치·후속 대장·보관 절차를 유지했다. 상세 공통 본문을 복제하지 않으며 NEXT_WORK에는 양측 반영 근거 대조의 담당·완료 조건을 연결한다. AGENTS와 AI_CONTEXT는 역할·기능 상태 변경이 없어 유지한다.

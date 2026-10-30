@@ -38,6 +38,8 @@
 
 ## 기타 기준과 이력
 
+다른 탭에서 이어갈 첫 공개 베타·포트폴리오 기술 진단/개선의 범위·시작 순서·미확인 후보·작업 그룹 기준은 [기술 진단 인계](../product/DETAIL_IMPROVEMENTS.md#technical-review-handoff)에 둔다. 공통 문서 운영 합의는 양측 반영·대조 완료이며, 개별 기술 개선은 아직 완료로 판정하지 않는다. 현재 실행 안내는 NEXT_WORK를 따른다.
+
 [계정 연결30](../backend-migration/30-scoped-storage-write-contract.md), [원정대 정책09](../backend-migration/09-migration-decisions.md), [인증36](../backend-migration/36-roster-ownership-dispute-flutter-design.md), [한도34](../backend-migration/34-member-limits-and-room-restrictions.md), [통계35](../backend-migration/35-weekly-member-and-group-statistics.md), [버그](BUG_REPORTS.md). 현재 그룹 작업의 경계/담당은 NEXT_WORK, 실행 구간 밖의 남은 수정안/보류·다음 행동은 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md)에서 관리한다.
 
 완료 경과·검증/커밋·실제 사용자 관찰은 [DEV_LOG](DEV_LOG.md). 정리 전 누적 원문은 [이력](history/instruction-state-before-normalization-2026-10-25.md), 감사 발견은 [보고서](INSTRUCTION_AUDIT_2026-10-25.md). 이력의 과거 대기/다음 행동은 현재 실행 지시가 아니다. [전체 문서지도](../README.md).
