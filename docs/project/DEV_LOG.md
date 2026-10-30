@@ -1,5 +1,15 @@
 # 개발 이력
 
+## 2026-10-31 — Backend 상세GET500 조사 회신 확인·당시 입력 기록 대조
+
+[Backend 조사 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530073442)과 고정 집계1be55a7d를 확인했다. 과거 두 request_id의500/internal·후속server_event 및 같은 시간창 추가1건은 확인됐으나 안전 로그에는 예외 class/traceback·query/room/actor가 없어 원인·당시 profile/세대를 복원하지 못했다. 실행b8542ef7/이미지930c25f8/DB0035의 현재 자료를 READ ONLY/provider 차단으로 서비스 직접호출·응답모델 대조해 현재 C/N456호출(316정상/140예상거절), 과거 anchor140호출(95정상/45예상거절)에서 예상외예외0이었다. 이 조합은 중복되며 자동시험/인증HTTP/기기검증·원인 수정완료로 합산하지 않는다. 코드·계약·서버/DB 변경은 없었다.
+
+Backend 요청에 따라 작업공간의 기존 앱 로그 메타데이터/두 request_id·detail 경로 유무, 당시 DEV_LOG/진단 근거와 일반 앱의 상세 reader 분기를 대조했다. flutter_01/02는8~9월, account-read-main-build는10월14일 자료로 요청ID/상세 원요청 기록이 없었다. 당시 보관 근거는 서버 request_id/UTC/route/status와 개방 오류 설명이며 두 상세 요청별 query/profile·anchor 사용 여부/진입 동작/주차 상태를 확정할 수 없다. 현재 코드상 가능한 reader 분기나 현재 방 상태로 과거 요청을 추측 복원하지 않았다.
+
+[Flutter 입력 기록 확인 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530221606)을 게시하고 본문 일치를 재조회했다. NEXT_WORK/AI_CONTEXT의 Backend 회신 대기를 현재 미재현·과거 원인 미확정/미해결·자연 재발 근거 대기로 교체했다. 사용자의 그룹·레이드 앱 전체 통과를 보존하며 재시험·추측 코드 수정은 요구하지 않는다. 자연 재발 시 UTC·새request_id·민감값 없는 profile/query 키/anchor 사용 여부·화면/직전 동작/주차 상태를 전달한다. 추가 제품코드/API 변경의 근거는 현재 없고 Penpot 시각 검수는 별도 도구 대기다.
+
+이 파트는 조사/협업 기록으로 코드·원요청/ACK·제품 계약을 변경하지 않았다. 문서 내용/상대 링크·diff 검토·git diff --check로 검증하며 Flutter 시험/분석을 반복하지 않는다. 서버/DB·자료 변경/복원·배포·기기 조작·dev/main 통합·Issue 상태 변경은 수행하지 않았다.
+
 ## 2026-10-31 — 그룹·레이드 변경 앱 기기 테스트 전체 통과
 
 055e0608 인계 후 사용자가 “앱 테스트 전부 통과”라고 확인했다. 현재 승인한 그룹 연결/교체/일반 전환·같은 그룹/외부 승계 및 직접 위임·C/N 독립/다음주 개방·상속/기존 주차 보존·그룹명/소속 배지/주차별 표시·이름 제한 안내의 앱 기기 인수를 완료로 반영했다. 기존 정상 인수와 원요청/ACK 보호를 유지하고 같은 정상 시험을 반복 요구하지 않는다. 이번 사용자 인수를 다른 보류 기능·운영 복구·종합 기술 개선·릴리즈 검증으로 확대하지 않는다.

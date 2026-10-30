@@ -8,16 +8,16 @@
 
 ## 실제 상태·담당·다음 행동
 
-**현재 그룹·레이드 변경의 네이티브 연결·자동 검증·사용자 앱 기기 인수 완료 / 별도 Backend 조사·Penpot 검수 대기**다. 코드055e0608 인계 후 사용자가 “앱 테스트 전부 통과”라고 확인했다. 그룹 변경·승계/직접 위임·C/N 독립/다음주 개방·상속·기존 주차 보존·그룹명/소속 배지/주차별 표시·이름 제한 안내의 앱 확인 대기를 해소한다. 같은 정상 시험을 다시 요구하지 않는다. [전체 앱 인수 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529987970)을 게시하고 본문을 재조회했다.
+**현재 그룹·레이드 변경의 네이티브 연결·자동 검증·사용자 앱 기기 인수 완료 / 과거 GET500 자연 재발 근거·Penpot 검수 대기**다. 코드055e0608 인계 후 사용자가 “앱 테스트 전부 통과”라고 확인했다. 그룹 변경·승계/직접 위임·C/N 독립/다음주 개방·상속·기존 주차 보존·그룹명/소속 배지/주차별 표시·이름 제한 안내의 앱 확인 대기를 해소한다. 같은 정상 시험을 다시 요구하지 않는다. [전체 앱 인수 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529987970)을 게시하고 본문을 재조회했다.
 
 계약은 Backend b212ad0f, 마지막 확인 실행 소스b8542ef7/DB0035·기록476d1f31이다. 구현88a69fa7, 개방 보완ffffc4e6·3ec0f54f, 이름 안내055e0608을 보존한다. 기반 전체2,724PASS·개방 직접110PASS/전체 분석0·이름 안내 페이지 분석0은 각각 당시 실행 결과이며 이번 사용자 수동 인수와 합산하지 않는다. 완료 경과/세부 인수는 DEV_LOG, 장기 계약은 제품 §9/설계39를 따른다.
 
 | 별도 남은 작업 | 담당·상태 | 완료 조건 |
 |---|---|---|
-| 상세 GET500 두 건 원인 대조 | Backend 조사·회신 대기 / [요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529904340) | request_id로 원인·영향·재현/수정 필요성·실행 상태·Flutter 변경 필요 여부 회신 |
+| 과거 상세 GET500 원인 미확정·현재 미재현 | 자연 재발 근거 대기 / [Backend 조사](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530073442)·[Flutter 입력 기록 대조](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530221606) | 재발 시 UTC/새 request_id·민감값 없는 profile/query·anchor 사용 여부/동작/주차 상태 전달 후 표적 재현. 정상 시험 반복·추측 수정 없음 |
 | Penpot03 실제 화면 대조·검수 | Flutter / 도구 대기 | 기존 보드 갱신·시각 검수 후 같은 묶음02 이관. 앱 인수만으로 시각 검수 완료 처리하지 않음 |
 
-현재 확인된 앱 미구현/기기 실패 항목은 없다. 정상 앱 인수를 과거 서버500 원인 해소로 간주하지 않는다. Backend 회신에 Flutter 변경이 필요하면 해당 차이만 대조한다. 종합 기술 개선은 별도 후속이며 이번 인수로 자동 착수·완료 처리하지 않는다. dev/main 통합·배포·자료초기화·브랜치 삭제는 이번 범위 밖이다.
+현재 확인된 앱 미구현/기기 실패 항목은 없다. 정상 앱 인수를 과거 서버500 원인 해소로 간주하지 않는다. Backend 조사 기록1be55a7d는 직접 호출/응답모델 대조에서 예상외 예외0이나 과거 원인 해소/수정 완료는 아니다. 당시 두 요청의 앱 query/화면/상태 원기록은 확인하지 못해 회신했다. 현재 추가 Flutter 코드/API 변경 근거는 없으며 자연 재발 근거가 생기면 해당 차이만 대조한다. 종합 기술 개선은 별도 후속이며 이번 인수로 자동 착수·완료 처리하지 않는다. dev/main 통합·배포·자료초기화·브랜치 삭제는 이번 범위 밖이다.
 
 ## 협업 상태
 
@@ -25,6 +25,7 @@
 - 새 정책 요청: [Issue16 확정 정책·구현 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6521839291), 게시 본문 재조회 확인. Backend b212ad0f 고정 계약·격리 검증 및 실행b8542ef7/DB0035 반영 인계 완료. [Flutter 연결·자동검증 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6527340458)의 본문을 재조회했다. 현재 앱 기기 인수는 완료했으며 별도 Backend 조회 오류/디자인 후속은 위 표를 따른다.
 - [다음주 방 생성 사용자 인수 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529639375): 본문 재조회 확인. 개방 오류의 기기 대기는 해소했다. 별도 상세GET500 원인 대조는 Backend 후속이다.
 - [추가 기기 인수 정정·GET500 조사 요청](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6529904340): 본문 재조회 확인. 그룹 변경/같은 그룹 승계/직접 위임 통과. Backend가 원인·영향·수정 필요성·실행 상태를 같은 Issue에 회신하면 Flutter 영향 여부를 대조한다.
+- [Backend 조사 회신](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530073442): 과거500 확인·현재 미재현·원인 미확정, 코드/계약/실행 변경 없음. [Flutter 답변](https://github.com/heo0328/lostparty-backend/issues/16#issuecomment-6530221606): 당시 요청별 입력 기록 확인 불가. 정상 앱 인수 유지·자연 재발 근거 대기.
 - 모집·탈퇴 연계: [Issue13 출처 연결](https://github.com/heo0328/lostparty-backend/issues/13#issuecomment-6521848149), 게시 본문 재조회 확인. completed 상태 유지·재개/종료 조작 없음.
 
 ## 회귀 보호·자동 검증
