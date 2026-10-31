@@ -3,6 +3,8 @@ import '../../../account/domain/account_read_session.dart';
 import '../../data/backend/group_repository.dart';
 import '../../data/backend/group_models.dart';
 
+enum GroupDetailArea { members, requests, code, management }
+
 enum GroupPageKind {
   home,
   search,
@@ -37,6 +39,10 @@ class BackendGroupViewModel extends ChangeNotifier {
   Map<String, dynamic>? summary, management, code, counts, usage, preview;
   GroupDetailSnapshot? detail;
   List<Map<String, dynamic>> rows = [], groups = [];
+  List<Map<String, dynamic>> requests = [];
+  final areaLoading = <GroupDetailArea>{};
+  final areaLoaded = <GroupDetailArea>{};
+  final areaFailures = <GroupDetailArea, Object>{};
   List<Map<String, dynamic>> inviteCandidates = [];
   int _inviteEpoch = 0;
   void clearInviteCandidates() {
@@ -96,6 +102,7 @@ class BackendGroupViewModel extends ChangeNotifier {
     detail = null;
     summary = management = code = counts = usage = preview = null;
     rows = [];
+    _clearDetailAreas();
     clearInviteCandidates();
     groups = [];
     activities.clear();
@@ -130,6 +137,7 @@ class BackendGroupViewModel extends ChangeNotifier {
         usage = null;
         cursor = null;
         rows = [];
+        _clearDetailAreas();
         activities.clear();
         _activityLoading.clear();
         activityFailures.clear();
@@ -211,7 +219,13 @@ class BackendGroupViewModel extends ChangeNotifier {
         }
         if (!current()) return;
         detail = next;
-        if (detail != null) {
+        if (detail != null && kind == GroupPageKind.detail) {
+          await Future.wait([
+            for (final area in GroupDetailArea.values)
+              if (area != GroupDetailArea.requests || leader)
+                _loadArea(area, e, binding),
+          ]);
+        } else if (detail != null) {
           final value = await repository.get(
             '/v1/groups/$groupId/management',
             query: {'management_profile': 'group-management-1'},
@@ -274,6 +288,62 @@ class BackendGroupViewModel extends ChangeNotifier {
     } finally {
       if (current()) {
         loading = false;
+        _emit();
+      }
+    }
+  }
+
+  void _clearDetailAreas() {
+    requests = [];
+    areaLoading.clear();
+    areaLoaded.clear();
+    areaFailures.clear();
+  }
+
+  Future<void> reloadArea(GroupDetailArea area) async {
+    if (busy || loading || detail == null || areaLoading.contains(area)) return;
+    if (area == GroupDetailArea.requests && !leader) return;
+    await _loadArea(area, _epoch, repository.readScope);
+  }
+
+  Future<void> _loadArea(GroupDetailArea area, int epoch, String scope) async {
+    bool current() =>
+        !_disposed && epoch == _epoch && scope == repository.readScope;
+    areaLoading.add(area);
+    areaLoaded.remove(area);
+    areaFailures.remove(area);
+    _emit();
+    final path = '/v1/groups/$groupId';
+    try {
+      switch (area) {
+        case GroupDetailArea.members:
+          final value = await repository.all(
+            '$path/members',
+            query: {'reader_profile': 'group-display-1'},
+          );
+          if (current()) rows = value;
+        case GroupDetailArea.requests:
+          final value = await repository.all(
+            '$path/join-relations',
+            query: {'state': 'pending'},
+          );
+          if (current()) requests = value;
+        case GroupDetailArea.code:
+          final value = await repository.get('$path/join-code');
+          if (current()) code = value;
+        case GroupDetailArea.management:
+          final value = await repository.get(
+            '$path/management',
+            query: {'management_profile': 'group-management-1'},
+          );
+          if (current()) management = value;
+      }
+      if (current()) areaLoaded.add(area);
+    } catch (error) {
+      if (current()) areaFailures[area] = error;
+    } finally {
+      if (current()) {
+        areaLoading.remove(area);
         _emit();
       }
     }
