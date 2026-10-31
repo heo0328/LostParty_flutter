@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../account/domain/account_read_session.dart';
 import '../../data/backend/group_models.dart';
 import '../../data/backend/group_repository.dart';
+import '../../domain/services/group_name_normalizer.dart';
 import '../viewmodels/backend_group_view_model.dart';
 
 /// Existing group entry points and card hierarchy, bound to current Backend data.
@@ -31,6 +32,14 @@ class _BackendGroupPageState extends State<BackendGroupPage>
   late final BackendGroupViewModel m;
   late String _memberBinding;
   final input = TextEditingController();
+  final _expandedMembers = <String>{};
+  int _expandedObservation = -1;
+  bool get canInteract => !m.busy && !m.loading && m.areaLoading.isEmpty;
+  bool allowed(String action) =>
+      (widget.kind != GroupPageKind.detail ||
+          m.areaLoaded.contains(GroupDetailArea.management)) &&
+      m.management != null &&
+      groupAllowed(groupMap(m.management!['permissions']), action);
   List<Map<String, dynamic>> get candidates => m.inviteCandidates;
   String get path => '/v1/groups/${widget.groupId}';
   String get route => '/groups/${widget.groupId}';
@@ -53,6 +62,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
     if (next == _memberBinding) return;
     _memberBinding = next;
     input.clear();
+    _expandedMembers.clear();
     m.clearInviteCandidates();
   }
 
@@ -334,6 +344,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
   }
 
   Future<void> manage(String action, {Map<String, dynamic>? member}) async {
+    if (!canInteract) return;
     final management = m.management;
     if (management == null ||
         !groupAllowed(groupMap(management['permissions']), action)) {
@@ -398,6 +409,132 @@ class _BackendGroupPageState extends State<BackendGroupPage>
     });
   }
 
+  Future<void> editName() async {
+    if (!canInteract ||
+        !m.leader ||
+        m.detail == null ||
+        !groupAllowed(groupMap(m.detail!.wire['permissions']), 'rename')) {
+      return;
+    }
+    final detail = m.detail!;
+    final binding = widget.repository.readScope, observation = m.observation;
+    var draft = detail.name;
+    final form = GlobalKey<FormState>();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('그룹 이름 변경'),
+        content: Form(
+          key: form,
+          child: TextFormField(
+            initialValue: detail.name,
+            onChanged: (value) => draft = value,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '그룹 이름',
+              helperText: '1~20자 · 앞뒤 공백 제외',
+              helperMaxLines: 2,
+            ),
+            validator: (v) =>
+                const GroupNameNormalizer().isValidDisplayName(v ?? '')
+                ? null
+                : '앞뒤 공백을 제외한 1~20자로 입력해 주세요.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (form.currentState!.validate()) {
+                Navigator.pop(
+                  context,
+                  const GroupNameNormalizer().displayName(draft),
+                );
+              }
+            },
+            child: const Text('저장'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted ||
+        name == null ||
+        binding != widget.repository.readScope ||
+        observation != m.observation ||
+        !canInteract) {
+      return;
+    }
+    await m.act('PATCH', path, {
+      'name': name,
+      'expected_revision': detail.group['revision'],
+      'expected_membership_revision': detail.membership['revision'],
+    });
+  }
+
+  Future<void> selectLeader() async {
+    if (!canInteract ||
+        !allowed('transfer_leadership') ||
+        !m.areaLoaded.contains(GroupDetailArea.members)) {
+      return;
+    }
+    final binding = widget.repository.readScope, observation = m.observation;
+    final members = m.rows.where((r) => r['is_me'] == false).toList();
+    Map<String, dynamic>? candidate;
+    final selected = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: const Text('그룹장 이전'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('후임 그룹원을 선택해 주세요.'),
+                  if (members.isEmpty) const Text('이전할 그룹원이 없습니다.'),
+                  for (final member in members)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(groupName(member['display'])),
+                      leading: Icon(
+                        candidate == member
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                      ),
+                      onTap: () => update(() => candidate = member),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: candidate == null
+                  ? null
+                  : () => Navigator.pop(context, candidate),
+              child: const Text('선택'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted ||
+        selected == null ||
+        binding != widget.repository.readScope ||
+        observation != m.observation) {
+      return;
+    }
+    await manage('transfer_leadership', member: selected);
+  }
+
   Future<void> unblock(Map<String, dynamic> subject) async {
     if (!await confirm('${groupName(subject['display'])}님의 신청 금지를 해제할까요?')) {
       return;
@@ -412,7 +549,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
 
   Widget button(String text, VoidCallback onTap, {bool enabled = true}) =>
       FilledButton.tonal(
-        onPressed: enabled && !m.busy && !m.loading ? onTap : null,
+        onPressed: enabled && canInteract ? onTap : null,
         child: Text(text),
       );
   Widget field(
@@ -448,6 +585,9 @@ class _BackendGroupPageState extends State<BackendGroupPage>
     ),
   );
   Widget card(Widget child) => Card(
+    margin: widget.kind == GroupPageKind.detail
+        ? const EdgeInsets.symmetric(vertical: 6)
+        : null,
     child: Padding(padding: const EdgeInsets.all(16), child: child),
   );
   Widget nav(String title, String suffix) => ListTile(
@@ -479,7 +619,9 @@ class _BackendGroupPageState extends State<BackendGroupPage>
           Text(
             '${r['kind'] == 'invitation' ? '초대' : '가입 신청'} · ${groupName(r['display'])} · 신청 ${r['application_count']}회',
           ),
-          Text('만료 ${DateTime.parse(r['expires_at']).toLocal()}'),
+          Text(
+            '만료 ${DateTime.parse(r['expires_at']).toLocal().toString().split('.').first}',
+          ),
           Wrap(
             spacing: 8,
             children: [
@@ -504,11 +646,56 @@ class _BackendGroupPageState extends State<BackendGroupPage>
     final id = member['membership_id'] as String;
     return Card(
       child: ExpansionTile(
-        title: Text(
-          '${groupName(member['display'])}${member['role'] == 'leader' ? ' · 그룹장' : ''}',
+        key: ValueKey('$id/${m.observation}'),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${groupName(member['display'])}${member['role'] == 'leader' ? ' · 그룹장' : ''}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (m.leader &&
+                member['is_me'] == false &&
+                _expandedMembers.contains(id))
+              Semantics(
+                button: true,
+                label: '${groupName(member['display'])} 추방',
+                child: SizedBox(
+                  width: 64,
+                  height: 48,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 8,
+                      ),
+                      minimumSize: const Size(64, 48),
+                    ),
+                    onPressed: canInteract && allowed('remove_member')
+                        ? () => manage('remove_member', member: member)
+                        : null,
+                    child: const SizedBox(
+                      width: 56,
+                      height: 32,
+                      child: Center(child: Text('추방')),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         subtitle: Text(groupSpecText(member['character_spec'])),
         onExpansionChanged: (expanded) {
+          setState(() {
+            if (expanded) {
+              _expandedMembers.add(id);
+            } else {
+              _expandedMembers.remove(id);
+            }
+          });
           if (expanded) unawaited(m.activity(id));
         },
         children: [
@@ -538,6 +725,260 @@ class _BackendGroupPageState extends State<BackendGroupPage>
         ],
       ),
     );
+  }
+
+  Widget areaState(GroupDetailArea area, String label) {
+    final error = m.areaFailures[area];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (error == null)
+            Text('$label 불러오는 중…')
+          else ...[
+            Text('$label 확인 불가 · ${groupFailure(error)}'),
+            button('다시 불러오기', () => m.reloadArea(area)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget detailSummary() {
+    final group = m.detail!.group;
+    return card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  group['name'],
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              if (m.leader)
+                IconButton(
+                  onPressed:
+                      canInteract &&
+                          groupAllowed(
+                            groupMap(m.detail!.wire['permissions']),
+                            'rename',
+                          )
+                      ? editName
+                      : null,
+                  tooltip: '그룹 이름 변경',
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '대표 · ${groupName(group['representative']['display'])}',
+                ),
+              ),
+              if (m.leader)
+                IconButton(
+                  onPressed: canInteract && allowed('change_representative')
+                      ? () => manage('change_representative')
+                      : null,
+                  tooltip: '그룹 대표 변경',
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+            ],
+          ),
+          Text('그룹장 · ${groupName(group['leader_display'])}'),
+          if (group['representative']['status'] == 'needs_update')
+            const Text('그룹 대표 캐릭터 변경이 필요합니다.'),
+          if (m.leader) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed:
+                    canInteract &&
+                        allowed('transfer_leadership') &&
+                        m.areaLoaded.contains(GroupDetailArea.members)
+                    ? selectLeader
+                    : null,
+                child: const Text('그룹장 이전'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> codeContents() {
+    if (m.code == null) return [];
+    final c = m.code!;
+    final next = DateTime.tryParse(
+      c['regenerate_available_at'] as String? ?? '',
+    );
+    final waiting = next != null && next.isAfter(DateTime.now().toUtc());
+    return [
+      Row(
+        children: [
+          Expanded(
+            child: c['code'] is String
+                ? SelectableText(
+                    c['code'],
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  )
+                : Text(
+                    c['active'] == true ? '코드가 공개되지 않았습니다.' : '발급된 초대코드가 없습니다.',
+                  ),
+          ),
+          if (c['code'] is String)
+            IconButton(
+              onPressed: canInteract
+                  ? () => Clipboard.setData(ClipboardData(text: c['code']))
+                  : null,
+              tooltip: '초대코드 복사',
+              icon: const Icon(Icons.content_copy),
+            ),
+        ],
+      ),
+      if (m.leader) ...[
+        if (c['active'] == true) ...[
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('그룹원에게 코드 공개'),
+            subtitle: const Text('공개를 꺼도 기존 코드는 유효합니다.'),
+            value: c['visible_to_members'],
+            onChanged: canInteract
+                ? (v) => codeCommand('visibility', visible: v)
+                : null,
+          ),
+          Wrap(
+            spacing: 8,
+            children: [
+              button('재발급', () => codeCommand('regenerate'), enabled: !waiting),
+              button('폐기', () => codeCommand('revoke')),
+            ],
+          ),
+          if (waiting)
+            Text('재발급 가능 ${next.toLocal().toString().split('.').first}'),
+        ] else
+          button('코드 생성', () => codeCommand('create')),
+      ],
+    ];
+  }
+
+  List<Widget> detailContents() {
+    if (m.detail == null) {
+      return [
+        if (m.summary != null) summaryCard(m.summary!),
+        if (!m.loading && m.failure == null && m.summary != null)
+          button('가입 신청', apply),
+      ];
+    }
+    final permissions = m.management == null
+        ? <String, dynamic>{}
+        : groupMap(m.management!['permissions']);
+    return [
+      detailSummary(),
+      if (m.leader) ...[
+        if (!m.areaLoaded.contains(GroupDetailArea.requests))
+          areaState(GroupDetailArea.requests, '신청·초대')
+        else if (m.requests.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text('새로운 그룹 가입 신청, 초대가 없습니다.', maxLines: 1),
+            ),
+          )
+        else ...[
+          const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text('신청·초대 관리'),
+          ),
+          ...m.requests.map(relationCard),
+        ],
+      ],
+      card(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('초대코드', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (!m.areaLoaded.contains(GroupDetailArea.code))
+              areaState(GroupDetailArea.code, '초대코드')
+            else
+              ...codeContents(),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          for (final entry in {
+            '사용자 초대': 'invite',
+            '그룹 레이드': 'raids',
+          }.entries) ...[
+            if (entry.value == 'raids') const SizedBox(width: 12),
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: FilledButton.tonal(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: canInteract
+                      ? () => open('$route/${entry.value}')
+                      : null,
+                  child: Text(entry.key),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+      if (m.leader)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: OutlinedButton(
+              onPressed: canInteract ? () => open('$route/blocked') : null,
+              child: const Text('신청 금지 인원'),
+            ),
+          ),
+        ),
+      const SizedBox(height: 20),
+      Text(
+        '그룹원 ${m.detail!.wire['capacity']['used']} / ${m.detail!.wire['capacity']['limit']}',
+      ),
+      if (!m.areaLoaded.contains(GroupDetailArea.members))
+        areaState(GroupDetailArea.members, '그룹원')
+      else
+        ...([...m.rows]..sort(
+              (a, b) => (a['role'] == 'leader' ? 0 : 1).compareTo(
+                b['role'] == 'leader' ? 0 : 1,
+              ),
+            ))
+            .map(memberCard),
+      const SizedBox(height: 24),
+      if (!m.areaLoaded.contains(GroupDetailArea.management))
+        areaState(GroupDetailArea.management, '그룹 관리')
+      else if (m.leader) ...[
+        const Text('그룹 해산'),
+        if (permissions['disband'] is Map &&
+            permissions['disband']['allowed'] == false)
+          Text(groupDisbandReason(permissions['disband']['reason'])),
+        if (m.management?['recruitment_state'] != 'clear')
+          nav('해산을 막는 그룹 레이드 확인', 'raids'),
+        button('그룹 해산', () => manage('disband'), enabled: allowed('disband')),
+      ] else
+        button('그룹 탈퇴', () => manage('leave'), enabled: allowed('leave')),
+    ];
   }
 
   List<Widget> content() {
@@ -622,42 +1063,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
           ],
         ];
       case GroupPageKind.detail:
-        return [
-          if (m.summary != null) summaryCard(m.summary!),
-          if (m.failure == null && m.detail == null && m.summary != null)
-            button('가입 신청', apply),
-          if (m.detail != null) ...[
-            Text(
-              '그룹원 ${m.detail!.wire['capacity']['used']} / ${m.detail!.wire['capacity']['limit']}',
-            ),
-            if (m.detail!.group['representative']['status'] == 'needs_update')
-              const Text('그룹 대표 캐릭터 변경이 필요합니다.'),
-            nav('사용자 초대', 'invite'),
-            nav('초대코드', 'code'),
-            nav('그룹 레이드', 'raids'),
-            if (m.leader) ...[
-              nav('그룹 정보 · 멤버 관리', 'info'),
-              nav('초대 · 신청 관리', 'requests'),
-              nav('신청 금지 인원', 'blocked'),
-            ],
-            for (final member
-                in [...m.rows]..sort(
-                  (a, b) => (a['role'] == 'leader' ? 0 : 1).compareTo(
-                    b['role'] == 'leader' ? 0 : 1,
-                  ),
-                ))
-              memberCard(member),
-            if (m.management != null && !m.leader)
-              button(
-                '그룹 탈퇴',
-                () => manage('leave'),
-                enabled: groupAllowed(
-                  groupMap(m.management!['permissions']),
-                  'leave',
-                ),
-              ),
-          ],
-        ];
+        return detailContents();
       case GroupPageKind.invite:
         return [
           if (m.detail != null) ...[
@@ -697,47 +1103,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
             ),
         ];
       case GroupPageKind.code:
-        if (m.code == null) return [];
-        final c = m.code!,
-            next = DateTime.tryParse(
-              c['regenerate_available_at'] as String? ?? '',
-            );
-        return [
-          if (c['code'] is String)
-            SelectableText(
-              c['code'],
-              style: Theme.of(context).textTheme.headlineMedium,
-            )
-          else
-            Text(c['active'] == true ? '코드가 공개되지 않았습니다.' : '발급된 초대코드가 없습니다.'),
-          if (c['code'] is String)
-            button(
-              '복사',
-              () => Clipboard.setData(ClipboardData(text: c['code'])),
-            ),
-          if (m.leader) ...[
-            SwitchListTile(
-              title: const Text('그룹원에게 코드 공개'),
-              subtitle: const Text('공개를 꺼도 기존 코드는 유효합니다.'),
-              value: c['visible_to_members'],
-              onChanged: m.busy || c['active'] != true
-                  ? null
-                  : (v) => codeCommand('visibility', visible: v),
-            ),
-            if (c['active'] != true)
-              button('코드 생성', () => codeCommand('create')),
-            if (c['active'] == true) ...[
-              button(
-                '재발급',
-                () => codeCommand('regenerate'),
-                enabled: next == null || !next.isAfter(DateTime.now().toUtc()),
-              ),
-              button('폐기', () => codeCommand('revoke')),
-            ],
-            if (next != null && next.isAfter(DateTime.now().toUtc()))
-              Text('재발급 가능 ${next.toLocal()}'),
-          ],
-        ];
+        return codeContents();
       case GroupPageKind.info:
         if (m.detail == null || !m.leader) return [];
         final permissions = m.management == null
@@ -834,6 +1200,10 @@ class _BackendGroupPageState extends State<BackendGroupPage>
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: m,
     builder: (context, _) {
+      if (_expandedObservation != m.observation) {
+        _expandedMembers.clear();
+        _expandedObservation = m.observation;
+      }
       final title = switch (widget.kind) {
         GroupPageKind.home => '그룹',
         GroupPageKind.search => '그룹 검색',

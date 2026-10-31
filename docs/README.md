@@ -21,7 +21,7 @@
 - [계정/캐시/복원30](backend-migration/30-scoped-storage-write-contract.md), [등록19](backend-migration/19-account-registration-flutter-contract.md), [키25](backend-migration/25-member-lostark-key-request.md), [인증36](backend-migration/36-roster-ownership-dispute-flutter-design.md)
 - [한도34](backend-migration/34-member-limits-and-room-restrictions.md)·[통계35](backend-migration/35-weekly-member-and-group-statistics.md)·[분야별 요청32](backend-migration/32-backend-domain-prework-requests.md)
 - [계정 후속14](backend-migration/14-my-account-flutter-integration-plan.md)·[DB 검토24](backend-migration/24-database-design-review.md)·[백엔드 문서목록](backend-migration/00-overview.md)
-- Penpot03 작업 중/02 구현 완료, 메인 보드·섹션별 하위 보드 수정과 완료 후 동일 보드 이동은 [디자인 공통 지침](design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다. 과거 시안 식별자/운영 이력은 설계37 §37.65.
+- Penpot03 작업 중/02 구현 완료, 메인 보드·섹션별 하위 보드 수정과 사용자 별도 지시 시 동일 보드 이관은 [디자인 공통 지침](design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다. 과거 시안 식별자/운영 이력은 설계37 §37.65.
 
 완료/검증 이력은 [DEV_LOG](project/DEV_LOG.md), 버그는 [BUG_REPORTS](project/BUG_REPORTS.md), 지시문 감사는 [보고서](project/INSTRUCTION_AUDIT_2026-10-25.md). 과거 Firebase 기술/배포 자료는 [레거시 지도](../legacy/firebase/README.md)에 보관하며 신규 실행 지시로 재사용하지 않는다.
 
