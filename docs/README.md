@@ -88,6 +88,7 @@
 UI 방향, 디자인 시스템과 시각적 적용 기준을 관리한다.
 
 - [`design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md`](design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md): Soft Lavender 기반 Design System v1 설계 요청과 단계적 적용 기준
+- [`design/PENPOT_IMPLEMENTED_SCREEN_MAP.md`](design/PENPOT_IMPLEMENTED_SCREEN_MAP.md):02 기능별 보드·기존 화면 소속·현행 대조·검수 및 미확인 범위
 - [`design/PARTY_COMPOSITION_RESPONSIVE_LAYOUT.md`](design/PARTY_COMPOSITION_RESPONSIVE_LAYOUT.md): 바형 스마트폰·폴드·태블릿의 파티 구성판 반응형 배치 계약
 
 ## 관리 원칙
