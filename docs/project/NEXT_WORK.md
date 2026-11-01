@@ -1,10 +1,12 @@
 # NEXT WORK — Android v1.1.2 게시
 
-## 현재 파트 — 승인 안내문과 release APK 게시 (2026-11-01)
+## 현재 상태 — Android v1.1.2 게시 완료 (2026-11-01)
 
-사용자가 안내문 초안과 새 release APK 게시를 승인했다. release/1.1.2에서 pubspec 1.1.2+4·docs/releases/v1.1.2.md를 준비하고 dev/main 동일 시점 반영 후 v1.1.2 태그를 push한다. 기존 자동화의 APK package/version/영구서명 검증·checksum·업로드 성공을 확인하고 승인 안내문을 Release 본문에 적용한다. 기존 태그/asset 덮어쓰기·서버/DB 변경은 제외한다. 버전/문서만 변경하므로 이전 코드 분석 결과를 재사용하고 diffcheck·CI release 빌드 검증을 수행한다. 기기 설치/실제 release 로그인은 사용자 확인으로 남긴다. 실패 시 진단 결과를 보고하고 자동 재실행하지 않는다.
+1.1.2+4·v1.1.2(9e4a18f7) APK 공개 게시를 완료했다. [Actions 41306739482](https://github.com/heo0328/LostParty_flutter/actions/runs/41306739482)의 빌드·package/version/영구서명·업로드 모두 성공했다. [Release](https://github.com/heo0328/LostParty_flutter/releases/tag/v1.1.2)에 APK·checksum과 승인 안내문을 게시하고 본문 일치를 재조회했다. 상세 안내문은 docs/releases/v1.1.2.md, 게시 검증 이력은 DEV_LOG를 따른다.
 
-AWS release 기본 주소 설정은 45bb7f1f로 dev/main 통합·push 완료했다. 명시 BACKEND_BASE_URL 우선·debug 로컬 기본값·profile 주소 명시·HTTPS 검증은 유지한다.
+남은 사용자 확인은 게시 APK의 업데이트 설치·실제 release 서명 Google 로그인·AWS 주요 흐름이다. 에이전트는 기기 설치/조작을 하지 않았다. 서버 외부 정기 백업은 Backend 담당 후속이며 이번 게시 완료에 포함하지 않는다. 서버/DB·기존 태그 변경은 없다. release 브랜치는 보존하고 완료 기록도 dev/main에 같은 시점으로 반영한다.
+
+AWS release 기본 주소 설정은 45bb7f1f로 통합했다. 명시 BACKEND_BASE_URL 우선·debug 로컬 기본값·profile 주소 명시·HTTPS 검증은 유지한다.
 
 ## 보존 후속 — 기존 그룹 보드 정렬 완료 (2026-11-01)
 

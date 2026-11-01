@@ -7411,3 +7411,7 @@ Backend33번째6269041117/설계1e2f706 로컬·미push의 원본행/정규화·
 ## 2026-11-01 — Android v1.1.2 게시 준비
 
 사용자 승인 안내문을 docs/releases/v1.1.2.md에 기록하고 버전1.1.2+4를 준비했다. 기존 v1.1.1은 보존한다. 기능 코드는45bb7f1f 그대로이며 release AWS 기본 주소·debug/명시 override를 유지한다. 문서/버전 diffcheck와 CI 서명 APK 검증을 완료 조건으로 두며 무관 전체 시험은 반복하지 않는다. dev/main 동일 시점 통합과 v1.1.2 태그 기반 공개 게시가 승인 범위다. 신규 실기기 인수는 미확인이고 서버/DB 변경은 없다.
+
+### v1.1.2 공개 게시 완료
+
+태그 v1.1.2는9e4a18f7을 가리킨다. Actions41306739482 전체success. kr.co.heowork0921.lostparty/1.1.2+4·승인 서명 SHA256 f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea 검증 단계를 통과했다. lostparty-v1.1.2-android.apk와.sha256이 uploaded이고 APK digest는568a59cd1d21560ab1a48908cf801a99043a335aaf87b9c6679a6696c2a5b236이다. https://github.com/heo0328/LostParty_flutter/releases/tag/v1.1.2 본문을 승인 안내문으로 적용·재조회 일치확인했다. 새로 가능한 흐름은 AWS 기본주소를 포함한 공개 APK 다운로드이며 기존 서명/패키지·업데이트 경로를 보존했다. 실제 업데이트 설치·release Google 로그인·주요 흐름은 사용자 미확인으로 남긴다. 완료 기록을 release/1.1.2→dev/main으로 같은 커밋에 반영·push하며 태그는 이동하지 않는다.

@@ -8,7 +8,7 @@
 
 ## 현재 작업과 실제 코드 상태
 
-2026-11-01 사용자 지시로 release의 기본 Backend 주소를 AWS Lightsail https://lostparty.duckdns.org로 지정했다. 명시 BACKEND_BASE_URL 우선·debug 로컬 기본값·profile 주소 명시·origin별 인증/자료 격리는 유지한다. 실행 설정은 [Google 로그인 계약](../architecture/GOOGLE_LOGIN_CONTRACT.md)의 실행 설정 절을 따른다. dev/main 동일 시점 통합·푸시 대상이며 무옵션 release 기기 접속/서명 Google 로그인은 미확인이다.
+2026-11-01 사용자 지시로 release의 기본 Backend 주소를 AWS Lightsail https://lostparty.duckdns.org로 지정했다. 명시 BACKEND_BASE_URL 우선·debug 로컬 기본값·profile 주소 명시·origin별 인증/자료 격리는 유지한다. 실행 설정은 [Google 로그인 계약](../architecture/GOOGLE_LOGIN_CONTRACT.md)의 실행 설정 절을 따른다. dev/main 동일 시점 통합·푸시를 마쳤으며 v1.1.2(1.1.2+4) 서명 APK·checksum·사용자 승인 안내문을 GitHub Release에 게시했다. CI41306739482 전체 성공, 실제 게시 APK 기기 접속/서명 Google 로그인은 미확인이다.
 
 Penpot02의 그룹 외 화면을5개 독립 기능 설명 보드·23개 하위 섹션으로 정리하고 정적 PNG/객체 검수를 마쳤다. 기존89객체 소속·현행 대조·참조 제외 사유와 미확인은 [구현 화면 대응표](../design/PENPOT_IMPLEMENTED_SCREEN_MAP.md)에 기록했다. 그룹 외 정리에서 그룹 복사본/01/03/04를 보존했다. 2026-11-01 사용자 변경으로02 이름은 「구현 운용 화면」이며, 현재02의 기존 그룹 보드를06 그룹으로 번호·백보드 스타일·05 오른쪽 정렬했다. 그룹 내부9섹션과 다른 보드/03은 그대로 유지했다. 사용자 검토 제시 단계이며 실제 View의 클릭·스크롤/전체 프로토타입은 후속이다. 두 번의30초 시간 초과에도 서버 변경이 완료된 것을 재조회로 확인해 작은 명령으로 재개했다. Flutter/Backend 코드는 변경하지 않았다. Penpot 문서는 dev bfc2d48d에 통합·푸시했고, 후속 AWS 주소 설정의 사용자 지시로 dev/main 동일 시점 통합에 포함한다. 다음 행동은 NEXT_WORK를 따른다.
 
