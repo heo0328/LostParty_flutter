@@ -7407,3 +7407,7 @@ Backend33번째6269041117/설계1e2f706 로컬·미push의 원본행/정규화·
 - 검증: dart format(변경0), flutter analyze --no-pub lib/app/backend_app.dart(문제0), git diff --check 및 diff 검토. 기본값 분기만 변경하므로 전체 시험은 반복하지 않았다. 기존 dev/main 코드 동일·차이는 Penpot 문서임을 확인했다.
 - 미확인: 무옵션 release APK의 AWS 접속과 실제 release 서명 Google 로그인. 사용자의 기존 AWS 연결 확인을 새 release 인수 완료로 확대하지 않는다. APK/태그·서버 배포/DB 초기화는 실행하지 않았다.
 - Git: fix/release-backend-url에서 구현·기록하고 사용자 승인에 따라 dev/main을 같은 최종 커밋으로 통합·푸시한다. 기존 Penpot dev 문서도 함께 반영한다. 목적 브랜치는 보존한다.
+
+## 2026-11-01 — Android v1.1.2 게시 준비
+
+사용자 승인 안내문을 docs/releases/v1.1.2.md에 기록하고 버전1.1.2+4를 준비했다. 기존 v1.1.1은 보존한다. 기능 코드는45bb7f1f 그대로이며 release AWS 기본 주소·debug/명시 override를 유지한다. 문서/버전 diffcheck와 CI 서명 APK 검증을 완료 조건으로 두며 무관 전체 시험은 반복하지 않는다. dev/main 동일 시점 통합과 v1.1.2 태그 기반 공개 게시가 승인 범위다. 신규 실기기 인수는 미확인이고 서버/DB 변경은 없다.
