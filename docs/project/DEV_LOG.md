@@ -7415,3 +7415,7 @@ Backend33번째6269041117/설계1e2f706 로컬·미push의 원본행/정규화·
 ### v1.1.2 공개 게시 완료
 
 태그 v1.1.2는9e4a18f7을 가리킨다. Actions41306739482 전체success. kr.co.heowork0921.lostparty/1.1.2+4·승인 서명 SHA256 f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea 검증 단계를 통과했다. lostparty-v1.1.2-android.apk와.sha256이 uploaded이고 APK digest는568a59cd1d21560ab1a48908cf801a99043a335aaf87b9c6679a6696c2a5b236이다. https://github.com/heo0328/LostParty_flutter/releases/tag/v1.1.2 본문을 승인 안내문으로 적용·재조회 일치확인했다. 새로 가능한 흐름은 AWS 기본주소를 포함한 공개 APK 다운로드이며 기존 서명/패키지·업데이트 경로를 보존했다. 실제 업데이트 설치·release Google 로그인·주요 흐름은 사용자 미확인으로 남긴다. 완료 기록을 release/1.1.2→dev/main으로 같은 커밋에 반영·push하며 태그는 이동하지 않는다.
+
+### Backend Issue34 APK 자동화 운영 회신
+
+본문·최신댓글(기존0)을 확인하고 https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6558053848 에 5개 질문의 실제 운영·고정근거·미확인·다음담당을 게시한 뒤 재조회했다. 최신 유효 v1.1.2와 v1.1.1 현asset0/중단안내를 구분했고 debug/실제release OAuth·전체 호환manifest는 미확인으로 남겼다. Backend 버전 독립+호환조합 연결·단계별 이력분리 의견을 전달했으며 정책 채택/CI 구현/재배포를 실행하지 않았다. Backend 적용안 정리 대기, 문서diffcheck·내용검토만 수행했다.
