@@ -65,7 +65,7 @@
 3. `flutter pub get`
 4. Secrets로 runner 임시 keystore를 복원하고 서명값을 환경변수로 전달
 5. 태그 실행이면 `v<pubspec versionName>` 일치 및 태그 커밋의 `main` 포함 여부 검사
-6. `flutter build apk --release`
+6. `flutter build apk --release` (2026-11-01부터 주소 옵션 생략 시 AWS `https://lostparty.duckdns.org` 사용. `BACKEND_BASE_URL` 명시값이 있으면 우선하며 설정 계약은 GOOGLE_LOGIN_CONTRACT를 따른다.)
 7. APK 서명 유효성, package ID, versionName/versionCode 검사
 8. `lostparty-<tag>-android.apk`로 이름 변경 및 `.sha256` 생성
 9. 검증 결과를 짧은 보존 기간의 workflow artifact로 업로드

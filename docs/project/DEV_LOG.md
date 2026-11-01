@@ -7399,3 +7399,11 @@ Backend33번째6269041117/설계1e2f706 로컬·미push의 원본행/정규화·
 ## 2026-10-26 — 목록 복귀/갱신 사용자 기기 통과
 
 사용자가 8a31853e 이후 레이드 현황 이동과 갱신의 정상 작동을 보고했다. BUG027/NEXT_WORK의 해당 재확인 과제를 통과·해결로 교체했다. 코드 변경/시험 반복 없이 기존 Issue13 회신에 사용자 결과를 반영한다. 확인 기록은 다음 의미 있는 파트에 포함하며 별도 커밋/푸시하지 않는다.
+
+## 2026-11-01 — release AWS 기본 Backend 주소
+
+- 사용자 지시로 release에서 BACKEND_BASE_URL 생략 시 https://lostparty.duckdns.org를 사용한다. 일반 main→BackendApp→공용 Dio→인증/각 Repository 경로의 기존 주소 전달을 유지한다.
+- 보존: 명시 dart-define 우선, debug 기본 http://10.0.2.2:8000, profile 주소 명시 요구, release HTTPS 검증, origin별 세션·캐시 분리. 새 API/DB·권한·UI 변경 없음.
+- 검증: dart format(변경0), flutter analyze --no-pub lib/app/backend_app.dart(문제0), git diff --check 및 diff 검토. 기본값 분기만 변경하므로 전체 시험은 반복하지 않았다. 기존 dev/main 코드 동일·차이는 Penpot 문서임을 확인했다.
+- 미확인: 무옵션 release APK의 AWS 접속과 실제 release 서명 Google 로그인. 사용자의 기존 AWS 연결 확인을 새 release 인수 완료로 확대하지 않는다. APK/태그·서버 배포/DB 초기화는 실행하지 않았다.
+- Git: fix/release-backend-url에서 구현·기록하고 사용자 승인에 따라 dev/main을 같은 최종 커밋으로 통합·푸시한다. 기존 Penpot dev 문서도 함께 반영한다. 목적 브랜치는 보존한다.

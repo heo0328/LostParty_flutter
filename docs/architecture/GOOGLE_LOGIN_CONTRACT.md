@@ -26,7 +26,7 @@
 
 현재 시작 정책은 [scoped 복원 계약30](../backend-migration/30-scoped-storage-write-contract.md)의 후속 정정을 따른다. 기존 정적 이미지를 서비스 초기화부터4초 표시한 뒤 인증/자료 준비와 무관하게 앱으로 진입하며 앱 소유 복원 작업은 계속한다. 애니메이션 추가는 보류다. 과거2200ms·인증완료 대기·debug URL 알럿 정책은 적용하지 않는다.
 
-Debug는 `BACKEND_BASE_URL` 명시값을 우선 사용하고 미지정 시 Android 에뮬레이터용 `http://10.0.2.2:8000`으로 즉시 초기화한다. 주소 입력 알럿은 없다. debug 전용 네트워크 설정은 개발 HTTP를 허용한다. release에는 `BACKEND_BASE_URL`의 HTTPS 주소가 필수다. `GOOGLE_SERVER_CLIENT_ID`는 확인된 공개 Web client가 기본값이다. `TERMS_URL`·`PRIVACY_URL`에는 확정된 HTTPS 주소를 설정한다. 앱 비밀키는 dart-define에 넣지 않는다. 인증정보는 origin별 저장이므로 접속 주소가 달라지면 동일 서버라도 기존 로그인 저장값을 자동 공유하지 않는다.
+Debug는 `BACKEND_BASE_URL` 명시값을 우선 사용하고 미지정 시 Android 에뮬레이터용 `http://10.0.2.2:8000`으로 즉시 초기화한다. 주소 입력 알럿은 없다. debug 전용 네트워크 설정은 개발 HTTP를 허용한다. 2026-11-01 사용자 지시로 release의 미지정 기본 주소는 AWS Lightsail의 `https://lostparty.duckdns.org`로 확정한다. 명시한 `BACKEND_BASE_URL`은 모든 모드에서 기본값보다 우선하며 release HTTPS 검증은 유지한다. Profile 모드는 기존처럼 주소를 명시해야 한다. `GOOGLE_SERVER_CLIENT_ID`는 확인된 공개 Web client가 기본값이다. `TERMS_URL`·`PRIVACY_URL`에는 확정된 HTTPS 주소를 설정한다. 앱 비밀키는 dart-define에 넣지 않는다. 인증정보는 origin별 저장이므로 접속 주소가 달라지면 동일 서버라도 기존 로그인 저장값을 자동 공유하지 않는다.
 
 Backend실행후사용자가에뮬레이터에서앱실행·Google선택/취소·최초가입/재로그인·유지선택별앱재시작·응답유실복구·로그아웃·로컬빌드를검증한다. Windows→WSL접속과서버nonce claim/서명검증·release등록은별도확인이다. 에이전트는기기설치/조작하지않았다.
 

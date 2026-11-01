@@ -144,7 +144,9 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     const configured = String.fromEnvironment('BACKEND_BASE_URL');
     final base = configured.isNotEmpty
         ? configured
-        : (kDebugMode ? 'http://10.0.2.2:8000' : '');
+        : (kReleaseMode
+              ? 'https://lostparty.duckdns.org'
+              : (kDebugMode ? 'http://10.0.2.2:8000' : ''));
     _initializeServices(base);
   }
 
