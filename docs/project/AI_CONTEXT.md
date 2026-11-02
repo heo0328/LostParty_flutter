@@ -8,7 +8,7 @@
 
 ## 현재 작업과 실제 코드 상태
 
-2026-11-02 그룹 초대 검색 결과 없음 안내를 구현했다. VM은 유효 검색 성공과 초기/실패를 구분하고 페이지는 빈 결과에 확정 문구를 표시한다. 입력/회원 변경 시 초기화와 늦은 응답 차단을 보존했다. 직접 시험20PASS이며 사용자 변경 화면 확인이 남았다. 현재 범위·검증·다음 행동은 NEXT_WORK를 따른다.
+2026-11-02 그룹 초대 검색에 로컬 우선 판별을 연결했다. 본인 로컬 캐시와 현재 상세 멤버/조회된 활동 캐릭터를 재사용해 알려진 본인·그룹원을 HTTP0회로 안내하고 모르는 이름은 기존 검색 GET1회로 처리한다. 기존 ALREADY_GROUP_MEMBER 초대 거절도 결과 영역 안내로 처리한다. 직접/영향36PASS·변경 Dart7파일 분석0. [Backend Issue38](https://github.com/heo0328/lostparty-backend/issues/38)의 새 판정 프로필·self 오류 확정/실제 반영과 Flutter 소비는 대기이며 현재 group-display-1을 유지한다. 전체 기능 완료·기기 인수로 확대하지 않는다. 현재 상태·다음 행동은 NEXT_WORK를 따른다.
 
 2026-11-01 사용자 지시로 release의 기본 Backend 주소를 AWS Lightsail https://lostparty.duckdns.org로 지정했다. 명시 BACKEND_BASE_URL 우선·debug 로컬 기본값·profile 주소 명시·origin별 인증/자료 격리는 유지한다. 실행 설정은 [Google 로그인 계약](../architecture/GOOGLE_LOGIN_CONTRACT.md)의 실행 설정 절을 따른다. dev/main 동일 시점 통합·푸시를 마쳤으며 v1.1.2(1.1.2+4) 서명 APK·checksum·사용자 승인 안내문을 GitHub Release에 게시했다. CI41306739482 전체 성공. 2026-11-02 사용자가 릴리즈 버전의 운영서버 Google 로그인 통과를 확인했다. 업데이트 설치 경로·refresh·전체 주요 흐름의 신규 인수까지 확대하지 않는다. Backend Issue34의 최신 보고에서는 v0.1.1 자동 서버 배포도 완료됐으며 외부 DB·키 백업과 전체 호환/인수 기록은 별도 후속이다. 근거와 남은 행동은 NEXT_WORK를 따른다.
 

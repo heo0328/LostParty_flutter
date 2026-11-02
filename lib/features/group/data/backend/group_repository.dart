@@ -43,11 +43,39 @@ class GroupRepository {
     this.session,
     this.changes, {
     this.journal = const SecureGroupJournal(),
+    this.readOwnInviteNames,
   });
   final Dio dio;
   final AccountReadSession session;
   final GroupChanges changes;
   final GroupJournal journal;
+
+  /// Local cache only: this callback must not refresh from the server.
+  final Future<Iterable<String>> Function()? readOwnInviteNames;
+  final _inviteContexts = <String, GroupInviteLocalContext>{};
+  int inviteContextGeneration = 0;
+
+  void rememberInviteContext(String groupId, GroupInviteLocalContext context) {
+    _inviteContexts[groupId] = context;
+  }
+
+  void clearInviteContext(String groupId, {Object? owner}) {
+    if (owner == null || identical(_inviteContexts[groupId]?.owner, owner)) {
+      _inviteContexts.remove(groupId);
+      inviteContextGeneration++;
+    }
+  }
+
+  GroupInviteRestriction? knownInviteRestriction(String groupId, String name) {
+    final context = _inviteContexts[groupId];
+    if (context == null) return null;
+    if (context.scope != readScope || !context.isCurrent()) {
+      clearInviteContext(groupId);
+      return null;
+    }
+    return context.names[groupInviteNameKey(name)];
+  }
+
   bool _busy = false;
   String get storageScope => jsonEncode([
     StorageScope(
@@ -334,6 +362,7 @@ String groupFailure(Object error) {
     'NO_ACTIVITY_CHARACTERS' => '내 계정에서 인증된 활동 캐릭터를 먼저 선택해 주세요.',
     'GROUP_FULL' || 'GROUP_CAPACITY_EXCEEDED' => '그룹 정원을 확인해 주세요.',
     'GROUP_ALREADY_JOINED' || 'ALREADY_MEMBER' => '이미 가입한 그룹입니다.',
+    'ALREADY_GROUP_MEMBER' => GroupInviteRestriction.alreadyMember.message,
     'GROUP_JOIN_BLOCKED' => '이 그룹에 가입할 수 없습니다.',
     'GROUP_RELATION_EXISTS' ||
     'GROUP_INVITATION_EXISTS' ||

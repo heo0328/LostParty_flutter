@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/account_read_session.dart';
 import 'package:lost_party/features/group/data/backend/group_repository.dart';
+import 'package:lost_party/features/group/data/backend/group_models.dart';
 import 'package:lost_party/features/group/presentation/pages/backend_group_page.dart';
 import 'package:lost_party/features/group/presentation/viewmodels/backend_group_view_model.dart';
 import '../../support/server_account_read_fakes.dart';
@@ -112,9 +113,11 @@ class DetailRepository extends GroupRepository {
       if (failMembers) throw const AccountReadException('NETWORK_UNAVAILABLE');
       return [member];
     }
-    if (path.endsWith('/activity-characters')) return [];
+    if (path.endsWith('/activity-characters')) return activityRows;
     throw StateError(path);
   }
+
+  List<Map<String, dynamic>> activityRows = [];
 
   @override
   Future<Map<String, dynamic>?> pending() async => null;
@@ -134,6 +137,51 @@ class DetailRepository extends GroupRepository {
 }
 
 void main() {
+  test(
+    'detail shares member/activity evidence and invalidates it on reload/dispose',
+    () async {
+      final r = DetailRepository(ReadSessionFake());
+      final detail = BackendGroupViewModel(
+        r,
+        GroupPageKind.detail,
+        groupId: fixtures.gid,
+      );
+      await detail.load();
+      final before = r.reads.length;
+      final invite = BackendGroupViewModel(
+        r,
+        GroupPageKind.invite,
+        groupId: fixtures.gid,
+      );
+      await invite.searchInvites('아주긴이름의은빛소서리스');
+      expect(invite.inviteRestriction, GroupInviteRestriction.alreadyMember);
+      expect(r.reads.length, before);
+      r.activityRows = [
+        {
+          'display': {'character_name': 'OtherAlt'},
+        },
+      ];
+      await detail.activity(fixtures.mid);
+      expect(
+        r.knownInviteRestriction(fixtures.gid, 'otheralt'),
+        GroupInviteRestriction.alreadyMember,
+      );
+      r.failMembers = true;
+      await detail.reloadArea(GroupDetailArea.members);
+      expect(r.knownInviteRestriction(fixtures.gid, 'OtherAlt'), isNull);
+      await detail.activity('late-after-member-failure');
+      expect(r.knownInviteRestriction(fixtures.gid, 'OtherAlt'), isNull);
+      r.failMembers = false;
+      await detail.reloadArea(GroupDetailArea.members);
+      expect(
+        r.knownInviteRestriction(fixtures.gid, 'OtherAlt'),
+        GroupInviteRestriction.alreadyMember,
+      );
+      detail.dispose();
+      expect(r.knownInviteRestriction(fixtures.gid, 'OtherAlt'), isNull);
+      invite.dispose();
+    },
+  );
   test(
     'detail areas keep independent failure and retry; no empty synthesis',
     () async {

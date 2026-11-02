@@ -204,6 +204,195 @@ void main() {
     changes.dispose();
     session.dispose();
   });
+  test('local own names win over group evidence without HTTP', () async {
+    final adapter = Adapter((_) async => reply(invitePage()));
+    dio.httpClientAdapter = adapter;
+    final r = GroupRepository(
+      dio,
+      session,
+      changes,
+      journal: journal,
+      readOwnInviteNames: () async => ['MyAlt'],
+    );
+    r.rememberInviteContext(
+      gid,
+      GroupInviteLocalContext(r.readScope, Object(), () => true, {
+        'myalt': GroupInviteRestriction.alreadyMember,
+      }),
+    );
+    final vm = BackendGroupViewModel(r, GroupPageKind.invite, groupId: gid);
+    await vm.searchInvites(' MyALT ');
+    expect(vm.inviteRestriction, GroupInviteRestriction.self);
+    expect(vm.inviteCandidates, isEmpty);
+    expect(adapter.calls, 0);
+    vm.clearInviteCandidates();
+    expect(vm.inviteRestriction, isNull);
+    expect(vm.inviteSearchCompleted, isFalse);
+    vm.dispose();
+  });
+  test('known group member uses zero HTTP; unknown uses one GET', () async {
+    final adapter = Adapter((o) async {
+      expect(o.method, 'GET');
+      return reply(invitePage());
+    });
+    dio.httpClientAdapter = adapter;
+    final r = repo();
+    r.rememberInviteContext(
+      gid,
+      GroupInviteLocalContext(r.readScope, Object(), () => true, {
+        'member': GroupInviteRestriction.alreadyMember,
+      }),
+    );
+    final vm = BackendGroupViewModel(r, GroupPageKind.invite, groupId: gid);
+    await vm.searchInvites('MEMBER');
+    expect(vm.inviteRestriction, GroupInviteRestriction.alreadyMember);
+    expect(adapter.calls, 0);
+    await vm.searchInvites('unknown');
+    expect(vm.inviteRestriction, isNull);
+    expect(vm.inviteCandidates, hasLength(1));
+    expect(adapter.calls, 1);
+    vm.dispose();
+  });
+  test('expired or other-group evidence cannot block a search', () async {
+    final adapter = Adapter((_) async => reply(invitePage()));
+    dio.httpClientAdapter = adapter;
+    final r = repo();
+    var current = true;
+    r.rememberInviteContext(
+      gid,
+      GroupInviteLocalContext(r.readScope, Object(), () => current, {
+        'member': GroupInviteRestriction.alreadyMember,
+      }),
+    );
+    final other = BackendGroupViewModel(r, GroupPageKind.invite, groupId: mid);
+    await other.searchInvites('member');
+    expect(other.inviteRestriction, isNull);
+    current = false;
+    final vm = BackendGroupViewModel(r, GroupPageKind.invite, groupId: gid);
+    await vm.searchInvites('member');
+    expect(vm.inviteRestriction, isNull);
+    expect(adapter.calls, 2);
+    other.dispose();
+    vm.dispose();
+  });
+  test(
+    'invalidated delayed local evidence never searches or restores a notice',
+    () async {
+      final gate = Completer<Iterable<String>>();
+      final adapter = Adapter((_) async => reply(invitePage()));
+      dio.httpClientAdapter = adapter;
+      final r = GroupRepository(
+        dio,
+        session,
+        changes,
+        journal: journal,
+        readOwnInviteNames: () => gate.future,
+      );
+      final vm = BackendGroupViewModel(r, GroupPageKind.invite, groupId: gid);
+      final pending = vm.searchInvites('own');
+      vm.clearInviteCandidates();
+      gate.complete(['own']);
+      await pending;
+      expect(vm.inviteRestriction, isNull);
+      expect(vm.inviteSearchCompleted, isFalse);
+      expect(adapter.calls, 0);
+      vm.dispose();
+    },
+  );
+  test('unavailable local cache falls back to one server search', () async {
+    final adapter = Adapter((_) async => reply(invitePage()));
+    dio.httpClientAdapter = adapter;
+    final r = GroupRepository(
+      dio,
+      session,
+      changes,
+      journal: journal,
+      readOwnInviteNames: () async => throw StateError('cache unavailable'),
+    );
+    final vm = BackendGroupViewModel(r, GroupPageKind.invite, groupId: gid);
+    await vm.searchInvites('unknown');
+    expect(vm.failure, isNull);
+    expect(adapter.calls, 1);
+    vm.dispose();
+  });
+  test(
+    'member and environment scopes invalidate positive group evidence',
+    () async {
+      final r = repo();
+      void remember() => r.rememberInviteContext(
+        gid,
+        GroupInviteLocalContext(r.readScope, Object(), () => true, {
+          'member': GroupInviteRestriction.alreadyMember,
+        }),
+      );
+      remember();
+      session.change(authenticated: true, user: mid);
+      expect(r.knownInviteRestriction(gid, 'member'), isNull);
+      remember();
+      dio.options.baseUrl = 'https://other.test';
+      expect(r.knownInviteRestriction(gid, 'member'), isNull);
+    },
+  );
+  test(
+    'uncertain invitation remains a failure with its original request saved',
+    () async {
+      final adapter = Adapter(
+        (_) async => reply({
+          'error': {'code': 'SERVICE_UNAVAILABLE'},
+        }, 503),
+      );
+      dio.httpClientAdapter = adapter;
+      final vm = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.invite,
+        groupId: gid,
+      );
+      await vm.act('POST', '/v1/groups/$gid/invitations', {
+        'target_character_id': mid,
+        'expected_target_ownership_revision': 1,
+        'expected_target_lifecycle_revision': 1,
+        'expected_group_revision': 1,
+        'expected_membership_revision': 1,
+      });
+      expect(vm.failure, isA<AccountReadException>());
+      expect(vm.inviteRestriction, isNull);
+      expect(vm.hasPendingRequest, isTrue);
+      expect(journal.values, hasLength(1));
+      expect(adapter.calls, 1);
+      vm.dispose();
+    },
+  );
+  test(
+    'already joined invitation is a result notice, not a refresh failure',
+    () async {
+      final adapter = Adapter(
+        (_) async => reply({
+          'error': {'code': 'ALREADY_GROUP_MEMBER'},
+        }, 409),
+      );
+      dio.httpClientAdapter = adapter;
+      final vm = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.invite,
+        groupId: gid,
+      );
+      final result = await vm.act('POST', '/v1/groups/$gid/invitations', {
+        'target_character_id': mid,
+        'expected_target_ownership_revision': 1,
+        'expected_target_lifecycle_revision': 1,
+        'expected_group_revision': 1,
+        'expected_membership_revision': 1,
+      });
+      expect(result, isNull);
+      expect(vm.failure, isNull);
+      expect(vm.inviteRestriction, GroupInviteRestriction.alreadyMember);
+      expect(vm.inviteCandidates, isEmpty);
+      expect(vm.hasPendingRequest, isFalse);
+      expect(journal.values, isEmpty);
+      expect(adapter.calls, 1);
+      vm.dispose();
+    },
+  );
   test(
     'invite profile sends exact query and rejects legacy or missing profile',
     () async {

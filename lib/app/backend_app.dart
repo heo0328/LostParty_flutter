@@ -455,7 +455,45 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       scopeKey: cycleScopeKey,
       changes: _memberAccount?.model ?? auth,
     );
-    final groupRepository = GroupRepository(_dio!, readSession, _groupChanges);
+    Future<Iterable<String>> ownInviteNames() async {
+      final runtime = lifecycle.runtime;
+      if (runtime == null || !runtime.canRead) return const [];
+      final binding = accountReadScope(readSession);
+      final generation = runtime.readGeneration;
+      void guard() {
+        requireAccountReadScope(readSession, binding);
+        if (runtime != lifecycle.runtime ||
+            runtime.disposed ||
+            generation != runtime.readGeneration) {
+          throw const AccountReadException('STALE_READ');
+        }
+      }
+
+      final names = <String>[];
+      final registrations = await runtime.readRegistrations(guard: guard);
+      for (final registration in registrations) {
+        if (registration.ownershipStatus != 'owned') continue;
+        final roster = await runtime.readRoster(
+          runtime.reference(registration.registrationId),
+          guard: guard,
+        );
+        for (final character in roster?.characters ?? []) {
+          if (character.usable == true &&
+              character.lifecycleState == 'active') {
+            names.add(character.characterName);
+          }
+        }
+      }
+      guard();
+      return names;
+    }
+
+    final groupRepository = GroupRepository(
+      _dio!,
+      readSession,
+      _groupChanges,
+      readOwnInviteNames: ownInviteNames,
+    );
     Future<List<GroupCharacterChoice>> groupCharacters() async {
       final runtime = lifecycle.runtime;
       if (runtime == null) {

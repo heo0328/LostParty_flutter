@@ -77,6 +77,10 @@ class _BackendGroupPageState extends State<BackendGroupPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && widget.groupId != null) {
+      widget.repository.clearInviteContext(widget.groupId!);
+      setState(m.clearInviteCandidates);
+    }
     if (state == AppLifecycleState.resumed && !m.busy) {
       m.clearInviteCandidates();
       unawaited(m.load());
@@ -1069,7 +1073,10 @@ class _BackendGroupPageState extends State<BackendGroupPage>
           if (m.detail != null) ...[
             field('캐릭터명', '정확한 캐릭터명', searchInvite),
             button('검색', searchInvite),
+            if (m.inviteRestriction case final restriction?)
+              Text(restriction.message),
             if (m.inviteSearchCompleted &&
+                m.inviteRestriction == null &&
                 !m.busy &&
                 m.failure == null &&
                 candidates.isEmpty)

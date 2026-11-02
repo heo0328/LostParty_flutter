@@ -9,6 +9,29 @@ List<Map<String, dynamic>> groupItems(
 String groupName(Object? display) => display is Map
     ? (display['character_name'] as String? ?? '표시 정보 없음')
     : '표시 정보 없음';
+
+String groupInviteNameKey(String name) => name.trim().replaceAllMapped(
+  RegExp('[A-Z]'),
+  (match) => match[0]!.toLowerCase(),
+);
+
+enum GroupInviteRestriction {
+  self('본인은 초대할수없습니다.'),
+  alreadyMember('이미 그룹에 있는 사용자를 초대할수없습니다.');
+
+  const GroupInviteRestriction(this.message);
+  final String message;
+}
+
+/// Only positive evidence from the current detail observation is reused.
+class GroupInviteLocalContext {
+  GroupInviteLocalContext(this.scope, this.owner, this.isCurrent, this.names);
+  final String scope;
+  final Object owner;
+  final bool Function() isCurrent;
+  final Map<String, GroupInviteRestriction> names;
+}
+
 bool groupAllowed(Map<String, dynamic>? permissions, String action) =>
     permissions?[action] is Map && permissions![action]['allowed'] == true;
 

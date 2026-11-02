@@ -7451,3 +7451,16 @@ NEXT_WORK에 기존 결과 영역의 확정 문구·검색 완료 최소 상태�
 - 검증: backend_group_test.dart 20PASS, 변경 Dart3파일 analyze 문제0, 포맷·diff check·코드/문서 diff 검토. 미검색/빈 성공/초기화/양성 재검색·중복 제출/빈 입력 실패/회원 전환 뒤 늦은 빈 응답을 직접 검증했다. 공용 계약/Router/DI 불변으로 전체 Flutter 시험은 반복하지 않았다. 최초 sandbox SDK 명령 무출력 정체는 중단하고 SDK 접근 가능한 권한으로 실행했다.
 - 미확인: 당시 운영 응답 재현, 사용자 기기의 미등록 이름 문구·입력 수정 후 안내 제거. 운영환경 테스트 회원 추가·기존 정상 초대 전수 재시험은 요구하지 않는다.
 - 상태: 구현·자동 검증 파트 보관, 사용자 화면 확인 대기. fix/group-invite-search-feedback 유지, dev/main 통합·릴리즈 게시 없음.
+
+
+## 2026-11-02 — 그룹 초대 로컬 우선 선행 구현·Backend 요청
+
+사용자 승인 계획을 NEXT_WORK/설계39에 기록하고 [Issue38](https://github.com/heo0328/lostparty-backend/issues/38)을 생성·재조회했다. 종료된 Issue12 최신 마감과 관련 요청 중복 없음을 확인했다. 서버 새 eligibility profile·self 오류는 제안이며 확정 SHA/실제 반영 회신 전에는 미지원 profile을 소비하지 않는다.
+
+BackendApp DI의 local-only callback은 현재 scoped runtime readRegistrations/readRoster로 소유·사용가능 캐릭터명을 얻는다. groupCharacters/loadMemberRoster·활동선택 필터를 재사용하지 않는다. 상세 VM은 받은 멤버 표시명/활동 목록을 GroupRepository의 일시 컨텍스트로 제공한다. 회원/환경·group·상세 observation/조회 상태와 무효화 세대를 확인하며 로컬 증거가 없거나 읽을 수 없으면 기존 검색으로 넘긴다. 본인 우선, trim/ASCII 정확비교다. 그룹명 normalizer는 Unicode 정규화까지 수행하므로 다른 서버 캐릭터 정확검색 규칙에 적용하지 않았다.
+
+- 새로 가능한 흐름: 이미 아는 본인·그룹원의 검색 요청0회 안내, 입력 수정 후 초기화. ALREADY_GROUP_MEMBER 초대 거절을 결과 영역에 표시하고 후보를 지워 잘못된 반복 전송을 막는다.
+- 보존 확인: 미지 이름 GET1·기존 빈 결과/후보 카드·프로필 strict 검증·정상 초대와 원ACK/불명 요청. 멤버 재조회 실패 뒤 활동 응답이 과거 로컬 증거를 복원하지 않도록 보호했다. 서버/DB·Penpot·게시 APK/태그는 변경하지 않았다.
+- 검증: 최종 backend_group_test + backend_group_detail_test 36PASS, 변경 Dart7파일 analyze 문제0, 포맷·git diff --check·diff검토. 정상 앱 DI 변경은 local-only callback 전달이며 Router/DTO/공용 저장 계약 불변, 관련 실제 상세/그룹 경계로 영향이 설명돼 전체 Flutter 시험을 반복하지 않았다.
+- 미확인/다음 담당: Backend Issue38 확정 DTO/OpenAPI/오류·고정 SHA/검증·실제 반영 회신 후 Flutter 연결. 로컬에 없는 다른 캐릭터의 self/member 판정은 아직 기존 서버가 반환하지 않는다. 사용자 변경 화면 확인도 남았다. 서버 준비 전 전체 기기 인수를 요구하지 않는다.
+- Git: fix/group-invite-search-feedback 선행 파트 보관, dev/main 통합·배포 없음. Backend 요청·구현 인계는 Issue38에서 추적한다.

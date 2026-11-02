@@ -45,11 +45,13 @@ class BackendGroupViewModel extends ChangeNotifier {
   final areaFailures = <GroupDetailArea, Object>{};
   List<Map<String, dynamic>> inviteCandidates = [];
   bool inviteSearchCompleted = false;
+  GroupInviteRestriction? inviteRestriction;
   int _inviteEpoch = 0;
   void clearInviteCandidates() {
     _inviteEpoch++;
     inviteCandidates = [];
     inviteSearchCompleted = false;
+    inviteRestriction = null;
   }
 
   Future<void> searchInvites(String name) async {
@@ -66,6 +68,22 @@ class BackendGroupViewModel extends ChangeNotifier {
     notice = null;
     _emit();
     try {
+      Iterable<String> ownNames = const [];
+      try {
+        ownNames = await repository.readOwnInviteNames?.call() ?? const [];
+      } catch (_) {
+        // Missing/unreadable local evidence is not a negative identity verdict.
+      }
+      if (!current()) return;
+      final key = groupInviteNameKey(name);
+      final restriction = ownNames.any((n) => groupInviteNameKey(n) == key)
+          ? GroupInviteRestriction.self
+          : repository.knownInviteRestriction(groupId!, name);
+      if (key.isNotEmpty && restriction != null) {
+        inviteRestriction = restriction;
+        inviteSearchCompleted = true;
+        return;
+      }
       final value = await repository.get(
         '/v1/groups/$groupId/invite-candidates',
         query: {
@@ -103,6 +121,7 @@ class BackendGroupViewModel extends ChangeNotifier {
     if (next == _sessionBinding) return;
     _sessionBinding = next;
     _epoch++;
+    if (groupId != null) repository.clearInviteContext(groupId!, owner: this);
     loading = busy = false;
     detail = null;
     summary = management = code = counts = usage = preview = null;
@@ -128,6 +147,9 @@ class BackendGroupViewModel extends ChangeNotifier {
   Future<void> load({bool more = false}) async {
     if (_disposed || !authenticated) return;
     final e = ++_epoch, binding = repository.readScope;
+    if (kind == GroupPageKind.detail && groupId != null) {
+      repository.clearInviteContext(groupId!, owner: this);
+    }
     bool current() =>
         !_disposed && e == _epoch && binding == repository.readScope;
     loading = true;
@@ -312,6 +334,10 @@ class BackendGroupViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadArea(GroupDetailArea area, int epoch, String scope) async {
+    if (area == GroupDetailArea.members && groupId != null) {
+      repository.clearInviteContext(groupId!, owner: this);
+    }
+    final contextGeneration = repository.inviteContextGeneration;
     bool current() =>
         !_disposed && epoch == _epoch && scope == repository.readScope;
     areaLoading.add(area);
@@ -326,7 +352,9 @@ class BackendGroupViewModel extends ChangeNotifier {
             '$path/members',
             query: {'reader_profile': 'group-display-1'},
           );
-          if (current()) rows = value;
+          if (current()) {
+            rows = value;
+          }
         case GroupDetailArea.requests:
           final value = await repository.all(
             '$path/join-relations',
@@ -343,7 +371,12 @@ class BackendGroupViewModel extends ChangeNotifier {
           );
           if (current()) management = value;
       }
-      if (current()) areaLoaded.add(area);
+      if (current()) {
+        areaLoaded.add(area);
+        if (area == GroupDetailArea.members) {
+          _rememberInviteContext(epoch, scope, contextGeneration);
+        }
+      }
     } catch (error) {
       if (current()) areaFailures[area] = error;
     } finally {
@@ -355,18 +388,51 @@ class BackendGroupViewModel extends ChangeNotifier {
   }
 
   final Set<String> _activityLoading = {};
+  void _rememberInviteContext(int epoch, String scope, int contextGeneration) {
+    if (kind != GroupPageKind.detail || groupId == null) return;
+    if (!areaLoaded.contains(GroupDetailArea.members)) return;
+    if (contextGeneration != repository.inviteContextGeneration) return;
+    final names = <String, GroupInviteRestriction>{};
+    for (final member in rows) {
+      final restriction = member['is_me'] == true
+          ? GroupInviteRestriction.self
+          : GroupInviteRestriction.alreadyMember;
+      for (final display in [
+        member['display'],
+        for (final c in activities[member['membership_id']] ?? []) c['display'],
+      ]) {
+        if (display is! Map || display['character_name'] is! String) continue;
+        final name = groupInviteNameKey(display['character_name'] as String);
+        if (name.isNotEmpty && names[name] != GroupInviteRestriction.self) {
+          names[name] = restriction;
+        }
+      }
+    }
+    repository.rememberInviteContext(
+      groupId!,
+      GroupInviteLocalContext(
+        scope,
+        this,
+        () => !_disposed && _epoch == epoch && repository.readScope == scope,
+        Map.unmodifiable(names),
+      ),
+    );
+  }
+
   Future<void> activity(String membership) async {
     if (activities.containsKey(membership) ||
         !_activityLoading.add(membership)) {
       return;
     }
     final e = _epoch, scope = repository.readScope;
+    final contextGeneration = repository.inviteContextGeneration;
     try {
       final value = await repository.all(
         '/v1/groups/$groupId/members/$membership/activity-characters',
       );
       if (_disposed || e != _epoch || scope != repository.readScope) return;
       activities[membership] = value;
+      _rememberInviteContext(e, scope, contextGeneration);
       activityFailures.remove(membership);
     } catch (error) {
       if (!_disposed && e == _epoch) activityFailures[membership] = error;
@@ -394,7 +460,18 @@ class BackendGroupViewModel extends ChangeNotifier {
       await load(); // A refresh error must not turn success into a retry command.
       return result;
     } catch (error) {
-      if (!_disposed && scope == repository.readScope) failure = error;
+      if (!_disposed && scope == repository.readScope) {
+        if (kind == GroupPageKind.invite &&
+            path == '/v1/groups/$groupId/invitations' &&
+            error is AccountReadException &&
+            error.code == 'ALREADY_GROUP_MEMBER') {
+          clearInviteCandidates();
+          inviteRestriction = GroupInviteRestriction.alreadyMember;
+          inviteSearchCompleted = true;
+        } else {
+          failure = error;
+        }
+      }
       return null;
     } finally {
       if (!_disposed && scope == repository.readScope) {
@@ -451,6 +528,7 @@ class BackendGroupViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (groupId != null) repository.clearInviteContext(groupId!, owner: this);
     _disposed = true;
     _epoch++;
     repository.session.removeListener(_sessionChanged);
