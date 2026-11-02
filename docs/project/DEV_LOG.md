@@ -7478,3 +7478,15 @@ AGENTS/ai_rules·로그인 실행 계약·현재 문서에 개발/운영 대상�
 - 보존 확인: 명시 URL override·HTTPS/회원 origin 격리·기존 초대 코드/검증 결과. 서버/DB·태그·배포·기기 조작 없음.
 - 검증: 변경 Dart 포맷·해당 파일 analyze 문제0·git diff --check·diff검토. 기본값 동작 불변으로 기능시험은 반복하지 않았다.
 - 미확인/다음: 로컬 서버의 새 초대 프로필 지원 및 Flutter 소비·변경 화면 확인. AWS 운영은 개발자 지시 대기이며 선행 조건이 아니다.
+
+
+## 2026-11-02 — Backend 확정 초대 판정의 네이티브 소비 설계
+
+사용자가 후속 설계를 지시했다. 고정 fdd51c8e의 joining README·EligibleInviteCandidate/EligibleInviteCandidates·admission_router와 현재 projection/GroupRepository profile검증·searchInvites/후보카드/act를 대조했다. Issue38 최신댓글도 확인했다. 남은 차이는 새 reader_profile/strict projection·후보별 eligibility·SELF_INVITATION과 전송 직전 수명 가드다.
+
+NEXT_WORK의 현재 파트를 후속 소비 설계로 교체하고 설계39/AI_CONTEXT를 맞췄다. self/already_member/eligible 혼합 후보는 카드별 처리, 로컬 positive·미등록·실패는 각각 구분, 두409 결과 안내·원요청 보호와 개발 로컬/운영 분리·검증 기준을 기록했다. 운영 배포를 개발 선행 조건으로 만들지 않으며 게시 APK는 보존한다.
+
+- 새로 가능한 흐름: 후속 구현의 고정 계약/수명/표시·검증 설계 확보, 기능은 미변경.
+- 보존 확인: lib/test·선행36PASS/분석0·debug로컬/releaseAWS·서버/DB/태그/Penpot.
+- 미확인: 새 네이티브 소비 구현·자동시험·로컬 새서버 실행/연동·사용자 변경 화면 확인.
+- 검증: 고정 계약·현재 코드 정적 대조/문서 diff검토·git diff --check. 코드불변으로 Flutter 시험/분석 미반복. 새 Backend 요구나 결과 인계가 생긴 파트가 아니므로 변화 없는 댓글은 추가하지 않았다.

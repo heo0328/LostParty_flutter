@@ -1,30 +1,41 @@
 # NEXT WORK — 그룹 초대 로컬 우선 판별
 
-## 현재 승인 범위 (2026-11-02)
+## 현재 파트 — 확정 Backend 계약의 네이티브 소비 설계 (2026-11-02)
 
-기본 개발·검증은 dev 로컬 서버이며 debug 기본 http://10.0.2.2:8000, release 기본 AWS https://lostparty.duckdns.org다. 운영 반영은 개발자 명시 지시로만 진행한다. 사용자가 로컬 우선 판별 계획의 구현을 지시했다. fix/group-invite-search-feedback을 유지한다. 이미 구현한 빈 결과 안내7b566d64를 확장한다.
+사용자가 후속 네이티브 연결 설계를 지시했다. 이번 파트는 계약/코드 대조와 설계 문서까지이며 기능 코드는 수정하지 않는다. `fix/group-invite-search-feedback`을 유지한다. 선행 구현은6d9052cc·로컬/운영 설정 정리는93c9ec67이며 미커밋 변경 없는 상태에서 착수했다.
 
-- 알려진 본인은 `본인은 초대할수없습니다.`, 해당 그룹원은 `이미 그룹에 있는 사용자를 초대할수없습니다.`를 기존 결과 영역에 표시하고 검색/초대 HTTP0회로 막는다. 본인 우선이다. 이름은 trim+ASCII 대소문자 무시 정확 비교다.
-- 일반 BackendApp/DI에서 로컬 계정 캐시만 읽는 callback을 연결한다. groupCharacters/loadMemberRoster를 호출해 자료를 새로 받지 않는다. 현재 그룹 상세의 멤버 표시명과 이미 받은 활동 캐릭터를 화면 흐름 범위로 공유한다. 모르는 이름은 기존 GET1회, 가능한 후보의 명시 초대만 POST1회다.
-- 자료는 현재 회원/환경/group/상세 조회 세대에 묶는다. 재조회·관계 변경·회원/환경 변경·앱 복귀에 무효화하며 주기 조회/TTL·전체 캐릭터 사전 조회·영속 중복 저장을 추가하지 않는다. 직접 진입/누락 자료는 서버 검색으로 넘긴다.
-- Backend 요청 [Issue38](https://github.com/heo0328/lostparty-backend/issues/38)을 게시·재조회했다. opt-in group-invite-eligibility-1 / invitation_eligibility(eligible/self/already_member), self 오류 SELF_INVITATION 제안·기존 ALREADY_GROUP_MEMBER 유지, 기존 프로필 호환과 일괄 조회·최종 POST 검증 유지가 요청 범위다. **계약·구현은 Backend fdd51c8e로 확정됐고 CI1817PASS이며, 개발 로컬 서버의 새 프로필 지원 확인이 남았다.** [Backend 완료 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6573802290)을 따른다. 운영 AWS는 기존 v0.1.1이며 개발자의 별도 지시 전에는 반영하지 않는다. [Flutter 선행 구현 인계](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6572614788)에 6d9052cc commit/push·36PASS/분석0·미연결 범위/다음 담당을 회신·재조회했으며 새 프로필을 임의 생성/활성화하지 않는다.
-- Flutter 선행은 로컬 판별·수명·결과 안내와 기존 ALREADY_GROUP_MEMBER 초대 거절 처리다. 서버 사유 판정은 준비 전 연결 대기로 명시한다. 네트워크 불명·원ACK는 유지한다.
+### 기준·현재 차이
 
-## 선행 구현·검증 결과와 다음 행동
+- 기준은 Backend `fdd51c8e9a4d9a5eda8c5f175485965a013ee99a`의 [가입/초대 계약](https://github.com/heo0328/lostparty-backend/blob/fdd51c8e9a4d9a5eda8c5f175485965a013ee99a/docs/features/groups/joining/README.md), EligibleInviteCandidate/EligibleInviteCandidates·admission_router 및 두 OpenAPI다. [구현/검증 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6573802290)은CI1817PASS·실제 서버 미반영을 구분한다.
+- 현재 일반 경로는 BackendApp DI → BackendGroupPage → searchInvites → local-only 본인 캐시/현재 그룹 자료 → 모르는 이름만 GroupRepository GET이다. 로컬 판별 HTTP0/미지 GET1·수명/무효화·ALREADY_GROUP_MEMBER 결과 안내는 연결·직접/영향36PASS, 변경 Dart7파일 분석0을 보존한다.
+- 남은 차이는 GET의 group-display-1을 새 group-invite-eligibility-1로 소비하는 strict projection·후보별 판정/버튼, SELF_INVITATION 처리다. 현재 후보 카드에는 모두 초대 버튼이 있고 SELF_INVITATION은 공통 실패로 떨어진다.
 
-로컬 선행 구현·일반 DI/화면 연결과 직접/영향 시험36PASS·변경 Dart7파일 분석0·포맷/diff검토를 완료했다. GroupRepository의 일시 컨텍스트는 상세 VM의 현재 observation·회원/환경에 묶이고 멤버 조회 실패/무효화 뒤 활동 응답으로 되살리지 않는다. BackendApp의 본인 callback은 readRegistrations/readRoster 로컬 읽기만 하며 활동선택 여부로 캐릭터를 누락하지 않는다. 알려진 대상 HTTP0, 미지 대상 GET1을 검증했다. 기존 ALREADY_GROUP_MEMBER 거절은 초대 결과 영역에 표시하며 결과 불명은 실패/원요청을 보존한다.
+### 연결 계약·화면 설계
 
-현재 일반 앱의 서버 검색은 기존 group-display-1이다. 새 서버 판정/self전용 오류는 Issue38의 fdd51c8e 고정 계약과 개발 로컬 서버 지원을 대조한 뒤 연결한다. 운영 배포는 개발 연결의 선행 조건이 아니다. 서버 후속이 끝난 뒤 새 계약 연결·직접 검증·사용자 좁은 화면 확인으로 대단원을 마무리한다. 지금 기존 그룹 정상 인수를 반복 요구하지 않는다.
+1. 고정 OpenAPI에서 초대 후보 GET의 reader_profile 허용값/200 union 및 새 EligibleInviteCandidate/EligibleInviteCandidates와 필요한 참조만 추출해 group_wire_schema.g.dart projection을 갱신한다. 기존 group-display-1·기본 DTO와 무관한 operation/명령/스키마는 보존한다. 기존 GroupContract 검증을 재사용하며 새 별도 느슨한 파서를 만들지 않는다.
+2. 로컬 우선 분기는 그대로 두고 미지 이름의 동일 GET에 reader_profile=group-invite-eligibility-1을 전송한다. 외곽 profile은 요청과 동일해야 하고 evaluated_at/items·기존 character_spec/revision 및 필수 invitation_eligibility가 유효해야 한다. 누락/알 수 없는 값/옛 프로필은 응답 오류로 처리하며 eligible·빈 결과로 합성하거나 구 프로필로 재요청하지 않는다.
+3. 기존 후보 순서·표시 정보·역할별 수치는 유지하고 각 카드에서 self는 `본인은 초대할수없습니다.`, already_member는 `이미 그룹에 있는 사용자를 초대할수없습니다.`를 표시하며 초대 버튼은 제공하지 않는다. eligible만 기존 버튼/확인/전송을 제공한다. 여러 후보가 섞여도 부적격 후보 때문에 다른 eligible을 숨기거나 전체 결과를 하나의 restriction으로 바꾸지 않는다.
+4. 로컬 positive 결과는 기존 결과 영역의 단일 안내·HTTP0회로 유지한다. 서버 items가0건일 때만 `앱 사용 회원의 캐릭터명이 아닙니다.`를 표시한다. eligible은 초대 성공 보장이 아니며 차단/pending/CAS 등은 기존 POST가 검증한다.
+5. 초대 시작과 확인창 승인 후/POST 직전에 같은 후보가 현재 inviteCandidates에 남아 있고 최신 검색/회원·환경·observation에 속하는지 확인한다. 새 프로필 후보는 eligibility가 eligible이어야 한다. 페이지 버튼 숨김만으로 우회를 막았다고 보지 않으며, stale 후보면 명령을 보내지 않는다. 이 가드는 권한 검증이 아니라 낡은 UI 명령 차단이며 서버 검증을 대체하지 않는다.
+6. 초대 POST만409 SELF_INVITATION/ALREADY_GROUP_MEMBER를 각각 기존 GroupInviteRestriction으로 매핑한다. 후보/이전 안내를 초기화한 뒤 결과 영역에 확정 사유를 표시하고 공통 새로고침 카드를 만들지 않는다. GroupRepository의 확정4xx journal정리·결과불명 원문/키 저장·ACK 복구는 그대로 유지한다. 타 명령 오류를 임의로 초대 결과로 바꾸지 않는다.
+7. 입력 수정·재검색·그룹 재조회/관계변경·회원/환경/앱복귀·dispose의 기존 무효화를 서버 후보에도 동일 적용한다. 새 TTL·주기 조회·원정대/전체 캐릭터 추가조회·Lost Ark API·영속 중복저장은 추가하지 않는다.
 
-## 순서·보호·완료 조건
+### 개발/운영 경계·구현 순서
 
-1. 그룹 계약/현재 계획 기록 → 로컬 읽기/그룹 화면 자료 공유 → 검색 결과/초대 거절 연결.
-2. HTTP0/1·미검색/빈 결과/양성·입력 수정·회원/환경/그룹 변경·늦은 응답·중복 요청·초대 거절/원요청 보호를 자동 검증한다. 기존 profile 엄격검증·정상 초대·다른 그룹 허용은 유지한다.
-3. Backend 고정 계약/개발 로컬 지원 확인 후 새 DTO/profile strict 검증·서버 eligibility 소비를 연결한다. 필드 누락을 eligible로 간주하지 않는다. 관련 Issue에 결과·현재 대기·다음 담당을 회신한다.
-4. 변경/직접 영향 시험·Dart 분석·포맷·diff검토를 수행한다. Router DI 변경은 callback 전달에 한정하며 공용 영향이 표적으로 설명되지 않으면 전체 검증으로 확대한다.
-5. 구현·검증 파트를 commit/push하고 사용자에게 본인 즉시 안내·미등록 안내·입력 수정 초기화 확인을 전달한다. 개발 로컬 준비 후 변경 경계만 확인하며 운영 배포를 요구하지 않는다.
+- 기본 개발 검증은 debug 로컬 http://10.0.2.2:8000(Android 에뮬레이터)에서 한다. release 기본 AWS https://lostparty.duckdns.org·명시 URL override는 유지한다. 프로필을 빌드 모드별로 영구 이중 구현하거나 런타임 실패 후 구 프로필로 우회하지 않는다.
+- 확정 계약으로 네이티브 코드/자동시험을 먼저 준비할 수 있다. 실제 로컬 연동 전에는 localhost:8000 OpenAPI의 새 profile/DTO·실행 소스 지원을 읽기로 확인한다. 로컬 미실행/구버전이면 구현/자동검증과 로컬 연동 대기를 구분하고 로컬 준비를 협의한다. 승인 없이 서버 시작·교체·DB변경·AWS배포를 하지 않는다.
+- 현재 게시 APK는 변경되지 않는다. 새 네이티브 소스로 release를 실행/게시하는 판단은 해당 서버 지원 확인과 사용자 별도 릴리즈 지시에서 다룬다. 운영 배포는 개발 연결의 선행 조건이 아니다.
+- 구현 순서: projection/직접 계약시험 → VM/후보별 UI와 전송 가드·두409 → 표적/영향검증 → 로컬 지원 읽기 대조/변경 경계 사용자 확인 → Issue38에 실제 commit/push·검증·미확인/다음 담당 인계.
+- 포함은 그룹 wire projection·models/repository/VM/현재 invite 페이지·관련 직접 시험과 문서다. Router 구조·저장 스키마·서버 구현/운영 배포·태그·dev/main 통합·Penpot 편집·운영환경 임의 회원 생성은 제외한다.
 
-서버/DB 수정·배포·태그·dev/main 통합·Penpot 편집·운영환경 임의 회원 생성은 제외한다. 현재 개발자료 유지/베타 직전 별도 초기화 방침과 기존 인수는 보존한다. 사용자 기기 조작은 사용자가 수행한다.
+### 회귀·검증·완료 기준
+
+- 계약: 새 query/profile/필수 enum·기존 후보필드/character_spec 검증, 누락/unknown/구DTO 거절, 구 프로필/기본 DTO의 기존 정상 검증 보존. 원래 순서/최대50·cursor없음 유지.
+- 요청/수명: 알려진 본인·그룹원 HTTP0, 미지 GET1, eligible의 명시 POST1·중복 방지, 혼합 후보의 개별 판정, 빈 결과·통신 실패 구분, 입력 수정/회원·환경전환 뒤 늦은 새 응답 폐기, 확인 중 후보 무효화 시 POST0을 검증한다.
+- 명령: 두409 사유/후보 제거/journal정리와 generic 새로고침 없음, 503/응답유실 원요청 보존, 성공 후 갱신 실패·원ACK 재전송 금지의 기존 회귀를 유지한다. 본인/그룹원 판정은 서버 소유회원 결과를 소비하며 다른 그룹 가입을 로컬 정책으로 거절하지 않는다.
+- 검증은 그룹 backend_group_test/backend_group_detail_test 중심과 필요 최소 전송가드 경계, 변경 Dart 분석·포맷·diff검토다. 표적 영향으로 설명되지 않는 공용 변경이 생기면 최종 전체 검증을 판단한다. 현재 후속 구현 시험은 미실행이며 선행36PASS를 새 소비 통과로 확대하지 않는다.
+- 사용자 정상 화면 확인은 로컬 지원 후 본인/그룹원 사유와 버튼 없음, 미등록 안내, 입력 수정 초기화다. 캐릭터/회원 자료가 없으면 자동 합성 경계와 구분해 미확인으로 남기며 운영회원 추가·기존 정상 초대 전수 재시험은 요구하지 않는다.
+- 설계 완료는 고정 계약·현재 차이·상태/전송/환경 경계·검증 순서 문서화다. 후속 코드는 사용자 구현 지시 후 변경한다. 대단원 완료는 네이티브 연결·직접검증·로컬 변경 화면 확인이며 AWS 운영반영은 포함하지 않는다.
 
 아래는 기존 릴리즈 완료 상태와 별도 후속이다.
 

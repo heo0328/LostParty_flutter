@@ -194,4 +194,8 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 자료는 회원/환경·group·상세 observation에 묶이고 재조회/관계변경·회원/환경 전환·앱복귀에서 무효화한다. 새 TTL/주기 통신은 없다. 초대 거절 ALREADY_GROUP_MEMBER는 결과 영역 안내로 처리하고 공통 새로고침 카드로 대체하지 않는다. 원요청/불명 결과 보호는 유지한다.
 
-서버 판정은 [Issue38](https://github.com/heo0328/lostparty-backend/issues/38)의 group-invite-eligibility-1·invitation_eligibility 제안이다. Backend fdd51c8e에서 계약·구현 확정/CI1817PASS를 회신했다. 개발 로컬 서버 지원을 대조한 뒤 새 프로필을 연결하며 운영 배포는 선행 조건이 아니다. 현재는 기존 group-display-1을 유지한다. 운영 반영은 개발자의 별도 명시 지시로만 진행한다. 새 서버 계약은 기존 프로필/게시 APK 호환·소유회원 기준/self우선/해당그룹 가입 확인·가입조회 일괄화·최종 POST검증 유지와 새 사유 구분을 요구한다. 현재 순서·검증/인계·대기는 NEXT_WORK에서 관리한다.
+서버 판정 소비 기준은 [Issue38](https://github.com/heo0328/lostparty-backend/issues/38)에서 확정한 Backend fdd51c8e9a4d9a5eda8c5f175485965a013ee99a다. GET reader_profile=group-invite-eligibility-1의 EligibleInviteCandidates는 profile/evaluated_at/items, 각 EligibleInviteCandidate는 기존 표시/revision/character_spec과 필수 invitation_eligibility(eligible/self/already_member)를 제공한다. strict projection과 요청 profile 일치를 검증하며 누락을 eligible로 간주하거나 구 profile 재요청으로 우회하지 않는다. 서버는 소유회원/self우선·해당그룹의 현재 가입만 판정하며 eligible은 차단/pending/CAS/최종 성공 보장이 아니다.
+
+로컬 positive는 단일 결과 안내, 서버 결과는 후보별 카드의 사유/버튼으로 표현한다. self/already_member 후보에는 초대 버튼을 제공하지 않고 eligible만 기존 전송을 제공한다. 혼합 후보를 전체 restriction으로 합치지 않는다. 확인 전후 현재 후보/검색·회원·환경 수명을 검사하고 POST의409 SELF_INVITATION/ALREADY_GROUP_MEMBER는 각각 본인/기존그룹원 결과 안내·후보 제거로 처리한다. 확정 거절 journal정리와 불명/ACK 경계는 그대로다.
+
+2026-11-02 후속은 설계 단계이며 현재 기능 코드는 아직 group-display-1·ALREADY_GROUP_MEMBER 선행 처리다. 네이티브 새 소비 구현/자동검증과 개발 로컬 지원·사용자 확인을 구분한다. debug 로컬/release AWS 기본값을 유지하고 운영 배포를 개발 선행 조건으로 두지 않는다. 게시 APK/기존 프로필은 보존하며 새 release 검증·게시와 AWS 반영은 개발자 별도 지시에서 다룬다. 현재 순서·검증/인계·대기는 NEXT_WORK를 따른다.
