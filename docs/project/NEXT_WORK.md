@@ -1,15 +1,15 @@
 # NEXT WORK — 그룹 초대 로컬 우선 판별
 
-## 현재 파트 — 네이티브 연결·자동 검증 완료 / 로컬 변경 화면 확인 대기 (2026-11-02)
+## 현재 파트 — 네이티브 연결 완료 / 로컬 구버전 실행으로 검색 인수 실패 (2026-11-02)
 
 사용자가 설계의 네이티브 코드 반영을 지시했다. 새 profile/strict projection·후보별 표시/버튼·확인 후 전송 가드·두409를 일반 앱 경로에 연결했다. `fix/group-invite-search-feedback`을 유지한다. 선행 구현은6d9052cc·로컬/운영 설정 정리는93c9ec67이며 미커밋 변경 없는 상태에서 착수했다.
 
 ### 현재 결과·남은 확인
 
 - 최종 직접/영향 시험41PASS·변경 Dart6파일 analyze 문제0·포맷·diff검토를 확인했다. 고정 OpenAPI blob4df8cd4c의 실제 JSON에서 변경 부분을 추출했으며 projection은 초대 GET1개+새 DTO2개 외 기존 schema/operation 불변을 별도 비교했다.
-- localhost:8000/health는 status ok/database ok다. /openapi.json은404이며 고정 app/main.py에서 openapi_url=None을 확인했다. 이것만으로 새 프로필 지원/실행 SHA를 확정하지 않는다. 로컬 새 profile 실응답·로그인 세션 연동/변경 화면 확인은 미확인이다. 서버 시작/교체·DB변경·AWS반영은 하지 않았다.
+- 사용자 로컬/debug 검색 직후 generic 새로고침 안내를 보고했다. 실행 컨테이너 lostparty-backend-api-1의 이미지 태그는 cycle-group-b8542ef이고 실제 admission_router.py/display_schemas.py에는 group-invite-eligibility-1·SELF_INVITATION이 없다. 최근 invite-candidates 로그2건 HTTP400을 확인했다. **현재 로컬 실행은 새 계약 미지원이며 검색 인수 실패/실행 준비 대기**다. 정확한 실행SHA/request_id는 미수집이고 이미지 태그만으로 고정 SHA를 단정하지 않는다. health ok/DBok는 새 계약 지원을 뜻하지 않는다. [진단 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6575085880)을 게시·재조회했다. 서버/DB/AWS는 변경하지 않았다.
 - [Flutter 소비 완료 인계](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6574940338)에 구현0bac63bf commit/push·41PASS/분석0·로컬 미확인과 다음 담당을 게시·재조회했다.
-- 다음은 Backend 로컬 실행 소스/지원 확인과 사용자 변경 화면 확인이다. 별도 정상 초대 전수시험·운영회원 추가는 요청하지 않는다. 아래 계약/표시/수명 기준을 구현했으며 현재 상태와 후속을 구분한다.
+- 다음 담당 Backend/개발자는 개발 로컬을 fdd51c8e 지원 코드로 실행할 준비/실행소스·새profile 지원 결과를 회신한다. 실제 로컬 교체는 해당 개발자 지시 범위에서 진행한다. 그 뒤 사용자 검색 변경 화면을 확인한다. 별도 정상 초대 전수시험·운영회원 추가는 요청하지 않는다. 아래 계약/표시/수명 기준을 구현했으며 현재 상태와 후속을 구분한다.
 
 ### 고정 기준·구현 차이
 

@@ -7505,3 +7505,15 @@ searchInvites는 local-only 선행 판별을 그대로 두고 미지 이름 GET�
 - 다음: Issue38에 구현 commit/push·검증·로컬 지원 미확인을 회신하고 Backend 로컬 실행 source/새profile 준비 상태를 확인한다. 사용자 화면은 자료가 있을 때 본인/그룹원 사유·버튼 없음/입력 초기화만 좁게 확인한다. 운영배포/전체 정상 인수 반복은 요구하지 않는다.
 
 0bac63bf commit/push 후 [Issue38 소비 완료 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6574940338)을 게시·재조회했다. 일반 앱 새profile 소비·41PASS/분석0·로컬 health와 실행SHA/새profile 실응답 미확인·다음 Backend 담당을 구분했다. 운영 반영은 요청하지 않았다.
+
+
+## 2026-11-02 — 사용자 로컬 초대 검색 실패·실행 구계약 확인
+
+사용자가 debug/로컬에서 캐릭터명 검색 직후 새로고침 안내를 보고했다. 직전 diff·새 profile 전송/strict검증·실패 매핑과 Issue38 최신 인계를 대조했다. docker ps 읽기로 lostparty-backend-api-1의 이미지 태그lostparty-backend-api:cycle-group-b8542ef/127.0.0.1:8000을 확인했다. docker exec의 파일읽기로 실제 admission_router.py·display_schemas.py 두 파일에 group-invite-eligibility-1/SELF_INVITATION이 없음을 확인했다. 최근 logs500행 중 초대검색2건 HTTP400을 필터 출력했으며 이름·그룹UUID·인증값은 출력/공유하지 않았다. 개별 request_id/실행 정확한 SHA는 미수집이다.
+
+새 Native가 요청하는 확정profile과 실행 로컬 서버가 불일치한다. 이전 health/DB정상은 신계약 지원 확인이 아니며 사용자 검색 인수는 실패/로컬 실행 준비 대기로 기록했다. Native fallback·검증 완화·증상 위 임시패치는 추가하지 않았다. 서버 시작/재생성/쓰기·DB·AWS/태그·기기조작은 하지 않았다.
+
+- 새로 확인: 로컬 실행의 새profile 미지원과 검색HTTP400 근거. 앱 기능은 미변경.
+- 보존: Native 계약/코드·기존41PASS/분석0·서버/자료·운영배포 경계.
+- 검증: 정적 diff/코드 대조, 컨테이너 메타/실행파일/상태코드 읽기, 문서 diffcheck. 코드불변으로 Flutter시험 미반복.
+- 다음: [Issue38 진단 인계](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6575085880) 게시·재조회. Backend/개발자의 개발 로컬 fdd51c8e 지원 실행 준비/결과회신 뒤 사용자 검색 좁은 재확인. AWS운영 배포 요청 아님.
