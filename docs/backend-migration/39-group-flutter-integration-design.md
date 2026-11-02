@@ -194,4 +194,4 @@ BackendGroupPage와 ViewModel은 기존 내그룹/요청 탭·검색/생성·카
 
 자료는 회원/환경·group·상세 observation에 묶이고 재조회/관계변경·회원/환경 전환·앱복귀에서 무효화한다. 새 TTL/주기 통신은 없다. 초대 거절 ALREADY_GROUP_MEMBER는 결과 영역 안내로 처리하고 공통 새로고침 카드로 대체하지 않는다. 원요청/불명 결과 보호는 유지한다.
 
-서버 판정은 [Issue38](https://github.com/heo0328/lostparty-backend/issues/38)의 group-invite-eligibility-1·invitation_eligibility 제안이다. 확정/실제 반영 전 일반 앱은 기존 group-display-1을 유지하며 미지원 프로필을 켜지 않는다. 새 서버 계약은 기존 프로필/게시 APK 호환·소유회원 기준/self우선/해당그룹 가입 확인·가입조회 일괄화·최종 POST검증 유지와 새 사유 구분을 요구한다. 현재 순서·검증/인계·대기는 NEXT_WORK에서 관리한다.
+서버 판정은 [Issue38](https://github.com/heo0328/lostparty-backend/issues/38)의 group-invite-eligibility-1·invitation_eligibility 제안이다. Backend fdd51c8e에서 계약·구현 확정/CI1817PASS를 회신했다. 개발 로컬 서버 지원을 대조한 뒤 새 프로필을 연결하며 운영 배포는 선행 조건이 아니다. 현재는 기존 group-display-1을 유지한다. 운영 반영은 개발자의 별도 명시 지시로만 진행한다. 새 서버 계약은 기존 프로필/게시 APK 호환·소유회원 기준/self우선/해당그룹 가입 확인·가입조회 일괄화·최종 POST검증 유지와 새 사유 구분을 요구한다. 현재 순서·검증/인계·대기는 NEXT_WORK에서 관리한다.

@@ -7466,3 +7466,15 @@ BackendApp DI의 local-only callback은 현재 scoped runtime readRegistrations/
 - Git: fix/group-invite-search-feedback 선행 파트 보관, dev/main 통합·배포 없음. Backend 요청·구현 인계는 Issue38에서 추적한다.
 
 6d9052cc commit/push 후 [Issue38 Flutter 인계](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6572614788)에 일반 앱 연결·36PASS/분석0·새 서버 계약 미연결/회신 대기와 다음 담당을 게시하고 재조회했다. 이 기록은 서버 구현·반영 완료가 아니다.
+
+
+## 2026-11-02 — debug 로컬/release AWS 기본 연결·배포 권한 재확정
+
+사용자가 기본 개발·검증은 dev 로컬 서버, 운영 AWS 반영은 개발자 명시 지시로만 진행한다고 재확정했다. 기존 무옵션 debug=http://10.0.2.2:8000/release=https://lostparty.duckdns.org 기본값을 BackendApp에서 명시 상수·모드별 기본값으로 정리했다. 명시 BACKEND_BASE_URL override·profile 주소명시·release HTTPS 검증은 유지했다. debug AWS override를 사용하면 같은 운영서버로 접속하므로 일반 개발은 flutter run으로 실행한다. 10.0.2.2는 Android 에뮬레이터 주소이며 물리기기의 로컬 접근 구성은 이번에 변경하지 않았다.
+
+AGENTS/ai_rules·로그인 실행 계약·현재 문서에 개발/운영 대상을 반영했다. Issue38 fdd51c8e의 계약·구현/CI1817PASS 완료 회신을 현재 기준으로 교체하고, 개발 로컬 지원 대조와 운영 배포를 구분했다. [환경 기준 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6574028919)을 게시·재조회했다. 운영 배포를 Flutter 개발의 선행 조건으로 요구하던 설명을 바로잡았다.
+
+- 새로 가능한 흐름: 기존 기본 URL 동작은 같으며 모드별 연결과 운영 권한 기준을 명확히 기록했다.
+- 보존 확인: 명시 URL override·HTTPS/회원 origin 격리·기존 초대 코드/검증 결과. 서버/DB·태그·배포·기기 조작 없음.
+- 검증: 변경 Dart 포맷·해당 파일 analyze 문제0·git diff --check·diff검토. 기본값 동작 불변으로 기능시험은 반복하지 않았다.
+- 미확인/다음: 로컬 서버의 새 초대 프로필 지원 및 Flutter 소비·변경 화면 확인. AWS 운영은 개발자 지시 대기이며 선행 조건이 아니다.

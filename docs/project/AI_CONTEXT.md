@@ -2,13 +2,13 @@
 
 ## 개발·협업 기준
 
-1인 개발, Firebase 구현 제거·자체 Python Backend·단일 Google 로그인. 현재 환경에서 개발하고 관련 앱/Backend 구현 후 테스트한다. 베타 시작 전 개발자료를 비우며 베타 이후 자료는 보존한다. 실제 초기화 실행은 별도 대상/시점 지시가 필요하다. [정책09 D08](../backend-migration/09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정).
+1인 개발, Firebase 구현 제거·자체 Python Backend·단일 Google 로그인. dev 로컬 서버를 기본 개발·검증 대상으로 사용한다. debug 기본은 Android 에뮬레이터용 http://10.0.2.2:8000, release 기본은 AWS https://lostparty.duckdns.org이며 명시 URL override는 유지한다. 운영 반영은 개발자의 명시 지시가 있을 때만 진행하고 개발 연결의 선행 조건으로 요구하지 않는다. 베타 시작 전 개발자료를 비우며 베타 이후 자료는 보존한다. 실제 초기화 실행은 별도 대상/시점 지시가 필요하다. [정책09 D08](../backend-migration/09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정).
 
 설계는 위 환경/방침과 이미 확정된 UX/제품 의도를 선행 조건으로 적용한다. 사용자의 기능 흐름 확인을 기술 조건 전체의 검수로 취급하지 않는다. 작업/문서 책임은 [AGENTS](../../AGENTS.md), 상세 [ai_rules](ai_rules.md), 현재 단일 실행 계획과 유효 후속은 [NEXT_WORK](NEXT_WORK.md)다. 브랜치는 대단원, 소분류 파트 완료에 커밋/푸시, 통합은 대단원 완료 시 별도다. 같은 브랜치에서 지침·버그기록·UI 보완도 처리한다.
 
 ## 현재 작업과 실제 코드 상태
 
-2026-11-02 그룹 초대 검색에 로컬 우선 판별을 연결했다. 본인 로컬 캐시와 현재 상세 멤버/조회된 활동 캐릭터를 재사용해 알려진 본인·그룹원을 HTTP0회로 안내하고 모르는 이름은 기존 검색 GET1회로 처리한다. 기존 ALREADY_GROUP_MEMBER 초대 거절도 결과 영역 안내로 처리한다. 직접/영향36PASS·변경 Dart7파일 분석0. [Backend Issue38](https://github.com/heo0328/lostparty-backend/issues/38)의 새 판정 프로필·self 오류 확정/실제 반영과 Flutter 소비는 대기이며 현재 group-display-1을 유지한다. 전체 기능 완료·기기 인수로 확대하지 않는다. 현재 상태·다음 행동은 NEXT_WORK를 따른다.
+2026-11-02 그룹 초대 검색에 로컬 우선 판별을 연결했다. 본인 로컬 캐시와 현재 상세 멤버/조회된 활동 캐릭터를 재사용해 알려진 본인·그룹원을 HTTP0회로 안내하고 모르는 이름은 기존 검색 GET1회로 처리한다. 기존 ALREADY_GROUP_MEMBER 초대 거절도 결과 영역 안내로 처리한다. 직접/영향36PASS·변경 Dart7파일 분석0. [Backend Issue38](https://github.com/heo0328/lostparty-backend/issues/38)의 새 판정 프로필·self 오류는 fdd51c8e로 확정·CI1817PASS이며 개발 로컬 지원 대조/Flutter 소비가 남았다. 운영은 v0.1.1 유지·개발자 별도 지시 대상이며 현재 group-display-1을 유지한다. 전체 기능 완료·기기 인수로 확대하지 않는다. 현재 상태·다음 행동은 NEXT_WORK를 따른다.
 
 2026-11-01 사용자 지시로 release의 기본 Backend 주소를 AWS Lightsail https://lostparty.duckdns.org로 지정했다. 명시 BACKEND_BASE_URL 우선·debug 로컬 기본값·profile 주소 명시·origin별 인증/자료 격리는 유지한다. 실행 설정은 [Google 로그인 계약](../architecture/GOOGLE_LOGIN_CONTRACT.md)의 실행 설정 절을 따른다. dev/main 동일 시점 통합·푸시를 마쳤으며 v1.1.2(1.1.2+4) 서명 APK·checksum·사용자 승인 안내문을 GitHub Release에 게시했다. CI41306739482 전체 성공. 2026-11-02 사용자가 릴리즈 버전의 운영서버 Google 로그인 통과를 확인했다. 업데이트 설치 경로·refresh·전체 주요 흐름의 신규 인수까지 확대하지 않는다. Backend Issue34의 최신 보고에서는 v0.1.1 자동 서버 배포도 완료됐으며 외부 DB·키 백업과 전체 호환/인수 기록은 별도 후속이다. 근거와 남은 행동은 NEXT_WORK를 따른다.
 

@@ -141,12 +141,15 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     super.initState();
     _entryGate.addListener(_entryReady);
     WidgetsBinding.instance.addObserver(this);
+    // Development tests use the host's local API via the Android emulator.
+    // Production rollout is a separate developer-directed action.
+    const developmentBaseUrl = 'http://10.0.2.2:8000';
+    const productionBaseUrl = 'https://lostparty.duckdns.org';
     const configured = String.fromEnvironment('BACKEND_BASE_URL');
-    final base = configured.isNotEmpty
-        ? configured
-        : (kReleaseMode
-              ? 'https://lostparty.duckdns.org'
-              : (kDebugMode ? 'http://10.0.2.2:8000' : ''));
+    final defaultBase = kDebugMode
+        ? developmentBaseUrl
+        : (kReleaseMode ? productionBaseUrl : '');
+    final base = configured.isNotEmpty ? configured : defaultBase;
     _initializeServices(base);
   }
 
