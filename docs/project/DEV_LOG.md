@@ -7419,3 +7419,12 @@ Backend33번째6269041117/설계1e2f706 로컬·미push의 원본행/정규화·
 ### Backend Issue34 APK 자동화 운영 회신
 
 본문·최신댓글(기존0)을 확인하고 https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6558053848 에 5개 질문의 실제 운영·고정근거·미확인·다음담당을 게시한 뒤 재조회했다. 최신 유효 v1.1.2와 v1.1.1 현asset0/중단안내를 구분했고 debug/실제release OAuth·전체 호환manifest는 미확인으로 남겼다. Backend 버전 독립+호환조합 연결·단계별 이력분리 의견을 전달했으며 정책 채택/CI 구현/재배포를 실행하지 않았다. Backend 적용안 정리 대기, 문서diffcheck·내용검토만 수행했다.
+
+## 2026-11-02 — 릴리즈 로그인 인수·현재 후속 문서 정리
+
+사용자가 릴리즈 버전의 운영서버 Google 로그인 통과를 확인했다. NEXT_WORK/AI_CONTEXT의 로그인 미확인·Backend 적용안 대기를 해소하고, Issue34 최신 결과 https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6560737194 의 Backend v0.1.1 자동 배포 완료와 외부 DB·키 백업 미완료를 구분했다. Penpot02는 사용자 정리에 따라 외부 미리보기 URL에서 메인 보드를 구간·섹션별로 하나씩 열람하는 방향으로 반영했다. 전체 클릭·스크롤 프로토타입을 필수 후속으로 두지 않는다. 그룹 초대 검색 결과 없음 문구는 DETAIL_IMPROVEMENTS에 차후 수정으로 기록했다.
+
+- 새로 확인된 흐름: 릴리즈 버전의 운영서버 로그인 사용자 인수 통과. 이번 문서 변경으로 새 앱 기능을 구현한 것은 아니다.
+- 보존 확인: 앱/Backend 코드·기존 검증 결과·Penpot 객체·서버/DB·태그를 변경하지 않았다.
+- 미확인: 업데이트 설치 경로·refresh·전체 주요 흐름의 신규 인수, 외부 미리보기 URL 실제 열람. 이를 정상 흐름 전체의 반복 시험 요청으로 확대하지 않는다.
+- 검증: 문서 내용·diff 검토와 git diff --check. 코드 불변으로 Flutter 시험/분석은 반복하지 않는다.
