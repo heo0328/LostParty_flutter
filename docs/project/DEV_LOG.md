@@ -7503,3 +7503,5 @@ searchInvites는 local-only 선행 판별을 그대로 두고 미지 이름 GET�
 - 검증: 최종 backend_group_test/backend_group_detail_test 41PASS·변경 Dart6파일 analyze 문제0·포맷/diff check/review. 추가 직접 경계는 필수 enum누락/unknown/구profile거절·혼합 순서/버튼·두409/journal·확인 무효화 POST0·eligible 중복 POST방지다. projection 변경은GET1개+고정 DTO2개만이며 기존 schemas불변을 비교했다. 공용 Router/DI·저장 불변이고 직접/영향 그룹 시험으로 범위를 설명해 전체 Flutter 시험은 반복하지 않았다.
 - 로컬 읽기: sandbox 소켓 접근 거절 뒤 읽기 권한으로 localhost:8000/openapi.json GET404, /health status ok/database ok를 확인했다. 고정 app/main.py는 openapi_url=None이다. 새 profile 지원/실행SHA·실회원 검색/초대·기기 인수는 미확인이다. 서버 시작/교체/쓰기·운영 배포는 하지 않았다.
 - 다음: Issue38에 구현 commit/push·검증·로컬 지원 미확인을 회신하고 Backend 로컬 실행 source/새profile 준비 상태를 확인한다. 사용자 화면은 자료가 있을 때 본인/그룹원 사유·버튼 없음/입력 초기화만 좁게 확인한다. 운영배포/전체 정상 인수 반복은 요구하지 않는다.
+
+0bac63bf commit/push 후 [Issue38 소비 완료 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6574940338)을 게시·재조회했다. 일반 앱 새profile 소비·41PASS/분석0·로컬 health와 실행SHA/새profile 실응답 미확인·다음 Backend 담당을 구분했다. 운영 반영은 요청하지 않았다.

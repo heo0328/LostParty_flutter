@@ -8,6 +8,7 @@
 
 - 최종 직접/영향 시험41PASS·변경 Dart6파일 analyze 문제0·포맷·diff검토를 확인했다. 고정 OpenAPI blob4df8cd4c의 실제 JSON에서 변경 부분을 추출했으며 projection은 초대 GET1개+새 DTO2개 외 기존 schema/operation 불변을 별도 비교했다.
 - localhost:8000/health는 status ok/database ok다. /openapi.json은404이며 고정 app/main.py에서 openapi_url=None을 확인했다. 이것만으로 새 프로필 지원/실행 SHA를 확정하지 않는다. 로컬 새 profile 실응답·로그인 세션 연동/변경 화면 확인은 미확인이다. 서버 시작/교체·DB변경·AWS반영은 하지 않았다.
+- [Flutter 소비 완료 인계](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6574940338)에 구현0bac63bf commit/push·41PASS/분석0·로컬 미확인과 다음 담당을 게시·재조회했다.
 - 다음은 Backend 로컬 실행 소스/지원 확인과 사용자 변경 화면 확인이다. 별도 정상 초대 전수시험·운영회원 추가는 요청하지 않는다. 아래 계약/표시/수명 기준을 구현했으며 현재 상태와 후속을 구분한다.
 
 ### 고정 기준·구현 차이
