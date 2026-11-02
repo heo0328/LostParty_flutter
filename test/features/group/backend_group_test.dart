@@ -233,6 +233,73 @@ void main() {
       );
     },
   );
+  test(
+    'invite empty success is distinct from initial and cleared state',
+    () async {
+      dio.httpClientAdapter = Adapter(
+        (_) async => reply({...invitePage(), 'items': []}),
+      );
+      final vm = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.invite,
+        groupId: gid,
+      );
+      expect(vm.inviteSearchCompleted, isFalse);
+      await vm.searchInvites('unknown');
+      expect(vm.inviteSearchCompleted, isTrue);
+      expect(vm.inviteCandidates, isEmpty);
+      expect(vm.failure, isNull);
+      vm.clearInviteCandidates();
+      expect(vm.inviteSearchCompleted, isFalse);
+      vm.dispose();
+    },
+  );
+  test(
+    'new search clears empty status and ignores duplicate submission',
+    () async {
+      final gate = Completer<ResponseBody>();
+      var calls = 0;
+      dio.httpClientAdapter = Adapter((_) {
+        calls++;
+        return calls == 1
+            ? Future.value(reply({...invitePage(), 'items': []}))
+            : gate.future;
+      });
+      final vm = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.invite,
+        groupId: gid,
+      );
+      await vm.searchInvites('unknown');
+      final pending = vm.searchInvites('MiXeD');
+      expect(vm.inviteSearchCompleted, isFalse);
+      expect(vm.busy, isTrue);
+      await vm.searchInvites('duplicate');
+      gate.complete(reply(invitePage()));
+      await pending;
+      expect(calls, 2);
+      expect(vm.inviteSearchCompleted, isTrue);
+      expect(vm.inviteCandidates, hasLength(1));
+      vm.dispose();
+    },
+  );
+  test('invalid empty input is not an empty search success', () async {
+    var calls = 0;
+    dio.httpClientAdapter = Adapter((_) async {
+      calls++;
+      return reply({...invitePage(), 'items': []});
+    });
+    final vm = BackendGroupViewModel(
+      repo(),
+      GroupPageKind.invite,
+      groupId: gid,
+    );
+    await vm.searchInvites('   ');
+    expect(calls, 0);
+    expect(vm.inviteSearchCompleted, isFalse);
+    expect(vm.failure, isA<FormatException>());
+    vm.dispose();
+  });
   test('invite search discards cleared late results', () async {
     final gate = Completer<ResponseBody>();
     dio.httpClientAdapter = Adapter((_) => gate.future);
@@ -248,6 +315,7 @@ void main() {
     await pending;
     expect(vm.inviteCandidates, isEmpty);
     expect(vm.failure, isNull);
+    expect(vm.inviteSearchCompleted, isFalse);
     vm.dispose();
   });
   test('invite candidate response from previous member is discarded', () async {
@@ -261,10 +329,11 @@ void main() {
     final pending = vm.searchInvites('MiXeD');
     await Future<void>.delayed(const Duration(milliseconds: 10));
     session.change(authenticated: false);
-    gate.complete(reply(invitePage()));
+    gate.complete(reply({...invitePage(), 'items': []}));
     await pending;
     expect(vm.inviteCandidates, isEmpty);
     expect(vm.failure, isNull);
+    expect(vm.inviteSearchCompleted, isFalse);
     vm.dispose();
   });
   test(
@@ -286,6 +355,7 @@ void main() {
       await vm.searchInvites('name');
       expect(vm.inviteCandidates, isEmpty);
       expect(vm.failure, isA<AccountReadException>());
+      expect(vm.inviteSearchCompleted, isFalse);
       vm.dispose();
     },
   );

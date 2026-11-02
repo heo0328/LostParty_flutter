@@ -1069,6 +1069,11 @@ class _BackendGroupPageState extends State<BackendGroupPage>
           if (m.detail != null) ...[
             field('캐릭터명', '정확한 캐릭터명', searchInvite),
             button('검색', searchInvite),
+            if (m.inviteSearchCompleted &&
+                !m.busy &&
+                m.failure == null &&
+                candidates.isEmpty)
+              const Text('앱 사용 회원의 캐릭터명이 아닙니다.'),
             for (final c in candidates)
               card(
                 Column(

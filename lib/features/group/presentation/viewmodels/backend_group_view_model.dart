@@ -44,10 +44,12 @@ class BackendGroupViewModel extends ChangeNotifier {
   final areaLoaded = <GroupDetailArea>{};
   final areaFailures = <GroupDetailArea, Object>{};
   List<Map<String, dynamic>> inviteCandidates = [];
+  bool inviteSearchCompleted = false;
   int _inviteEpoch = 0;
   void clearInviteCandidates() {
     _inviteEpoch++;
     inviteCandidates = [];
+    inviteSearchCompleted = false;
   }
 
   Future<void> searchInvites(String name) async {
@@ -71,7 +73,10 @@ class BackendGroupViewModel extends ChangeNotifier {
           'reader_profile': 'group-display-1',
         },
       );
-      if (current()) inviteCandidates = groupItems(value);
+      if (current()) {
+        inviteCandidates = groupItems(value);
+        inviteSearchCompleted = true;
+      }
     } catch (error) {
       if (current()) failure = error;
     } finally {
