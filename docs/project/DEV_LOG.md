@@ -7517,3 +7517,15 @@ searchInvites는 local-only 선행 판별을 그대로 두고 미지 이름 GET�
 - 보존: Native 계약/코드·기존41PASS/분석0·서버/자료·운영배포 경계.
 - 검증: 정적 diff/코드 대조, 컨테이너 메타/실행파일/상태코드 읽기, 문서 diffcheck. 코드불변으로 Flutter시험 미반복.
 - 다음: [Issue38 진단 인계](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6575085880) 게시·재조회. Backend/개발자의 개발 로컬 fdd51c8e 지원 실행 준비/결과회신 뒤 사용자 검색 좁은 재확인. AWS운영 배포 요청 아님.
+
+
+## 2026-11-02 — 그룹 초대 로컬 테스트 전부 통과·배포 지시 경계 확정
+
+사용자가 개발 로컬/debug에서 이번 초대 변경 테스트 전부 통과를 보고했다. Backend [로컬반영6575270695](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6575270695)의 구현fdd51c8e/이미지revision737e14d4·소스대조/17PASS·실제 개발자료 READ ONLY self 응답 확인을 읽었다. 이전 컨테이너 구버전/검색HTTP400 인수 대기는 현재 문서에서 해소하고 경과는 이력에 보존했다.
+
+[Flutter 인수 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6576244724)을 게시·재조회했다. 사용자는 운영서버 배포와 네이티브 APK 게시는 각각 개발자가 명시 지시할 때만 하며 개별 수정마다 배포하지 않는다고 재확정했다. AGENTS/ai_rules와 현재 상태에 반영했다. 개발 완료/보관·통합과 운영배포/공개는 별개이며 이번 보고를 배포·태그/APK공개·dev/main통합·Issue종료 승인으로 확대하지 않았다.
+
+- 새로 확인: 이번 초대 검색/안내 변경의 로컬 사용자 인수 전부 통과.
+- 보존: 기존41PASS/분석0·로컬자료/서버·AWS·게시APK/태그. 이번 에이전트 작업은 문서/회신뿐이다.
+- 미확인: AWS운영의 새기능 인수·새APK 릴리즈 인수는 이번 범위가 아니며 필수 다음 단계로 추가하지 않는다.
+- 검증: 문서내용/diff검토·git diff --check. 코드불변으로 Flutter 시험/분석과 기기 조작을 반복하지 않았다.
