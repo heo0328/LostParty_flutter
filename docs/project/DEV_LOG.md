@@ -7464,3 +7464,5 @@ BackendApp DI의 local-only callback은 현재 scoped runtime readRegistrations/
 - 검증: 최종 backend_group_test + backend_group_detail_test 36PASS, 변경 Dart7파일 analyze 문제0, 포맷·git diff --check·diff검토. 정상 앱 DI 변경은 local-only callback 전달이며 Router/DTO/공용 저장 계약 불변, 관련 실제 상세/그룹 경계로 영향이 설명돼 전체 Flutter 시험을 반복하지 않았다.
 - 미확인/다음 담당: Backend Issue38 확정 DTO/OpenAPI/오류·고정 SHA/검증·실제 반영 회신 후 Flutter 연결. 로컬에 없는 다른 캐릭터의 self/member 판정은 아직 기존 서버가 반환하지 않는다. 사용자 변경 화면 확인도 남았다. 서버 준비 전 전체 기기 인수를 요구하지 않는다.
 - Git: fix/group-invite-search-feedback 선행 파트 보관, dev/main 통합·배포 없음. Backend 요청·구현 인계는 Issue38에서 추적한다.
+
+6d9052cc commit/push 후 [Issue38 Flutter 인계](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6572614788)에 일반 앱 연결·36PASS/분석0·새 서버 계약 미연결/회신 대기와 다음 담당을 게시하고 재조회했다. 이 기록은 서버 구현·반영 완료가 아니다.

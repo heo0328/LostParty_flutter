@@ -7,7 +7,7 @@
 - 알려진 본인은 `본인은 초대할수없습니다.`, 해당 그룹원은 `이미 그룹에 있는 사용자를 초대할수없습니다.`를 기존 결과 영역에 표시하고 검색/초대 HTTP0회로 막는다. 본인 우선이다. 이름은 trim+ASCII 대소문자 무시 정확 비교다.
 - 일반 BackendApp/DI에서 로컬 계정 캐시만 읽는 callback을 연결한다. groupCharacters/loadMemberRoster를 호출해 자료를 새로 받지 않는다. 현재 그룹 상세의 멤버 표시명과 이미 받은 활동 캐릭터를 화면 흐름 범위로 공유한다. 모르는 이름은 기존 GET1회, 가능한 후보의 명시 초대만 POST1회다.
 - 자료는 현재 회원/환경/group/상세 조회 세대에 묶는다. 재조회·관계 변경·회원/환경 변경·앱 복귀에 무효화하며 주기 조회/TTL·전체 캐릭터 사전 조회·영속 중복 저장을 추가하지 않는다. 직접 진입/누락 자료는 서버 검색으로 넘긴다.
-- Backend 요청 [Issue38](https://github.com/heo0328/lostparty-backend/issues/38)을 게시·재조회했다. opt-in group-invite-eligibility-1 / invitation_eligibility(eligible/self/already_member), self 오류 SELF_INVITATION 제안·기존 ALREADY_GROUP_MEMBER 유지, 기존 프로필 호환과 일괄 조회·최종 POST 검증 유지가 요청 범위다. **확정 계약·고정 SHA·실제 반영 회신 대기**이며 새 프로필을 임의 생성/활성화하지 않는다.
+- Backend 요청 [Issue38](https://github.com/heo0328/lostparty-backend/issues/38)을 게시·재조회했다. opt-in group-invite-eligibility-1 / invitation_eligibility(eligible/self/already_member), self 오류 SELF_INVITATION 제안·기존 ALREADY_GROUP_MEMBER 유지, 기존 프로필 호환과 일괄 조회·최종 POST 검증 유지가 요청 범위다. **확정 계약·고정 SHA·실제 반영 회신 대기**다. [Flutter 선행 구현 인계](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6572614788)에 6d9052cc commit/push·36PASS/분석0·미연결 범위/다음 담당을 회신·재조회했으며 새 프로필을 임의 생성/활성화하지 않는다.
 - Flutter 선행은 로컬 판별·수명·결과 안내와 기존 ALREADY_GROUP_MEMBER 초대 거절 처리다. 서버 사유 판정은 준비 전 연결 대기로 명시한다. 네트워크 불명·원ACK는 유지한다.
 
 ## 선행 구현·검증 결과와 다음 행동
