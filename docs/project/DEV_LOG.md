@@ -7529,3 +7529,10 @@ searchInvites는 local-only 선행 판별을 그대로 두고 미지 이름 GET�
 - 보존: 기존41PASS/분석0·로컬자료/서버·AWS·게시APK/태그. 이번 에이전트 작업은 문서/회신뿐이다.
 - 미확인: AWS운영의 새기능 인수·새APK 릴리즈 인수는 이번 범위가 아니며 필수 다음 단계로 추가하지 않는다.
 - 검증: 문서내용/diff검토·git diff --check. 코드불변으로 Flutter 시험/분석과 기기 조작을 반복하지 않았다.
+
+
+## 2026-11-02 — 초대 변경 완료 기록·dev 통합
+
+사용자가 완료 문서 최신화와 작업 브랜치의 dev 병합을 지시했다. origin fetch 후 local dev/origin dev 동일·작업트리 청결을 확인했고, 이번 변경의41PASS/분석0·로컬 사용자 전부통과 결과를 재사용한다. NEXT_WORK/AI_CONTEXT의 상태를 완료·dev 통합으로 맞추고 같은 완료 기록을 포함한 fix/group-invite-search-feedback을 dev에 fast-forward 병합·push한다. 기능 변경 없는 문서/통합으로 Flutter 시험을 반복하지 않는다.
+
+새로 확인된 흐름은 이번 초대 변경 로컬 인수·통합 완료이며 기존 동작/검증을 보존한다. 검증은 diff검토·git diff --check·병합/원격 동기화 확인이다. main·운영서버·태그/Release/APK는 변경하지 않는다. 브랜치는 삭제 후보이나 보존하며 추가 기능은 자동 착수하지 않는다.
