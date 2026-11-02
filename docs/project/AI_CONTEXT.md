@@ -8,9 +8,7 @@
 
 ## 현재 작업과 실제 코드 상태
 
-현재 파트는 Backend fdd51c8e 확정 초대 판정 계약의 네이티브 소비 설계다. 새 profile strict 검증·후보별 사유/버튼·확인 후 stale 후보 차단·두409 처리와 로컬 개발 검증 순서를 NEXT_WORK에 기록했다. 기능 코드는 이번 파트에서 변경하지 않으며 선행 로컬 판별/36PASS와 후속 소비 완료를 구분한다.
-
-2026-11-02 그룹 초대 검색에 로컬 우선 판별을 연결했다. 본인 로컬 캐시와 현재 상세 멤버/조회된 활동 캐릭터를 재사용해 알려진 본인·그룹원을 HTTP0회로 안내하고 모르는 이름은 기존 검색 GET1회로 처리한다. 기존 ALREADY_GROUP_MEMBER 초대 거절도 결과 영역 안내로 처리한다. 직접/영향36PASS·변경 Dart7파일 분석0. [Backend Issue38](https://github.com/heo0328/lostparty-backend/issues/38)의 새 판정 프로필·self 오류는 fdd51c8e로 확정·CI1817PASS이며 개발 로컬 지원 대조/Flutter 소비가 남았다. 운영은 v0.1.1 유지·개발자 별도 지시 대상이며 현재 group-display-1을 유지한다. 전체 기능 완료·기기 인수로 확대하지 않는다. 현재 상태·다음 행동은 NEXT_WORK를 따른다.
+현재 파트는 Backend fdd51c8e 확정 초대 판정의 네이티브 소비 연결·자동 검증 완료다. 로컬 우선 HTTP0 판별을 유지하고 미지 이름의 GET1은 group-invite-eligibility-1을 사용한다. 필수 invitation_eligibility의 후보별 사유/버튼·확인 후 stale 전송 차단·두409 결과 안내를 연결했다. 직접/영향41PASS·변경 Dart6파일 분석0. localhost health는API/DB ok이나 공개 OpenAPI 비활성으로 현재 새 profile 지원/실행SHA와 실제 변경 화면은 미확인이다. 현재 순서/인계는 NEXT_WORK를 따른다. 운영AWS 반영·게시 APK 변경은 없으며 개발자 별도 지시 대상이다.
 
 2026-11-01 사용자 지시로 release의 기본 Backend 주소를 AWS Lightsail https://lostparty.duckdns.org로 지정했다. 명시 BACKEND_BASE_URL 우선·debug 로컬 기본값·profile 주소 명시·origin별 인증/자료 격리는 유지한다. 실행 설정은 [Google 로그인 계약](../architecture/GOOGLE_LOGIN_CONTRACT.md)의 실행 설정 절을 따른다. dev/main 동일 시점 통합·푸시를 마쳤으며 v1.1.2(1.1.2+4) 서명 APK·checksum·사용자 승인 안내문을 GitHub Release에 게시했다. CI41306739482 전체 성공. 2026-11-02 사용자가 릴리즈 버전의 운영서버 Google 로그인 통과를 확인했다. 업데이트 설치 경로·refresh·전체 주요 흐름의 신규 인수까지 확대하지 않는다. Backend Issue34의 최신 보고에서는 v0.1.1 자동 서버 배포도 완료됐으며 외부 DB·키 백업과 전체 호환/인수 기록은 별도 후속이다. 근거와 남은 행동은 NEXT_WORK를 따른다.
 

@@ -29,7 +29,7 @@ Map<String, dynamic> ack() => {
   'membership_revision': 2,
   'ended_at': stamp,
 };
-Map<String, dynamic> invitePage() {
+Map<String, dynamic> invitePage({bool eligibility = true}) {
   final role = {
     'combat_power': null,
     'source': 'unavailable',
@@ -41,11 +41,12 @@ Map<String, dynamic> invitePage() {
     'reason': 'ROLE_ANALYSIS_UNAVAILABLE',
   };
   return {
-    'profile': 'group-display-1',
+    'profile': eligibility ? 'group-invite-eligibility-1' : 'group-display-1',
     'evaluated_at': stamp,
     'items': [
       {
         'target_character_id': mid,
+        if (eligibility) 'invitation_eligibility': 'eligible',
         'display': {
           'server_name': '서버',
           'character_name': 'MiXeD',
@@ -362,13 +363,93 @@ void main() {
       vm.dispose();
     },
   );
+  for (final code in ['ALREADY_GROUP_MEMBER', 'SELF_INVITATION']) {
+    test(
+      '$code invitation is a result notice, not a refresh failure',
+      () async {
+        final adapter = Adapter(
+          (_) async => reply({
+            'error': {'code': code},
+          }, 409),
+        );
+        dio.httpClientAdapter = adapter;
+        final vm = BackendGroupViewModel(
+          repo(),
+          GroupPageKind.invite,
+          groupId: gid,
+        );
+        final result = await vm.act('POST', '/v1/groups/$gid/invitations', {
+          'target_character_id': mid,
+          'expected_target_ownership_revision': 1,
+          'expected_target_lifecycle_revision': 1,
+          'expected_group_revision': 1,
+          'expected_membership_revision': 1,
+        });
+        expect(result, isNull);
+        expect(vm.failure, isNull);
+        expect(
+          vm.inviteRestriction,
+          code == 'SELF_INVITATION'
+              ? GroupInviteRestriction.self
+              : GroupInviteRestriction.alreadyMember,
+        );
+        expect(vm.inviteCandidates, isEmpty);
+        expect(vm.hasPendingRequest, isFalse);
+        expect(journal.values, isEmpty);
+        expect(adapter.calls, 1);
+        vm.dispose();
+      },
+    );
+  }
   test(
-    'already joined invitation is a result notice, not a refresh failure',
+    'new profile rejects missing or unknown eligibility and never retries old profile',
     () async {
+      final page = invitePage();
+      final candidate = (page['items'] as List).single as Map<String, dynamic>;
+      final adapter = Adapter((o) async {
+        expect(
+          o.queryParameters['reader_profile'],
+          'group-invite-eligibility-1',
+        );
+        return reply(page);
+      });
+      dio.httpClientAdapter = adapter;
+      final vm = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.invite,
+        groupId: gid,
+      );
+      await vm.searchInvites('MiXeD');
+      expect(vm.failure, isNull);
+      candidate.remove('invitation_eligibility');
+      await vm.searchInvites('MiXeD');
+      expect(vm.failure, isA<FormatException>());
+      expect(vm.inviteCandidates, isEmpty);
+      candidate['invitation_eligibility'] = 'unknown';
+      await vm.searchInvites('MiXeD');
+      expect(vm.failure, isA<FormatException>());
+      expect(vm.inviteSearchCompleted, isFalse);
+      page['profile'] = 'group-display-1';
+      candidate.remove('invitation_eligibility');
+      await vm.searchInvites('MiXeD');
+      expect(vm.failure, isA<FormatException>());
+      expect(adapter.calls, 4);
+      vm.dispose();
+    },
+  );
+  test(
+    'mixed server candidates retain order and only eligible current candidates can invite',
+    () async {
+      final base =
+          (invitePage()['items'] as List).single as Map<String, dynamic>;
       final adapter = Adapter(
         (_) async => reply({
-          'error': {'code': 'ALREADY_GROUP_MEMBER'},
-        }, 409),
+          ...invitePage(),
+          'items': [
+            for (final state in ['self', 'already_member', 'eligible'])
+              {...base, 'invitation_eligibility': state},
+          ],
+        }),
       );
       dio.httpClientAdapter = adapter;
       final vm = BackendGroupViewModel(
@@ -376,19 +457,99 @@ void main() {
         GroupPageKind.invite,
         groupId: gid,
       );
-      final result = await vm.act('POST', '/v1/groups/$gid/invitations', {
-        'target_character_id': mid,
-        'expected_target_ownership_revision': 1,
-        'expected_target_lifecycle_revision': 1,
-        'expected_group_revision': 1,
-        'expected_membership_revision': 1,
+      await vm.searchInvites('MiXeD');
+      vm.detail = GroupDetailSnapshot({
+        'group': summary(),
+        'my_membership': {'revision': 1},
       });
-      expect(result, isNull);
-      expect(vm.failure, isNull);
-      expect(vm.inviteRestriction, GroupInviteRestriction.alreadyMember);
-      expect(vm.inviteCandidates, isEmpty);
-      expect(vm.hasPendingRequest, isFalse);
-      expect(journal.values, isEmpty);
+      expect(vm.inviteRestriction, isNull);
+      expect(vm.inviteCandidates.map(groupInviteCandidateRestriction), [
+        GroupInviteRestriction.self,
+        GroupInviteRestriction.alreadyMember,
+        null,
+      ]);
+      final candidates = [...vm.inviteCandidates];
+      expect(candidates.map(vm.canInviteCandidate), [false, false, true]);
+      final denied = candidates.first;
+      await vm.inviteCandidate(denied, isCurrent: vm.invitationGuard(denied));
+      final allowed = candidates.last;
+      final guard = vm.invitationGuard(allowed);
+      vm.clearInviteCandidates();
+      await vm.inviteCandidate(allowed, isCurrent: guard);
+      expect(
+        adapter.calls,
+        1,
+      ); // Search only; denied/stale candidates never POST.
+      await vm.searchInvites('MiXeD');
+      expect(
+        guard(),
+        isFalse,
+      ); // Same ID in a new search cannot revive a confirmation.
+      vm.dispose();
+    },
+  );
+  test(
+    'eligible invitation sends once and a member switch invalidates its guard',
+    () async {
+      final postGate = Completer<ResponseBody>();
+      var posts = 0;
+      dio.httpClientAdapter = Adapter((o) async {
+        if (o.method == 'GET') return reply(invitePage());
+        posts++;
+        return postGate.future;
+      });
+      final vm = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.invite,
+        groupId: gid,
+      );
+      await vm.searchInvites('MiXeD');
+      vm.detail = GroupDetailSnapshot({
+        'group': summary(),
+        'my_membership': {'revision': 1},
+      });
+      final candidate = vm.inviteCandidates.single;
+      final guard = vm.invitationGuard(candidate);
+      final pending = vm.inviteCandidate(candidate, isCurrent: guard);
+      await vm.inviteCandidate(candidate, isCurrent: guard);
+      postGate.complete(
+        reply({
+          'error': {'code': 'SELF_INVITATION'},
+        }, 409),
+      );
+      await pending;
+      expect(posts, 1);
+      expect(vm.inviteRestriction, GroupInviteRestriction.self);
+      session.change(authenticated: false);
+      expect(guard(), isFalse);
+      expect(vm.inviteRestriction, isNull);
+      vm.dispose();
+    },
+  );
+  test(
+    'member or environment changes during confirmation cannot send an invite',
+    () async {
+      final adapter = Adapter((_) async => reply(invitePage()));
+      dio.httpClientAdapter = adapter;
+      final vm = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.invite,
+        groupId: gid,
+      );
+      await vm.searchInvites('MiXeD');
+      vm.detail = GroupDetailSnapshot({
+        'group': summary(),
+        'my_membership': {'revision': 1},
+      });
+      final candidate = vm.inviteCandidates.single;
+      final guard = vm.invitationGuard(candidate);
+      expect(guard(), isTrue);
+      dio.options.baseUrl = 'https://other.test';
+      await vm.inviteCandidate(candidate, isCurrent: guard);
+      expect(adapter.calls, 1);
+      dio.options.baseUrl = 'https://example.test';
+      session.change(authenticated: false);
+      await vm.inviteCandidate(candidate, isCurrent: guard);
       expect(adapter.calls, 1);
       vm.dispose();
     },
@@ -403,7 +564,7 @@ void main() {
           'character_name': 'MiXeD',
           'reader_profile': 'group-display-1',
         });
-        return reply(legacy ? {'items': []} : invitePage());
+        return reply(legacy ? {'items': []} : invitePage(eligibility: false));
       });
       const path = '/v1/groups/$gid/invite-candidates';
       final query = {

@@ -1,4 +1,4 @@
-// Validation projection: Backend 22b16207; invite display c38144528c42eda7fcf2912fa412d3a005fc68e7.
+// Validation projection: Backend 22b16207; invite display c38144528c42eda7fcf2912fa412d3a005fc68e7; invite eligibility fdd51c8e9a4d9a5eda8c5f175485965a013ee99a.
 const groupWireSchemaJson = r'''
 {
   "operations": [
@@ -373,7 +373,10 @@ const groupWireSchemaJson = r'''
           "schema": {
             "anyOf": [
               {
-                "const": "group-display-1",
+                "enum": [
+                  "group-display-1",
+                  "group-invite-eligibility-1"
+                ],
                 "type": "string"
               },
               {
@@ -390,6 +393,9 @@ const groupWireSchemaJson = r'''
       "responses": {
         "200": {
           "anyOf": [
+            {
+              "$ref": "#/components/schemas/EligibleInviteCandidates"
+            },
             {
               "$ref": "#/components/schemas/DisplayInviteCandidates"
             },
@@ -4353,6 +4359,104 @@ const groupWireSchemaJson = r'''
         "items"
       ],
       "title": "DisplayInviteCandidates"
+    },
+    "EligibleInviteCandidate": {
+      "properties": {
+        "target_character_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "Target Character Id"
+        },
+        "display": {
+          "$ref": "#/components/schemas/CharacterDisplay"
+        },
+        "ownership_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "Ownership Revision"
+        },
+        "lifecycle_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "Lifecycle Revision"
+        },
+        "item_level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Item Level"
+        },
+        "combat_power": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Combat Power"
+        },
+        "character_spec": {
+          "$ref": "#/components/schemas/CharacterSpec"
+        },
+        "invitation_eligibility": {
+          "type": "string",
+          "enum": [
+            "eligible",
+            "self",
+            "already_member"
+          ],
+          "title": "Invitation Eligibility"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "target_character_id",
+        "display",
+        "ownership_revision",
+        "lifecycle_revision",
+        "item_level",
+        "combat_power",
+        "character_spec",
+        "invitation_eligibility"
+      ],
+      "title": "EligibleInviteCandidate"
+    },
+    "EligibleInviteCandidates": {
+      "properties": {
+        "profile": {
+          "type": "string",
+          "const": "group-invite-eligibility-1",
+          "title": "Profile"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Evaluated At"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/components/schemas/EligibleInviteCandidate"
+          },
+          "type": "array",
+          "title": "Items"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "profile",
+        "evaluated_at",
+        "items"
+      ],
+      "title": "EligibleInviteCandidates"
     }
   }
 }

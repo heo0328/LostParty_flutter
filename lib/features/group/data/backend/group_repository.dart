@@ -363,6 +363,7 @@ String groupFailure(Object error) {
     'GROUP_FULL' || 'GROUP_CAPACITY_EXCEEDED' => '그룹 정원을 확인해 주세요.',
     'GROUP_ALREADY_JOINED' || 'ALREADY_MEMBER' => '이미 가입한 그룹입니다.',
     'ALREADY_GROUP_MEMBER' => GroupInviteRestriction.alreadyMember.message,
+    'SELF_INVITATION' => GroupInviteRestriction.self.message,
     'GROUP_JOIN_BLOCKED' => '이 그룹에 가입할 수 없습니다.',
     'GROUP_RELATION_EXISTS' ||
     'GROUP_INVITATION_EXISTS' ||

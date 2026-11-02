@@ -1,14 +1,20 @@
 # NEXT WORK — 그룹 초대 로컬 우선 판별
 
-## 현재 파트 — 확정 Backend 계약의 네이티브 소비 설계 (2026-11-02)
+## 현재 파트 — 네이티브 연결·자동 검증 완료 / 로컬 변경 화면 확인 대기 (2026-11-02)
 
-사용자가 후속 네이티브 연결 설계를 지시했다. 이번 파트는 계약/코드 대조와 설계 문서까지이며 기능 코드는 수정하지 않는다. `fix/group-invite-search-feedback`을 유지한다. 선행 구현은6d9052cc·로컬/운영 설정 정리는93c9ec67이며 미커밋 변경 없는 상태에서 착수했다.
+사용자가 설계의 네이티브 코드 반영을 지시했다. 새 profile/strict projection·후보별 표시/버튼·확인 후 전송 가드·두409를 일반 앱 경로에 연결했다. `fix/group-invite-search-feedback`을 유지한다. 선행 구현은6d9052cc·로컬/운영 설정 정리는93c9ec67이며 미커밋 변경 없는 상태에서 착수했다.
 
-### 기준·현재 차이
+### 현재 결과·남은 확인
+
+- 최종 직접/영향 시험41PASS·변경 Dart6파일 analyze 문제0·포맷·diff검토를 확인했다. 고정 OpenAPI blob4df8cd4c의 실제 JSON에서 변경 부분을 추출했으며 projection은 초대 GET1개+새 DTO2개 외 기존 schema/operation 불변을 별도 비교했다.
+- localhost:8000/health는 status ok/database ok다. /openapi.json은404이며 고정 app/main.py에서 openapi_url=None을 확인했다. 이것만으로 새 프로필 지원/실행 SHA를 확정하지 않는다. 로컬 새 profile 실응답·로그인 세션 연동/변경 화면 확인은 미확인이다. 서버 시작/교체·DB변경·AWS반영은 하지 않았다.
+- 다음은 Backend 로컬 실행 소스/지원 확인과 사용자 변경 화면 확인이다. 별도 정상 초대 전수시험·운영회원 추가는 요청하지 않는다. 아래 계약/표시/수명 기준을 구현했으며 현재 상태와 후속을 구분한다.
+
+### 고정 기준·구현 차이
 
 - 기준은 Backend `fdd51c8e9a4d9a5eda8c5f175485965a013ee99a`의 [가입/초대 계약](https://github.com/heo0328/lostparty-backend/blob/fdd51c8e9a4d9a5eda8c5f175485965a013ee99a/docs/features/groups/joining/README.md), EligibleInviteCandidate/EligibleInviteCandidates·admission_router 및 두 OpenAPI다. [구현/검증 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6573802290)은CI1817PASS·실제 서버 미반영을 구분한다.
 - 현재 일반 경로는 BackendApp DI → BackendGroupPage → searchInvites → local-only 본인 캐시/현재 그룹 자료 → 모르는 이름만 GroupRepository GET이다. 로컬 판별 HTTP0/미지 GET1·수명/무효화·ALREADY_GROUP_MEMBER 결과 안내는 연결·직접/영향36PASS, 변경 Dart7파일 분석0을 보존한다.
-- 남은 차이는 GET의 group-display-1을 새 group-invite-eligibility-1로 소비하는 strict projection·후보별 판정/버튼, SELF_INVITATION 처리다. 현재 후보 카드에는 모두 초대 버튼이 있고 SELF_INVITATION은 공통 실패로 떨어진다.
+- 이번에 GET은 group-invite-eligibility-1을 소비하고 후보별 self/already_member 사유·eligible 버튼을 표시한다. SELF_INVITATION과 ALREADY_GROUP_MEMBER의409는 결과 영역에서 안내하고 후보를 초기화한다.
 
 ### 연결 계약·화면 설계
 
@@ -33,9 +39,9 @@
 - 계약: 새 query/profile/필수 enum·기존 후보필드/character_spec 검증, 누락/unknown/구DTO 거절, 구 프로필/기본 DTO의 기존 정상 검증 보존. 원래 순서/최대50·cursor없음 유지.
 - 요청/수명: 알려진 본인·그룹원 HTTP0, 미지 GET1, eligible의 명시 POST1·중복 방지, 혼합 후보의 개별 판정, 빈 결과·통신 실패 구분, 입력 수정/회원·환경전환 뒤 늦은 새 응답 폐기, 확인 중 후보 무효화 시 POST0을 검증한다.
 - 명령: 두409 사유/후보 제거/journal정리와 generic 새로고침 없음, 503/응답유실 원요청 보존, 성공 후 갱신 실패·원ACK 재전송 금지의 기존 회귀를 유지한다. 본인/그룹원 판정은 서버 소유회원 결과를 소비하며 다른 그룹 가입을 로컬 정책으로 거절하지 않는다.
-- 검증은 그룹 backend_group_test/backend_group_detail_test 중심과 필요 최소 전송가드 경계, 변경 Dart 분석·포맷·diff검토다. 표적 영향으로 설명되지 않는 공용 변경이 생기면 최종 전체 검증을 판단한다. 현재 후속 구현 시험은 미실행이며 선행36PASS를 새 소비 통과로 확대하지 않는다.
+- 검증은 그룹 backend_group_test/backend_group_detail_test 중심과 필요 최소 전송가드 경계, 변경 Dart 분석·포맷·diff검토다. 표적 영향으로 설명되지 않는 공용 변경이 생기면 최종 전체 검증을 판단한다. 후속 최종 직접/영향41PASS이며 선행36PASS를 중복 합산하지 않는다. 자동 시험은 로컬 실응답·기기 인수와 구분한다.
 - 사용자 정상 화면 확인은 로컬 지원 후 본인/그룹원 사유와 버튼 없음, 미등록 안내, 입력 수정 초기화다. 캐릭터/회원 자료가 없으면 자동 합성 경계와 구분해 미확인으로 남기며 운영회원 추가·기존 정상 초대 전수 재시험은 요구하지 않는다.
-- 설계 완료는 고정 계약·현재 차이·상태/전송/환경 경계·검증 순서 문서화다. 후속 코드는 사용자 구현 지시 후 변경한다. 대단원 완료는 네이티브 연결·직접검증·로컬 변경 화면 확인이며 AWS 운영반영은 포함하지 않는다.
+- 설계 완료는 고정 계약·현재 차이·상태/전송/환경 경계·검증 순서 문서화다. 이번 사용자 구현 지시로 네이티브 연결·자동검증을 마쳤다. 대단원 완료는 네이티브 연결·직접검증·로컬 변경 화면 확인이며 AWS 운영반영은 포함하지 않는다.
 
 아래는 기존 릴리즈 완료 상태와 별도 후속이다.
 

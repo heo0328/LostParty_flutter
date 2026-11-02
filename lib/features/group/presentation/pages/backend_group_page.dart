@@ -258,19 +258,10 @@ class _BackendGroupPageState extends State<BackendGroupPage>
   Future<void> searchInvite() => m.searchInvites(input.text);
 
   Future<void> invite(Map<String, dynamic> c) async {
+    if (!m.canInviteCandidate(c)) return;
+    final current = m.invitationGuard(c);
     if (!await confirm('${groupName(c['display'])}님을 초대할까요?')) return;
-    final result = await m.act(
-      'POST',
-      '$path/invitations',
-      {
-        'target_character_id': c['target_character_id'],
-        'expected_target_ownership_revision': c['ownership_revision'],
-        'expected_target_lifecycle_revision': c['lifecycle_revision'],
-        'expected_group_revision': m.detail!.group['revision'],
-        'expected_membership_revision': m.detail!.membership['revision'],
-      },
-      successNotice: '${groupName(c['display'])}님에게 초대를 보냈습니다. 상대가 수락하면 가입됩니다.',
-    );
+    final result = await m.inviteCandidate(c, isCurrent: current);
     if (result != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('초대를 보냈습니다. 요청 현황에서 확인할 수 있습니다.')),
@@ -1090,7 +1081,15 @@ class _BackendGroupPageState extends State<BackendGroupPage>
                     Text(
                       '${c['display']['server_name']} · ${c['display']['class_name'] ?? ''}\n${groupSpecText(c['character_spec'])}',
                     ),
-                    button('초대', () => invite(c)),
+                    if (groupInviteCandidateRestriction(c)
+                        case final restriction?)
+                      Text(restriction.message)
+                    else
+                      button(
+                        '초대',
+                        () => invite(c),
+                        enabled: m.canInviteCandidate(c),
+                      ),
                   ],
                 ),
               ),

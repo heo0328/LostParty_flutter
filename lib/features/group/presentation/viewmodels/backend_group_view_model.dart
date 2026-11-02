@@ -88,7 +88,7 @@ class BackendGroupViewModel extends ChangeNotifier {
         '/v1/groups/$groupId/invite-candidates',
         query: {
           'character_name': name.trim(),
-          'reader_profile': 'group-display-1',
+          'reader_profile': 'group-invite-eligibility-1',
         },
       );
       if (current()) {
@@ -106,6 +106,48 @@ class BackendGroupViewModel extends ChangeNotifier {
   }
 
   final Map<String, List<Map<String, dynamic>>> activities = {};
+  bool canInviteCandidate(Map<String, dynamic> candidate) =>
+      !_disposed &&
+      kind == GroupPageKind.invite &&
+      authenticated &&
+      !busy &&
+      !loading &&
+      detail != null &&
+      inviteSearchCompleted &&
+      inviteRestriction == null &&
+      inviteCandidates.any((value) => identical(value, candidate)) &&
+      candidate['invitation_eligibility'] == 'eligible';
+
+  bool Function() invitationGuard(Map<String, dynamic> candidate) {
+    final search = _inviteEpoch, observation = _epoch;
+    final scope = repository.readScope;
+    return () =>
+        search == _inviteEpoch &&
+        observation == _epoch &&
+        scope == repository.readScope &&
+        canInviteCandidate(candidate);
+  }
+
+  Future<Map<String, dynamic>?> inviteCandidate(
+    Map<String, dynamic> candidate, {
+    required bool Function() isCurrent,
+  }) async {
+    if (!isCurrent() || !canInviteCandidate(candidate)) return null;
+    return act(
+      'POST',
+      '/v1/groups/$groupId/invitations',
+      {
+        'target_character_id': candidate['target_character_id'],
+        'expected_target_ownership_revision': candidate['ownership_revision'],
+        'expected_target_lifecycle_revision': candidate['lifecycle_revision'],
+        'expected_group_revision': detail!.group['revision'],
+        'expected_membership_revision': detail!.membership['revision'],
+      },
+      successNotice:
+          '${groupName(candidate['display'])}님에게 초대를 보냈습니다. 상대가 수락하면 가입됩니다.',
+    );
+  }
+
   final Map<String, Object> activityFailures = {};
   int homeTab = 0;
   String relationView = 'received_invitations';
@@ -464,9 +506,12 @@ class BackendGroupViewModel extends ChangeNotifier {
         if (kind == GroupPageKind.invite &&
             path == '/v1/groups/$groupId/invitations' &&
             error is AccountReadException &&
-            error.code == 'ALREADY_GROUP_MEMBER') {
+            error.status == 409 &&
+            {'SELF_INVITATION', 'ALREADY_GROUP_MEMBER'}.contains(error.code)) {
           clearInviteCandidates();
-          inviteRestriction = GroupInviteRestriction.alreadyMember;
+          inviteRestriction = error.code == 'SELF_INVITATION'
+              ? GroupInviteRestriction.self
+              : GroupInviteRestriction.alreadyMember;
           inviteSearchCompleted = true;
         } else {
           failure = error;

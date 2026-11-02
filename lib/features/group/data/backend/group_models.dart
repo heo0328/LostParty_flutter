@@ -23,6 +23,15 @@ enum GroupInviteRestriction {
   final String message;
 }
 
+GroupInviteRestriction? groupInviteCandidateRestriction(
+  Map<String, dynamic> candidate,
+) => switch (candidate['invitation_eligibility']) {
+  'eligible' => null,
+  'self' => GroupInviteRestriction.self,
+  'already_member' => GroupInviteRestriction.alreadyMember,
+  _ => throw const FormatException('Invalid invitation eligibility'),
+};
+
 /// Only positive evidence from the current detail observation is reused.
 class GroupInviteLocalContext {
   GroupInviteLocalContext(this.scope, this.owner, this.isCurrent, this.names);

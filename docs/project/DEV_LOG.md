@@ -7490,3 +7490,16 @@ NEXT_WORK의 현재 파트를 후속 소비 설계로 교체하고 설계39/AI_C
 - 보존 확인: lib/test·선행36PASS/분석0·debug로컬/releaseAWS·서버/DB/태그/Penpot.
 - 미확인: 새 네이티브 소비 구현·자동시험·로컬 새서버 실행/연동·사용자 변경 화면 확인.
 - 검증: 고정 계약·현재 코드 정적 대조/문서 diff검토·git diff --check. 코드불변으로 Flutter 시험/분석 미반복. 새 Backend 요구나 결과 인계가 생긴 파트가 아니므로 변화 없는 댓글은 추가하지 않았다.
+
+
+## 2026-11-02 — 확정 초대 판정 네이티브 소비 구현·자동 검증
+
+사용자 구현 지시로 고정 Backend fdd51c8e OpenAPI blob4df8cd4c를 읽었다. 큰 contents/raw 경로는 빈 응답/크기 제한이 있어 blob SHA 경로로 원본을 확보했고 실제 내용은 JSON이다. .dart_tool/invite_contract_delta.json에 필요한 조각만 보관하고 wire projection의 초대 GET query/200 union·새 EligibleInviteCandidate/EligibleInviteCandidates를 갱신했다. 기존 operation과 schema 불변을 구조 비교했다.
+
+searchInvites는 local-only 선행 판별을 그대로 두고 미지 이름 GET에 group-invite-eligibility-1을 요청한다. 후보별 사유는 기존 카드 안에서 표시하고 eligible만 초대 버튼을 제공한다. VM은 현재 후보 객체/검색세대·observation·회원/환경·busy/loading/완료상태로 확인 전후 전송을 가드한다. 입력 수정/재검색의 같은 UUID 후보가 과거 확인창을 되살리지 않는다. invitation 명령의409 SELF_INVITATION/ALREADY_GROUP_MEMBER는 각각 결과 영역 안내·후보 제거로 처리한다. 확정4xx journal정리/503 원요청 보존/ACK는 변경하지 않았다.
+
+- 새로 가능한 흐름: 서버 검색의 본인/그룹원 다른 캐릭터 판정 표시, 혼합 후보별 버튼/사유, 확인 중 무효화된 초대 전송 차단.
+- 보존 확인: 로컬 known HTTP0·미지 GET1·명시 eligible POST1·기존 empty/old profile 검증/표시 수치·초대 원본문/멱등/불명/ACK. 회원/환경/입력 전환의 늦은 결과 보호. 서버/DB·AWS·태그·게시 APK·Penpot 불변.
+- 검증: 최종 backend_group_test/backend_group_detail_test 41PASS·변경 Dart6파일 analyze 문제0·포맷/diff check/review. 추가 직접 경계는 필수 enum누락/unknown/구profile거절·혼합 순서/버튼·두409/journal·확인 무효화 POST0·eligible 중복 POST방지다. projection 변경은GET1개+고정 DTO2개만이며 기존 schemas불변을 비교했다. 공용 Router/DI·저장 불변이고 직접/영향 그룹 시험으로 범위를 설명해 전체 Flutter 시험은 반복하지 않았다.
+- 로컬 읽기: sandbox 소켓 접근 거절 뒤 읽기 권한으로 localhost:8000/openapi.json GET404, /health status ok/database ok를 확인했다. 고정 app/main.py는 openapi_url=None이다. 새 profile 지원/실행SHA·실회원 검색/초대·기기 인수는 미확인이다. 서버 시작/교체/쓰기·운영 배포는 하지 않았다.
+- 다음: Issue38에 구현 commit/push·검증·로컬 지원 미확인을 회신하고 Backend 로컬 실행 source/새profile 준비 상태를 확인한다. 사용자 화면은 자료가 있을 때 본인/그룹원 사유·버튼 없음/입력 초기화만 좁게 확인한다. 운영배포/전체 정상 인수 반복은 요구하지 않는다.
