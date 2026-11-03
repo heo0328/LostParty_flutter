@@ -1,3 +1,5 @@
+import '../shared/diagnostics/startup_timing.dart';
+import '../shared/diagnostics/startup_http_timing.dart';
 import '../features/group/data/backend/group_repository.dart';
 import '../features/group/data/backend/group_models.dart';
 import '../features/group/presentation/pages/backend_group_page.dart';
@@ -150,10 +152,11 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         ? developmentBaseUrl
         : (kReleaseMode ? productionBaseUrl : '');
     final base = configured.isNotEmpty ? configured : defaultBase;
-    _initializeServices(base);
+    StartupTiming.sync(StartupWork.services, () => _initializeServices(base));
   }
 
   void _entryReady() {
+    if (_entryGate.canEnter) StartupTiming.active?.entryReady();
     if (mounted) setState(() {});
   }
 
@@ -162,17 +165,26 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       _configurationError = 'Backend HTTPS 주소를 BACKEND_BASE_URL로 설정해 주세요.';
       return;
     }
-    _database = AccountDatabase();
-    _cycle = PartyCycleRuntime();
-    _dio = Dio(
-      BaseOptions(
-        baseUrl: base,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
-        sendTimeout: const Duration(seconds: 10),
-        followRedirects: false,
-      ),
+    _database = StartupTiming.sync(
+      StartupWork.services,
+      AccountDatabase.new,
+      detail: StartupService.database,
     );
+    _cycle = PartyCycleRuntime();
+    _dio = StartupTiming.sync(
+      StartupWork.services,
+      () => Dio(
+        BaseOptions(
+          baseUrl: base,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+          followRedirects: false,
+        ),
+      ),
+      detail: StartupService.dio,
+    );
+    StartupHttpTiming.attach(_dio!, lostArk: false);
     _auth = AuthSessionController(
       api: DioBackendAuthApi(_dio!),
       google: AndroidGoogleAuthenticationGateway(),
@@ -184,7 +196,11 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       ),
     );
     try {
-      _router = _createRouter();
+      _router = StartupTiming.sync(
+        StartupWork.services,
+        _createRouter,
+        detail: StartupService.router,
+      );
       _ownershipNavigation = OwnershipNoticeNavigation(_router!, _ownership!);
     } on AccountReadException {
       _configurationError = '서버 연결 주소를 확인하지 못했습니다. 연결 설정을 확인한 뒤 앱을 다시 실행해 주세요.';
@@ -195,7 +211,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   }
 
   Future<void> _restoreSession() async {
-    await _auth!.restore();
+    await StartupTiming.run(StartupWork.sessionRestore, _auth!.restore);
     if (!mounted) return;
   }
 
@@ -1076,6 +1092,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      StartupTiming.active?.finish(StartupResult.interrupted);
+    }
     if (state == AppLifecycleState.resumed) {
       unawaited(_memberKey?.reload());
       unawaited(_ownership?.resume());

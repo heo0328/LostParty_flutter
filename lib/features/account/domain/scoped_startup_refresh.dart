@@ -192,3 +192,20 @@ abstract interface class ScopedCharacterRefreshSource {
     void Function(ScopedRefreshItem) onLocalSaved,
   );
 }
+
+/// App runtime capability. Test sources may implement the single-item contract.
+/// An unsupported HTTP server is never a reason to fall back to that contract.
+abstract interface class ScopedBatchRefreshSource {
+  Future<void> refreshBatch(
+    ScopedRefreshBatch batch,
+    List<ScopedRefreshTarget> targets,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onSaved,
+    bool Function(ScopedRefreshTarget, Object) onFailure,
+  );
+  Future<void> retryUploads(
+    List<ScopedRefreshItem> items,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onResult,
+  );
+}

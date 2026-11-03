@@ -1,3 +1,4 @@
+import '../../../../shared/diagnostics/startup_timing.dart';
 import '../../../../shared/diagnostics/load_timing.dart';
 import 'dart:async';
 
@@ -152,6 +153,11 @@ class ScopedStartupRefreshController extends ChangeNotifier {
   }
 
   void _interrupt() {
+    // Initial key readiness may change null -> configured while prepare waits.
+    // Only an already consumed batch is interrupted; auth owns member changes.
+    if (_initialized && _runs.isNotEmpty) {
+      StartupTiming.active?.finish(StartupResult.interrupted);
+    }
     _epoch++;
     _uploadOnly = false;
     _flight = null;
@@ -195,6 +201,7 @@ class ScopedStartupRefreshController extends ChangeNotifier {
       notifyListeners();
       return Future.value();
     }
+    StartupTiming.active?.event(StartupEvent.runnerStart);
     final epoch = _epoch, identity = _currentIdentity();
     _uploadOnly = false;
     _phase = ScopedRefreshPhase.preparing;
@@ -289,11 +296,75 @@ class ScopedStartupRefreshController extends ChangeNotifier {
       _phase = ScopedRefreshPhase.running;
       _publish(epoch, identity);
       final queue = selected.toList();
+      final queuedAt = StartupTiming.active?.micros;
       var next = 0;
       var stopScheduling = false;
+      bool failed(ScopedRefreshTarget target, Object error) {
+        guard();
+        final id = target.ref.characterId;
+        final code = error is LostArkApiException
+            ? 'ARMORY_${error.type.name.toUpperCase()}'
+            : error is AccountReadException
+            ? error.code
+            : error is ScopedCacheException
+            ? error.code
+            : 'ANALYSIS_FAILED';
+        if (error is LostArkApiException ||
+            running.items[id]!.status != ScopedRefreshStatus.saved) {
+          running.items[id] = ScopedRefreshItem(
+            target,
+            ScopedRefreshStatus.failed,
+            code: code,
+          );
+        }
+        if (error is LostArkApiException &&
+            error.type == LostArkApiErrorType.rateLimited) {
+          source.cooldown.observe(
+            error.retryAt ??
+                source.cooldown.now().add(const Duration(seconds: 60)),
+          );
+          _failure = 'RATE_LIMITED';
+          stopScheduling = true;
+        } else if (error is LostArkApiException &&
+            {
+              LostArkApiErrorType.unauthorized,
+              LostArkApiErrorType.missingToken,
+              LostArkApiErrorType.cancelled,
+            }.contains(error.type)) {
+          _failure = 'KEY_NOT_READY';
+          stopScheduling = true;
+        } else if (error is AccountReadException && error.status == 429) {
+          source.cooldown.observe(
+            error.retryAt ??
+                source.cooldown.now().add(
+                  error.retryAfter ?? const Duration(seconds: 60),
+                ),
+          );
+          _failure = 'RATE_LIMITED';
+          stopScheduling = true;
+        } else if (error is ScopedCacheException &&
+            {
+              'STALE_WRITE',
+              'REGISTRATION_NOT_CURRENT',
+              'SCOPE_CHANGED',
+            }.contains(error.code)) {
+          _failure = error.code;
+          stopScheduling = true;
+        }
+        _publish(epoch, identity);
+        return stopScheduling;
+      }
+
       Future<void> worker() async {
         while (!stopScheduling && next < queue.length) {
           // No await between choosing an ID and advancing the shared cursor.
+          final ordinal = next + 1;
+          final trace = StartupTiming.active;
+          if (trace != null && queuedAt != null) {
+            trace.write(
+              'event=queueRelease ordinal=$ordinal wait_us=${trace.micros - queuedAt}',
+            );
+          }
           final id = queue[next++];
           guard();
           final item = running.items[id]!;
@@ -304,102 +375,63 @@ class ScopedStartupRefreshController extends ChangeNotifier {
             break;
           }
           try {
-            final value = await LoadTiming.run(
-              LoadStage.characterRefresh,
-              () => source.refresh(prepared, item.target, guard, (saved) {
-                if (identical(_runs[prepared.scope], running)) {
-                  running.items[id] = saved;
-                }
-                _publish(epoch, identity);
-              }),
+            final value = await StartupTiming.run(
+              StartupWork.character,
+              () => LoadTiming.run(
+                LoadStage.characterRefresh,
+                () => source.refresh(prepared, item.target, guard, (saved) {
+                  if (identical(_runs[prepared.scope], running)) {
+                    running.items[id] = saved;
+                  }
+                  _publish(epoch, identity);
+                }),
+              ),
+              ordinal: ordinal,
             );
             guard();
             running.items[id] = value;
-          } on LostArkApiException catch (error) {
-            guard();
-            running.items[id] = ScopedRefreshItem(
-              item.target,
-              ScopedRefreshStatus.failed,
-              code: 'ARMORY_${error.type.name.toUpperCase()}',
-            );
-            if (error.type == LostArkApiErrorType.rateLimited) {
-              source.cooldown.observe(
-                error.retryAt ??
-                    source.cooldown.now().add(const Duration(seconds: 60)),
-              );
-              _failure = 'RATE_LIMITED';
-              stopScheduling = true;
-              break;
-            }
-            if ({
-              LostArkApiErrorType.unauthorized,
-              LostArkApiErrorType.missingToken,
-              LostArkApiErrorType.cancelled,
-            }.contains(error.type)) {
-              _failure = 'KEY_NOT_READY';
-              stopScheduling = true;
-              break;
-            }
-          } on AccountReadException catch (error) {
-            guard();
-            if (running.items[id]!.status != ScopedRefreshStatus.saved) {
-              running.items[id] = ScopedRefreshItem(
-                item.target,
-                ScopedRefreshStatus.failed,
-                code: error.code,
-              );
-            }
-            if (error.status == 429) {
-              source.cooldown.observe(
-                error.retryAt ??
-                    source.cooldown.now().add(
-                      error.retryAfter ?? const Duration(seconds: 60),
-                    ),
-              );
-              _failure = 'RATE_LIMITED';
-              stopScheduling = true;
-              break;
-            }
-          } on ScopedCacheException catch (error) {
-            guard();
-            if (running.items[id]!.status != ScopedRefreshStatus.saved) {
-              running.items[id] = ScopedRefreshItem(
-                item.target,
-                ScopedRefreshStatus.failed,
-                code: error.code,
-              );
-            }
-            if ({
-              'STALE_WRITE',
-              'REGISTRATION_NOT_CURRENT',
-              'SCOPE_CHANGED',
-            }.contains(error.code)) {
-              _failure = error.code;
-              stopScheduling = true;
-              break;
-            }
-          } catch (_) {
-            guard();
-            if (running.items[id]!.status != ScopedRefreshStatus.saved) {
-              running.items[id] = ScopedRefreshItem(
-                item.target,
-                ScopedRefreshStatus.failed,
-                code: 'ANALYSIS_FAILED',
-              );
-            }
+          } catch (error) {
+            failed(item.target, error);
           }
           _publish(epoch, identity);
         }
       }
 
-      // Retain at most two full character chains; await both before completion.
-      await Future.wait([worker(), worker()]);
+      if (source is ScopedBatchRefreshSource) {
+        await (source as ScopedBatchRefreshSource).refreshBatch(
+          prepared,
+          [
+            for (final id in queue)
+              if (running.items[id]!.status == ScopedRefreshStatus.queued)
+                running.items[id]!.target,
+          ],
+          guard,
+          (saved) {
+            guard();
+            if (identical(_runs[prepared.scope], running)) {
+              running.items[saved.target.ref.characterId] = saved;
+            }
+            _publish(epoch, identity);
+          },
+          failed,
+        );
+        if (source.cooldown.active) _failure ??= 'RATE_LIMITED';
+      } else {
+        // Non-runtime sources retain their original single-item contract.
+        await Future.wait([worker(), worker()]);
+      }
       guard();
       _markInterrupted(running);
       _phase = ScopedRefreshPhase.completed;
     } catch (error) {
       LoadTiming.failure();
       if (run != null) _markInterrupted(run);
+      if (run == null) {
+        StartupTiming.active?.event(
+          StartupEvent.preparationBlocked,
+          result: StartupResult.failed,
+        );
+      }
       if (!_disposed && epoch == _epoch && identity == _currentIdentity()) {
         _phase = run == null
             ? ScopedRefreshPhase.blocked
@@ -411,6 +443,22 @@ class ScopedStartupRefreshController extends ChangeNotifier {
             : 'PREPARATION_FAILED';
       }
     } finally {
+      if (!retry &&
+          run != null &&
+          !_disposed &&
+          epoch == _epoch &&
+          identity == _currentIdentity()) {
+        StartupTiming.active?.runnerFinished(
+          result: run.items.isEmpty
+              ? StartupResult.noTargets
+              : _failure != null ||
+                    incompleteCount > 0 ||
+                    pendingServerCount > 0
+              ? StartupResult.partial
+              : StartupResult.ok,
+          count: run.items.length,
+        );
+      }
       _publish(epoch, identity);
     }
   }
@@ -448,15 +496,17 @@ class ScopedStartupRefreshController extends ChangeNotifier {
     operation =
         Future<void>(() async {
           try {
-            for (final e in run.items.entries.toList().where(
-              (e) => e.value.serverPending,
-            )) {
-              guard();
-              if (source.cooldown.active) break;
+            if (source is ScopedBatchRefreshSource) {
               try {
-                final saved = await source.retryUpload(e.value, guard);
-                guard();
-                run.items[e.key] = saved;
+                await (source as ScopedBatchRefreshSource).retryUploads(
+                  run.items.values.where((i) => i.serverPending).toList(),
+                  guard,
+                  (saved) {
+                    guard();
+                    run.items[saved.target.ref.characterId] = saved;
+                    notifyListeners();
+                  },
+                );
               } on AccountReadException catch (error) {
                 guard();
                 _failure = error.code;
@@ -464,7 +514,25 @@ class ScopedStartupRefreshController extends ChangeNotifier {
                 guard();
                 _failure = error.code;
               }
-              notifyListeners();
+            } else {
+              for (final e in run.items.entries.toList().where(
+                (e) => e.value.serverPending,
+              )) {
+                guard();
+                if (source.cooldown.active) break;
+                try {
+                  final saved = await source.retryUpload(e.value, guard);
+                  guard();
+                  run.items[e.key] = saved;
+                } on AccountReadException catch (error) {
+                  guard();
+                  _failure = error.code;
+                } on ScopedCacheException catch (error) {
+                  guard();
+                  _failure = error.code;
+                }
+                notifyListeners();
+              }
             }
           } catch (_) {
             /* Cancellation preserves durable pending and member data. */
@@ -486,6 +554,7 @@ class ScopedStartupRefreshController extends ChangeNotifier {
   @override
   void dispose() {
     if (_disposed) return;
+    StartupTiming.active?.finish(StartupResult.interrupted);
     _interrupt();
     _disposed = true;
     if (_initialized) {

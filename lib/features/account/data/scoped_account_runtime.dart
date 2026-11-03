@@ -1,3 +1,4 @@
+import '../../../shared/diagnostics/startup_timing.dart';
 import 'dart:async';
 import 'account_bootstrap.dart';
 
@@ -212,7 +213,10 @@ class ScopedAccountRuntime {
     requireCurrent(sessionScope, storageScope);
     return _track(() async {
       try {
-        final cache = await _cacheConnection();
+        final cache = await StartupTiming.run(
+          StartupWork.cacheConnection,
+          _cacheConnection,
+        );
         requireCurrent(sessionScope, storageScope);
         guard?.call();
         final result = await action(cache);
@@ -260,7 +264,10 @@ class ScopedAccountRuntime {
         final receivedAt = DateTime.now().toUtc();
         late AccountBootstrap data;
         try {
-          data = AccountBootstrap.fromJson(json!);
+          data = StartupTiming.sync(
+            StartupWork.dto,
+            () => AccountBootstrap.fromJson(json!),
+          );
         } on FormatException {
           throw const AccountReadException('INVALID_RESPONSE');
         } on TypeError {
@@ -551,6 +558,16 @@ class ScopedAccountRuntime {
     (roles) => roles.prepare(registration, character, guard: guard),
     guard: guard,
   );
+
+  Future<Map<String, RolePlanResult>> prepareRoleBuildBatch(
+    List<(ScopedRegistrationRef, ScopedCharacterRef)> refs, {
+    required void Function() guard,
+  }) => _withRoles((roles) => roles.prepareBatch(refs, guard), guard: guard);
+
+  Future<Map<(String, CharacterBuildRole), RoleSyncResult>> syncRoleBuildBatch(
+    List<RoleUploadPlan> uploads, {
+    required void Function() guard,
+  }) => _withRoles((roles) => roles.syncBatch(uploads, guard), guard: guard);
   Future<ScopedRoleState> saveRoleBuild(
     ScopedRolePlan plan,
     ScopedRoleBuildDraft draft, {

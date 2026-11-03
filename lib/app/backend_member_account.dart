@@ -1,3 +1,4 @@
+import '../shared/diagnostics/startup_timing.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -109,7 +110,14 @@ class BackendMemberAccount {
     availability.initialize();
     weekly?.initialize();
     model.initialize();
+    if (!automaticRefreshEnabled) {
+      StartupTiming.active?.runnerFinished(
+        result: StartupResult.skipped,
+        count: 0,
+      );
+    }
     if (automaticRefreshEnabled) {
+      StartupTiming.active?.event(StartupEvent.automaticWaiting);
       model.addListener(_startAutomaticWhenDisplayReady);
       weekly?.addListener(_startAutomaticWhenDisplayReady);
       _startAutomaticWhenDisplayReady();

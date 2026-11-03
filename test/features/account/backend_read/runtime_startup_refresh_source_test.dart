@@ -1,3 +1,4 @@
+import '../../../support/startup_batch_fakes.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -87,6 +88,8 @@ void main() {
     ),
   );
   Map<String, dynamic> serve(RequestOptions r) {
+    final batch = startupBatchReply(r, serve, clock);
+    if (batch != null) return batch;
     if (r.path == '/v1/me/game-accounts') {
       return {
         'items': [
@@ -281,6 +284,238 @@ void main() {
     await controller.startIfReady();
   }
 
+  List<String> nineTargets() {
+    final ids = List.generate(
+      9,
+      (i) => '00000000-0000-4000-8000-${(i + 1).toString().padLeft(12, '0')}',
+    );
+    Map<String, dynamic> selection() => {
+      ...settings(),
+      'activity_character_ids': ids,
+    };
+    apiRespond = (r) {
+      final data = serve(r);
+      if (r.path == '/v1/me/game-accounts') {
+        for (final registration in data['items'] as List) {
+          registration['settings'] = selection();
+          registration['character_count'] = 9;
+        }
+      } else if (r.path.endsWith('/refresh')) {
+        (data['registration'] as Map)['settings'] = selection();
+        (data['registration'] as Map)['character_count'] = 9;
+      } else if (r.path.endsWith('/characters')) {
+        data['items'] = [
+          for (var i = 0; i < ids.length; i++)
+            {
+              ...wire.item(id: ids[i], name: 'character$i'),
+              'class_name': className,
+            },
+        ];
+        data['settings'] = selection();
+      }
+      return data;
+    };
+    return ids;
+  }
+
+  test(
+    'nine real runtime targets use one profile GET and one summary POST with configured reads',
+    () async {
+      nineTargets();
+      expect(
+        source.concurrentReads,
+        const int.fromEnvironment(
+          'STARTUP_ARMORY_CONCURRENCY',
+          defaultValue: 2,
+        ),
+      );
+      final limit = source.concurrentReads > 9 ? 9 : source.concurrentReads;
+      final entered = Completer<void>(), release = Completer<void>();
+      var active = 0, maximum = 0;
+      armoryRespond = (r) async {
+        active++;
+        if (active > maximum) maximum = active;
+        if (active == limit && !entered.isCompleted) entered.complete();
+        await release.future;
+        active--;
+        return fixtures.armory(
+          name: Uri.decodeComponent(r.path.split('/').last),
+        );
+      };
+      final flight = run();
+      await entered.future;
+      expect(armoryCalls, hasLength(limit));
+      expect(
+        apiCalls.where((r) => r.path == '/v2/me/role-summary-batches'),
+        isEmpty,
+      );
+      release.complete();
+      await flight;
+      expect(maximum, limit);
+      expect(armoryCalls, hasLength(9));
+      expect(controller.savedCount, 9);
+      expect(controller.pendingServerCount, 0);
+      final profileGets = apiCalls
+          .where((r) => r.path == '/v2/me/characters/personal-profiles')
+          .toList();
+      final posts = apiCalls
+          .where((r) => r.path == '/v2/me/role-summary-batches')
+          .toList();
+      expect(profileGets, hasLength(1));
+      expect(posts, hasLength(1));
+      expect((posts.single.data as Map)['items'], hasLength(9));
+      expect(
+        apiCalls.where(
+          (r) =>
+              r.path.endsWith('/personal-profile') ||
+              r.path.contains('/role-summaries/'),
+        ),
+        isEmpty,
+      );
+      expect(await db.select(db.scopedRoleCommands).get(), isEmpty);
+    },
+  );
+
+  test('two provider failures preserve seven saves in a single POST', () async {
+    nineTargets();
+    armoryRespond = (r) {
+      final name = Uri.decodeComponent(r.path.split('/').last);
+      if (name == 'character1' || name == 'character7') throw failure(r);
+      return fixtures.armory(name: name);
+    };
+    await run();
+    expect(controller.savedCount, 7);
+    expect(controller.incompleteCount, 2);
+    expect(controller.pendingServerCount, 0);
+    final post = apiCalls.singleWhere(
+      (r) => r.path == '/v2/me/role-summary-batches',
+    );
+    expect((post.data as Map)['items'], hasLength(7));
+    expect(armoryCalls, hasLength(9));
+  });
+
+  test(
+    'two batch conflicts retain only their durable pending commands',
+    () async {
+      final ids = nineTargets();
+      final old = apiRespond;
+      Object? fixtureError;
+      apiRespond = (r) {
+        try {
+          if (r.path != '/v2/me/role-summary-batches') return old(r);
+          final items = (r.data as Map)['items'] as List;
+          final rejected = items
+              .where(
+                (i) =>
+                    i['character_id'] == ids[2] || i['character_id'] == ids[8],
+              )
+              .toList();
+          final accepted = items.where((i) => !rejected.contains(i)).toList();
+          final response = serve(r.copyWith(data: {'items': accepted}));
+          final errors = <Map<String, dynamic>>[
+            for (final item in rejected)
+              {
+                'character_id': item['character_id'],
+                'role': item['role'],
+                'command_id': item['command_id'],
+                'status': 409,
+                'result': null,
+                'error': {
+                  'code': 'REVISION_CONFLICT',
+                  'message': 'REVISION_CONFLICT',
+                  'request_id': 'batch-test',
+                  'retry_after_seconds': null,
+                },
+              },
+          ];
+          return {
+            ...response,
+            'items': [...response['items'] as List, ...errors],
+          };
+        } catch (error) {
+          fixtureError = error;
+          rethrow;
+        }
+      };
+      await run();
+      expect(fixtureError, isNull);
+      expect(controller.savedCount, 9);
+      expect(
+        controller.pendingServerCount,
+        2,
+        reason: controller.items.map((i) => i.code).toString(),
+      );
+      expect(controller.incompleteCount, 0);
+      expect(await db.select(db.scopedRoleCommands).get(), hasLength(2));
+      expect(
+        controller.items
+            .where((i) => i.serverPending)
+            .every((i) => i.code == 'REVISION_CONFLICT'),
+        isTrue,
+      );
+      expect(roleSummaries, hasLength(7));
+    },
+  );
+
+  test(
+    'lost batch ACK retries immutable commands without fetching armory again',
+    () async {
+      nineTargets();
+      final old = apiRespond;
+      var lost = false;
+      apiRespond = (r) async {
+        final response = await old(r);
+        if (r.path == '/v2/me/role-summary-batches' && !lost) {
+          lost = true;
+          throw failure(r);
+        }
+        return response;
+      };
+      await run();
+      expect(controller.pendingServerCount, 9);
+      final first = jsonEncode(
+        apiCalls
+            .singleWhere((r) => r.path == '/v2/me/role-summary-batches')
+            .data,
+      );
+      await controller.retryServerSaved();
+      expect(controller.pendingServerCount, 0);
+      expect(armoryCalls, hasLength(9));
+      final posts = apiCalls
+          .where((r) => r.path == '/v2/me/role-summary-batches')
+          .toList();
+      expect(posts, hasLength(2));
+      expect(jsonEncode(posts.last.data), first);
+      expect(await db.select(db.scopedRoleCommands).get(), isEmpty);
+    },
+  );
+
+  test(
+    'missing batch result acknowledges no commands and remains recoverable',
+    () async {
+      nineTargets();
+      final old = apiRespond;
+      apiRespond = (r) async {
+        final response = await old(r);
+        if (r.path == '/v2/me/role-summary-batches') {
+          (response['items'] as List).removeLast();
+        }
+        return response;
+      };
+      await run();
+      expect(controller.pendingServerCount, 9);
+      expect(await db.select(db.scopedRoleCommands).get(), hasLength(9));
+      expect(
+        controller.items.every((i) => i.code == 'INVALID_RESPONSE'),
+        isTrue,
+      );
+      apiRespond = old;
+      await controller.retryServerSaved();
+      expect(controller.pendingServerCount, 0);
+      expect(armoryCalls, hasLength(9));
+    },
+  );
+
   test(
     'actual adapter fetches all active full armories, saves warnings in correct UUID role and uploads summaries only',
     () async {
@@ -299,8 +534,11 @@ void main() {
             .every((r) => jsonDecode(r.payload)['raw'] == null),
         isTrue,
       );
-      final puts = apiCalls.where((r) => r.method == 'PUT').toList();
-      expect(puts, hasLength(2));
+      final puts = apiCalls
+          .where((r) => r.path == '/v2/me/role-summary-batches')
+          .toList();
+      expect(puts, hasLength(1));
+      expect((puts.single.data as Map)['items'], hasLength(2));
       expect(
         puts.every((r) => !(jsonEncode(r.data)).contains('ArmoryProfile')),
         isTrue,
@@ -334,7 +572,10 @@ void main() {
       }
       expect(controller.savedCount, 2);
       expect(controller.pendingServerCount, 0);
-      expect(apiCalls.where((r) => r.method == 'PUT'), hasLength(2));
+      expect(
+        apiCalls.where((r) => r.path == '/v2/me/role-summary-batches'),
+        hasLength(1),
+      );
       final rows = await db.select(db.scopedRoleRecords).get();
       expect(
         rows.where(

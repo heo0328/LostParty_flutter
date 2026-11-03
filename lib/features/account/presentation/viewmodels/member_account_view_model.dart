@@ -1,3 +1,4 @@
+import '../../../../shared/diagnostics/startup_timing.dart';
 import '../../../../shared/diagnostics/load_timing.dart';
 import '../../domain/services/account_detail_access.dart';
 import 'dart:async';
@@ -315,8 +316,12 @@ class MemberAccountViewModel extends ChangeNotifier {
         );
   }
 
+  int diagnosticModelGeneration = 0;
   void _emit() {
-    if (!_disposed) LoadTiming.listeners(notifyListeners);
+    if (_disposed) return;
+    diagnosticModelGeneration =
+        StartupTiming.active?.publishModel(ready: _initialDisplayReady) ?? 0;
+    LoadTiming.listeners(notifyListeners);
   }
 
   void initialize() {
@@ -923,6 +928,8 @@ class MemberAccountViewModel extends ChangeNotifier {
           if (_refreshAfter) {
             _refreshAfter = false;
             unawaited(refresh());
+          } else if (!_disposed && epoch == _epoch) {
+            StartupTiming.active?.finalModelReady(failed: failure != null);
           }
         });
     _flight = flight;

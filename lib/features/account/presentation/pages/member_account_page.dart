@@ -1,3 +1,4 @@
+import '../../../../shared/diagnostics/startup_timing.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -211,6 +212,12 @@ class MemberAccountPage extends StatelessWidget {
         model.runner.source.cooldown,
       ]),
       builder: (context, _) => UiTiming.measure(UiWork.pageWidgets, () {
+        StartupTiming.active?.builtModel(
+          model.diagnosticModelGeneration,
+          visible:
+              TickerMode.valuesOf(context).enabled &&
+              (ModalRoute.of(context)?.isCurrent ?? true),
+        );
         return Scaffold(
           appBar: AppBar(
             title: const OwnershipNoticeTitle(child: Text('내 계정')),

@@ -1,3 +1,4 @@
+import '../../../support/startup_batch_fakes.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -79,6 +80,24 @@ Map<String, dynamic> summaryJson() => {
   'observed_lifecycle_revision': 1,
 };
 
+class AckFailureStore extends ScopedRoleRepository {
+  AckFailureStore(super.cache);
+  bool failNextAck = true;
+  @override
+  Future<void> acknowledge(
+    ScopedRolePlan plan,
+    ScopedRoleCommand command,
+    RoleSummaryAck ack, {
+    void Function()? guard,
+  }) {
+    if (failNextAck) {
+      failNextAck = false;
+      throw const ScopedCacheException('CACHE_CONFLICT');
+    }
+    return super.acknowledge(plan, command, ack, guard: guard);
+  }
+}
+
 void main() {
   late ReadSessionFake session;
   late Dio dio;
@@ -132,6 +151,8 @@ void main() {
     ),
   );
   Map<String, dynamic> backend(RequestOptions r) {
+    final batch = startupBatchReply(r, backend, clock);
+    if (batch != null) return batch;
     if (r.path == '/v1/me/game-accounts') return registrationPageJson();
     if (r.path.endsWith('/characters')) {
       return wire.roster(
@@ -844,6 +865,176 @@ void main() {
       } finally {
         await runtime.close();
       }
+    },
+  );
+  test(
+    'batch reuses the saved plan and emits only one POST without fresh GET',
+    () async {
+      final plan = await prepared();
+      await sync.save(plan, draft());
+      calls.clear();
+      final result = await sync.syncBatch([
+        (plan: plan, role: CharacterBuildRole.dealer),
+      ], () {});
+      expect(calls.map((r) => r.path), ['/v2/me/role-summary-batches']);
+      expect(
+        result[(characterId, CharacterBuildRole.dealer)]!.state!.hasPending,
+        isFalse,
+      );
+      expect(await db.select(db.scopedRoleCommands).get(), isEmpty);
+    },
+  );
+
+  test(
+    'single and overlapping batch sync share one immutable item flight',
+    () async {
+      final plan = await prepared();
+      await sync.save(plan, draft());
+      final entered = Completer<void>(), release = Completer<void>();
+      respond = (r) async {
+        if (r.path == '/v2/me/role-summary-batches') {
+          entered.complete();
+          await release.future;
+        }
+        return backend(r);
+      };
+      calls.clear();
+      final first = sync.syncBatch([
+        (plan: plan, role: CharacterBuildRole.dealer),
+      ], () {});
+      await entered.future;
+      final single = sync.sync(reg(), ref(), CharacterBuildRole.dealer);
+      final second = sync.syncBatch([
+        (plan: plan, role: CharacterBuildRole.dealer),
+      ], () {});
+      release.complete();
+      await Future.wait([first, single, second]);
+      expect(calls, hasLength(1));
+      expect(serverRoles['dealer']!['version'], 2);
+    },
+  );
+
+  test(
+    'restart after committed batch response loss replays the original item',
+    () async {
+      final plan = await prepared();
+      await sync.save(plan, draft());
+      var lost = false;
+      respond = (r) {
+        final result = backend(r);
+        if (r.path == '/v2/me/role-summary-batches' && !lost) {
+          lost = true;
+          throw error(r, 503, 'SERVICE_UNAVAILABLE');
+        }
+        return result;
+      };
+      await sync.syncBatch([
+        (plan: plan, role: CharacterBuildRole.dealer),
+      ], () {});
+      final first = jsonEncode(
+        calls.lastWhere((r) => r.path == '/v2/me/role-summary-batches').data,
+      );
+      expect(serverRoles['dealer']!['version'], 2);
+      store.dispose();
+      cache.dispose();
+      await db.close();
+      connect();
+      final fresh = await sync.prepareBatch([(reg(), ref())], () {});
+      await sync.syncBatch([
+        (plan: fresh[characterId]!.plan!, role: CharacterBuildRole.dealer),
+      ], () {});
+      final last = calls.lastWhere(
+        (r) => r.path == '/v2/me/role-summary-batches',
+      );
+      expect(jsonEncode(last.data), first);
+      expect(serverRoles['dealer']!['version'], 2);
+      expect(await db.select(db.scopedRoleCommands).get(), isEmpty);
+    },
+  );
+
+  test(
+    'batch applies the same conservative first-send lifetime as single',
+    () async {
+      final plan = await prepared();
+      await sync.save(plan, draft());
+      respond = (r) {
+        if (r.path == '/v2/me/role-summary-batches') {
+          throw error(r, 503, 'SERVICE_UNAVAILABLE');
+        }
+        return backend(r);
+      };
+      await sync.syncBatch([
+        (plan: plan, role: CharacterBuildRole.dealer),
+      ], () {});
+      clock = clock.add(const Duration(hours: 24));
+      final fresh = await sync.prepareBatch([(reg(), ref())], () {});
+      calls.clear();
+      final results = await sync.syncBatch([
+        (plan: fresh[characterId]!.plan!, role: CharacterBuildRole.dealer),
+      ], () {});
+      expect(calls, isEmpty);
+      expect(
+        results[(characterId, CharacterBuildRole.dealer)]!
+            .state!
+            .command!
+            .errorCode,
+        'IDEMPOTENCY_REVIEW_REQUIRED',
+      );
+    },
+  );
+
+  test('late batch ACK preserves a newer local draft', () async {
+    final plan = await prepared();
+    await sync.save(plan, draft());
+    final entered = Completer<void>(), release = Completer<void>();
+    respond = (r) async {
+      final result = backend(r);
+      if (r.path == '/v2/me/role-summary-batches') {
+        entered.complete();
+        await release.future;
+      }
+      return result;
+    };
+    final flight = sync.syncBatch([
+      (plan: plan, role: CharacterBuildRole.dealer),
+    ], () {});
+    await entered.future;
+    clock = clock.add(const Duration(seconds: 1));
+    final newer = await prepared();
+    final local = await sync.save(newer, draft());
+    release.complete();
+    final result = await flight;
+    final state = result[(characterId, CharacterBuildRole.dealer)]!.state!;
+    expect(state.hasPending, isTrue);
+    expect(state.localRevision, local.localRevision);
+    expect(state.localSummary!.same(local.localSummary), isTrue);
+  });
+  test(
+    'local ACK failure preserves the durable item for idempotent batch recovery',
+    () async {
+      store.dispose();
+      store = AckFailureStore(cache);
+      sync = ScopedRoleSync(RoleSummaryClient(api), store, now: () => clock);
+      final plan = await prepared();
+      await sync.save(plan, draft());
+      final first = await sync.syncBatch([
+        (plan: plan, role: CharacterBuildRole.dealer),
+      ], () {});
+      expect(
+        first[(characterId, CharacterBuildRole.dealer)]!.failure!.code,
+        'CACHE_CONFLICT',
+      );
+      expect(await db.select(db.scopedRoleCommands).get(), hasLength(1));
+      final fresh = await sync.prepareBatch([(reg(), ref())], () {});
+      final result = await sync.syncBatch([
+        (plan: fresh[characterId]!.plan!, role: CharacterBuildRole.dealer),
+      ], () {});
+      expect(
+        result[(characterId, CharacterBuildRole.dealer)]!.state!.hasPending,
+        isFalse,
+      );
+      expect(serverRoles['dealer']!['version'], 2);
+      expect(await db.select(db.scopedRoleCommands).get(), isEmpty);
     },
   );
 }

@@ -1,3 +1,4 @@
+import '../../../shared/diagnostics/startup_timing.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -67,6 +68,19 @@ class AuthSessionController extends ChangeNotifier {
 
   void _emit(AuthStatus value, [String? code]) {
     if (_disposed) return;
+    StartupTiming.active?.session((
+      _epoch,
+      _user?.id,
+    ), authenticated: value == AuthStatus.signedIn);
+    if (value == AuthStatus.guest ||
+        value == AuthStatus.unavailable ||
+        value == AuthStatus.reauthenticationRequired) {
+      StartupTiming.active?.finish(
+        value == AuthStatus.guest && code == null
+            ? StartupResult.skipped
+            : StartupResult.failed,
+      );
+    }
     status = value;
     errorCode = code;
     notifyListeners();
@@ -78,21 +92,25 @@ class AuthSessionController extends ChangeNotifier {
     final epoch = ++_epoch;
     _emit(AuthStatus.restoring);
     try {
-      final raw = await _store.read();
+      final raw = await StartupTiming.run(StartupWork.sessionRead, _store.read);
       if (!_current(epoch)) return;
       if (raw == null) {
         _emit(AuthStatus.guest);
         return;
       }
-      final saved = jsonDecode(raw) as Map<String, dynamic>;
-      if (saved['version'] != 1) {
-        throw const FormatException('Invalid session cache.');
-      }
-      _user = AuthUser.fromJson(saved['user'] as Map<String, dynamic>);
-      _tokens = AuthTokens.fromJson(saved['tokens'] as Map<String, dynamic>);
-      _pending = saved['pending'] == null
-          ? null
-          : _PendingRefresh.fromJson(saved['pending'] as Map<String, dynamic>);
+      StartupTiming.sync(StartupWork.sessionParse, () {
+        final saved = jsonDecode(raw) as Map<String, dynamic>;
+        if (saved['version'] != 1) {
+          throw const FormatException('Invalid session cache.');
+        }
+        _user = AuthUser.fromJson(saved['user'] as Map<String, dynamic>);
+        _tokens = AuthTokens.fromJson(saved['tokens'] as Map<String, dynamic>);
+        _pending = saved['pending'] == null
+            ? null
+            : _PendingRefresh.fromJson(
+                saved['pending'] as Map<String, dynamic>,
+              );
+      });
       if (!remember || _user!.status != 'active') {
         await _invalidate(epoch, 'SESSION_INVALID');
         return;
@@ -336,9 +354,12 @@ class AuthSessionController extends ChangeNotifier {
     final operation = _storageQueue.then((_) async {
       if (!_current(epoch) && !forceDelete) return;
       if (payload == null) {
-        await _store.delete();
+        await StartupTiming.run(StartupWork.sessionWrite, _store.delete);
       } else {
-        await _store.write(payload);
+        await StartupTiming.run(
+          StartupWork.sessionWrite,
+          () => _store.write(payload),
+        );
       }
     });
     _storageQueue = operation.catchError((Object _) {});

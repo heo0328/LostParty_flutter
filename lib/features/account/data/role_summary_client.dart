@@ -1,3 +1,4 @@
+import '../../../shared/diagnostics/startup_timing.dart';
 import 'dart:convert';
 
 import '../domain/account_read_session.dart';
@@ -47,10 +48,12 @@ class RoleSummaryClient {
   }
 
   Future<PersonalProfile> get(ScopedCharacterRef ref) => _decode(ref, () async {
-    final value = PersonalProfile.fromJson(
-      (await api.request(
-        '/v2/me/characters/${ref.characterId}/personal-profile',
-      ))!,
+    final json = (await api.request(
+      '/v2/me/characters/${ref.characterId}/personal-profile',
+    ))!;
+    final value = StartupTiming.sync(
+      StartupWork.dto,
+      () => PersonalProfile.fromJson(json),
     );
     roleCheck(
       value.characterId == ref.characterId && value.accountId == ref.accountId,
@@ -71,7 +74,10 @@ class RoleSummaryClient {
     final version = rolePositive(body['expected_version']);
     final owner = rolePositive(body['expected_ownership_revision']);
     final life = rolePositive(body['expected_lifecycle_revision']);
-    final summary = RoleSummary.fromJson(roleMap(body['summary']));
+    final summary = StartupTiming.sync(
+      StartupWork.dto,
+      () => RoleSummary.fromJson(roleMap(body['summary'])),
+    );
     roleCheck(summary.lifecycleRevision == life);
     roleCheck(
       RegExp(
@@ -79,13 +85,15 @@ class RoleSummaryClient {
       ).hasMatch(key),
     );
     roleCheck(utf8.encode(jsonEncode(body)).length <= 32768);
-    final value = RoleSummaryAck.fromJson(
-      (await api.request(
-        '/v2/me/characters/${ref.characterId}/role-summaries/${role.name}',
-        method: 'PUT',
-        body: body,
-        idempotencyKey: key,
-      ))!,
+    final json = (await api.request(
+      '/v2/me/characters/${ref.characterId}/role-summaries/${role.name}',
+      method: 'PUT',
+      body: body,
+      idempotencyKey: key,
+    ))!;
+    final value = StartupTiming.sync(
+      StartupWork.dto,
+      () => RoleSummaryAck.fromJson(json),
     );
     roleCheck(
       value.characterId == ref.characterId &&
