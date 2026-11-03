@@ -1,17 +1,17 @@
-# NEXT WORK — Android v2.0.0 릴리즈 준비·운영 호환 확인
+# NEXT WORK — Android v2.0.0 APK 게시
 
-## 승인·현재 범위 — 2026-11-04
+## 승인·현재 상태 — 2026-11-04
 
-사용자가 새 릴리즈 게시와 버전2.0.0, 기존 안내문 앞에 승인된 새 안내문을 추가하도록 지시했다. 통합기준 dev/main11e9c847에서 release/2.0.0을 분기했다. 버전은2.0.0+5(Android versionCode4→5), 태그v2.0.0과 정식서명/앱ID는기존계약을 따른다. docs/releases/v2.0.0.md는새안내+구분선+v1.1.2원문으로 구성하며 기존문서는수정하지않는다. 기능코드/서명키/데이터 변경은없다.
+사용자가 새 릴리즈 게시, 버전 2.0.0, 승인한 새 안내문을 기존 안내문 상단에 추가하도록 지시했다. `release/2.0.0`에서 `2.0.0+5`와 누적 안내문을 준비하고 dev/main에 반영했다. `docs/releases/v2.0.0.md` 하단에는 실제 v1.1.2 게시 본문 전체를 보존했다. 기존 Release·태그·파일은 변경하지 않는다.
 
-## 게시 선행 조건
+Backend 운영 지원 대기는 해소됐다. [Issue34 완료 회신](https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6609667274)에서 v2.0.0 소스 `51b1cb3362c11f899bbbbcd4fb767c68b1c697d5`, 운영 배포 성공과 일괄 GET/POST·기존 참가 유지 수정 지원을 확인했다. [배포 Actions](https://github.com/heo0328/lostparty-backend/actions/runs/41674801953)는 성공이며 DB revision0035·환경/키/자료 보존, health 검증 결과를 인계받았다. Backend 배포를 중복 실행하지 않았다.
 
-Backend Issue41/42 최신종료회신은 개발/로컬인수·Git통합 완료, AWS실행은v0.1.2 그대로라고 명시했다. 새앱의일괄GET/POST와활동참가예방수정이운영에반영됐다는근거는아직없다. Backend dev/main4231a58d(일괄b1f11bb/예방0207d0f6 포함)와 실제운영을구분한다. 사용자APK게시승인을운영서버배포승인으로확대하지않는다. 운영계약준비확인전 공개태그/Release를게시하지않는다. AWS/DB배포는별도명시지시대상이다.
+## 게시 완료·남은 확인
 
-안내문·버전·브랜치/검증을먼저준비해리뷰가능하게하고, 사용자가 Backend도v2.0.0으로운영배포중이라고알렸다. 중복배포요청없이실제완료/계약회신을기다리며준비된버전/안내문을dev/main에반영한다. Backend 운영반영이확인되면 승인태그v2.0.0 push1회→기존CI서명/ID/버전/체크섬검증·APK게시→해당버전문서로Release본문설정→재조회/asset검증순으로진행한다. 승인된원문하단보존을확인하고 --generate-notes의자동문구로대체하지않는다. 기존v1.1.2/asset/tag를변경하지않으며실기기설치/실행은사용자담당이다. 빌드실패시태그이동/자동재시도하지않는다.
+Native 태그 `v2.0.0`은 main에 포함된 `703f7b8afd8aff52f475da0b32ade853f0e5c210`에 고정했다. [서명 APK Actions41675349499](https://github.com/heo0328/LostParty_flutter/actions/runs/41675349499)는 빌드·앱 ID/버전/기존 서명 인증서 검증·게시까지 성공했다. [공개 Release](https://github.com/heo0328/LostParty_flutter/releases/tag/v2.0.0)에 `lostparty-v2.0.0-android.apk`와 `.sha256`이 첨부됐고 draft/prerelease가 아님을 확인했다. APK SHA-256은 `a9b8f6a0a82be7f567a03a0e008649c26c3ffe05b65193fa4de592d27c755c04`이며 게시 asset digest와 체크섬 파일이 일치한다.
 
-## 검증과 남은 행동
+Release 본문을 승인한 누적 안내문 파일로 적용하고 실제 본문 동일성·기존 v1.1.2 본문 전체 하단 보존을 재조회 검증했다. 기존 Release/태그/첨부 파일은 변경하지 않았다. Backend 운영 지원 대기와 Native 게시 작업은 완료이며 [Issue34에 Native 완료 결과](https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6609824463)를 회신했다.
 
-기능트리는이미통합전전체2817PASS/전체분석0·관련실기기인수결과와같다. 버전/릴리즈문서만변경하므로불필요전체시험은반복하지않고 diffcheck·기존본문동일성·버전/태그중복없음·CI서명검증을적용한다. 서명APK의2.0.0업데이트설치·운영실회원전체인수는미확인이다. APK실제게시완료전이슈/문서에배포완료로표시하지않는다. 현재기능정책·측정집계는계정계약30/DEV_LOG,별도표시후속은DETAIL_IMPROVEMENTS를따른다.
+기능 소스는 기존 전체2817PASS·전체분석0 및 사용자 로컬 인수 시점과 동일하다. 버전·문서 변경에는 diffcheck/본문 보존 검증을 적용하고 전체 Flutter 시험은 반복하지 않았다. 새 APK의 기존 설치본 위 업데이트 설치·운영 실회원 전체 인수는 미확인이고 사용자 담당이다.
 
-검증결과: 실제GitHub v1.1.2게시본문과기존문서의정규화본문동일·새안내하단보존PASS, version2.0.0+5·태그중복없음·diffcheck PASS. Backend최신게시Release도v0.1.2로확인했다. 운영OpenAPI공개조회는HTTP오류로계약판정에사용하지않았고Issue41/42의운영미반영보고를기준으로지원확인대기를유지한다. 준비브랜치/버전/안내문을dev/main에반영하고공개태그/Release/APK게시는운영호환확인뒤진행한다. 운영진행상태는 [Issue34 Native 후속](https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6609556664)으로회신했고배포를중복요청하지않았다.
+완료 기록은 release/2.0.0에서 커밋하고 dev/main을 같은 시점으로 반영·푸시한다. 공개 태그의 소스는 이동하지 않으며 릴리즈 브랜치는 버전 이력으로 보존한다. 별도 남은 표시/제품 개선은 DETAIL_IMPROVEMENTS를 따른다. 기존 dev 방 복구는 제외 범위이며 운영 자료 변경이나 추가 기능 수정은 수행하지 않는다.

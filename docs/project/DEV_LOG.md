@@ -1,5 +1,19 @@
 # 개발 이력
 
+## 2026-11-04 — Native v2.0.0 서명 APK 공개 완료
+
+[Actions41675349499](https://github.com/heo0328/LostParty_flutter/actions/runs/41675349499) 전체 성공 후 [v2.0.0 Release](https://github.com/heo0328/LostParty_flutter/releases/tag/v2.0.0)의 공개 상태와 APK/체크섬 첨부를 재조회했다. 소스 태그는703f7b8afd8aff52f475da0b32ade853f0e5c210, 버전2.0.0+5, 앱 ID kr.co.heowork0921.lostparty다. 기존 인증서 SHA-256 f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea와 앱 ID/버전 검사를 CI에서 통과했다. APK89,178,370bytes, SHA-256 a9b8f6a0a82be7f567a03a0e008649c26c3ffe05b65193fa4de592d27c755c04가 asset digest/체크섬 파일과 일치한다.
+
+새로 가능해진 흐름: 운영 Backend 지원 확인 후 초기 갱신 개선·초대 안내·활동 해제 후 기존 참가 유지 보완을 담은 새 서명 APK를 내려받을 수 있다. 보존 확인: 동일 앱 ID/서명, release AWS 기본 주소, 기존 Release/태그/파일과 v1.1.2 안내문 원문 전체다. 승인한 새 안내를 상단에 붙인 docs/releases/v2.0.0.md로 게시 본문을 교체했고 실제 본문 동일성과 과거 본문 하단 보존을 검증했다.
+
+검증: 기존 기능 전체2817PASS·분석0을 재사용하고 이번에는 CI 빌드/ID/버전/서명/체크섬·본문 재조회·diffcheck/문서 검토를 수행했다. 미확인: 새2.0.0 APK 업데이트 설치·운영 실회원 전체 인수이며 기기 설치/조작은 하지 않았다. Backend 운영 결과는 Issue34에서 인계받았고 Native 게시 결과도 같은 Issue에 회신한다. 완료 기록을 릴리즈 브랜치에서 커밋한 뒤 dev/main 동일 시점으로 반영·푸시하며 태그는 이동하지 않는다.
+
+## 2026-11-04 — Backend 운영 지원 확인·Native v2.0.0 태그 게시
+
+[Backend 완료 회신](https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6609667274)과 Actions41674801953의 production 배포 성공을 확인했다. 운영 소스51b1cb3362c11f899bbbbcd4fb767c68b1c697d5에 일괄b1f11bb·참가 유지0207d0f6이 포함됨을 비교 API로 확인했고, DB0035·환경/키/기존 자료 보존과 health 검증을 인계받았다. Backend 배포 중복 실행이나 운영 회원 쓰기는 하지 않았다.
+
+사용자가 승인한 Native v2.0.0 태그를 main 포함 소스703f7b8afd8aff52f475da0b32ade853f0e5c210에 한 번 생성·푸시했고 서명 APK Actions41675349499가 시작됐다. 버전2.0.0+5, 기존 서명·ID·AWS 기본 주소를 유지한다. 게시 성공과 APK 기기 인수는 아직 구분하며 빌드 결과 확인 후 안내문/파일을 검증한다. 기능 소스 변경이 없어 기존2817PASS·분석0을 재사용하고 문서 diffcheck를 수행한다.
+
 ## 2026-11-04 — Backend v2.0.0 운영배포 진행 사용자 안내·Native 게시 대기
 
 사용자가 Backend도동일v2.0.0으로운영배포중이라고알렸다. Native준비버전2.0.0+5/새안내상단·기존본문하단을재확인하고 [Issue34](https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6609556664)에운영완료/실제계약/소스인계를요청했다. Backend배포를중복요청/실행하지않는다. 릴리즈버전/문서의dev/main통합을진행하되공개태그/APK게시승인을이미받은범위에서도실제Backend지원확인까지태그발행을기다린다. 진행중과완료를구분하며APK/서버/DB/기기변경없음.
