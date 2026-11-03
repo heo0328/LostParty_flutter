@@ -1,3 +1,4 @@
+import '../../../shared/diagnostics/startup_timing.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../shared/lost_ark_api/client/api_cooldown.dart';
@@ -113,7 +114,10 @@ class StartupRosterRefresh extends ChangeNotifier {
           idempotencyKey: command.key,
         );
         guard();
-        final ack = ServerRegistrationRefresh.fromJson(json!);
+        final ack = StartupTiming.sync(
+          StartupWork.dto,
+          () => ServerRegistrationRefresh.fromJson(json!),
+        );
         final r = ack.registration, before = command.before;
         if (r.registrationId != before.registrationId ||
             r.gameAccountId != before.accountId ||

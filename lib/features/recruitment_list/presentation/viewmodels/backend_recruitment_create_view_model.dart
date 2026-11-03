@@ -1117,6 +1117,8 @@ String recruitmentFailureMessage(String? code) => switch (code) {
   'WEEKLY_ALREADY_PARTICIPATING' ||
   'WEEKLY_OCCUPANCY_CHANGED' => '같은 레이드의 현재 참가 상태를 확인해 주세요.',
   'SESSION_DURATION_EXCEEDED' => '한 타임의 레이드 진행시간 합계는 24시간까지 설정할 수 있어요.',
+  'ACTIVITY_SELECTION_REQUIRED' =>
+    '앱에서 사용하도록 선택되지 않은 캐릭터입니다. 활동 캐릭터를 다시 선택해 주세요.',
   'OWNERSHIP_REQUIRED' || 'CHARACTER_NOT_ACTIVE' => '캐릭터 인증과 활동 선택을 확인해 주세요.',
   'REQUEST_IN_PROGRESS' => '요청을 처리 중입니다. 잠시 후 결과를 다시 확인해 주세요.',
   'SELECTION_CONTEXT_CHANGED' ||

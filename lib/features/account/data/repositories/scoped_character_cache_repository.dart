@@ -1,3 +1,4 @@
+import '../../../../shared/diagnostics/startup_timing.dart';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -166,6 +167,11 @@ class ScopedCharacterCacheRepository {
     _requireScope(read.scope);
   }
 
+  Future<T> _transaction<T>(Future<T> Function() action) => StartupTiming.run(
+    StartupWork.cacheTransaction,
+    () => db.transaction(action),
+  );
+
   Future<T> _write<T>(Future<T> Function() action) {
     final result = _tail.then((_) => action());
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
@@ -216,7 +222,7 @@ class ScopedCharacterCacheRepository {
         serial = ++_serial,
         registrationSerial = _registrationSerial;
     _latest[ref.registrationId] = serial;
-    final read = await db.transaction(() async {
+    final read = await _transaction(() async {
       final s = await _scopeRow(ref.scope);
       cacheRequire(s != null, 'REGISTRATION_NOT_CURRENT');
       final r = await _registration(s!.id, ref.registrationId);
@@ -308,7 +314,7 @@ class ScopedCharacterCacheRepository {
                 rows.where((r) => r.accountId != null).length &&
             rows.map((r) => r.sourceContract).toSet().length <= 1,
       );
-      await db.transaction(() async {
+      await _transaction(() async {
         var s = await _scopeRow(read.scope);
         cacheRequire(
           (s?.localVersion ?? 0) == read.expectedVersion,
@@ -410,7 +416,7 @@ class ScopedCharacterCacheRepository {
       read.registration.sameStructure(snapshot.registration),
       'SNAPSHOT_MISMATCH',
     );
-    final version = await db.transaction(() async {
+    final version = await _transaction(() async {
       final s = await _scopeRow(read.scope);
       cacheRequire(
         s != null &&
@@ -509,7 +515,7 @@ class ScopedCharacterCacheRepository {
   ) async {
     _requireScope(key);
     final epoch = _epoch;
-    final result = await db.transaction(() async {
+    final result = await _transaction(() async {
       final s = await _scopeRow(key);
       if (s == null) return <CacheRegistrationSnapshot>[];
       final rows =
@@ -532,7 +538,7 @@ class ScopedCharacterCacheRepository {
   }) async {
     _requireScope(ref.scope);
     final epoch = _epoch;
-    final result = await db.transaction(() async {
+    final result = await _transaction(() async {
       final s = await _scopeRow(ref.scope);
       if (s == null) return null;
       final r = await _registration(s.id, ref.registrationId);

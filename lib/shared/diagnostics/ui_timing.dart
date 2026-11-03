@@ -1,3 +1,4 @@
+import 'startup_timing.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -9,8 +10,12 @@ enum UiWork { pageWidgets, buildAnalysis }
 /// Fixed labels only. Durations describe work on this isolate, not API latency.
 class UiTiming {
   static UiTimingWindow? _current;
+  static T measure<T>(UiWork work, T Function() action) => StartupTiming.sync(
+    work == UiWork.pageWidgets ? StartupWork.pageWidgets : StartupWork.analysis,
+    () => _measure(work, action),
+  );
 
-  static T measure<T>(UiWork work, T Function() action) {
+  static T _measure<T>(UiWork work, T Function() action) {
     final window = _current;
     if (!kDebugMode || window == null || !window.active) return action();
     final clock = Stopwatch()..start();
@@ -115,6 +120,7 @@ class _UiFrameProbeState extends State<UiFrameProbe> {
     final active =
         TickerMode.valuesOf(context).enabled &&
         (ModalRoute.of(context)?.isCurrent ?? true);
+    StartupTiming.active?.visibility(active);
     if (window.active != active) {
       _flush();
       window.active = active;
@@ -139,6 +145,7 @@ class _UiFrameProbeState extends State<UiFrameProbe> {
 
   @override
   void dispose() {
+    StartupTiming.active?.visibility(false);
     _timer?.cancel();
     if (_window != null) {
       SchedulerBinding.instance.removeTimingsCallback(_frames);

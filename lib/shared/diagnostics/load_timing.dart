@@ -1,3 +1,4 @@
+import 'startup_timing.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -35,6 +36,26 @@ enum LocalLoadWork {
 
 /// Client elapsed time only. Never accepts URLs, identifiers or error text.
 class LoadTiming {
+  static Future<T> local<T>(LocalLoadWork kind, Future<T> Function() action) =>
+      StartupTiming.run(
+        StartupWork.localRead,
+        () => _local(kind, action),
+        detail: kind,
+      );
+  static void listeners(void Function() action) =>
+      StartupTiming.sync(StartupWork.listeners, () => _listeners(action));
+  static Future<T> run<T>(
+    LoadStage stage,
+    Future<T> Function() action, {
+    bool root = false,
+    bool enabled = kDebugMode,
+    void Function(String)? sink,
+  }) => StartupTiming.run(
+    StartupWork.loadStage,
+    () => _run(stage, action, root: root, enabled: enabled, sink: sink),
+    detail: stage,
+  );
+
   static final _key = Object();
   static int _sequence = 0;
 
@@ -42,7 +63,7 @@ class LoadTiming {
       Zone.current[_key] as List<_Span>? ?? const [];
 
   /// Elapsed local work, including DB/guard/wait time; not SQL execution time.
-  static Future<T> local<T>(
+  static Future<T> _local<T>(
     LocalLoadWork kind,
     Future<T> Function() action,
   ) async {
@@ -59,7 +80,7 @@ class LoadTiming {
     }
   }
 
-  static void listeners(void Function() action) {
+  static void _listeners(void Function() action) {
     final spans = _spans;
     if (!kDebugMode || spans.isEmpty) {
       action();
@@ -76,7 +97,7 @@ class LoadTiming {
     }
   }
 
-  static Future<T> run<T>(
+  static Future<T> _run<T>(
     LoadStage stage,
     Future<T> Function() action, {
     bool root = false,

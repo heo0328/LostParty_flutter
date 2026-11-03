@@ -1,3 +1,6 @@
+import 'account_bootstrap_test.dart' as bootstrap_fixture show example;
+import '../../../support/startup_batch_fakes.dart';
+import 'package:lost_party/shared/diagnostics/startup_timing.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -115,6 +118,8 @@ void main() {
     ),
   );
   Map<String, dynamic> serve(RequestOptions r) {
+    final batch = startupBatchReply(r, serve, clock);
+    if (batch != null) return batch;
     if (r.path == '/v1/me/game-accounts') {
       return {
         'items': [
@@ -451,6 +456,185 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 10));
     await until(() => !model.loading && !controller.isBusy);
   }
+
+  test(
+    'normal batch runtime keeps only the existing final bootstrap refresh',
+    () async {
+      final remote = binding.source.remote;
+      binding.dispose();
+      await lifecycle.close();
+      db = ScopedAccountCacheDatabase(NativeDatabase.memory());
+      lifecycle = BackendAccountLifecycle(
+        api: api,
+        registrations: ServerAccountReadRepository(api, session),
+        databaseFactory: () => db,
+        enabled: true,
+        bootstrapEnabled: true,
+      );
+      runtime = lifecycle.runtime!;
+      binding = BackendMemberAccount(
+        lifecycle: lifecycle,
+        automaticRefreshEnabled: true,
+        settings: settingsModel,
+        key: key,
+        remote: remote,
+        catalog: Catalog(),
+        cooldown: cooldown,
+      );
+      model = binding.model;
+      controller = binding.runner;
+      final ids = [
+        characterId,
+        secondCharacterId,
+        for (var i = 0; i < 7; i++)
+          '00000000-0000-4000-8000-${(i + 1).toString().padLeft(12, '0')}',
+      ];
+      Map<String, dynamic> nineServe(RequestOptions r) {
+        final data = serve(r);
+        Map<String, dynamic> selection() => {
+          ...settings(),
+          'activity_character_ids': ids,
+        };
+        if (r.path == '/v1/me/game-accounts') {
+          for (final registration in data['items'] as List) {
+            registration['settings'] = selection();
+            registration['character_count'] = 9;
+          }
+        } else if (r.path.endsWith('/refresh')) {
+          (data['registration'] as Map)['settings'] = selection();
+          (data['registration'] as Map)['character_count'] = 9;
+        } else if (r.path.endsWith('/characters')) {
+          data['settings'] = selection();
+          data['items'] = [
+            for (var i = 0; i < ids.length; i++)
+              {
+                ...wire.item(
+                  id: ids[i],
+                  name: i == 0
+                      ? 'sample'
+                      : i == 1
+                      ? 'second'
+                      : 'character$i',
+                ),
+                'class_name': className,
+              },
+          ];
+        }
+        return data;
+      }
+
+      apiRespond = (r) {
+        if (r.path != '/v2/me/account-bootstrap') return nineServe(r);
+        final data = bootstrap_fixture.example('empty');
+        final metadata =
+            (nineServe(r.copyWith(path: '/v1/me/game-accounts'))['items']
+                    as List)
+                .single;
+        final characters = nineServe(
+          r.copyWith(path: '/v1/me/game-accounts/$registrationId/characters'),
+        );
+        data['registrations'] = [
+          {
+            'registration': metadata,
+            'characters': characters,
+            'representative': nineServe(
+              r.copyWith(
+                path: '/v2/me/game-accounts/$registrationId/representative',
+              ),
+            ),
+            'presentation': nineServe(
+              r.copyWith(
+                path:
+                    '/v2/me/game-accounts/$registrationId/presentation-settings',
+              ),
+            ),
+            'personal_profiles': [
+              for (final id in ids)
+                nineServe(
+                  r.copyWith(path: '/v2/me/characters/$id/personal-profile'),
+                ),
+            ],
+            'unavailable_characters': <Object>[],
+          },
+        ];
+        return data;
+      };
+      final lines = <String>[];
+      final trace = StartupTrace(sink: lines.add);
+      StartupTiming.testTrace = trace;
+      addTearDown(() {
+        trace.finish(StartupResult.interrupted);
+        StartupTiming.testTrace = null;
+      });
+      await until(() => !key.busy && !settingsModel.busy);
+      binding.initialize();
+      await until(() => lines.any((line) => line.contains('event=finalModel')));
+      expect(controller.savedCount, 9);
+      expect(controller.pendingServerCount, 0);
+      expect(armoryCalls, hasLength(9));
+      expect(model.failure, isNull);
+      expect(
+        apiCalls.where((r) => r.path == '/v2/me/account-bootstrap'),
+        hasLength(2),
+      ); // Initial + final.
+      expect(
+        apiCalls.where((r) => r.path == '/v2/me/characters/personal-profiles'),
+        hasLength(1),
+      );
+      expect(
+        apiCalls.where((r) => r.path == '/v2/me/role-summary-batches'),
+        hasLength(1),
+      );
+      expect(
+        apiCalls.where(
+          (r) =>
+              r.path.endsWith('/personal-profile') ||
+              r.path.contains('/role-summaries/'),
+        ),
+        isEmpty,
+      );
+      expect(
+        model.sections.single.characters.every(
+          (c) => c.dealer?.hasPending == false,
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'startup diagnostic waits for real follow-up model read after runner',
+    () async {
+      final lines = <String>[];
+      final trace = StartupTrace(sink: lines.add);
+      StartupTiming.testTrace = trace;
+      final entered = Completer<void>(), release = Completer<void>();
+      addTearDown(() {
+        if (!release.isCompleted) release.complete();
+        trace.finish(StartupResult.interrupted);
+        StartupTiming.testTrace = null;
+      });
+      apiRespond = (request) async {
+        if (controller.consumed && !controller.isBusy && !entered.isCompleted) {
+          entered.complete();
+          await release.future;
+        }
+        return serve(request);
+      };
+      await until(() => !key.busy && !settingsModel.busy);
+      binding.initialize();
+      await until(() => entered.isCompleted);
+      expect(trace.runnerDone, isTrue);
+      expect(lines.any((line) => line.contains('event=finalModel')), isFalse);
+      release.complete();
+      await until(() => lines.any((line) => line.contains('event=finalModel')));
+      expect(model.loading, isFalse);
+      expect(model.restoring, isFalse);
+      expect(model.sections, isNotEmpty);
+      expect(lines.any((line) => line.contains('event=finalFrame')), isFalse);
+      expect(lines.join(), isNot(contains(member)));
+    },
+  );
 
   test(
     'explicit character refresh fetches only selected UUID and deduplicates taps',

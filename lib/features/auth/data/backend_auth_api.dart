@@ -1,3 +1,4 @@
+import '../../../shared/diagnostics/startup_timing.dart';
 import 'package:dio/dio.dart';
 
 import '../domain/backend_auth_models.dart';
@@ -38,20 +39,23 @@ class DioBackendAuthApi implements BackendAuthApi {
     ),
   );
   @override
-  Future<AuthTokens> refresh(String token, String requestId) => _decode(
-    () async => AuthTokens.fromJson(
-      await _request(
-        'POST',
-        '/v1/auth/refresh',
-        body: {'refresh_token': token, 'refresh_request_id': requestId},
-      ),
-    ),
-  );
+  Future<AuthTokens> refresh(String token, String requestId) =>
+      _decode(() async {
+        final json = await _request(
+          'POST',
+          '/v1/auth/refresh',
+          body: {'refresh_token': token, 'refresh_request_id': requestId},
+        );
+        return StartupTiming.sync(
+          StartupWork.dto,
+          () => AuthTokens.fromJson(json),
+        );
+      });
   @override
-  Future<AuthUser> me(String access) => _decode(
-    () async =>
-        AuthUser.fromJson(await _request('GET', '/v1/me', access: access)),
-  );
+  Future<AuthUser> me(String access) => _decode(() async {
+    final json = await _request('GET', '/v1/me', access: access);
+    return StartupTiming.sync(StartupWork.dto, () => AuthUser.fromJson(json));
+  });
   @override
   Future<AuthSession> session(String access) => _decode(
     () async => AuthSession.fromJson(

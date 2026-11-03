@@ -1,3 +1,4 @@
+import '../../../../shared/diagnostics/startup_timing.dart';
 import '../../../../shared/diagnostics/load_timing.dart';
 import 'package:dio/dio.dart';
 import '../../../../shared/lost_ark_api/client/api_cooldown.dart';
@@ -16,11 +17,14 @@ class DioBackendAccountReadApi
   final AccountReadSession session;
 
   @override
-  Future<ServerRegistrationPage> registrations({String? cursor}) => _decode(
-    () async => ServerRegistrationPage.fromJson(
-      await _get('/v1/me/game-accounts', cursor: cursor),
-    ),
-  );
+  Future<ServerRegistrationPage> registrations({String? cursor}) =>
+      _decode(() async {
+        final json = await _get('/v1/me/game-accounts', cursor: cursor);
+        return StartupTiming.sync(
+          StartupWork.dto,
+          () => ServerRegistrationPage.fromJson(json),
+        );
+      });
 
   @override
   Future<ServerCharactersResponse> characters(
@@ -32,14 +36,16 @@ class DioBackendAccountReadApi
     ).hasMatch(registrationId)) {
       throw const AccountReadException('INVALID_REGISTRATION_ID');
     }
-    return _decode(
-      () async => ServerCharactersResponse.fromJson(
-        await _get(
-          '/v1/me/game-accounts/$registrationId/characters',
-          cursor: cursor,
-        ),
-      ),
-    );
+    return _decode(() async {
+      final json = await _get(
+        '/v1/me/game-accounts/$registrationId/characters',
+        cursor: cursor,
+      );
+      return StartupTiming.sync(
+        StartupWork.dto,
+        () => ServerCharactersResponse.fromJson(json),
+      );
+    });
   }
 
   Future<T> _decode<T>(Future<T> Function() decode) async {
@@ -76,7 +82,10 @@ class DioBackendAccountReadApi
     }
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final access = await session.accessToken();
+        final access = await StartupTiming.run(
+          StartupWork.accessToken,
+          session.accessToken,
+        );
         requireAccountReadScope(session, scope);
         final response = await LoadTiming.http(
           () => dio.request<Object?>(
@@ -86,7 +95,9 @@ class DioBackendAccountReadApi
             options: Options(
               followRedirects: false,
               method: method,
-              receiveTimeout: path.endsWith('/combat-power/refresh')
+              receiveTimeout: path == '/v2/me/role-summary-batches'
+                  ? const Duration(seconds: 60)
+                  : path.endsWith('/combat-power/refresh')
                   ? const Duration(seconds: 30)
                   : null,
               headers: {

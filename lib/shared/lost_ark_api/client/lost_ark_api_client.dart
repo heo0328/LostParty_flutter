@@ -1,3 +1,5 @@
+import '../../diagnostics/startup_timing.dart';
+import '../../diagnostics/startup_http_timing.dart';
 import 'package:dio/dio.dart';
 
 import '../auth/api_token_store.dart';
@@ -17,6 +19,7 @@ class LostArkApiClient {
        cooldown = cooldown ?? ApiCooldown(),
        _dio = dio ?? Dio(_createBaseOptions()) {
     _applyBaseOptions(_dio.options);
+    StartupHttpTiming.attach(_dio, lostArk: true);
     if (logWriter != null) {
       _dio.interceptors.add(LostArkApiLogInterceptor(write: logWriter));
     }
@@ -29,7 +32,10 @@ class LostArkApiClient {
 
   Future<T> get<T>(String path, {Map<String, dynamic>? queryParameters}) async {
     final scope = scopeIdentity?.call();
-    final token = await _apiTokenStore.read();
+    final token = await StartupTiming.run(
+      StartupWork.accessToken,
+      _apiTokenStore.read,
+    );
     void checkScope() {
       if (scopeIdentity != null && scope != scopeIdentity!()) {
         throw const LostArkApiException(type: LostArkApiErrorType.cancelled);
