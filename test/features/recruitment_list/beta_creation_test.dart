@@ -357,6 +357,50 @@ void main() {
       },
     );
     test(
+      'activity rejection clears creation slot without success or automatic POST',
+      () async {
+        await ready();
+        model.update(model.draft.copy(title: '남길 입력'));
+        respond = (_) async => throw const AccountReadException(
+          'ACTIVITY_SELECTION_REQUIRED',
+          status: 409,
+        );
+        await model.submit();
+        expect(model.failure, 'ACTIVITY_SELECTION_REQUIRED');
+        expect(
+          recruitmentFailureMessage(model.failure),
+          '앱에서 사용하도록 선택되지 않은 캐릭터입니다. 활동 캐릭터를 다시 선택해 주세요.',
+        );
+        expect(model.hasPending, isFalse);
+        expect(model.editable, isTrue);
+        expect(model.selection, isNull);
+        expect(model.createdRoomId, isNull);
+        expect(model.draft.title, '남길 입력');
+        expect(
+          await transport.restore(RecruitmentCommandOwner.creation),
+          isNull,
+        );
+        expect(sends, hasLength(1));
+        await model.retry();
+        expect(sends, hasLength(1));
+      },
+    );
+    test(
+      'activity rejection is definite only for the confirmed HTTP status',
+      () {
+        expect(
+          definiteRecruitmentRejection(409, 'ACTIVITY_SELECTION_REQUIRED'),
+          isTrue,
+        );
+        for (final status in [null, 200, 400, 401, 403, 404, 429, 500, 503]) {
+          expect(
+            definiteRecruitmentRejection(status, 'ACTIVITY_SELECTION_REQUIRED'),
+            isFalse,
+          );
+        }
+      },
+    );
+    test(
       'storage failure prevents HTTP; ACK storage retry does not repeat creation',
       () async {
         await ready();

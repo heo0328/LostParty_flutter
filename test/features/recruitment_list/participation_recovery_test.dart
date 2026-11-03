@@ -318,6 +318,74 @@ void main() {
         expect(mutations, isEmpty);
       });
     }
+    for (final intent in ['apply', 'join']) {
+      test(
+        '$intent activity rejection survives cleanup failure and restart',
+        () async {
+          api.respond = (_, _) async {
+            final j = interaction.admissionWire(interaction.n, intent: intent);
+            j['data']['beta_schedule'] = null;
+            return j;
+          };
+          store.failRelease = true;
+          answer = (_) async => throw const AccountReadException(
+            'ACTIVITY_SELECTION_REQUIRED',
+            status: 409,
+          );
+          final first = await controller();
+          final preview = await first.preview(
+            base.roomId,
+            interaction.n,
+            characterId,
+            'dealer',
+            intent,
+          );
+          expect(preview, isNotNull);
+          await first.admit(preview!, {});
+          expect(first.hasPending, isTrue);
+          final saved = await first.commandTransport!.restore(
+            RecruitmentCommandOwner.participation,
+          );
+          expect(saved!.state, RecruitmentCommandState.rejected);
+          expect(saved.rejection!['code'], 'ACTIVITY_SELECTION_REQUIRED');
+          expect(first.admissionSuccess, isNull);
+          expect(writes, hasLength(1));
+          stop(first);
+          store.failRelease = false;
+          final next = await controller();
+          expect(next.hasPending, isFalse);
+          expect(next.canAct, isTrue);
+          expect(next.admissionSuccess, isNull);
+          expect(mutations, isEmpty);
+          expect(
+            await next.commandTransport!.restore(
+              RecruitmentCommandOwner.participation,
+            ),
+            isNull,
+          );
+          await next.retry();
+          expect(writes, hasLength(1));
+        },
+      );
+    }
+    test(
+      'activity code with server failure remains an unresolved original',
+      () async {
+        answer = (_) async => throw const AccountReadException(
+          'ACTIVITY_SELECTION_REQUIRED',
+          status: 503,
+        );
+        final c = await controller();
+        await apply(c);
+        expect(c.hasPending, isTrue);
+        final original = writes.single;
+        await c.retry();
+        expect(writes.last.sameOriginal(original), isTrue);
+        expect(c.hasPending, isTrue);
+        expect(c.admissionSuccess, isNull);
+        expect(mutations, isEmpty);
+      },
+    );
     test(
       'verified no-effect rejection is saved/released and permits a new action',
       () async {
