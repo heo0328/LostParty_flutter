@@ -14,7 +14,7 @@
 
 - 상태·담당: 2026-11-07 사용자 보고로 과거 debug OAuth 클라이언트 삭제·현재 debug 로그인 복구를 완료했다. Flutter는 공개 운영 APK/기존 debug 지문을 대조했고 콘솔 변경은 사용자가 수행했다. 같은 정리를 계속 미완료 요청으로 남기지 않는다.
 - 근거: 현재 debug APK/keystore·과거 debug 기록·체크섬 검증한 공개 운영 v2.0.0 APK의 서명 지문을 [Google 로그인 계약의 서명 식별표](../architecture/GOOGLE_LOGIN_CONTRACT.md#포맷-후-로컬-복구oauth-서명-식별-2026-11-07)에 모았고, 사용자는 이 대조 후 과거 debug 항목을 삭제했다고 보고했다.
-- 별도 유효 후속: 사용자는 release 원본 백업 부재를 확인하고 새 release 키로 전환·백업하기로 확정했다. 담당은 사용자(비밀번호·물리 백업·기기 확인), Flutter(서명/CI/문서), Backend(허용 설정)다. 아직 실행하지 않았으며 키 회수 계획을 병행하지 않는다. 물리 파일·웹 다운로드 구분, 백업을 다시 안내할 시점, 완료 조건·실행 순서는 [릴리즈 계약 B-1](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup), 현재 파트는 NEXT_WORK를 따른다. 신규 운영 OAuth 등록은 그 전환에 필요한 범위에서 검토하며 기존 운영 등록은 전환 전 임의 삭제하지 않는다.
+- 별도 유효 후속: 사용자는 release 원본 백업 부재를 확인하고 새 release 키로 전환·백업하기로 확정했다. 담당은 사용자(비밀번호·물리 백업·기기 확인), Flutter(서명/CI/문서), Backend(허용 설정)다. 추가 기능 개발·개발 로컬 테스트를 모두 마친 뒤 운영 APK 게시 준비 시 키 전환·백업·자동 게시 경로 검증을 진행한다. 지금은 기록만 유지하며 키 회수 계획을 병행하지 않는다. 물리 파일·웹 다운로드 구분, 백업을 다시 안내할 시점, 완료 조건·실행 순서는 [릴리즈 계약 B-1](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup), 현재 파트는 NEXT_WORK를 따른다. 신규 운영 OAuth 등록은 그 전환에 필요한 범위에서 검토하며 기존 운영 등록은 전환 전 임의 삭제하지 않는다.
 
 ## 비활성 체크박스 채움 색상 — 후속 UI 확인
 
