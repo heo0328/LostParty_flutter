@@ -1,5 +1,50 @@
 # 개발 이력
 
+## 2026-11-07 — 로컬 복구 문서 보관·dev/main 통합 지시
+
+사용자가 관련 문서 커밋·dev 병합/푸시·main 동일 시점 정렬/푸시를 명시 지시했다. 최신 origin/dev와 origin/main이 같은 기준이며 작업 브랜치와 충돌할 추가 커밋이 없음을 확인했다. 복구·백업 범위 정정 및 릴리즈 전 실행 시점 문서4개를 보관하고 통합한다. 미추적 devtools_options.yaml은 DevTools 설정으로 이번 문서 커밋에서 제외해 보존한다. 검증은 문서 diff·git diff --check와 통합 후 local/origin 커밋 일치 확인이며, 기능 변경이 없어 Flutter 시험을 반복하지 않는다. 키 생성·Actions·운영 배포·APK 게시 및 브랜치 삭제는 실행 범위가 아니다. Backend 백업과 릴리즈 전 후속은 미완료로 유지한다.
+
+## 2026-11-07 — Native 서명·자동 게시 검증의 실행 시점 명확화
+
+사용자 확인에 따라 새 release 키 생성·물리 백업·설정 전환·게시 없는 Actions 및 설치/로그인 검증은 추가 기능 개발과 개발 로컬 테스트를 모두 마친 뒤 운영 APK 게시 준비 시 진행하는 후속으로 명시했다. NEXT_WORK·릴리즈 계약·차후 수정안의 실행 시점을 맞추고 즉시 준비로 읽히는 제목을 교체했다.
+
+- 새로 가능한 흐름: 후속 작업의 착수 시점을 문서에서 확인 가능. 앱 기능 변경 없음.
+- 보존 확인: 기존 코드·서명키·Secrets·OAuth·서버·공개 APK 유지. 개발 재개의 선행 조건으로 릴리즈 시험을 요구하지 않는다.
+- 미확인 실기기 항목: 새 서명 APK 설치·운영 로그인은 해당 릴리즈 준비 시 검증 대기.
+- 검증: 문서 diff 검토·git diff --check. 키 생성·설정 변경·Actions·게시·커밋/푸시는 실행하지 않았다.
+
+## 2026-11-07 — Backend 필수 백업 조사·사용자 보관 안내 요청 게시
+
+사용자가 Native뿐 아니라 Backend의 백업 대상도 확인해 진행하도록 새 Issue 게시를 명시 지시했다. 기존 백업 관련 Issue 검색과 #34 최신 댓글, Backend quick ops의 서버 외부 DB 백업 미구성/전송 미확인 기록을 읽고 [Issue46](https://github.com/heo0328/lostparty-backend/issues/46)을 게시했다. Native 백업 원장 b7868eee를 인계하고 Backend가 기존 기록과 실제 상태를 대조한 뒤 로컬/AWS 물리 파일·DB/키·환경/배포 자료, 웹 다운로드/복사 방법, 사용자/에이전트 담당·암호화 별도 보관·다음 안내 시점을 정리해 백업 결과를 회신하도록 요청했다.
+
+- 새로 가능한 흐름: Backend 백업 전용 요청·담당·완료 조건과 회신 대기를 공식 채널에서 추적. 실제 백업 완료는 아님.
+- 보존 확인: Backend 코드/운영·DB·인증키/비밀값·Native 앱/서명·태그/게시 불변. 새 Native release 키 결정과 기존 Backend 키 보존을 구분했다.
+- 후속 확인: [Backend 첫 회신6705299811](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6705299811)에서 로컬 키4개/설정·DB 복구와 사용자 로그인/서버200, 외부 백업 미확인·운영 실행 사용자 보류를 확인했다. 사용자 추가 지시로 [Native 시기 기준안6705346619](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6705346619)을 회신했다. 현재 복구 마감·새 release 키 생성/첫 게시·변경/재구성·AWS 최초 외부 보관·정기 DB 보관 시점을 분리하고, 변경 없는 키의 백업 재사용과 사용자 보류 유지를 명시했다.
+- 후속 수용: [Backend 수용 회신6705402315](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6705402315)에서 시기 기준 수용과 로컬 우선5개 파일·운영 DB/키/환경/배포·SSH 복구 대상을 확인했다. 실제 대상 목록은 릴리즈 계약 B-1에 반영했다. 정기 DB 후보 하루1회·일별7개/주별4개는 사용자 미확정이고 수동 단계 주기/복구시간 보장은 없다.
+- 사용자 범위 정정: 파일 위치를 안내하면 사용자가 외장하드로 직접 복사하고 비밀번호는 기존 방식으로 관리한다고 확정했다. Native가 저장소·암호화/정기 정책 협의로 범위를 과도하게 확장한 것을 바로잡아 [회신6705693077](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6705693077)에 경로·초회 저장 항목·운영 무중단 가능/다음 배포 전 시기만 확인하도록 요청했다. Windows/WSL 로컬 경로의 내용 없는 조회에서 `.env`는 확인됐고 키4개는 접근 거절이었으며 누락 판정/권한 변경은 하지 않았다.
+- 미확인·다음: Backend의 사용자 복사 방법/초회 다운로드 목록과 실제 운영 백업 영향·시기 회신 대기. 운영 실행 보류와 외부 백업 미실행을 유지하며 정기정책/암호화 도구 결정은 현재 안내의 선행 조건에서 제외했다. 시기 기준 수용을 실제 보관 완료로 표시하지 않는다. 이번 중간 회신/기록은 파트 완료 전 커밋·푸시하지 않는다.
+- 검증: 최초 Issue와 협의 댓글 게시 후 재조회·원문 동일성, 문서 내용·git diff --check. 요청·문서 전용으로 Flutter 시험/분석·서버 작업은 실행하지 않았다.
+
+## 2026-11-07 — 새 release 서명 전환 결정·물리 백업 안내 기준 기록
+
+사용자가 과거 debug OAuth 항목 삭제·현재 debug.keystore 파일 복사 백업을 보고했고, 포맷 전 release 키/비밀번호 백업은 없다고 확인했다. 기존 GitHub Secret 키 회수 대신 새 release 키를 생성·백업하고 이후 배포를 통일하기로 확정했다. 기존 APK 삭제·재설치/동일 Google 계정 재로그인과 로컬 자료 영향, 서버 회원·DB 유지 조건을 구분했다. 새 키 전환은 결정됐지만 이번 지시는 문서 기록이며 생성·Secret/CI/OAuth/Backend 변경·서명 빌드·게시를 실행하지 않았다.2.0.1은 예시이고 실제 게시 버전은 미정이다.
+
+공식 Android/GitHub/Google Play/Apple 문서를 확인해 [릴리즈 계약 B-1](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup)에 필수 키 파일·비밀번호/alias, 선택적 로컬 설정, 웹에서 받을 수 있는 공개 자료와 개인키의 차이, 향후 Play/iOS의 조건부 항목을 기록했다. AGENTS/NEXT_WORK에 새 키 생성/첫 게시 전 사용자 백업 안내·별도 보관/사본 접근 확인과 동일 키 업데이트의 확인 재사용을 연결했다. 기존 회수/옛 키 백업 대기는 현재 실행안에서 교체했다.
+
+- 새로 가능한 흐름: 다음 release 서명 전환 착수 시 에이전트가 실제 파일명/경로와 백업 항목을 사용자에게 안내할 기준 확보. 앱 기능 변화 없음.
+- 보존 확인: 기존 키·GitHub Secret·CI 코드·운영 OAuth/서버·게시 APK/태그·회원 데이터. 비밀값 수집·다운로드 없음.
+- 미확인: 새 release 키 생성/물리 백업·복원 접근·새 지문·CI 서명/실기기 로그인·실제 게시. debug 사본 보관은 사용자 보고이며 에이전트가 사본을 열어 검증한 것은 아니다.
+- 검증: 공식 출처·문서 계약/현재 미적용 상태·상대 링크·git diff --check 검토. 문서 전용으로 Flutter 분석·시험·빌드와 Actions를 반복하지 않았다.
+
+## 2026-11-07 — 로컬 debug OAuth 복구·기존 콘솔 등록 정리 후속 기록
+
+포맷 후 Google 인증 실패를 읽기 전용으로 조사했다. 로컬 인증키 복구 후 challenge201은 성공했지만 Google에서 `UNREGISTERED_ON_API_CONSOLE`이 발생했다. 사용자는 기존 Android 클라이언트 2개에 현재 debug 지문이 없음을 확인하고 새 등록을 추가했다. 이후 최종 POST는 도착했고401 `GOOGLE_PROOF_INVALID`/`azp_allowlist`를 확인해 Backend 에이전트에 전달할 검증 단계·request_id를 사용자에게 안내했다. 사용자가 dev 로컬 에뮬레이터 Google 로그인 정상 동작을 최종 확인했다. 기존 OAuth 항목은 보존했고 정리는 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md#로컬-환경-복구--google-oauth-android-클라이언트-정리)에 남겼다.
+
+- 새로 가능한 흐름: 기존 Flutter/Dart/Java와 고정 의존성 복구, GitHub CLI/권한/이슈 조회·push dry-run/IDE 확장 확인, 사용자 dev 로컬 Google 로그인 복구. 앱 기능 코드 변경 없음.
+- 보존 확인: 앱/Backend 코드, 운영 설정·release 서명·기존 OAuth 클라이언트. 토큰·키 원문 출력 없음.
+- 미확인: 콘솔 기존 항목 대조·삭제, 개발키 백업과 로컬 release 서명키 복원. 전체 앱·로그인 유지/복구·새 운영 APK 업데이트 인수는 이번 사용자 보고에 포함하지 않는다.
+- 검증: 복구 SDK의 기존 lockfile 강제 설치 성공·분석0/debug APK 빌드 성공·인증 세션15PASS, GitHub CLI 로그인/권한·실제 변경 없는 push dry-run, 운영 health200/카탈로그200/미인증me401. 공개 v2.0.0 APK를 임시 폴더로 내려받아 기존 파일 체크섬과 승인 서명 인증서 SHA-256 일치·운영 SHA-1을 확인했다. 서명 식별 원장은 Google 로그인 계약이다. 문서 내용·링크·git diff --check를 확인하며 이번 문서 기록으로 Flutter 시험·빌드는 반복하지 않는다. 이 구간은 Backend와 사용자 사이의 복구 확인이며 별도 Issue 협업 요청/댓글을 만들지 않았다.
+
 ## 2026-11-04 — Native v2.0.0 서명 APK 공개 완료
 
 [Actions41675349499](https://github.com/heo0328/LostParty_flutter/actions/runs/41675349499) 전체 성공 후 [v2.0.0 Release](https://github.com/heo0328/LostParty_flutter/releases/tag/v2.0.0)의 공개 상태와 APK/체크섬 첨부를 재조회했다. 소스 태그는703f7b8afd8aff52f475da0b32ade853f0e5c210, 버전2.0.0+5, 앱 ID kr.co.heowork0921.lostparty다. 기존 인증서 SHA-256 f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea와 앱 ID/버전 검사를 CI에서 통과했다. APK89,178,370bytes, SHA-256 a9b8f6a0a82be7f567a03a0e008649c26c3ffe05b65193fa4de592d27c755c04가 asset digest/체크섬 파일과 일치한다.
