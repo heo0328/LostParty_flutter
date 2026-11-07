@@ -42,7 +42,7 @@ Backend실행후사용자가에뮬레이터에서앱실행·Google선택/취소�
 | 과거 PC debug | `6B:B4:A0:BC:30:6B:D2:0C:85:F5:24:EB:B5:00:BA:20:8B:2B:B2:05` | 과거 계약의 등록 근거. 다른 환경 사용 여부 확인 후 콘솔 정리 후보 |
 | 운영 release | `DF:13:E0:D2:0A:AE:BF:D3:DE:72:E8:B7:3B:20:C0:7C:96:D1:06:43` | 공개 v2.0.0 APK에서 직접 추출, 운영 등록 유지 |
 
-운영 APK 파일 SHA-256은 DEV_LOG의 게시 근거 `a9b8f6a0a82be7f567a03a0e008649c26c3ffe05b65193fa4de592d27c755c04`와 일치하고, 서명 인증서 SHA-256도 CI 고정값 `f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea`와 일치했다. 콘솔 각 항목의 실제 값 대조·삭제는 아직 실행하지 않았으며 후속은 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md#로컬-환경-복구--google-oauth-android-클라이언트-정리)을 따른다.
+운영 APK 파일 SHA-256은 DEV_LOG의 게시 근거 `a9b8f6a0a82be7f567a03a0e008649c26c3ffe05b65193fa4de592d27c755c04`와 일치하고, 서명 인증서 SHA-256도 CI 고정값 `f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea`와 일치했다. 이후 사용자는 과거 debug OAuth 항목 삭제와 현재 debug 키 파일 복사 백업 완료를 보고했다. 사용자는 새 release 키 전환을 결정했지만 아직 실행 전이므로 표의 운영값은 현재 게시 v2.0.0 기준이다. 새 키 생성·사용자 백업 안내·CI/새 운영 OAuth·Backend 대조의 기준은 [릴리즈 계약 B-1](GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup)을 따른다.
 
 Android OAuth 클라이언트를 새로 만들면 로컬 Backend의 Google `azp` 허용 목록과도 대조한다. 복구 과정에서 Google의 `UNREGISTERED_ON_API_CONSOLE` 이후 최종 POST가 도착했지만 `azp_allowlist` 검사로401이 발생한 이력이 있다. 허용 검증을 제거하거나 운영 허용 목록을 임의 변경하지 않는다. 포맷 후의 새 debug 키는 기존 release 키와 별개이며, Git clone이 ignored 키/서명 설정을 복원하지 않는다. 개발키 백업·로컬 release 키 복원은 사용자 보관 자료로 확인하고 비밀값은 문서/Git/로그에 남기지 않는다.
 

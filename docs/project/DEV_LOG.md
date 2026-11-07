@@ -1,5 +1,16 @@
 # 개발 이력
 
+## 2026-11-07 — 새 release 서명 전환 결정·물리 백업 안내 기준 기록
+
+사용자가 과거 debug OAuth 항목 삭제·현재 debug.keystore 파일 복사 백업을 보고했고, 포맷 전 release 키/비밀번호 백업은 없다고 확인했다. 기존 GitHub Secret 키 회수 대신 새 release 키를 생성·백업하고 이후 배포를 통일하기로 확정했다. 기존 APK 삭제·재설치/동일 Google 계정 재로그인과 로컬 자료 영향, 서버 회원·DB 유지 조건을 구분했다. 새 키 전환은 결정됐지만 이번 지시는 문서 기록이며 생성·Secret/CI/OAuth/Backend 변경·서명 빌드·게시를 실행하지 않았다.2.0.1은 예시이고 실제 게시 버전은 미정이다.
+
+공식 Android/GitHub/Google Play/Apple 문서를 확인해 [릴리즈 계약 B-1](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup)에 필수 키 파일·비밀번호/alias, 선택적 로컬 설정, 웹에서 받을 수 있는 공개 자료와 개인키의 차이, 향후 Play/iOS의 조건부 항목을 기록했다. AGENTS/NEXT_WORK에 새 키 생성/첫 게시 전 사용자 백업 안내·별도 보관/사본 접근 확인과 동일 키 업데이트의 확인 재사용을 연결했다. 기존 회수/옛 키 백업 대기는 현재 실행안에서 교체했다.
+
+- 새로 가능한 흐름: 다음 release 서명 전환 착수 시 에이전트가 실제 파일명/경로와 백업 항목을 사용자에게 안내할 기준 확보. 앱 기능 변화 없음.
+- 보존 확인: 기존 키·GitHub Secret·CI 코드·운영 OAuth/서버·게시 APK/태그·회원 데이터. 비밀값 수집·다운로드 없음.
+- 미확인: 새 release 키 생성/물리 백업·복원 접근·새 지문·CI 서명/실기기 로그인·실제 게시. debug 사본 보관은 사용자 보고이며 에이전트가 사본을 열어 검증한 것은 아니다.
+- 검증: 공식 출처·문서 계약/현재 미적용 상태·상대 링크·git diff --check 검토. 문서 전용으로 Flutter 분석·시험·빌드와 Actions를 반복하지 않았다.
+
 ## 2026-11-07 — 로컬 debug OAuth 복구·기존 콘솔 등록 정리 후속 기록
 
 포맷 후 Google 인증 실패를 읽기 전용으로 조사했다. 로컬 인증키 복구 후 challenge201은 성공했지만 Google에서 `UNREGISTERED_ON_API_CONSOLE`이 발생했다. 사용자는 기존 Android 클라이언트 2개에 현재 debug 지문이 없음을 확인하고 새 등록을 추가했다. 이후 최종 POST는 도착했고401 `GOOGLE_PROOF_INVALID`/`azp_allowlist`를 확인해 Backend 에이전트에 전달할 검증 단계·request_id를 사용자에게 안내했다. 사용자가 dev 로컬 에뮬레이터 Google 로그인 정상 동작을 최종 확인했다. 기존 OAuth 항목은 보존했고 정리는 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md#로컬-환경-복구--google-oauth-android-클라이언트-정리)에 남겼다.

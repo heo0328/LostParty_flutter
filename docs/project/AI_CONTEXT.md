@@ -8,7 +8,7 @@
 
 ## 현재 작업과 실제 코드 상태
 
-2026-11-07 PC 포맷 후 Flutter 3.41.6·Dart 3.11.4·Java21과 기존 설정/고정 의존성을 복구했다. 분석0/debug APK 빌드·인증 세션15PASS, GitHub CLI/저장소 권한·push dry-run·IDE 확장을 확인했고 사용자가 dev 로컬 에뮬레이터 Google 로그인 정상 동작을 확인했다. 운영 서버는 사용자 정상 사용 보고와 공개 읽기 점검을 유지한다. 앱 기능 변경·운영 배포는 없으며 현재 남은 환경/서명 후속은 NEXT_WORK, OAuth 등록 정리는 DETAIL_IMPROVEMENTS, 공개 지문 원장은 GOOGLE_LOGIN_CONTRACT를 따른다.
+2026-11-07 PC 포맷 후 Flutter 3.41.6·Dart 3.11.4·Java21과 기존 설정/고정 의존성을 복구했다. 분석0/debug APK 빌드·인증 세션15PASS, GitHub CLI/저장소 권한·push dry-run·IDE 확장을 확인했고 사용자가 dev 로컬 에뮬레이터 Google 로그인 정상 동작·과거 debug OAuth 삭제·debug 키 파일 백업을 보고했다. 운영 서버는 사용자 정상 사용 보고와 공개 읽기 점검을 유지한다. 사용자는 기존 release 키 회수 대신 새 키 전환·확실한 별도 백업을 선택했다. 새 키/CI/운영 설정 변경·배포는 미실행이며 사용자 백업 안내·확인 조건과 물리 파일 원장은 [릴리즈 계약 B-1](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup), 현재 순서는 NEXT_WORK, 공개 지문 원장은 GOOGLE_LOGIN_CONTRACT다.
 
 2026-11-04 사용자 승인으로 Native2.0.0+5를 [GitHub Release](https://github.com/heo0328/LostParty_flutter/releases/tag/v2.0.0)에 게시했다. 태그 소스703f7b8a·서명 APK CI41675349499 성공, APK/체크섬 첨부·실제 누적 안내문 동일성과 기존 v1.1.2 본문 하단 보존을 확인했다. Backend도 v2.0.0 운영 배포 성공과 batch/기존 참가 유지 지원을 Issue34에서 인계받았다. 새 APK 업데이트 설치·운영 실회원 전체 인수는 미확인이다. 현재 Git/후속과 상세 검증은 NEXT_WORK/DEV_LOG를 따른다.
 
