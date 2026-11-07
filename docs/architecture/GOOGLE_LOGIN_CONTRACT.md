@@ -32,6 +32,20 @@ Debug는 `BACKEND_BASE_URL` 명시값을 우선 사용하고 미지정 시 Andro
 
 Backend실행후사용자가에뮬레이터에서앱실행·Google선택/취소·최초가입/재로그인·유지선택별앱재시작·응답유실복구·로그아웃·로컬빌드를검증한다. Windows→WSL접속과서버nonce claim/서명검증·release등록은별도확인이다. 에이전트는기기설치/조작하지않았다.
 
+#### 포맷 후 로컬 복구·OAuth 서명 식별 (2026-11-07)
+
+사용자가 새 Android OAuth 클라이언트를 생성한 뒤 dev 로컬 에뮬레이터의 Google 로그인 정상 동작을 확인했다. Flutter 3.41.6·Dart 3.11.4·Java21, 기존 의존성·설정 복원 후 분석0/debug APK 빌드 성공과 인증 세션 단위15PASS를 확인했다. 이 확인은 전체 앱 기능·로그인 유지/복구·운영 APK 업데이트 설치의 재인수가 아니다. Firebase 설정 JSON 다운로드나 앱의 기존 Web client ID 변경은 하지 않았다.
+
+| 용도 | 인증서 SHA-1 | 근거·현재 처리 |
+|---|---|---|
+| 현재 PC debug | `C4:89:03:66:C6:51:0F:9D:AE:62:BB:C3:E5:5D:30:14:F7:04:E1:76` | 현재 debug APK와 keystore 일치, 새 Android OAuth 등록·사용자 로컬 로그인 통과 |
+| 과거 PC debug | `6B:B4:A0:BC:30:6B:D2:0C:85:F5:24:EB:B5:00:BA:20:8B:2B:B2:05` | 과거 계약의 등록 근거. 다른 환경 사용 여부 확인 후 콘솔 정리 후보 |
+| 운영 release | `DF:13:E0:D2:0A:AE:BF:D3:DE:72:E8:B7:3B:20:C0:7C:96:D1:06:43` | 공개 v2.0.0 APK에서 직접 추출, 운영 등록 유지 |
+
+운영 APK 파일 SHA-256은 DEV_LOG의 게시 근거 `a9b8f6a0a82be7f567a03a0e008649c26c3ffe05b65193fa4de592d27c755c04`와 일치하고, 서명 인증서 SHA-256도 CI 고정값 `f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea`와 일치했다. 콘솔 각 항목의 실제 값 대조·삭제는 아직 실행하지 않았으며 후속은 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md#로컬-환경-복구--google-oauth-android-클라이언트-정리)을 따른다.
+
+Android OAuth 클라이언트를 새로 만들면 로컬 Backend의 Google `azp` 허용 목록과도 대조한다. 복구 과정에서 Google의 `UNREGISTERED_ON_API_CONSOLE` 이후 최종 POST가 도착했지만 `azp_allowlist` 검사로401이 발생한 이력이 있다. 허용 검증을 제거하거나 운영 허용 목록을 임의 변경하지 않는다. 포맷 후의 새 debug 키는 기존 release 키와 별개이며, Git clone이 ignored 키/서명 설정을 복원하지 않는다. 개발키 백업·로컬 release 키 복원은 사용자 보관 자료로 확인하고 비밀값은 문서/Git/로그에 남기지 않는다.
+
 - Android 우선, 신규 FastAPI/PostgreSQL Backend를 사용한다. 기존 Firebase 사용자·UID·Player·데이터를 연결하거나 이관하지 않는다.
 - 앱 실행에 로그인을 강제하지 않는다. 비로그인은 서버 회원·guest UID·사용자별 서버 자료를 생성하지 않는다.
 - 기존 로컬 계정·캐릭터 조회·빌드 관리와 기본 설정은 비로그인에서도 유지한다. 원정대 인증은 로그인 후에만 가능하다.

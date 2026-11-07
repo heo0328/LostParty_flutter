@@ -1,5 +1,14 @@
 # 개발 이력
 
+## 2026-11-07 — 로컬 debug OAuth 복구·기존 콘솔 등록 정리 후속 기록
+
+포맷 후 Google 인증 실패를 읽기 전용으로 조사했다. 로컬 인증키 복구 후 challenge201은 성공했지만 Google에서 `UNREGISTERED_ON_API_CONSOLE`이 발생했다. 사용자는 기존 Android 클라이언트 2개에 현재 debug 지문이 없음을 확인하고 새 등록을 추가했다. 이후 최종 POST는 도착했고401 `GOOGLE_PROOF_INVALID`/`azp_allowlist`를 확인해 Backend 에이전트에 전달할 검증 단계·request_id를 사용자에게 안내했다. 사용자가 dev 로컬 에뮬레이터 Google 로그인 정상 동작을 최종 확인했다. 기존 OAuth 항목은 보존했고 정리는 [차후 수정안](../product/DETAIL_IMPROVEMENTS.md#로컬-환경-복구--google-oauth-android-클라이언트-정리)에 남겼다.
+
+- 새로 가능한 흐름: 기존 Flutter/Dart/Java와 고정 의존성 복구, GitHub CLI/권한/이슈 조회·push dry-run/IDE 확장 확인, 사용자 dev 로컬 Google 로그인 복구. 앱 기능 코드 변경 없음.
+- 보존 확인: 앱/Backend 코드, 운영 설정·release 서명·기존 OAuth 클라이언트. 토큰·키 원문 출력 없음.
+- 미확인: 콘솔 기존 항목 대조·삭제, 개발키 백업과 로컬 release 서명키 복원. 전체 앱·로그인 유지/복구·새 운영 APK 업데이트 인수는 이번 사용자 보고에 포함하지 않는다.
+- 검증: 복구 SDK의 기존 lockfile 강제 설치 성공·분석0/debug APK 빌드 성공·인증 세션15PASS, GitHub CLI 로그인/권한·실제 변경 없는 push dry-run, 운영 health200/카탈로그200/미인증me401. 공개 v2.0.0 APK를 임시 폴더로 내려받아 기존 파일 체크섬과 승인 서명 인증서 SHA-256 일치·운영 SHA-1을 확인했다. 서명 식별 원장은 Google 로그인 계약이다. 문서 내용·링크·git diff --check를 확인하며 이번 문서 기록으로 Flutter 시험·빌드는 반복하지 않는다. 이 구간은 Backend와 사용자 사이의 복구 확인이며 별도 Issue 협업 요청/댓글을 만들지 않았다.
+
 ## 2026-11-04 — Native v2.0.0 서명 APK 공개 완료
 
 [Actions41675349499](https://github.com/heo0328/LostParty_flutter/actions/runs/41675349499) 전체 성공 후 [v2.0.0 Release](https://github.com/heo0328/LostParty_flutter/releases/tag/v2.0.0)의 공개 상태와 APK/체크섬 첨부를 재조회했다. 소스 태그는703f7b8afd8aff52f475da0b32ade853f0e5c210, 버전2.0.0+5, 앱 ID kr.co.heowork0921.lostparty다. 기존 인증서 SHA-256 f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea와 앱 ID/버전 검사를 CI에서 통과했다. APK89,178,370bytes, SHA-256 a9b8f6a0a82be7f567a03a0e008649c26c3ffe05b65193fa4de592d27c755c04가 asset digest/체크섬 파일과 일치한다.
