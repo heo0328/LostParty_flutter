@@ -1,5 +1,113 @@
 # 개발 이력
 
+## 2026-11-08 — Issue17 기획 로컬 커밋·디자인 확인 순서 확정
+
+사용자가 개발 시작 전 문서를 커밋하고 푸시하지 않도록 지시했다. 이번 기능은 Penpot 디자인 선확인 없이 기존 합의 배치에 따라 개발한 뒤 사용자 디바이스 테스트에서 화면·사용 흐름을 확인한다. 계약26/NEXT_WORK/AI_CONTEXT에 반영했다. 기능 코드는 변경하지 않았으며 기존 정상 동작은 그대로다. 기기 시험은 구현 후 사용자 담당으로 남긴다.
+
+첫 로컬 커밋597c1305에서 에이전트가 Issue17 관련 파일/이력만 임의 선별해 다른 변경을 남겼다. 사용자는 작은 변경을 따로 커밋하지 않는 이유가 다음 작업에서 수정되는 최신본까지 한 커밋에 담기 위한 것이라고 정정했다. 이에 현재 누적 문서·DevTools 설정·협업 규칙 전체를 포함해 미게시 커밋을 amend한다. devtools_options.yaml은 추적 제외 파일이 아니며 내용은 기본 DevTools 설정이므로 함께 포함한다. AGENTS/ai_rules에 사용자 지시 시점의 전체 최신 변경 보관·임의 선별 금지·커밋과 푸시 구분을 반영했다. 검증은 문서 내용·diff 검토와 git diff --check이며 Flutter 시험/분석을 반복하지 않는다. 현재 feature/raid-character-missing-recovery를 유지하고 푸시·dev 병합·개발 착수는 하지 않는다.
+
+최신 [Backend 게시 완료 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721299358)을 확인해 현재 계약/NEXT_WORK의 소스 미게시 대기를 교체했다. 구현·계약 `4c37c2bebbb9eb8950770a240b6e20b7b468399c` push·실행 소스 일치는 Backend 보고이며 Native가 새 연동 시험을 수행한 것은 아니다. 기존 로컬0036 지원·계약 해시는 그대로다.
+
+## 2026-11-08 — Issue17 Native 구현 기획·설계 확정·개발서버 지원 대기 해소
+
+사용자의 계획에 따라 계약26에 화면별 경고 범위·상세 주차 선택 아래 본인 안내/갱신·기존 변경 재사용·활동 관리 저장/취소 왕복, presence 원본/표시 분리·M/P 교체 대상 일치·원요청 불변·범위별 갱신과 늦은 응답 보호를 정리했다. 실제 Router/DI·계정/목록/상세/후보/명령의 연결 지점과 회귀 검증 책임, 후속 구현 순서·완료 조건을 기록했다. 이 작업은 설계이며 기능 코드·Penpot·기기 시험은 진행하지 않았다.
+
+[Backend 최신 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721249386)에서 기존 로컬 DB0036·새 API 실행 지원/계약 일치·기존 자료 보존 확인을 인계했다. 이전 DB0035/미지원 대기를 NEXT_WORK·계약26·AI_CONTEXT에서 교체했다. Backend의 실행 읽기 검증 보고를 수용했으며 Native가 재실행하거나 신규 기능 인수를 통과했다고 표시하지 않는다. 실제 개발자료에는 참가 방이 없어 상세·부분 완료 명령은 여전히 격리 검증 근거와 구분한다.
+
+- 새로 가능해진 흐름: 앱 기능 변화 없음. 설계 확정과 Backend 로컬 지원 인계로 후속 Native 구현의 기준을 마련했다.
+- 보존 확인: 기존 기능 코드는 미변경. 참가 자리·실제 주차·완료 기록·저장 원요청/ACK 보존을 설계의 회귀 조건으로 유지했다.
+- 미확인: Native 실제 연결·전체 시험/분석·사용자 기기 확인. 후속 구현 지시 후 진행하며 운영/APK/Issue 종료와 분리한다.
+- 검증: 필수 문서/관련 코드 대조·최신 Issue 회신 확인·문서 링크/내용 검토·git diff --check. 순수 문서 변경으로 Flutter 시험/분석은 재실행하지 않는다. 현재 작업 브랜치 유지, 미커밋·미push·dev 미반영이다.
+
+[Native 설계·지원 인계 확인](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721323343)을 게시하고 재조회 본문 일치를 확인했다. Backend 미지원 대기 해소와 Native 설계 완료/기능 미착수·후속 구현 담당을 회신했으며 추가 Backend 변경/반복 시험은 요청하지 않았다.
+
+## 2026-11-08 — Issue17 Backend 공개 구현/검증 인계 접수·실제 연결 대기
+
+[Backend6721042421](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721042421)의 공개 경고·presence·M/P/공통 active 해석·세대 capability/원ACK 구현과 격리HTTP 최종7PASS·주차권한 보강(기존 시험 확장)·생성계약 전체 일치 보고를 확인했다. 로컬 구현 문서·실제 기본18491bc0…/two-cycle7a2a589f…의 전체 해시 일치를 읽기 확인했다. 후보 대비 V1 오확장 제외/V2만 확장·actor 없는 apply/join 본문 유지·원ACK/기록 보존 차이를 접수하고 [Native 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721152982)을 게시·재조회 일치 확인했다.
+
+- 새로 가능한 흐름: Backend 로컬 구현/격리검증 결과와 실제 지원/Native 연결 대기를 구분해 추적. Native 기능 연결은 추가되지 않음.
+- 보존 확인: 기존 UX·원요청·다른방/주차·기록과 검증 결과 범위. 이전 회귀와 최종7PASS/보강을 중복 합산하지 않음.
+- 미확인: Backend 전체repo 시험·원격게시·실dev/운영·provider/회원/기기, Native 신규DTO/연결 인수. HEAD3e3ddc1은 base, 소스 미커밋/미push·dev DB0035로 새계약 미지원.
+- 검증: 공식 인계·로컬 문서/계약 해시 대조, 댓글 재조회·문서 diff 검사. 새로운 Flutter/Backend 시험 반복·코드변경·커밋/푸시·실DB 적용·배포·자료복구·Issue 종료 없음. 다음은 별도 게시/개발로컬 반영 지시·지원 상태 인계 후 연결이며 화면/Penpot 보류 유지.
+
+## 2026-11-08 — Issue17 잔여 파서2경로 통과·검토 후보 수용 회신
+
+Backend6720385381 수정 examplesbd1d31bb…를 임시 경로로 복사·SHA256 일치 확인한 뒤 앞서 실패한 상세/교체 preview2경로만 기존 ignored test로 재실행해2PASS를 확인했다. 이전 통과5건은 재사용했고 이번 전체7건 재실행으로 표시하지 않는다. 제공된 파일 그대로 beta/metadata 분리·기존 MembershipReadView/parseCycleDetail·CycleAdmissionPreview를 통과했으며 파서/추적 소스·시험 보정은 없다. [Native 수용 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6720431541)을 게시·재조회 일치 확인했다.
+
+- 새로 가능한 흐름: 고정 검토 후보(OpenAPI8318d0bf…/examplesbd1d31bb…)의 기존 Native 본문 소비 대조 구간 수용. 앱 기능 변화 없음.
+- 보존 확인: 기존 strict 본문/metadata 분리·M/P/원ACK·UX·후속 검증 책임. 기존23PASS/Backend 합성 결과와 Native 실행 결과는 구분.
+- 미확인: 새 metadata DTO·query/HTTP·실제서명/CAS·동시성/앱 연결·기기 시험 없음. 공개 실행 구현·실DB0036 미적용/전체 완료 아님. 화면/Penpot 보류 유지.
+- 검증: flutter test --no-pub .dart_tool/issue17_review/contract_review_test.dart --plain-name 'base body parses after declared metadata extraction' --reporter expanded 결과2PASS, 댓글 재조회·문서 diff 검사. feature/raid-character-missing-recovery 유지·커밋/푸시·DB 적용·배포·Issue 종료 없음.
+
+## 2026-11-08 — Issue17 수정 예시 실제 Native 파서7건·잔여2건 회신
+
+Backend6720284102의 수정 예시ae6253b7…/동일 OpenAPI8318d0bf…를 읽고 해시 일치 확인했다. ignored .dart_tool/issue17_review의 임시 fixture·Flutter test에서 새 metadata/presence만 제안대로 분리해 기존 파서를 실행했다. 추적 소스/테스트·Backend 파일 변경은 없다. 최초 기본 sandbox 실행은 출력 없이 대기해 중단했으며 SDK 접근 허용 재실행에서7건 중5PASS/2FAIL이다.
+
+통과는 기존 구버전 beta목록2항목 읽기·후보·bootstrap·characters 본문과 issue→active/M∩P=0 검사다. detail은 기존 MembershipReadView 뒤 실제 parseCycleDetail에서 synthetic-3d/3c의 하이픈이 raidIdentifier에 거절됐다. preview는 session_display.kind=none이 기존 bind(existing)에 거절됐다. [결과 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6720331248)에 정확한 위치·예시 보완 또는 기존 의미 변경점 명시를 요청했고 재조회 일치를 확인했다. 수정되지 않은 예시를 임의 보정해 통과로 보고하지 않았다. 수정 후 실패2건과 직접 영향만 확인한다.
+
+- 새로 가능한 흐름: 기존 본문 파서의 실수용/잔여 불일치를 구분해 최종 계약 대기 추적. 앱 기능 추가 없음.
+- 보존 확인: 기존 strict 파서·정상 통과5건·Backend 기존 결과의 범위. 앞선 주요 예시 오류 보완을 확인했으나 최종 수용은 보류했다.
+- 미확인: 새 DTO/schema 구현·HTTP/실제서명/CAS·게임/실기기 없음. Penpot/화면 구현 보류 유지.
+- 검증: flutter test --no-pub .dart_tool/issue17_review/contract_review_test.dart --reporter expanded 결과5PASS/2FAIL, 댓글 재조회·문서 diff 검사. 커밋/푸시·DB 적용·배포·Issue 종료 없음.
+
+## 2026-11-08 — Issue17 고정 후보 해시·완전 예시 정합성 대조
+
+[Backend 후보](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6720172136)의 로컬 JSON2개 해시가 게시값(OpenAPI8318d0bf…/examplesa6f69b3e…)과 일치함을 확인했다. M/P·metadata/구버전 세대 제한·bootstrap/presence 전달 구체화 방향은 유지하되 완전 detail의 방/세대/역할·권한 불일치와 완료 assignment를 지목한 조치 경고, preview의 주차/만료/구조, 기존 int 검사를 거절시키는 소수점 revision을 확인해 [보완 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6720198723)을 게시했다. 원문 재조회 일치, 계약26/NEXT_WORK의 현재 대기를 교체했다.
+
+- 새로 가능한 흐름: 최종 계약 수용을 막는 구체 예시·기존 Native 검증 근거와 수정 기준 추적. 앱 변화 없음.
+- 보존 확인: 설계 수용 방향·기존 strict 검증/원ACK·정책 범위. schema PASS와 실제 의미/Native 수용을 구분했다.
+- 미확인 실기기/시험: Native 파서 실행·HTTP/서명/CAS·새 게임/기기 시험 없음. 기존23PASS와 합성 검증은 당시 범위만 유지.
+- 검증: 파일 hash/JSON·기존 Dart 정적 대조, 댓글 재조회 일치·문서 diff 검사. 코드/Backend 파일 변경·커밋/푸시·DB 적용·배포·Issue 종료 없음.
+
+## 2026-11-08 — Backend Issue17 4항목 회신 대조·최종 소비 경계 요청
+
+[Backend6719925630](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6719925630)의 주차/본인·타인 경고와 null 의미, M(active)/P(보존) 분리, 새 참여 능력 표식·사용자 선택 구버전 영향 방/주차 한정 업데이트 정책, presence/원본·갱신/ACK 원칙을 확인했다. Native의 actor/preview strict shape·원명령 재검증·beta metadata 분리/reader·bootstrap characters 재사용과 대조한 결과 [최종 소비3항목 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6720005902)을 게시·재조회 일치 확인했다.
+
+- 새로 가능한 흐름: 설계 수용 방향과 남은 실제 DTO/조합·구버전 항목별 제한 예시, M/P 서명/CAS·현재 카드 표시, bootstrap/presence 전달·캐시 수명의 고정 요구를 공식 채널에서 확인 가능. 앱 기능 변화 없음.
+- 보존 확인: 사용자 UX·주차별 권한, 원본/완료 기록·원ACK와 다른 방/일반 기능. Backend의 새 제안을 구현/전체 검증 완료로 확대하지 않았다.
+- 미확인 실기기: 새 구현/시험 없음. 기존23PASS는 내부 기반 결과만 유지.
+- 검증: 댓글 재조회·내용 일치와 문서 diff 검사. 브랜치/기존 미커밋 자료 유지, 코드 변경·Flutter 시험 반복·커밋/푸시·DB 적용·배포·Issue 종료 없음.
+
+## 2026-11-08 — Issue17 추가 사용자 확정·기존 기능 영향 점검과 계약 확정 요청
+
+사용자가 상세 주차 버튼의 경고 범위를 권한 있는 해당 실제 주차 참가자 전체로 선택했다. Native 기존 DTO·교체 검증·계정/주간 공용 목록·갱신/활동 선택 복귀·원요청 경계와 Backend 미게시 설계·관련 diff/관찰·경고·복구 코드·직접 시험 내용을 읽었다. 기존 참가에 한정한 관찰 근거 예외와 읽기/명령 경계를 확인했으나 일부 완료 후 교체의 양측 공통 참가 해석·표시와 원본 분리·새 공개 계약의 상세 대조는 남았다. 새 시험 통과나 Backend 고정 게시 SHA로 보고하지 않았다.
+
+사용자가 승인한 계획대로 [Issue17 계약 확정 요청](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6719797227)을 한 댓글로 게시하고 재조회 원문 일치를 확인했다. Backend4항목별 수용/차이/미결정 회신→Native 실제 경로 대조→제품 변경만 사용자 추가 협의→양측 경계 검증 책임 확정 순서다. 계약26/NEXT_WORK에 링크·대기 조건을 반영하고 오래된 현재 main 유지 문구를 실제 작업 브랜치로 교체했다.
+
+- 새로 가능한 흐름: 사용자 추가 확정과 코드 영향·정확한 계약 산출물/완료 조건을 공식 채널에서 확인 가능. 앱 기능 추가 없음.
+- 보존 확인: 기존 변경 명령의 원자성·CAS/원ACK, 완료 Snapshot/참가·주차/계정 원본, 다른 소유/누락 원인 방어 및 IF-001 비활성. 기존23PASS는 기반 결과로 유지.
+- 미확인 실기기: 구현·시안·기기 시험 없음. 새 API·부분 완료 교체·실DB0036/운영 반영 미완료 유지.
+- 검증: 댓글 재조회 일치·문서 diff/링크·git diff --check. 기능코드·Backend 파일 변경/시험 반복·커밋·푸시·merge·배포·Issue 종료 없음. feature/raid-character-missing-recovery와 기존 미커밋/미추적 자료 보존.
+
+## 2026-11-08 — Issue17 Native UX5항목 사용자 확인·공식 회신
+
+실제 AppShell/주차별 참가 목록·캐시/상세의 기존 변경 버튼·활동 관리 진입·초기 provider 갱신/앱 복귀 서버조회 경로를 대조한 뒤 사용자에게5항목을 설명했다. 사용자는 좌측 상단 경고/우측 사용량, 목록과 상세의 주차별 표시, 기존 변경 재사용, 활동 선택 왕복의 방·주차 보존, 범위별 서버 재조회 추천을 수용했다. 계약26에 기록하고 [Issue17 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6719423066)을 게시했다. 새 DTO/API 확정·일부 완료 교체/경계 상세까지 완료한 것은 아니다.
+
+- 새로 가능한 흐름: 사용자 확인한 UX와 Backend에 대조할 최소 주차 요약·권한/실패·교체 경계를 같은 Issue에서 확인 가능. 앱 기능 구현 없음.
+- 보존 확인: 기존 카드·변경 버튼·명시 확정·참가/주차·조회 경계. 활동 자동 추가18은 후속이며 수동 제외 재선택을 승인하지 않음. 웹소켓은 추후 검토.
+- 미확인 실기기: 이번에는 구현/기기 시험 없음. Penpot·Native 화면 구현 보류 유지.
+- 검증: 공식 댓글 재조회·내용 대조, 문서 diff·git diff --check. Flutter 시험/분석·브랜치 이동·커밋/푸시·배포·Issue 종료 없음.
+
+## 2026-11-08 — Issue34·38·46 종료 준비 최신화 게시
+
+사용자 요청으로 세 이슈의 최신 본문·댓글을 재조회하고 완료 범위·검증 근거·별도 후속으로 본문을 교체한 뒤 종료 검토 회신을 게시했다. [34](https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6718443740)·[38](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6718445004)·[46](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6718450091)의 본문/댓글 원문 일치와 OPEN을 재조회했다. 요청 구간은 종료 가능이며 종료 자체는 실행하지 않았다.
+
+- 새로 가능한 흐름: 과거 통합/게시·백업 회신 대기와 실제 완료를 공식 채널에서 구분 가능.
+- 보존 확인: 기존 댓글/고정 근거·미확인 운영 전체 인수·별도 서명 전환/복원·자동화 후속. 앱/서버·자료/키·배포 변경 없음.
+- 미확인 실기기: 새 시험 없음. 기존 결과를 신규 시험이나 운영 전체 인수로 확대하지 않음.
+- 검증: 게시 후 본문/댓글 일치·OPEN 확인, 문서 diff 검사. Issue46 첫 본문 교체는 자동 승인 검토가 백업 세부 메타데이터 공개 위험으로 거절해 미게시됐다. 세부 정보를 제외한 완료 요약·기존 근거 링크로 축소한 본문과 댓글은 게시·재조회 성공했다. Flutter 시험 반복·브랜치 이동·커밋·푸시는 하지 않았다.
+
+## 2026-11-08 — 개발 재개 전 현재 문서·Backend 백업 상태 정리
+
+사용자 지시로 main에서 브랜치 이동·신규 분기·커밋·푸시 없이 문서만 정리했다. 완료한 복구·통합을 NEXT_WORK의 개발 기준선으로 교체했다. 로컬 main/dev와 저장된 origin 참조는86e53e11이며 원격 직접 조회는 네트워크 제한으로 재검증하지 못했다. 미추적 devtools_options.yaml은 보존했다.
+
+[Issue46 실행 결과](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706589300)·[최종 인계](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706731221)와 최신 본문을 대조했다. 로컬 고정자료 사용자 보관 보고·운영 기준본 온라인 생성/PC 내장 SSD 보관/무결성 확인·Backend 문서 게시로 과거 회신/실행 대기가 해소됐음을 반영했다. 로컬 DB dump 사용자 제외, 외장 사본 미확인, 실제 서비스 복원·정기 자동화 미실행과 Issue OPEN을 구분했다. 상세 원장은 Backend c62f2a73을 참조하며 비밀값·개인 저장 경로·백업 파일은 복제하지 않았다. 아래 과거 DEV_LOG의 대기 상태는 당시 이력이다.
+
+- 새로 가능한 흐름: 현재 개발 기준선과 유효 후속을 완료한 복구·백업 요청과 구분해 확인 가능. 기술 진단 인계의 오래된 현재 우선 작업·기기 대기 표현도 교체했다. 앱 기능 추가 없음.
+- 보존 확인: 앱/테스트·서버·DB·키·CI/OAuth·배포·APK, 기존 웹소켓 사전 협의 요구와 사용자 보류 범위. 웹소켓은 기존 요구 위치만 연결하고 새 기획/설계·구현은 시작하지 않았다.
+- 미확인 실기기 항목: 새 시험 없음. 기존 미확인 운영 APK 전체 인수·새 서명 전환 인수의 범위/시점은 유지한다.
+- 검증: 문서 diff·관련 링크/내용 대조·git diff --check. 기능 변경이 없어 Flutter 시험·분석·빌드 반복 없음. 결과는 미커밋이며 dev 통합·push·Issue 댓글/종료를 수행하지 않았다.
+
 ## 2026-11-07 — 로컬 복구 문서 보관·dev/main 통합 지시
 
 사용자가 관련 문서 커밋·dev 병합/푸시·main 동일 시점 정렬/푸시를 명시 지시했다. 최신 origin/dev와 origin/main이 같은 기준이며 작업 브랜치와 충돌할 추가 커밋이 없음을 확인했다. 복구·백업 범위 정정 및 릴리즈 전 실행 시점 문서4개를 보관하고 통합한다. 미추적 devtools_options.yaml은 DevTools 설정으로 이번 문서 커밋에서 제외해 보존한다. 검증은 문서 diff·git diff --check와 통합 후 local/origin 커밋 일치 확인이며, 기능 변경이 없어 Flutter 시험을 반복하지 않는다. 키 생성·Actions·운영 배포·APK 게시 및 브랜치 삭제는 실행 범위가 아니다. Backend 백업과 릴리즈 전 후속은 미완료로 유지한다.
