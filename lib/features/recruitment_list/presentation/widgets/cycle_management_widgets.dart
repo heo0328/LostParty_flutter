@@ -579,12 +579,15 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                           child: const Text('기존 참가 확인'),
                         ),
                     ],
-                    if ((d['conflicts'] as List).isNotEmpty &&
+                    if (((d['conflicts'] as List).isNotEmpty ||
+                            d['selection'] == null) &&
                         !alternative &&
                         p.action != 'decline')
                       TextButton(
                         onPressed: loading ? null : alternatives,
-                        child: const Text('다른 캐릭터로 참가'),
+                        child: Text(
+                          d['selection'] == null ? '참가 캐릭터 선택' : '다른 캐릭터로 참가',
+                        ),
                       ),
                     if (alternative) ...[
                       DropdownButtonFormField<String>(

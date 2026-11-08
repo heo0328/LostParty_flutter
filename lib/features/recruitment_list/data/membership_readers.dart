@@ -555,9 +555,11 @@ class MembershipReadRepository implements MembershipReadGateway {
     this.api, {
     this.contractMode = RecruitmentContractMode.legacy,
     this.includeGroupState = false,
+    this.includeCharacterIssues = false,
   });
   final RecruitmentContractMode contractMode;
   final bool includeGroupState;
+  final bool includeCharacterIssues;
   final BackendRegistrationApi api;
   Future<MembershipReadView> _read(
     String room,
@@ -580,6 +582,10 @@ class MembershipReadRepository implements MembershipReadGateway {
         query: {
           'target_cycle_key': target,
           'reader_profile': membershipReaderProfile,
+          if (anchor == null &&
+              includeCharacterIssues &&
+              contractMode == RecruitmentContractMode.betaWire2)
+            'include_character_issues': 'true',
           if (includeCoordinationWait &&
               anchor == null &&
               contractMode == RecruitmentContractMode.betaWire2)

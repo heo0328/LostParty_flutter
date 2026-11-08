@@ -1,0 +1,1036 @@
+{
+  "source": "Backend Issue17 reviewed synthetic examples; actual wire SHA256 2aeca907115ffc768cad723d227f0c2339b042f56f46ffed251c1037d235b6c4; not live-member data",
+  "examples": {
+    "own_summary_normal_zero": {
+      "name": "own_summary_normal_zero",
+      "path": "/v2/me/raid-room-character-issues",
+      "method": "get",
+      "query": {},
+      "status": 200,
+      "component": "RosterIssueSummary",
+      "response": {
+        "profile": "roster-character-issues-1",
+        "current_cycle_key": "2026-11-04",
+        "next_cycle_key": "2026-11-11",
+        "has_issues": false,
+        "affected_room_count": 0,
+        "affected_target_count": 0,
+        "cycles": [
+          {
+            "target_cycle_key": "2026-11-04",
+            "has_issues": false,
+            "affected_room_count": 0
+          },
+          {
+            "target_cycle_key": "2026-11-11",
+            "has_issues": false,
+            "affected_room_count": 0
+          }
+        ],
+        "evaluated_at": "2026-11-08T10:00:00Z",
+        "issues_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "notes": ""
+    },
+    "room_other_member_missing_opposite_unauthorized": {
+      "name": "room_other_member_missing_opposite_unauthorized",
+      "path": "/v2/raid-rooms/{room_id}/detail",
+      "method": "get",
+      "query": {
+        "include_character_issues": "true"
+      },
+      "status": 200,
+      "component": "RosterIssueRoomContext",
+      "response": {
+        "profile": "roster-character-issues-1",
+        "evaluated_at": "2026-11-08T10:00:00Z",
+        "issues_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "target_summaries": [
+          {
+            "target_cycle_key": "2026-11-04",
+            "state": "ready",
+            "has_issues": true,
+            "affected_participant_count": 1
+          },
+          {
+            "target_cycle_key": "2026-11-11",
+            "state": "not_authorized",
+            "has_issues": null,
+            "affected_participant_count": null
+          }
+        ],
+        "selected_target_issues": [
+          {
+            "code": "ROSTER_CHARACTER_MISSING",
+            "room_id": "00000000-0000-4000-8000-00000000000a",
+            "target_cycle_key": "2026-11-04",
+            "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+            "target_generation": 1,
+            "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+            "character_id": "00000000-0000-4000-8000-000000000028",
+            "character_name": "옛캐릭터",
+            "assignment_ids": [
+              "00000000-0000-4000-8000-000000000032"
+            ],
+            "observed_at": "2026-11-08T10:00:00Z",
+            "registration_id": null
+          }
+        ]
+      },
+      "notes": "Exact root character_issue_context fragment; not a complete HTTP envelope."
+    },
+    "full_new_beta_detail_both_opt_ins": {
+      "name": "full_new_beta_detail_both_opt_ins",
+      "path": "/v2/raid-rooms/{room_id}/detail",
+      "method": "get",
+      "query": {
+        "reader_profile": "membership-actions-1",
+        "contract_profile": "beta-recruitment-1",
+        "group_policy_version": "cycle-group-policy-1",
+        "include_character_issues": "true",
+        "participation_profile": "remaining-active-1",
+        "target_cycle_key": "2026-11-04"
+      },
+      "status": 200,
+      "component": "RosterIssues_Participation_Beta_MembershipActionDetailProfile",
+      "response": {
+        "scope": {
+          "server_now": "2026-11-08T10:00:00Z",
+          "current_cycle_key": "2026-11-04",
+          "target_cycle_key": "2026-11-04",
+          "policy_version": "membership-actions-1",
+          "reader_kind": "detail"
+        },
+        "data": {
+          "target": {
+            "room_id": "00000000-0000-4000-8000-00000000000a",
+            "title": "sample",
+            "room_revision": 1,
+            "room_state": "active",
+            "target_cycle_key": "2026-11-04",
+            "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+            "target_generation": 1,
+            "target_revision": 5,
+            "target_state": "open",
+            "generation_state": "open",
+            "leadership": {
+              "leader_cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+              "leader_membership_id": "00000000-0000-4000-8000-000000000001",
+              "leadership_revision": 1
+            }
+          },
+          "viewer": {
+            "membership_id": "00000000-0000-4000-8000-000000000001",
+            "membership_revision": 1,
+            "membership_state": "active",
+            "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+            "cycle_member_revision": 1,
+            "cycle_member_state": "participating",
+            "joined_order": "1",
+            "role": "leader",
+            "mode": "participant",
+            "record_locator": null
+          },
+          "access": {
+            "state": "allowed",
+            "basis": "current_membership",
+            "read_only": false,
+            "evaluated_at": "2026-11-08T10:00:00Z"
+          },
+          "recovery": {
+            "state": "none",
+            "reason": null,
+            "revision": null,
+            "remaining_review_reasons": [],
+            "menu_access": false,
+            "can_request_recovery": {
+              "allowed": false,
+              "reason": null,
+              "next_change_at": null
+            }
+          },
+          "permissions": {
+            "view_detail": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "view_plan": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            },
+            "manage_target": {
+              "allowed": false,
+              "reason": "RECRUITMENT_COMMAND_NOT_READY",
+              "next_change_at": null
+            },
+            "resume_weekly": {
+              "allowed": false,
+              "reason": "RECRUITMENT_COMMAND_NOT_READY",
+              "next_change_at": null
+            },
+            "read_action_menu": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            }
+          },
+          "content": {
+            "scope": {
+              "server_now": "2026-11-08T10:00:00Z",
+              "current_cycle_key": "2026-11-04",
+              "target_cycle_key": "2026-11-04",
+              "playable_from": "2026-11-04T01:00:00Z",
+              "phase": "current",
+              "target_revision": 5,
+              "policy_version": "two-cycle-contract-4",
+              "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+              "target_generation": 1
+            },
+            "data": {
+              "room": {
+                "room_id": "00000000-0000-4000-8000-00000000000a",
+                "revision": 1,
+                "title": "sample",
+                "scope": "public",
+                "group_id": null,
+                "admission_mode": "leader_only",
+                "experience_level": null,
+                "app_capacity": 4,
+                "app_member_count": 1,
+                "state": "active",
+                "items": [
+                  {
+                    "item_id": "00000000-0000-4000-8000-00000000003d",
+                    "raid_id": "serca",
+                    "difficulty_id": "normal",
+                    "game_party_size": 4,
+                    "round_id": "00000000-0000-4000-8000-000000000047"
+                  },
+                  {
+                    "item_id": "00000000-0000-4000-8000-00000000003c",
+                    "raid_id": "horizon_cathedral",
+                    "difficulty_id": "stage1",
+                    "game_party_size": 4,
+                    "round_id": "00000000-0000-4000-8000-000000000046"
+                  }
+                ],
+                "game_items": [
+                  {
+                    "item_id": "00000000-0000-4000-8000-00000000003d",
+                    "raid_id": "serca",
+                    "difficulty_id": "normal",
+                    "game_party_size": 4,
+                    "round_id": "00000000-0000-4000-8000-000000000047"
+                  },
+                  {
+                    "item_id": "00000000-0000-4000-8000-00000000003c",
+                    "raid_id": "horizon_cathedral",
+                    "difficulty_id": "stage1",
+                    "game_party_size": 4,
+                    "round_id": "00000000-0000-4000-8000-000000000046"
+                  }
+                ],
+                "leader_display": null,
+                "created_at": "2026-11-08T10:00:00Z",
+                "phase": "current",
+                "restricted": false,
+                "schedule_summary": {
+                  "mode": "unscheduled",
+                  "occurrence_mode": null,
+                  "confirmed_starts_at": [],
+                  "earliest_start": null,
+                  "latest_start": null
+                },
+                "combat_requirement": {
+                  "input_mode": "shared",
+                  "dealer_min": null,
+                  "support_min": null
+                },
+                "continuation_enabled": false,
+                "permissions": {
+                  "view_detail": {
+                    "allowed": true,
+                    "reason": null,
+                    "next_change_at": null
+                  },
+                  "view_plan": {
+                    "allowed": true,
+                    "reason": null,
+                    "next_change_at": null
+                  }
+                },
+                "leadership": {
+                  "leader_cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+                  "leader_membership_id": "00000000-0000-4000-8000-000000000001",
+                  "leadership_revision": 1
+                },
+                "my_target_role": "leader",
+                "target_cycle_key": "2026-11-04",
+                "target_state": "open",
+                "target_revision": 5,
+                "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+                "target_generation": 1,
+                "beta_schedule": null
+              },
+              "settings": null,
+              "members_revision": 1,
+              "members": [
+                {
+                  "membership_id": "00000000-0000-4000-8000-000000000001",
+                  "revision": 1,
+                  "group_member": false,
+                  "joined_at": "2026-11-08T10:00:00Z",
+                  "character": {
+                    "character_id": "00000000-0000-4000-8000-000000000029",
+                    "selected_role": "dealer",
+                    "display": {
+                      "server_name": "예시",
+                      "character_name": "새캐릭터",
+                      "class_name": "예시직업"
+                    }
+                  },
+                  "assignments": [
+                    {
+                      "assignment_id": "00000000-0000-4000-8000-000000000033",
+                      "item_id": "00000000-0000-4000-8000-00000000003d",
+                      "round_id": "00000000-0000-4000-8000-000000000047",
+                      "state": "active",
+                      "party_no": 1,
+                      "slot_no": 1
+                    },
+                    {
+                      "assignment_id": "00000000-0000-4000-8000-000000000032",
+                      "item_id": "00000000-0000-4000-8000-00000000003c",
+                      "round_id": "00000000-0000-4000-8000-000000000046",
+                      "state": "completed",
+                      "party_no": 1,
+                      "slot_no": 1
+                    }
+                  ],
+                  "comparison": null,
+                  "build": null,
+                  "is_me": true,
+                  "status": "valid",
+                  "status_reason": null,
+                  "target_role": "leader",
+                  "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+                  "cycle_member_revision": 1,
+                  "joined_order": "1",
+                  "target_state": "participating"
+                }
+              ],
+              "my_membership": {
+                "membership_id": "00000000-0000-4000-8000-000000000001",
+                "revision": 1,
+                "group_member": false,
+                "target_role": "leader",
+                "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+                "cycle_member_revision": 1,
+                "joined_order": "1"
+              },
+              "plan_revision": 1,
+              "permissions": {
+                "view_detail": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                },
+                "view_plan": {
+                  "allowed": true,
+                  "reason": null,
+                  "next_change_at": null
+                }
+              },
+              "access": {
+                "state": "allowed",
+                "policy_snapshot": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "evaluated_at": "2026-11-08T10:00:00Z",
+                "issues": []
+              },
+              "leadership": {
+                "leader_cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+                "leader_membership_id": "00000000-0000-4000-8000-000000000001",
+                "leadership_revision": 1
+              },
+              "my_target_role": "leader",
+              "formation_slots": [],
+              "formation_history": [],
+              "unplaced_assignments": [],
+              "beta_schedule": null,
+              "recruitment_identity": null
+            }
+          },
+          "record": null,
+          "beta_schedule": null,
+          "recruitment_identity": null
+        },
+        "participation_context": {
+          "profile": "remaining-active-1",
+          "evaluated_at": "2026-11-08T10:00:00Z",
+          "members": [
+            {
+              "room_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-11-04",
+              "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+              "target_generation": 1,
+              "membership_id": "00000000-0000-4000-8000-000000000001",
+              "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+              "cycle_member_revision": 1,
+              "active_assignments": [
+                {
+                  "assignment_id": "00000000-0000-4000-8000-000000000033",
+                  "revision": 1,
+                  "item_id": "00000000-0000-4000-8000-00000000003d",
+                  "round_id": "00000000-0000-4000-8000-000000000047",
+                  "character_id": "00000000-0000-4000-8000-000000000029",
+                  "selected_role": "dealer",
+                  "party_no": 1,
+                  "slot_no": 1
+                }
+              ],
+              "preserved_assignments": [
+                {
+                  "assignment_id": "00000000-0000-4000-8000-000000000032",
+                  "revision": 1,
+                  "item_id": "00000000-0000-4000-8000-00000000003c",
+                  "round_id": "00000000-0000-4000-8000-000000000046",
+                  "character_id": "00000000-0000-4000-8000-000000000028",
+                  "selected_role": "dealer",
+                  "party_no": 1,
+                  "slot_no": 1,
+                  "state": "completed"
+                }
+              ],
+              "current_character": {
+                "character_id": "00000000-0000-4000-8000-000000000029",
+                "selected_role": "dealer",
+                "display": {
+                  "server_name": "예시",
+                  "character_name": "새캐릭터",
+                  "class_name": "예시직업"
+                }
+              },
+              "binding_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ]
+        },
+        "character_issue_context": {
+          "profile": "roster-character-issues-1",
+          "evaluated_at": "2026-11-08T10:00:00Z",
+          "issues_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "target_summaries": [
+            {
+              "target_cycle_key": "2026-11-04",
+              "state": "ready",
+              "has_issues": true,
+              "affected_participant_count": 1
+            },
+            {
+              "target_cycle_key": "2026-11-11",
+              "state": "not_authorized",
+              "has_issues": null,
+              "affected_participant_count": null
+            }
+          ],
+          "selected_target_issues": [
+            {
+              "code": "ROSTER_CHARACTER_MISSING",
+              "room_id": "00000000-0000-4000-8000-00000000000a",
+              "target_cycle_key": "2026-11-04",
+              "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+              "target_generation": 1,
+              "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+              "character_id": "00000000-0000-4000-8000-000000000029",
+              "character_name": "새캐릭터",
+              "assignment_ids": [
+                "00000000-0000-4000-8000-000000000033"
+              ],
+              "observed_at": "2026-11-08T10:00:00Z",
+              "registration_id": "00000000-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        "group_policy_version": "cycle-group-policy-1"
+      },
+      "notes": "Full response; validate this declared component before extracting the two known metadata roots."
+    },
+    "full_new_beta_character_preview": {
+      "name": "full_new_beta_character_preview",
+      "path": "/v2/raid-rooms/{room_id}/admission-context",
+      "method": "get",
+      "query": {
+        "intent": "change_character",
+        "contract_profile": "beta-recruitment-1",
+        "group_policy_version": "cycle-group-policy-1",
+        "participation_profile": "remaining-active-1",
+        "target_cycle_key": "2026-11-04",
+        "character_id": "00000000-0000-4000-8000-00000000002a",
+        "selected_role": "dealer",
+        "include_session_display": "true"
+      },
+      "status": 200,
+      "component": "Participation_Beta_AdmissionDisplayContext",
+      "response": {
+        "scope": {
+          "server_now": "2026-11-08T10:00:00Z",
+          "current_cycle_key": "2026-11-04",
+          "target_cycle_key": "2026-11-04",
+          "playable_from": "2026-11-04T01:00:00Z",
+          "phase": "current",
+          "target_revision": 5,
+          "policy_version": "two-cycle-contract-4",
+          "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+          "target_generation": 1
+        },
+        "data": {
+          "room_id": "00000000-0000-4000-8000-00000000000a",
+          "room_revision": 1,
+          "members_revision": 1,
+          "plan_revision": 1,
+          "expected_cycle_key": "2026-11-04",
+          "server_time": "2026-11-08T10:00:00Z",
+          "catalog_version": "2026.08.20",
+          "policy_snapshot": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "context_token": "v1.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "selection": {
+            "registration_id": "00000000-0000-4000-8000-000000000001",
+            "character_id": "00000000-0000-4000-8000-00000000002a",
+            "selected_role": "dealer",
+            "expected_registration_version": 1,
+            "expected_ownership_revision": 1,
+            "expected_roster_revision": 1,
+            "expected_lifecycle_revision": 1,
+            "expected_role_summary_version": 1,
+            "expected_limits_revision": 1,
+            "expected_usage_revision": 1
+          },
+          "targets": [
+            {
+              "item_id": "00000000-0000-4000-8000-00000000003d",
+              "round_id": "00000000-0000-4000-8000-000000000047",
+              "party_no": 1,
+              "expected_round_revision": 1,
+              "expected_weekly_revision": 1
+            }
+          ],
+          "session_choices": [],
+          "comparison": {
+            "selected_role": "dealer",
+            "requirement": null,
+            "actual": null,
+            "state": "unrestricted",
+            "source": "flutter_analysis",
+            "trust": "client_submitted",
+            "current_summary_version": 1,
+            "success_summary_version": null,
+            "power_revision": 1,
+            "observed_at": null,
+            "success_saved_at": null,
+            "success_issues": [],
+            "current_issues": []
+          },
+          "permissions": {
+            "change_character": {
+              "allowed": true,
+              "reason": null,
+              "next_change_at": null
+            }
+          },
+          "target_cycle_key": "2026-11-04",
+          "expected_target_revision": 5,
+          "issued_at": "2026-11-08T10:00:00Z",
+          "expires_at": "2026-11-08T10:05:00Z",
+          "leadership": {
+            "leader_cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+            "leader_membership_id": "00000000-0000-4000-8000-000000000001",
+            "leadership_revision": 1
+          },
+          "beta_schedule": null,
+          "session_display": {
+            "kind": "existing",
+            "selection_mode": "select_session_ids",
+            "target_cycle_key": "2026-11-04",
+            "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+            "target_generation": 1,
+            "display_revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "plan_revision": 1,
+            "sessions": [],
+            "previews": []
+          }
+        },
+        "participation_context": {
+          "profile": "remaining-active-1",
+          "actor": {
+            "room_id": "00000000-0000-4000-8000-00000000000a",
+            "target_cycle_key": "2026-11-04",
+            "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+            "target_generation": 1,
+            "membership_id": "00000000-0000-4000-8000-000000000001",
+            "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+            "cycle_member_revision": 1,
+            "active_assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-000000000033",
+                "revision": 1,
+                "item_id": "00000000-0000-4000-8000-00000000003d",
+                "round_id": "00000000-0000-4000-8000-000000000047",
+                "character_id": "00000000-0000-4000-8000-000000000029",
+                "selected_role": "dealer",
+                "party_no": 1,
+                "slot_no": 1
+              }
+            ],
+            "preserved_assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-000000000032",
+                "revision": 1,
+                "item_id": "00000000-0000-4000-8000-00000000003c",
+                "round_id": "00000000-0000-4000-8000-000000000046",
+                "character_id": "00000000-0000-4000-8000-000000000028",
+                "selected_role": "dealer",
+                "party_no": 1,
+                "slot_no": 1,
+                "state": "completed"
+              }
+            ],
+            "current_character": {
+              "character_id": "00000000-0000-4000-8000-000000000029",
+              "selected_role": "dealer",
+              "display": {
+                "server_name": "예시",
+                "character_name": "새캐릭터",
+                "class_name": "예시직업"
+              }
+            },
+            "binding_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "evaluated_at": "2026-11-08T10:00:00Z"
+        },
+        "group_policy_version": "cycle-group-policy-1"
+      },
+      "notes": "Full preview shape; replace only actor.active_assignments. The context token shown is synthetic, not executable."
+    },
+    "full_new_candidates_empty_but_exact_actor": {
+      "name": "full_new_candidates_empty_but_exact_actor",
+      "path": "/v2/raid-rooms/{room_id}/admission-character-candidates",
+      "method": "get",
+      "query": {
+        "intent": "change_character",
+        "participation_profile": "remaining-active-1",
+        "target_cycle_key": "2026-11-04"
+      },
+      "status": 200,
+      "component": "Participation_AdmissionCandidatePage",
+      "response": {
+        "scope": {
+          "server_now": "2026-11-08T10:00:00Z",
+          "current_cycle_key": "2026-11-04",
+          "target_cycle_key": "2026-11-04",
+          "playable_from": "2026-11-04T01:00:00Z",
+          "phase": "current",
+          "target_revision": 5,
+          "policy_version": "two-cycle-contract-4",
+          "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+          "target_generation": 1
+        },
+        "data": {
+          "room_id": "00000000-0000-4000-8000-00000000000a",
+          "intent": "change_character",
+          "eligibility_policy_version": "admission-eligibility-2",
+          "actor": {
+            "membership_id": "00000000-0000-4000-8000-000000000001",
+            "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+            "cycle_member_revision": 1,
+            "assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-000000000033",
+                "revision": 1,
+                "item_id": "00000000-0000-4000-8000-00000000003d",
+                "round_id": "00000000-0000-4000-8000-000000000047",
+                "character_id": "00000000-0000-4000-8000-000000000029",
+                "selected_role": "dealer",
+                "party_no": 1,
+                "slot_no": 1
+              }
+            ]
+          },
+          "evaluated_at": "2026-11-08T10:00:00Z",
+          "catalog_version": "2026.08.20",
+          "snapshot_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "raw_candidate_count": 0,
+          "eligible_candidate_count": 0,
+          "exclusion_summary": [],
+          "items": [],
+          "next_cursor": null
+        },
+        "participation_context": {
+          "profile": "remaining-active-1",
+          "actor": {
+            "room_id": "00000000-0000-4000-8000-00000000000a",
+            "target_cycle_key": "2026-11-04",
+            "room_cycle_id": "00000000-0000-4000-8000-000000000014",
+            "target_generation": 1,
+            "membership_id": "00000000-0000-4000-8000-000000000001",
+            "cycle_member_id": "00000000-0000-4000-8000-00000000001e",
+            "cycle_member_revision": 1,
+            "active_assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-000000000033",
+                "revision": 1,
+                "item_id": "00000000-0000-4000-8000-00000000003d",
+                "round_id": "00000000-0000-4000-8000-000000000047",
+                "character_id": "00000000-0000-4000-8000-000000000029",
+                "selected_role": "dealer",
+                "party_no": 1,
+                "slot_no": 1
+              }
+            ],
+            "preserved_assignments": [
+              {
+                "assignment_id": "00000000-0000-4000-8000-000000000032",
+                "revision": 1,
+                "item_id": "00000000-0000-4000-8000-00000000003c",
+                "round_id": "00000000-0000-4000-8000-000000000046",
+                "character_id": "00000000-0000-4000-8000-000000000028",
+                "selected_role": "dealer",
+                "party_no": 1,
+                "slot_no": 1,
+                "state": "completed"
+              }
+            ],
+            "current_character": {
+              "character_id": "00000000-0000-4000-8000-000000000029",
+              "selected_role": "dealer",
+              "display": {
+                "server_name": "예시",
+                "character_name": "새캐릭터",
+                "class_name": "예시직업"
+              }
+            },
+            "binding_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "evaluated_at": "2026-11-08T10:00:00Z"
+        }
+      },
+      "notes": "Independent empty-candidate snapshot; not permission to submit the separate preview fixture."
+    },
+    "bootstrap_presence_in_same_character_dto": {
+      "name": "bootstrap_presence_in_same_character_dto",
+      "path": "/v2/me/account-bootstrap",
+      "method": "get",
+      "query": {
+        "include_roster_presence": "true"
+      },
+      "status": 200,
+      "component": "RosterPresence_AccountBootstrap",
+      "response": {
+        "server_now": "2026-10-18T08:00:00Z",
+        "complete": true,
+        "registrations": [
+          {
+            "registration": {
+              "registration_id": "00000000-0000-4000-8000-000000000001",
+              "label": "",
+              "is_main": true,
+              "version": 2,
+              "game_account_id": "00000000-0000-4000-8000-000000000002",
+              "verification_status": "verified",
+              "ownership_status": "owned",
+              "ownership_revision": 1,
+              "roster_revision": 1,
+              "settings": {
+                "configuration_state": "configured",
+                "activity_character_ids": [
+                  "00000000-0000-4000-8000-000000000003"
+                ],
+                "representative_character_id": "00000000-0000-4000-8000-000000000003",
+                "settings_version": 2,
+                "ownership_revision": 1,
+                "next_change_at": null,
+                "selection_complete": true,
+                "ineligible_character_ids": []
+              },
+              "representative_summary": {
+                "server_name": "예시서버",
+                "character_name": "예시캐릭터",
+                "class_name": "예시직업",
+                "character_level": 60,
+                "item_level": "1700",
+                "combat_power": null
+              },
+              "character_count": 1,
+              "server_fetched_at": "2026-10-18T08:00:00Z"
+            },
+            "characters": {
+              "registration_id": "00000000-0000-4000-8000-000000000001",
+              "game_account_id": "00000000-0000-4000-8000-000000000002",
+              "is_main": true,
+              "registration_version": 2,
+              "ownership_status": "owned",
+              "ownership_revision": 1,
+              "roster_revision": 1,
+              "settings": {
+                "configuration_state": "configured",
+                "activity_character_ids": [
+                  "00000000-0000-4000-8000-000000000003"
+                ],
+                "representative_character_id": "00000000-0000-4000-8000-000000000003",
+                "settings_version": 2,
+                "ownership_revision": 1,
+                "next_change_at": null,
+                "selection_complete": true,
+                "ineligible_character_ids": []
+              },
+              "items": [
+                {
+                  "server_name": "예시서버",
+                  "character_name": "예시캐릭터",
+                  "class_name": "예시직업",
+                  "character_level": 60,
+                  "item_level": "1700",
+                  "combat_power": null,
+                  "character_id": "00000000-0000-4000-8000-000000000003",
+                  "roster_status": "confirmed",
+                  "summary_fetched_at": "2026-10-18T08:00:00Z",
+                  "last_confirmed_at": "2026-10-18T08:00:00Z",
+                  "requires_refresh": false,
+                  "eligible": true,
+                  "power_stale": true,
+                  "power_fetched_at": null,
+                  "power_checked_at": null,
+                  "power_status": "unknown",
+                  "power_reason": null,
+                  "lifecycle_state": "active",
+                  "lifecycle_revision": 1,
+                  "usable": true,
+                  "blocked_reason": null,
+                  "roster_presence": {
+                    "state": "unknown",
+                    "observed_at": null
+                  }
+                }
+              ],
+              "next_cursor": null,
+              "server_fetched_at": "2026-10-18T08:00:00Z",
+              "roster_presence_scope": {
+                "profile": "roster-presence-1",
+                "registration_id": "00000000-0000-4000-8000-000000000001",
+                "registration_version": 2,
+                "ownership_revision": 1,
+                "roster_revision": 1,
+                "presence_revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "evaluated_at": "2026-10-18T08:00:00Z"
+              }
+            },
+            "representative": {
+              "registration_id": "00000000-0000-4000-8000-000000000001",
+              "game_account_id": "00000000-0000-4000-8000-000000000002",
+              "is_main": true,
+              "registration_version": 2,
+              "settings_version": 2,
+              "ownership_revision": 1,
+              "roster_revision": 1,
+              "representative_character_id": "00000000-0000-4000-8000-000000000003",
+              "configuration_state": "configured",
+              "next_change_at": null
+            },
+            "presentation": {
+              "registration_id": "00000000-0000-4000-8000-000000000001",
+              "game_account_id": "00000000-0000-4000-8000-000000000002",
+              "registration_version": 2,
+              "ownership_revision": 1,
+              "version": 1,
+              "visible_count": 6,
+              "saved_at": null
+            },
+            "personal_profiles": [
+              {
+                "character_id": "00000000-0000-4000-8000-000000000003",
+                "game_account_id": "00000000-0000-4000-8000-000000000002",
+                "ownership_revision": 1,
+                "lifecycle_revision": 1,
+                "lifecycle_state": "active",
+                "dealer": {
+                  "version": 1,
+                  "summary": null,
+                  "saved_at": null
+                },
+                "support": {
+                  "version": 1,
+                  "summary": null,
+                  "saved_at": null
+                },
+                "preferences": {
+                  "version": 1,
+                  "preferred_role": null,
+                  "visible": true,
+                  "display_order": null,
+                  "saved_at": null
+                }
+              }
+            ],
+            "unavailable_characters": []
+          }
+        ],
+        "weekly_states": {
+          "current_cycle": {
+            "server_time": "2026-10-18T08:00:00Z",
+            "cycle_key": "2026-10-14",
+            "starts_at": "2026-10-13T21:00:00Z",
+            "ends_at": "2026-10-20T21:00:00Z",
+            "timezone": "Asia/Seoul"
+          },
+          "cycle_key": "2026-10-14",
+          "catalog_version": "2026.08.20",
+          "entries": [
+            {
+              "character_id": "00000000-0000-4000-8000-000000000003",
+              "raid_id": "kazeros_act4",
+              "cycle_key": "2026-10-14",
+              "revision": 1,
+              "ownership_revision": 1,
+              "lifecycle_revision": 1,
+              "state": "incomplete",
+              "completion_sources": [],
+              "participation": null,
+              "can_mark_completed": true,
+              "can_clear_manual_completion": false,
+              "mark_blocked_reason": null
+            },
+            {
+              "character_id": "00000000-0000-4000-8000-000000000003",
+              "raid_id": "kazeros_finale",
+              "cycle_key": "2026-10-14",
+              "revision": 1,
+              "ownership_revision": 1,
+              "lifecycle_revision": 1,
+              "state": "incomplete",
+              "completion_sources": [],
+              "participation": null,
+              "can_mark_completed": true,
+              "can_clear_manual_completion": false,
+              "mark_blocked_reason": null
+            },
+            {
+              "character_id": "00000000-0000-4000-8000-000000000003",
+              "raid_id": "serca",
+              "cycle_key": "2026-10-14",
+              "revision": 1,
+              "ownership_revision": 1,
+              "lifecycle_revision": 1,
+              "state": "incomplete",
+              "completion_sources": [],
+              "participation": null,
+              "can_mark_completed": true,
+              "can_clear_manual_completion": false,
+              "mark_blocked_reason": null
+            },
+            {
+              "character_id": "00000000-0000-4000-8000-000000000003",
+              "raid_id": "horizon_cathedral",
+              "cycle_key": "2026-10-14",
+              "revision": 1,
+              "ownership_revision": 1,
+              "lifecycle_revision": 1,
+              "state": "incomplete",
+              "completion_sources": [],
+              "participation": null,
+              "can_mark_completed": true,
+              "can_clear_manual_completion": false,
+              "mark_blocked_reason": null
+            },
+            {
+              "character_id": "00000000-0000-4000-8000-000000000003",
+              "raid_id": "belgardin",
+              "cycle_key": "2026-10-14",
+              "revision": 1,
+              "ownership_revision": 1,
+              "lifecycle_revision": 1,
+              "state": "incomplete",
+              "completion_sources": [],
+              "participation": null,
+              "can_mark_completed": true,
+              "can_clear_manual_completion": false,
+              "mark_blocked_reason": null
+            }
+          ]
+        }
+      },
+      "notes": ""
+    },
+    "characters_presence_same_scope": {
+      "name": "characters_presence_same_scope",
+      "path": "/v2/me/game-accounts/{registration_id}/characters",
+      "method": "get",
+      "query": {
+        "include_roster_presence": "true"
+      },
+      "status": 200,
+      "component": "RosterPresence_LifecycleCharactersOut",
+      "response": {
+        "registration_id": "00000000-0000-4000-8000-000000000001",
+        "game_account_id": "00000000-0000-4000-8000-000000000002",
+        "is_main": true,
+        "registration_version": 2,
+        "ownership_status": "owned",
+        "ownership_revision": 1,
+        "roster_revision": 1,
+        "settings": {
+          "configuration_state": "configured",
+          "activity_character_ids": [
+            "00000000-0000-4000-8000-000000000003"
+          ],
+          "representative_character_id": "00000000-0000-4000-8000-000000000003",
+          "settings_version": 2,
+          "ownership_revision": 1,
+          "next_change_at": null,
+          "selection_complete": true,
+          "ineligible_character_ids": []
+        },
+        "items": [
+          {
+            "server_name": "예시서버",
+            "character_name": "예시캐릭터",
+            "class_name": "예시직업",
+            "character_level": 60,
+            "item_level": "1700",
+            "combat_power": null,
+            "character_id": "00000000-0000-4000-8000-000000000003",
+            "roster_status": "confirmed",
+            "summary_fetched_at": "2026-10-18T08:00:00Z",
+            "last_confirmed_at": "2026-10-18T08:00:00Z",
+            "requires_refresh": false,
+            "eligible": true,
+            "power_stale": true,
+            "power_fetched_at": null,
+            "power_checked_at": null,
+            "power_status": "unknown",
+            "power_reason": null,
+            "lifecycle_state": "active",
+            "lifecycle_revision": 1,
+            "usable": true,
+            "blocked_reason": null,
+            "roster_presence": {
+              "state": "unknown",
+              "observed_at": null
+            }
+          }
+        ],
+        "next_cursor": null,
+        "server_fetched_at": "2026-10-18T08:00:00Z",
+        "roster_presence_scope": {
+          "profile": "roster-presence-1",
+          "registration_id": "00000000-0000-4000-8000-000000000001",
+          "registration_version": 2,
+          "ownership_revision": 1,
+          "roster_revision": 1,
+          "presence_revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "evaluated_at": "2026-10-18T08:00:00Z"
+        }
+      },
+      "notes": ""
+    }
+  }
+}

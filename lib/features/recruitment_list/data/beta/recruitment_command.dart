@@ -294,6 +294,7 @@ class RecruitmentCommand {
 
 /// Closed set of known no-create outcomes. Unknown errors stay unresolved.
 bool definiteRecruitmentRejection(Object? status, Object? code) =>
+    (status == 409 && code == 'CHARACTER_SELECTION_REQUIRED') ||
     (status == 409 && code == 'ACTIVITY_SELECTION_REQUIRED') ||
     const {400, 403, 404, 409, 413}.contains(status) &&
         const {

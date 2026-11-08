@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../viewmodels/roster_issue_controller.dart';
 import '../../data/beta/beta_read.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../../account/presentation/viewmodels/member_weekly_view_model.dart';
@@ -34,6 +35,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
     this.initialTarget,
     this.returnCommandKey,
     this.onRecord,
+    this.rosterIssues,
     super.key,
   });
   final MemberWeeklyViewModel weekly;
@@ -42,6 +44,7 @@ class CycleOwnRoomsPage extends StatefulWidget {
   final CycleParticipationController? mutations;
   final VoidCallback? onRefresh;
   final CycleReadRepository repository;
+  final RosterIssueController? rosterIssues;
   final String Function() scopeKey;
   final VoidCallback onLogin;
   final void Function(String, String) onRoom;
@@ -54,6 +57,19 @@ class CycleOwnRoomsPage extends StatefulWidget {
 class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
   late final CycleReadViewModel m;
   int _mutationVersion = 0;
+  int _issueVersion = 0;
+  void _issuesChanged() {
+    final version = widget.rosterIssues?.mutationVersion ?? 0;
+    if (version == _issueVersion) return;
+    _issueVersion = version;
+    for (final target in [
+      widget.weekly.cycles?.current.key,
+      widget.weekly.cycles?.next.key,
+    ].whereType<String>()) {
+      m.invalidateTarget(target);
+    }
+  }
+
   bool _initialApplied = false;
   String? _departureKey;
   String? _relationKey;
@@ -71,6 +87,8 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
     _relationKey = widget.mutations?.relationEnded?.$1;
     _mutationVersion = widget.mutations?.mutationVersion ?? 0;
     widget.mutations?.addListener(_mutated);
+    _issueVersion = widget.rosterIssues?.mutationVersion ?? 0;
+    widget.rosterIssues?.addListener(_issuesChanged);
     _meta();
   }
 
@@ -123,6 +141,7 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
 
   @override
   void dispose() {
+    widget.rosterIssues?.removeListener(_issuesChanged);
     widget.weekly.removeListener(_meta);
     widget.mutations?.removeListener(_mutated);
     m.dispose();
@@ -131,7 +150,12 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([m, widget.weekly, widget.weekly.model]),
+    listenable: Listenable.merge([
+      m,
+      widget.weekly,
+      widget.weekly.model,
+      if (widget.rosterIssues != null) widget.rosterIssues!,
+    ]),
     builder: (context, _) {
       final cycles = widget.weekly.cycles;
       final hasParticipant =
@@ -170,10 +194,20 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                 children: [
                   if (cycles != null && m.target != null)
                     MemberCycleSelector(
+                      issueCycles:
+                          widget.rosterIssues?.affectedCycles ?? const {},
                       cycles: cycles,
                       value: m.target!,
                       onChanged: (v) => m.select(v, section: m.tab),
                     ),
+                  if (widget.rosterIssues?.failure != null)
+                    TextButton(
+                      onPressed: () => widget.rosterIssues!.refresh(),
+                      child: const Text('캐릭터 경고를 확인하지 못했습니다 · 다시 확인'),
+                    )
+                  else if (widget.rosterIssues != null &&
+                      widget.rosterIssues!.value == null)
+                    const Text('참가 캐릭터 상태 확인 중'),
                   if (cycles == null) ...[
                     if (widget.weekly.loading) const LinearProgressIndicator(),
                     TextButton(
@@ -218,6 +252,15 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                     Card(
                       key: ValueKey(row.identity),
                       child: ListTile(
+                        leading: row.characterIssues.isEmpty
+                            ? null
+                            : const Tooltip(
+                                message: '참가 캐릭터 확인 필요',
+                                child: Icon(
+                                  Icons.error_outline,
+                                  color: Colors.red,
+                                ),
+                              ),
                         title: Text(
                           row.title ??
                               (row.recoveryOnly

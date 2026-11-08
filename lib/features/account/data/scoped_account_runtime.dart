@@ -63,15 +63,21 @@ class ScopedAccountRuntime {
     this.allowHttp = false,
     this.ownsDatabase = true,
     this.bootstrapEnabled = false,
+    this.rosterPresenceEnabled = false,
   }) : baseUrl = api.dio.options.baseUrl {
     _validateEnvironment();
-    _client = ServerCharacterLifecycleClient(api, registrations: registrations);
+    _client = ServerCharacterLifecycleClient(
+      api,
+      registrations: registrations,
+      includePresence: rosterPresenceEnabled,
+    );
   }
   final DioBackendAccountReadApi api;
   final ScopedCacheDatabaseFactory databaseFactory;
   final String baseUrl;
   final bool enabled, allowHttp, ownsDatabase;
   final bool bootstrapEnabled;
+  final bool rosterPresenceEnabled;
   AppliedAccountBootstrap? _bootstrap;
   AppliedAccountBootstrap? get bootstrap {
     final value = _bootstrap;
@@ -259,14 +265,22 @@ class ScopedAccountRuntime {
         _bootstrap = null;
         final read = await cache.beginRegistrations();
         current();
-        final json = await api.request('/v2/me/account-bootstrap');
+        final json = await api.request(
+          '/v2/me/account-bootstrap',
+          query: rosterPresenceEnabled
+              ? {'include_roster_presence': 'true'}
+              : null,
+        );
         current();
         final receivedAt = DateTime.now().toUtc();
         late AccountBootstrap data;
         try {
           data = StartupTiming.sync(
             StartupWork.dto,
-            () => AccountBootstrap.fromJson(json!),
+            () => AccountBootstrap.fromJson(
+              json!,
+              includePresence: rosterPresenceEnabled,
+            ),
           );
         } on FormatException {
           throw const AccountReadException('INVALID_RESPONSE');
@@ -297,6 +311,7 @@ class ScopedAccountRuntime {
                     lifecycleRevision: c.lifecycleRevision,
                     usable: c.usable,
                     blockedReason: c.blockedReason,
+                    rosterPresence: c.presence,
                     profile: c.wire,
                   ),
             ]),

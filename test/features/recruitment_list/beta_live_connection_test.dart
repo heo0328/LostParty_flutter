@@ -161,6 +161,7 @@ void main() {
         expect(request['query'], {
           'contract_profile': BetaContract.profile,
           'group_policy_version': BetaContract.groupPolicyVersion,
+          'participation_profile': BetaContract.participationProfile,
         });
         expect(
           (request['body'] as Map).containsKey('application_memo'),

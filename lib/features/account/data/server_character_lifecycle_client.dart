@@ -38,6 +38,7 @@ class ServerCharacterLifecycleClient {
   ServerCharacterLifecycleClient(
     this.api, {
     ServerAccountReadRepository? registrations,
+    this.includePresence = false,
   }) : _baseUrl = api.dio.options.baseUrl,
        _registrations =
            registrations ?? ServerAccountReadRepository(api, api.session) {
@@ -47,6 +48,7 @@ class ServerCharacterLifecycleClient {
     }
   }
   final DioBackendAccountReadApi api;
+  final bool includePresence;
   final String _baseUrl;
   final ServerAccountReadRepository _registrations;
   final Object _owner = Object();
@@ -92,7 +94,12 @@ class ServerCharacterLifecycleClient {
     _guard(scope, session);
     final json = await api.request(
       path,
-      query: {'limit': 50, 'cursor': ?cursor},
+      query: {
+        'limit': 50,
+        'cursor': ?cursor,
+        if (includePresence && path.endsWith('/characters'))
+          'include_roster_presence': 'true',
+      },
     );
     _guard(scope, session);
     if (json == null) throw const AccountReadException('INVALID_RESPONSE');
@@ -157,6 +164,7 @@ class ServerCharacterLifecycleClient {
           session,
           cursor: cursor,
         ),
+        includePresence: includePresence,
       );
       if (result.registrationId != ref.registrationId) {
         throw const AccountReadException('INVALID_RESPONSE');
@@ -202,6 +210,7 @@ class ServerCharacterLifecycleClient {
                   usable: c.usable,
                   blockedReason: c.blockedReason,
                   profile: c.wire,
+                  rosterPresence: c.presence,
                 ),
               ),
         );

@@ -590,7 +590,7 @@ class MemberAccountPage extends StatelessWidget {
               _pendingSettings(context, reg, count!),
             _characterGrid(context, reg, section),
             if (section.displayReady &&
-                section.visible.isEmpty &&
+                section.presentVisible.isEmpty &&
                 section.characters.isNotEmpty)
               const Text('표시하도록 선택한 캐릭터가 없습니다. 표시 설정에서 변경할 수 있습니다.'),
           ],
@@ -617,7 +617,7 @@ class MemberAccountPage extends StatelessWidget {
         spacing: spacing,
         runSpacing: spacing,
         children: [
-          for (final row in section.visible)
+          for (final row in section.presentVisible)
             SizedBox(
               width: width,
               child: _character(

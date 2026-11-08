@@ -121,6 +121,17 @@ class MemberAccountSection {
       )
       .take(presentation?.visibleCount ?? 200)
       .toList();
+
+  /// Ordinary account display only. Weekly participation still uses the raw rows.
+  List<MemberCharacterState> get presentVisible => ordered
+      .where(
+        (c) =>
+            registration.settings.activityIds.contains(c.ref.characterId) &&
+            (c.preferences?.preferences.visible ?? true) &&
+            c.observation.rosterPresence?.missing != true,
+      )
+      .take(presentation?.visibleCount ?? 200)
+      .toList();
 }
 
 class RepresentativeChoice {

@@ -86,6 +86,7 @@ Future<void> showCycleAdmission(
   required String room,
   required String target,
   required String intent,
+  Future<void> Function()? onManageCharacters,
 }) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
@@ -97,6 +98,7 @@ Future<void> showCycleAdmission(
       room: room,
       target: target,
       intent: intent,
+      onManageCharacters: onManageCharacters,
     ),
   ),
 );
@@ -107,9 +109,11 @@ class _CycleAdmissionSheet extends StatefulWidget {
     required this.room,
     required this.target,
     required this.intent,
+    this.onManageCharacters,
   });
   final CycleParticipationController controller;
   final String room, target, intent;
+  final Future<void> Function()? onManageCharacters;
   @override
   State<_CycleAdmissionSheet> createState() => _CycleAdmissionSheetState();
 }
@@ -243,6 +247,17 @@ class _CycleAdmissionSheetState extends State<_CycleAdmissionSheet> {
             const SizedBox(height: 12),
             if (characters.isEmpty && !loading && error == null)
               Text(m.emptyMessage),
+            if (widget.intent == 'change_character' &&
+                widget.onManageCharacters != null)
+              TextButton(
+                onPressed: loading || widget.controller.hasPending
+                    ? null
+                    : () async {
+                        await widget.onManageCharacters!();
+                        if (mounted) await m.load();
+                      },
+                child: const Text('활동 캐릭터 선택'),
+              ),
             if (characters.isEmpty && !loading && error == null)
               for (final message in m.exclusionMessages)
                 Text(message, style: const TextStyle(fontSize: 12)),

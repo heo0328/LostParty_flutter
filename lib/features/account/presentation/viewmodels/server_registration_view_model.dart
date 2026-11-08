@@ -49,6 +49,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
     this.cooldown,
     this.onCommandStarted,
     this.onCommandFinished,
+    this.onCommandApplied,
   }) : now = now ?? DateTime.now {
     cooldown?.addListener(_cooldownChanged);
     session.addListener(_onSession);
@@ -61,6 +62,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
   final ApiCooldown? cooldown;
   final void Function(AccountReadScope)? onCommandStarted;
   final void Function(AccountReadScope)? onCommandFinished;
+  final void Function(String path)? onCommandApplied;
   void _cooldownChanged() {
     if (!_disposed) notifyListeners();
   }
@@ -87,6 +89,7 @@ class ServerRegistrationViewModel extends ChangeNotifier {
   _RegistrationCommand? _pending;
   List<ServerPowerResult> powerResults = const [];
   bool powerContext = false;
+  int appliedVersion = 0;
   bool get hasPending => _pending != null;
   bool get canWrite =>
       session.isAuthenticated &&
@@ -400,6 +403,8 @@ class ServerRegistrationViewModel extends ChangeNotifier {
       if (_valid(ticket, command.scope)) {
         powerResults = powers ?? const [];
         _pending = null;
+        appliedVersion++;
+        onCommandApplied?.call(command.path);
         preview = null;
         previewName = null;
         _retryAt = null;

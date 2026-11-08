@@ -1,5 +1,52 @@
 # 개발 이력
 
+## 2026-11-09 — Issue17 테스트 자료 준비·기기 인수 후속 보관과 전체 변경 Git 보관
+
+사용자는 실제 게임 캐릭터를 삭제·개명해 누락 상태를 재현하기 어려우므로 테스트 자료 조정이 필요한 기기 시험을 남은 작업으로 보관하고, 문서를 최신화한 뒤 현재 변경 전체를 커밋·푸시하도록 지시했다. NEXT_WORK에 개발 전용 본인/타인 누락·부분 완료 자료, 누락 유지/동일 UUID 정상 복구와 재현·원복 절차의 협의 담당·순서·완료 조건을 기록했다. 구체 조정 방식은 미확정이며 서버/DB·게임 자료·기기를 변경하지 않았다.
+
+- 새로 가능해진 흐름/보존 확인: 아래 Native 구현·자동 검증 결과를 유지하며 이번 구간에는 기능 코드를 변경하지 않았다.
+- 미확인 기기 항목: 정상 참가 회귀를 포함한 기존5개 확인 구간을 그대로 남긴다. 누락 자료가 없는 항목은 미확인이며 실제 게임 변경을 요구하지 않는다. 준비 후 사용자 기기 확인과 Native의 Issue17 결과 회신이 필요하다.
+- 검증: 기존 최종 전체 Flutter2,826PASS·분석0 결과를 재사용하고 문서 내용/diff와 git diff --check를 확인한다. 문서 변경만으로 Flutter 시험을 반복하지 않는다.
+- Git 범위: feature/raid-character-missing-recovery의 추적 제외 파일 외 최신 변경 전체를 한 커밋으로 보관하고 같은 브랜치에 푸시한다. dev 병합·운영/APK 배포·Issue 종료는 제외하며 후속 테스트가 남아 브랜치를 유지한다.
+
+[테스트 후속 보관6723640225](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6723640225)에 미실행 사유·다음 자료 준비 범위와 이번 서버 변경 요청 없음을 인계했다. Git 게시 결과는 같은 댓글에 고정 SHA로 반영한다.
+
+## 2026-11-09 — Issue17 Native 구현·자동 검증 완료, 사용자 기기 확인 대기
+
+사용자의 구현 지시에 따라 계약26의 일반 앱 경로를 연결했다. Backend 실제 계약 SHA2562aeca907…를 고정한 생성기/검증 projection으로 지원 API의 새 participation_profile·경고 opt-in을 처리하고 원요청 snapshot은 보존했다. bootstrap/characters presence를 같은 DTO→격리 캐시 payload로 전달하며 일반 계정 표시만 숨겼다. 옵션 생략은 같은 원정대/소유/roster/lifecycle 범위에서만 관찰을 보존하고 범위가 바뀌면 미확인으로 되돌린다. 원본 캐릭터·설정·주간 참가/기록을 삭제하지 않았다.
+
+부분 완료 변경은 후보/미리보기/plan의 M·binding과 최종 CAS 본문을 대조해 M만 바꾸고 P는 유지한다. plan에 없는 party_no/slot_no를 raw assignment와 비교하지 않고 binding으로 보호하며 실제 ID/revision/item/round/character/role을 검증한다. 앱 공통 경고 상태의 시작/복귀·초기 원정대/성공 명령 갱신, 실패 시 마지막 경고 유지/미조회 구분·명령 중 dirty 후속 조회·회원/환경/주차/관계 수명 보호를 연결했다. 하단/주차/카드 경고·상세 안내와 해당 원정대 갱신·기존 변경 버튼/활동 관리 저장·취소 왕복을 실제 DI/Router에 연결했다. 전체 완료 후 새 다음주의 명시 선택 진입/CHARACTER_SELECTION_REQUIRED 안내·확정 거절 분류도 반영했다.
+
+- 새로 가능한 흐름: 앱에서 문제 참가 발견→해당 방/주차·원정대 갱신→지속 누락 시 명시 변경, 활동 관리 후 원래 변경 흐름 복귀. 완료 기록과 남은 참가의 분리 표시/교체.
+- 보존 확인: 기존 참가/신청·일정·주차 분리·완료/탈퇴·계정 복원/관리·원요청/원ACK 회귀 시험 통과. 서버/DB·운영/APK·Penpot은 변경하지 않았다. 화면 배치/가독성과 실제 회원 명령은 아래 기기 인수와 구분한다.
+- 자동 검증: 최종 전체 flutter test **2,826PASS/2분13초**, flutter analyze **문제0**, 변경 Dart40파일 포맷 **0변경**, git diff --check 통과. 신규9개 시험은 전체 수에 포함하며 권한 없음/null·M/P/현재 캐릭터·최종 CAS·presence bootstrap/캐시·옵션 생략/범위 변경·저장 요청 profile 경계·실제 읽기 opt-in/metadata 누락 거절·실패/늦은 응답/명령 중 조회를 검증했다.
+- 실패·수정 경과: 초기 일괄 시험은 재사용 모듈의 opt-in 기본 적용 영향/기존 query 기대값 차이를 확인해 호출자 옵션과 실제 앱 활성화를 분리하고 기대값을 갱신했다. 수정 중 실행은 중단했다. 중간 전체2,824PASS/1FAIL에서 plan CAS 비교의 자리 필드 부재를 확인해 실제 계약으로 수정했고 직접9PASS 후 고정된 최종 전체2,826PASS를 확인했다. 신규 예시 wrapper/경로와 fake 세션 준비 오류도 수정했다. 중간 결과를 합산하거나 성공으로 바꾸지 않는다.
+- 미확인: Native 실회원 API 명령/디바이스 UI·업데이트 설치·메모리/성능 측정은 미실행이다. 사용자가 개발 로컬에서 NEXT_WORK의5개 구간을 확인한다. Penpot 선확인 없이 구현 후 기기 확인 방침을 유지한다.
+
+작업 중 [Backend 고정 소스 인계6722956197](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722956197)을 확인했다. caffaf3405a53be941250132a2b50779943b15f6가 기존 검증 로컬 image ce59926c/DB0036·계약과 일치한다는 보고이며 서버 시험을 재실행한 것은 아니다. Native는 feature/raid-character-missing-recovery의 전체 변경을 미커밋으로 누적하며 push/dev 병합·배포·Issue 종료를 하지 않았다.
+
+[Native 결과6723317207](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6723317207)을 게시·재조회 본문 일치 확인했다. Backend 고정 기준과 Native 일반 앱 연결/2,826PASS·분석0·미커밋 상태·사용자 기기 대기를 전달했고 추가 Backend 작업/반복 시험은 요청하지 않았다.
+
+## 2026-11-08 — 보완 개발서버 반영 확인·Native 선행 대기 해소
+
+[Backend6722917497](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722917497)의 보완 실행 image ce59926c…·기존DB0036/migration 없음·247파일/manifest/계약 일치·healthy/최소 HTTP 보고를 확인하고 [Native6722932504](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722932504)에 수신 회신했다. 직전 읽기 확인한 기본18491bc0…/two-cycle2aeca907…와 일치하며 두 선처리 항목의 실행 지원 대기는 해소됐다. 보완 소스 미커밋·미push와 실제 로컬 지원 완료를 구분하고 원격 게시를 새 차단 조건으로 요구하지 않는다.
+
+새로 확인된 것은 Native 구현 착수 준비 완료이며 기능 코드는 그대로다. 기존 자리/완료 기록·원요청 보존 및 Penpot 선확인 제외/사용자 기기 확인 방침을 유지한다. 실제 회원 명령·Native 신규 연결/기기 시험은 미실행이고 Backend 격리 시험/실행 지원을 그 인수로 확대하지 않았다. 검증은 최신 회신/계약 해시 인계 대조·댓글 재조회·문서 diff와 git diff --check다. 현재 브랜치 유지·문서 변경 누적·미커밋/미push·dev 미반영이다.
+
+## 2026-11-08 — Backend 잔여2항목 로컬 보완 결과 수용·실행 지원 구분
+
+[Backend6722487011](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722487011)과 로컬 followup 문서·계약 해시를 Native 관리 DTO/선택 화면·명령 생성/오류 경계와 대조했다. active0의 완료P→신규 다음주 선택 제거와 혼합 M/P 일정·탈퇴/승계·다음주 발급/rollback 검증 보고를 수용하고 [Native6722805010](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722805010)에 회신했다. 기존 nullable selection·permission/선택 준비/명령 권한 검사를 재사용하며 새 CHARACTER_SELECTION_REQUIRED 안내·오류 분류가 구현 항목이다. 기존 N 참가 보존과 아직 미참가 N의 신규 선택을 구분했다.
+
+기본18491bc0…/후속 two-cycle2aeca907… 해시 일치를 읽기 확인했다. source/검증 문서는 미커밋·미push·실제 dev 미반영이고 현재 image4ac36fdb/DB0036은 이전 실행임을 유지한다. 새로 확인된 것은 로컬 보완/검증·소비 방향의 수용이며 Native 기능은 미변경, 기존 흐름/원요청·완료 기록 보호는 유지한다. 실서버 명령/기기 시험과 Native 자동 시험은 미실행이고 Backend 격리 결과를 신규 인수로 합산하지 않았다. 검증은 댓글·문서/코드 대조·파일 해시·회신 재조회·git diff --check다. 현재 브랜치/누적 변경 유지·미커밋·미push·dev 미반영이다.
+
+## 2026-11-08 — Native 착수 전 잔여 2항목 선처리 요청
+
+사용자가 남은 두 확인 항목을 먼저 처리한 뒤 시작하도록 순서를 정했다. 최신 Issue17은 Backend 감사 이후 완료 회신이 없어 [선처리 요청6721977533](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721977533)을 게시했다. Backend 담당의 active0 완료P fallback 보완, 혼합 M/P 일정/탈퇴/승계/다음주 신규 발급의 직접 명령 검증과 계약 차이/실행 지원 인계를 요청했다. Native는 결과를 대조하기 전 기능 구현을 병행하지 않도록 현재 문서를 교체했다. 새 기능/시험은 없고 기존 코드를 보존했다. 검증은 게시 재조회·문서 diff와 git diff --check이며 새 기기 시험은 미실행이다. 현재 브랜치 유지·미커밋·미push·dev 미반영이다.
+
+## 2026-11-08 — Native 구현 착수 가능 여부·Backend 잔여 감사 확인
+
+사용자의 구현 가능 여부 질문에 필수 문서·Git/코드와 Issue17 최신 댓글을 대조했다. [Backend 감사6721435909](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721435909)에서 active0의 완료P→다음주 source fallback과 혼합 M/P 후속 명령의 직접 검증 부족을 확인했다. Backend 보완 미실행·담당을 현재 문서에 반영했다. Native DTO/경고/화면 구현 착수는 가능하지만 해당 경계의 최종 연동은 보완 결과와 대조한다. 새 기능은 구현하지 않았고 기존 코드는 보존했다. 신규 자동/기기 시험은 없으며 문서 diff 검토·git diff --check만 수행했다. 현재 브랜치 유지, 이번 문서 변경은 미커밋·미push·dev 미반영이다.
+
 ## 2026-11-08 — Issue17 기획 로컬 커밋·디자인 확인 순서 확정
 
 사용자가 개발 시작 전 문서를 커밋하고 푸시하지 않도록 지시했다. 이번 기능은 Penpot 디자인 선확인 없이 기존 합의 배치에 따라 개발한 뒤 사용자 디바이스 테스트에서 화면·사용 흐름을 확인한다. 계약26/NEXT_WORK/AI_CONTEXT에 반영했다. 기능 코드는 변경하지 않았으며 기존 정상 동작은 그대로다. 기기 시험은 구현 후 사용자 담당으로 남긴다.

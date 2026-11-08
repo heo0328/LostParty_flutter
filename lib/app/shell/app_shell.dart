@@ -1,5 +1,7 @@
 import '../../features/recruitment_list/presentation/viewmodels/raid_room_usage_controller.dart';
 import 'dart:async';
+import '../../features/recruitment_list/presentation/viewmodels/roster_issue_controller.dart';
+import '../../features/recruitment_list/presentation/widgets/roster_issue_badge.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +20,7 @@ class AppShell extends StatefulWidget {
     this.scopedStartupRefresh,
     this.onRaidStatusSelected,
     this.raidUsage,
+    this.rosterIssues,
     super.key,
   });
 
@@ -27,6 +30,7 @@ class AppShell extends StatefulWidget {
   final ScopedStartupRefreshController? scopedStartupRefresh;
   final VoidCallback? onRaidStatusSelected;
   final RaidRoomUsageController? raidUsage;
+  final RosterIssueController? rosterIssues;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -135,18 +139,31 @@ class _AppShellState extends State<AppShell> {
     final usage = widget.raidUsage;
     if (usage == null) return Icon(icon);
     return ListenableBuilder(
-      listenable: usage,
-      builder: (context, _) => Badge(
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        textColor: Theme.of(context).colorScheme.onPrimaryContainer,
-        isLabelVisible: usage.authenticated,
-        label: Text(
-          usage.label,
-          semanticsLabel: usage.label == '—/—'
-              ? '참가 모집방 사용량 미확인'
-              : '참가 모집방 ${usage.label}',
+      listenable: Listenable.merge([
+        usage,
+        if (widget.rosterIssues != null) widget.rosterIssues!,
+      ]),
+      builder: (context, _) => RosterIssueBadge(
+        visible: widget.rosterIssues?.hasIssues == true,
+        child: Tooltip(
+          message: widget.rosterIssues?.failure != null
+              ? '캐릭터 경고 갱신 실패 · 다시 확인해 주세요.'
+              : widget.rosterIssues?.value == null
+              ? '캐릭터 경고 미확인'
+              : '레이드 현황',
+          child: Badge(
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            textColor: Theme.of(context).colorScheme.onPrimaryContainer,
+            isLabelVisible: usage.authenticated,
+            label: Text(
+              usage.label,
+              semanticsLabel: usage.label == '—/—'
+                  ? '참가 모집방 사용량 미확인'
+                  : '참가 모집방 ${usage.label}',
+            ),
+            child: Icon(icon),
+          ),
         ),
-        child: Icon(icon),
       ),
     );
   }

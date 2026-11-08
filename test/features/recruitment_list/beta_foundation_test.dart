@@ -151,6 +151,11 @@ void main() {
           if (p == path) {
             expect(q, isEmpty);
             presets++;
+          } else if (p == '/v2/me/raid-room-character-issues') {
+            expect(
+              q['participation_profile'],
+              BetaContract.participationProfile,
+            );
           } else {
             expect(q['contract_profile'], BetaContract.profile);
             profiles++;
@@ -167,6 +172,7 @@ void main() {
         expect(beta.query('POST', '/v2/raid-rooms'), {
           'contract_profile': BetaContract.profile,
           'group_policy_version': BetaContract.groupPolicyVersion,
+          'participation_profile': BetaContract.participationProfile,
         });
         expect(beta.query('GET', path), isEmpty);
         expect(beta.query('PUT', path), isEmpty);

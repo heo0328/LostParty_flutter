@@ -1,3 +1,4 @@
+import 'roster_presence.dart';
 import 'dart:convert';
 
 /// These are normalized storage records, not Backend wire DTOs.
@@ -215,6 +216,7 @@ class CacheCharacterObservation {
     required this.lifecycleRevision,
     required this.usable,
     required this.blockedReason,
+    this.rosterPresence,
     Map<String, dynamic> profile = const {},
   }) : characterId = cacheUuid(characterId),
        accountId = cacheUuid(accountId),
@@ -235,6 +237,7 @@ class CacheCharacterObservation {
   final String? lifecycleState, blockedReason;
   final int? lifecycleRevision;
   final bool? usable;
+  final RosterPresenceObservation? rosterPresence;
   Map<String, Object?> toStorage() => {
     'id': characterId,
     'account': accountId,
@@ -245,6 +248,7 @@ class CacheCharacterObservation {
     'usable': usable,
     'blocked': blockedReason,
     'profile': jsonDecode(profileJson),
+    if (rosterPresence != null) 'rosterPresence': rosterPresence!.toStorage(),
   };
   factory CacheCharacterObservation.fromStorage(Map<String, dynamic> json) =>
       CacheCharacterObservation(
@@ -257,6 +261,11 @@ class CacheCharacterObservation {
         usable: json['usable'] as bool?,
         blockedReason: json['blocked'] as String?,
         profile: json['profile'] as Map<String, dynamic>,
+        rosterPresence: json['rosterPresence'] == null
+            ? null
+            : RosterPresenceObservation.fromStorage(
+                json['rosterPresence'] as Map<String, dynamic>,
+              ),
       );
 }
 

@@ -876,6 +876,8 @@ class CycleParticipationController extends ChangeNotifier {
             .admissionCandidates(fresh.room, fresh.target, fresh.intent);
         if (!_valid(e) || isCurrent?.call() == false) return null;
         if (current.actor?.signature != expectedActor.signature ||
+            expectedActor.participationBinding !=
+                fresh.participation?.binding ||
             current.scope['room_cycle_id'] != fresh.scope['room_cycle_id'] ||
             current.scope['target_generation'] !=
                 fresh.scope['target_generation'] ||

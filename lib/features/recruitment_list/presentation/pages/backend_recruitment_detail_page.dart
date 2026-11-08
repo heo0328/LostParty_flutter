@@ -1,5 +1,7 @@
 import '../widgets/cycle_action_dialog_route.dart';
 import 'dart:async';
+import '../../data/roster_participation.dart';
+import '../viewmodels/roster_issue_controller.dart';
 import 'schedule_comparison_page.dart';
 import '../widgets/schedule_design.dart';
 import '../widgets/recruitment_design.dart';
@@ -40,6 +42,9 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
     this.participation,
     this.reader,
     this.recordAnchor,
+    this.rosterIssues,
+    this.onRefreshRoster,
+    this.onManageCharacters,
     super.key,
   });
   final RecruitmentGateway gateway;
@@ -49,6 +54,9 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
   final CycleParticipationController? participation;
   final MembershipReadGateway? reader;
   final MembershipRecordAnchor? recordAnchor;
+  final RosterIssueController? rosterIssues;
+  final Future<void> Function(String registration)? onRefreshRoster;
+  final Future<void> Function(String? registration)? onManageCharacters;
   final Listenable? accessChanges;
   final String Function()? scopeKey;
   final VoidCallback onLogin, onCreateAnother;
@@ -66,10 +74,75 @@ class _BackendRecruitmentDetailPageState
   String? _completionKey;
   String? _membershipKey;
   bool _leaving = false;
+  bool _refreshingRoster = false;
+  String? _rosterFailure;
+  int _issueVersion = 0;
+  Map<String, dynamic>? get _metadata =>
+      m.profile?.betaData ?? m.value?.betaData;
+  RosterIssueRoom? get _issues => _metadata?['character_issue_context'] == null
+      ? null
+      : RosterIssueRoom(
+          Map<String, dynamic>.from(_metadata!['character_issue_context']),
+        );
+  List<RosterCharacterIssue> get _ownIssues => (_issues?.items ?? [])
+      .where(
+        (i) =>
+            i.room == widget.roomId &&
+            i.target == m.target &&
+            i.registration != null,
+      )
+      .toList();
+  bool get _hasRemainingOwnParticipation {
+    final raw = _metadata?['participation_context'];
+    if (raw == null) return true;
+    final id =
+        m.value?.members
+            .where((v) => v['is_me'] == true)
+            .firstOrNull?['membership_id'] ??
+        m.profile?.projection.viewer['membership_id'];
+    return RosterParticipationContext(
+      Map<String, dynamic>.from(raw),
+    ).members.any(
+      (p) =>
+          p.wire['membership_id'] == id &&
+          p.wire['target_cycle_key'] == m.target &&
+          p.active.isNotEmpty,
+    );
+  }
+
+  void _issuesChanged() {
+    final version = widget.rosterIssues?.mutationVersion ?? 0;
+    if (_issueVersion == version) return;
+    _issueVersion = version;
+    if (!m.readOnly) m.invalidate();
+  }
+
+  Future<void> _refreshRoster(String registration) async {
+    final target = m.target, binding = widget.scopeKey?.call();
+    setState(() {
+      _refreshingRoster = true;
+      _rosterFailure = null;
+    });
+    try {
+      await widget.onRefreshRoster!(registration);
+      if (mounted && target == m.target && binding == widget.scopeKey?.call()) {
+        await m.load();
+      }
+    } catch (_) {
+      if (mounted && target == m.target && binding == widget.scopeKey?.call()) {
+        _rosterFailure = '원정대 갱신 결과를 확인해 주세요. 경고는 최신 상태 확인 후 해제됩니다.';
+      }
+    } finally {
+      if (mounted) setState(() => _refreshingRoster = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _issueVersion = widget.rosterIssues?.mutationVersion ?? 0;
+    widget.rosterIssues?.addListener(_issuesChanged);
     m = BackendRecruitmentDetailViewModel(
       gateway: widget.gateway,
       session: widget.session,
@@ -172,6 +245,7 @@ class _BackendRecruitmentDetailPageState
 
   @override
   void dispose() {
+    widget.rosterIssues?.removeListener(_issuesChanged);
     WidgetsBinding.instance.removeObserver(this);
     widget.participation?.removeListener(_changed);
     m.dispose();
@@ -206,12 +280,37 @@ class _BackendRecruitmentDetailPageState
             Padding(
               padding: const EdgeInsets.all(12),
               child: MemberCycleSelector(
+                issueCycles: _issues?.affectedCycles ?? const {},
                 cycles: m.cycles!,
                 value: m.target!,
                 enabled: !m.loading,
                 onChanged: (target) {
                   if (!m.loading) m.selectCycle(target);
                 },
+              ),
+            ),
+          if (!m.readOnly && _ownIssues.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final issue in _ownIssues) ...[
+                    Text(
+                      '참가 중인 ${issue.name} 캐릭터가 원정대 목록에서 확인되지 않습니다. 원정대를 새로고침한 뒤에도 확인되지 않으면 다른 캐릭터로 변경해 주세요.',
+                    ),
+                    TextButton.icon(
+                      onPressed:
+                          _refreshingRoster || widget.onRefreshRoster == null
+                          ? null
+                          : () => _refreshRoster(issue.registration!),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('원정대 새로고침'),
+                    ),
+                  ],
+                  if (_refreshingRoster) const LinearProgressIndicator(),
+                  if (_rosterFailure != null) Text(_rosterFailure!),
+                ],
               ),
             ),
           Expanded(
@@ -632,6 +731,7 @@ class _BackendRecruitmentDetailPageState
         ),
         if (_canManage &&
             m.target != null &&
+            _hasRemainingOwnParticipation &&
             {'leader', 'member'}.contains(room['my_target_role']))
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -645,6 +745,11 @@ class _BackendRecruitmentDetailPageState
                         room: widget.roomId,
                         target: m.target!,
                         intent: 'change_character',
+                        onManageCharacters: widget.onManageCharacters == null
+                            ? null
+                            : () => widget.onManageCharacters!(
+                                _ownIssues.firstOrNull?.registration,
+                              ),
                       )
                     : null,
                 icon: const Icon(Icons.manage_accounts_outlined),
@@ -802,7 +907,22 @@ class _BackendRecruitmentDetailPageState
   }
 
   Widget _member(Map<String, dynamic> member, bool groupLinked) {
-    final c = member['character'] as Map?;
+    final rawParticipation = _metadata?['participation_context'];
+    final participation = rawParticipation == null
+        ? null
+        : RosterParticipationContext(
+                Map<String, dynamic>.from(rawParticipation),
+              ).members
+              .where(
+                (p) =>
+                    p.wire['room_id'] == widget.roomId &&
+                    p.wire['target_cycle_key'] == m.target &&
+                    p.wire['membership_id'] == member['membership_id'],
+              )
+              .firstOrNull;
+    final c = participation == null
+        ? member['character'] as Map?
+        : participation.current;
     final display = c?['display'] as Map?;
     final name = display?['character_name'] as String? ?? '캐릭터 미확인';
     final role = c?['selected_role'] == 'support' ? '서포터' : '딜러';
@@ -819,6 +939,13 @@ class _BackendRecruitmentDetailPageState
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if ((_issues?.items ?? []).any(
+            (i) => i.character == c?['character_id'] && i.target == m.target,
+          ))
+            const Tooltip(
+              message: '캐릭터 확인 필요',
+              child: Icon(Icons.error_outline, color: Colors.red, size: 18),
+            ),
           Container(
             width: 34,
             height: 34,

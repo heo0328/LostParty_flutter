@@ -4,9 +4,9 @@
 
 ### 현재 범위와 완료 상태
 
-사용자 확정 계획에 따라 **기획·설계를 확정한다. 이번에는 기능 코드·Penpot·기기 시험을 진행하지 않는다.** 아래 구현 순서는 후속 구현 지시 때 적용한다. 원정대 목록에서 사라진 캐릭터로 남아 있는 참가를 발견하고, 본인의 원정대 갱신 또는 기존 캐릭터 변경으로 해결하는 것이 목표다. 기존 참가 자리·실제 주차·예약·일정·투표·권한·완료 기록을 보존하며 삭제·개명이나 새 이름과의 동일성을 추정하지 않는다.
+사용자 확정 계획과 후속 구현 지시에 따라 **Native 코드·기존 화면 연결과 자동 검증을 마쳤다. Penpot 선확인과 에이전트의 기기 조작은 진행하지 않는다.** 원정대 목록에서 사라진 캐릭터로 남아 있는 참가를 발견하고, 본인의 원정대 갱신 또는 기존 캐릭터 변경으로 해결하는 것이 목표다. 기존 참가 자리·실제 주차·예약·일정·투표·권한·완료 기록을 보존하며 삭제·개명이나 새 이름과의 동일성을 추정하지 않는다.
 
-사용자 추가 확정: 이번 작업은 **Penpot 디자인 선확인 없이 기능을 개발하고, 이후 사용자 디바이스 테스트에서 화면·사용 흐름을 확인한다.** 기존 합의 배치와 디자인을 구현 기준으로 사용하며 Penpot 시안 승인을 개발 선행 조건으로 두지 않는다. 현재 요청은 개발 전 기획 문서의 로컬 커밋까지이며 기능 개발·기기 시험을 지금 실행하는 지시로 확대하지 않는다.
+사용자 추가 확정: 이번 작업은 **Penpot 디자인 선확인 없이 기능을 개발하고, 이후 사용자 디바이스 테스트에서 화면·사용 흐름을 확인한다.** 기존 합의 배치와 디자인을 구현 기준으로 사용하며 Penpot 시안 승인을 개발 선행 조건으로 두지 않는다. 개발 전 문서 보관은56cc66c2로 마쳤다. 2026-11-09 사용자 지시로 이후 누적 구현/검증/문서 전체를 현재 브랜치의 한 커밋으로 보관하고 푸시한다. 기기 테스트는 개발용 재현 자료 준비 후의 남은 작업이며 자동 검증이나 Git 보관으로 인수 완료를 선언하지 않는다. 실제 게임 캐릭터 삭제·개명 없이 누락 유지/동일 UUID 복구를 재현할 자료·절차를 먼저 정하며 구체 방식과 실행 순서는 NEXT_WORK를 따른다.
 
 [Backend 개발서버 반영 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721249386)에 따르면 기존 개발 DB에 `0036_roster_presence`와 새 실행 소스가 반영돼 경고·presence·새 참가 해석을 지원한다. **이전 서버 미지원 대기는 해소됐다.** 이는 Backend 실행·읽기 검증의 인계이며 Native 연결·실회원 상세/부분 완료 변경·기기 인수 완료는 아니다. 실제 참가 방이 없어 해당 명령은 개발 실자료로 검증하지 않았다고 구분했다. 후속 [Backend 게시 완료 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721299358)에서 `feat/character-lifecycle`의 구현·계약 커밋 `4c37c2bebbb9eb8950770a240b6e20b7b468399c` push 및 실행 소스 일치를 보고했다. `3e3ddc1`은 기반이며 실제 구현 고정점은 `4c37c2b`다.
 
@@ -31,7 +31,7 @@
 
 ### 데이터·API와 명령 계약
 
-소비 기준은 [Backend 실제 구현 인계](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721042421)의 `openapi/openapi.yaml`과 `openapi/two-cycle.openapi.yaml`이다. 과거 후보 문서나 기존 파서 통과를 새 DTO 검증으로 대체하지 않는다. 해시는 각각 `18491bc066d08a578aa9228cd0da85eee508288c28d14d563d788e73e324c3dd`, `7a2a589f02d5d49847ce62c0f3bacbfff71ffb123076db822b4aae910666c8fd`다.
+소비 기준은 [Backend 실제 구현 인계](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6721042421)의 `openapi/openapi.yaml`과 `openapi/two-cycle.openapi.yaml` 및 [후속 보완 계약](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722487011)이다. 과거 후보 문서나 기존 파서 통과를 새 DTO 검증으로 대체하지 않는다. 기본 해시는 `18491bc066d08a578aa9228cd0da85eee508288c28d14d563d788e73e324c3dd`를 유지하고 후속 로컬 two-cycle 해시는 `2aeca907115ffc768cad723d227f0c2339b042f56f46ffed251c1037d235b6c4`로 일치를 확인했다. 변경은 next_cycle_selection 의미 주석이며 경로·동작·components/필수·nullable 구조 불변이라는 Backend 보고다. 과거 실행 two-cycle의7a2a589f…와 현재 실행2aeca907…를 구분한다. 후속 보완은 실제 dev에 반영됐으며 이후 caffaf3405a53be941250132a2b50779943b15f6로 게시됐다. 실행 근거는 아래 최신 인계를 따른다.
 
 | 연결 | 적용 기준 |
 |---|---|
@@ -79,7 +79,17 @@ Backend가 누락 근거·전체 집계·권한·최종 참가 자격과 원자 
 
 WebSocket은 구현하지 않는다. 후속에서는 이벤트를 동일한 범위 무효화·재조회 진입점에 연결할 수 있는지 검토한다. 이번 설계에 polling·구독 계약·전면 상태관리 교체를 추가하지 않는다.
 
-### 후속 구현 순서와 검증 완료 조건
+### 구현 순서와 검증 완료 조건
+
+[Backend 보완 결과](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722487011)를 로컬 문서·실제 계약 해시와 Native 기존 소비 경계에 대조해 [수용](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722805010)했고, 후속 [실제 개발서버 반영](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722917497)까지 확인했다. 사용자 확정 순서인 **두 항목 선처리 → Native 결과 대조 → Native 구현**의 선행 대기는 해소됐다. 실행 image ce59926c…/DB0036 유지·실행 소스/계약 일치 보고를 접수했다. 후속 [고정 구현 게시](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722956197)로 caffaf3405a53be941250132a2b50779943b15f6 원격 기준도 확보됐다. 실행/계약은 동일하다는 Backend 인계를 받았다. 이번 확인은 Native 실제 연결/기기 인수 통과가 아니다.
+
+이번주 전체 완료 후 아직 참가하지 않은 다음주 신규 참가/개설에서는 현재 선택이 없으며 완료P를 기본 선택으로 사용하지 않는다. GET context는200/selection=null/permission.allowed=false/reason=CHARACTER_SELECTION_REQUIRED이고, 형식이 유효해도 미선택 context에 임의 선택을 넣은 POST는409/같은 사유다. null·빈 필수값 같은 형식 오류의 기존400과 구분한다. 기존 캐릭터 선택에서 character_id/selected_role을 명시해 새 context를 받고 현재 신규 자격을 검증한다. 이미 N 참가가 있으면 N 자체의 active 선택·자리/noop·누락 경고/수동 교체를 유지하며 C 완료P로 바꾸지 않는다. 이는 Backend와 사용자가 추가 확인한 범위이며 새 제품 미결정은 없다.
+
+Native의 nullable selection·permission/selectionReady와 명령 권한 검사를 재사용한다. CHARACTER_SELECTION_REQUIRED의 안내·확정 거절 분류와 미선택 상태에서 기존 캐릭터 선택으로 들어가는 진입을 연결했다. 새 경로/본문/필수 nullable 변경이나 저장 원요청/원ACK 재작성은 하지 않는다. 혼합 M/P 일정 제출/확인·탈퇴/자동승계·혼합 참가자 후계자·다음주 신규 발급과 rollback/후속 재시도 통과는 Backend의 격리 검증 보고이며 Native 신규 시험/실회원 인수로 확대하지 않는다.
+
+Native 연결은 `BackendApp`에서 presence·경고 opt-in을 명시 활성화한다. 재사용 계정/reader 모듈의 opt-in은 호출자가 정하며 실행 중 구계약 fallback/자동 협상은 없다. `RosterIssueController`가 앱 시작·복귀/초기 갱신·명령 이후 요약을 소유하고, 권한 있는 상세·주차/페이지 캐시는 각 소유자가 관리한다. 명령 중 조회는 dirty 후속 조회로 보완하며 기존 참가 명령의 목록/상세 갱신과 경고 요약 통지를 분리해 중복 무효화를 줄인다. presence는 기존 캐시 payload의 독립 필드에 저장해 DB 구조 변경 없이 원본을 보존하고 동일 원정대/소유/roster/lifecycle 범위의 옵션 생략 응답에서만 이전 관찰을 유지한다.
+
+부분 교체의 후보·미리보기·plan은 같은 binding/M을 대조하고 최종 assignments CAS에는 M만 담는다. plan assignment에는 party_no/slot_no가 없으므로 해당 값은 binding으로 보호하고 실제 본문의 ID/revision/item/round/character/role을 직접 비교한다. 완료P와 raw 목록은 제거하지 않는다. 활동 관리 저장·취소 뒤 기존 sheet에서 후보를 다시 읽고 명시 확정하며, 실제 경로/자동 검증 상태와 사용자 기기 항목은 NEXT_WORK/DEV_LOG를 따른다.
 
 1. 실제 OpenAPI·지원 옵션 조합과 DTO/확장 응답 검증을 연결한다.
 2. presence 원본 보존·일반 표시 분리, M/P 교체와 공통 현재 참가 해석을 연결한다.
@@ -97,7 +107,7 @@ WebSocket은 구현하지 않는다. 후속에서는 이벤트를 동일한 범�
 
 사용자 기기 확인은 구현 후 기존 정상 참가/신청·완료·탈퇴, 양 주차 경고와 권한, 해당 원정대 갱신/지속 누락 시 변경, 일부 완료 기록 보존, 활동 관리 저장·취소 후 원래 방/주차 복귀에 한정해 안내한다. 설치·조작은 사용자가 수행한다. 현재는 이 시험을 실행하지 않았다. 기존 내부23PASS·후속 격리 HTTP7PASS·과거 Native 후보 파서 결과와 이번 설계 검토를 신규 Native 기능 통과로 합산하지 않는다.
 
-이번 설계 완료 기준은 사용자 확정 UX·실제 계약·일반 앱 연결 지점·자료/명령 수명·회귀 책임·후속 순서가 기록되고 이전 서버 대기가 최신화되는 것이다. 기능 연결 완료는 후속 구현에서 일반 앱 진입→조회/명령→성공 후 갱신과 자동 검증을 확인한 뒤 판정한다.
+이번 설계 완료 기준은 사용자 확정 UX·실제 계약·일반 앱 연결 지점·자료/명령 수명·회귀 책임·후속 순서가 기록되고 이전 서버 대기가 최신화되는 것이다. 일반 앱 DI/Router→조회/명령→성공 후 갱신 연결과 자동 검증은 확인했으며 실제 회원 명령·기기 인수는 NEXT_WORK의 사용자 확인 단계로 남긴다.
 
 ## Issue17 — 기존 협의·검토 근거
 

@@ -6,6 +6,7 @@ import '../../domain/policies/party_cycle_policy.dart';
 import 'beta_wire_schema.g.dart';
 import 'beta_original_wire_schema.g.dart';
 import 'cycle_group_policy.dart';
+import '../roster_participation.dart';
 
 enum RecruitmentContractMode { legacy, betaWire2 }
 
@@ -23,6 +24,7 @@ class BetaContract {
   static const groupPolicyVersion = 'cycle-group-policy-1';
   static const version = 'beta-recruitment-wire-2';
   static const profile = 'beta-recruitment-1';
+  static const participationProfile = 'remaining-active-1';
   static final Map<String, dynamic> _wire = jsonDecode(betaWireSchemaJson);
   static final Map<String, dynamic> _originalWire = jsonDecode(
     betaOriginalWireSchemaJson,
@@ -75,8 +77,13 @@ class BetaContract {
       if (profiled) 'contract_profile': profile,
       if (!original && params.any((p) => p['name'] == 'group_policy_version'))
         'group_policy_version': groupPolicyVersion,
+      if (!original && params.any((p) => p['name'] == 'participation_profile'))
+        'participation_profile': participationProfile,
     });
   }
+
+  void validateDefinition(String name, Object? value) =>
+      validate(_wire['definitions'][name], value);
 
   void validateRequest(
     String method,
@@ -284,6 +291,7 @@ class BetaResponse<T> {
       original: original,
     );
     contract.validateResponse(method, path, status, json);
+    if (!original) validateRosterEnvelope(json);
     _relations(json);
     final metadata = betaFreeze(json) as Map<String, dynamic>;
     Object? strip(Object? v) => v is Map<String, dynamic>
@@ -310,7 +318,11 @@ class BetaResponse<T> {
         : v is List
         ? v.map(strip).toList()
         : v;
-    return BetaResponse._(parseLegacy(roleMap(strip(json))), metadata);
+    final legacy = Map<String, dynamic>.of(json)
+      ..remove('participation_context')
+      ..remove('character_issues')
+      ..remove('character_issue_context');
+    return BetaResponse._(parseLegacy(roleMap(strip(legacy))), metadata);
   }
 
   static void _relations(Object? raw) {
