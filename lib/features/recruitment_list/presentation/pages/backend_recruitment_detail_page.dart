@@ -1,3 +1,5 @@
+import '../viewmodels/completion_failure.dart';
+import '../widgets/recovery_notice_card.dart';
 import '../widgets/cycle_action_dialog_route.dart';
 import 'dart:async';
 import '../../data/roster_participation.dart';
@@ -326,7 +328,7 @@ class _BackendRecruitmentDetailPageState
                 : m.profile != null && m.value == null
                 ? _projectionDetail()
                 : m.value == null
-                ? Center(
+                ? SingleChildScrollView(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: m.loading
@@ -334,19 +336,27 @@ class _BackendRecruitmentDetailPageState
                           : Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  m.failure == 'ROOM_NOT_FOUND' ||
+                                RecoveryNoticeCard(
+                                  title: '정보를 불러오지 못했습니다',
+                                  message:
+                                      m.failure == 'ROOM_NOT_FOUND' ||
                                           m.failure ==
                                               'ROOM_MEMBERSHIP_REQUIRED'
                                       ? '현재 이 모집을 확인할 수 없습니다.'
                                       : recruitmentFailureMessage(m.failure),
-                                  textAlign: TextAlign.center,
+                                  diagnostic: m.failure == null
+                                      ? null
+                                      : completionDiagnostic(
+                                          m.failure!,
+                                          m.failureDetails,
+                                        ),
+                                  actionLabel: '새로고침',
+                                  onAction: m.load,
                                 ),
-                                const SizedBox(height: 12),
-                                FilledButton(
-                                  onPressed: m.load,
-                                  child: const Text('상세 다시 불러오기'),
-                                ),
+                                if (widget.participation != null)
+                                  CycleCommandBanner(
+                                    controller: widget.participation!,
+                                  ),
                                 if (m.membershipMenu != null)
                                   _membershipActions(),
                                 if (!m.readOnly &&
@@ -368,9 +378,6 @@ class _BackendRecruitmentDetailPageState
                                             : '선택 주차 모집 재개',
                                       ),
                                     ),
-                                  CycleCommandBanner(
-                                    controller: widget.participation!,
-                                  ),
                                 ],
                               ],
                             ),
@@ -392,6 +399,14 @@ class _BackendRecruitmentDetailPageState
         .firstOrNull;
     return '${r?.displayName ?? item['raid_id']} · ${d?.name ?? item['difficulty_id']}';
   }
+
+  String _raidName(Map item) =>
+      m.catalog?.raids
+          .where((r) => r.raidId == item['raid_id'])
+          .firstOrNull
+          ?.displayName ??
+      item['raid_name'] as String? ??
+      item['raid_id'] as String;
 
   bool get _canManage =>
       !m.readOnly &&
@@ -440,9 +455,9 @@ class _BackendRecruitmentDetailPageState
                 ),
             ],
           ),
-          if (!m.readOnly && m.membershipMenu != null) _membershipActions(),
-          if (!m.readOnly && widget.participation != null)
+          if (widget.participation != null)
             CycleCommandBanner(controller: widget.participation!),
+          if (!m.readOnly && m.membershipMenu != null) _membershipActions(),
         ],
       ),
     );
@@ -528,18 +543,19 @@ class _BackendRecruitmentDetailPageState
                 color: AppColors.textSecondary,
               ),
             ),
-            if (_canLead)
-              Wrap(
-                spacing: 8,
-                children: [
-                  _managementButton('settings', '모집 조건 변경'),
-                  _managementButton('common', '공통 정보 변경'),
-                ],
-              ),
           ],
         ),
         if (widget.participation != null)
           CycleCommandBanner(controller: widget.participation!),
+        if (_canLead)
+          Wrap(
+            spacing: 8,
+            children: [
+              _managementButton('settings', '모집 조건 변경'),
+              _managementButton('common', '공통 정보 변경'),
+            ],
+          ),
+
         if (_canManage) ...[
           ListenableBuilder(
             listenable: widget.participation!,
@@ -788,6 +804,7 @@ class _BackendRecruitmentDetailPageState
                   true,
               continuation: room['continuation_enabled'] == true,
               raidLabel: _raidLabel,
+              raidName: _raidName,
             ),
           ),
         Wrap(

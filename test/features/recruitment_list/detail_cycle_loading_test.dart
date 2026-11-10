@@ -78,13 +78,16 @@ void main() {
         await tester.pumpAndSettle();
         expect(selector().enabled, true);
         expect(selector().value, cycles.n);
-        expect(find.text('상세 다시 불러오기'), fails ? findsOne : findsNothing);
+        expect(
+          find.widgetWithText(FilledButton, '새로고침'),
+          fails ? findsOne : findsNothing,
+        );
 
         await tester.tap(find.text('이번 주'));
         await tester.pumpAndSettle();
         expect(selector().value, cycles.c);
         expect(selector().enabled, true);
-        expect(find.text('상세 다시 불러오기'), findsNothing);
+        expect(find.widgetWithText(FilledButton, '새로고침'), findsNothing);
         expect(reads, [cycles.c, cycles.n, cycles.c]);
         expect(gateway.writes, isEmpty);
         await tester.pumpWidget(const SizedBox.shrink());

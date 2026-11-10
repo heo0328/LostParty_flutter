@@ -3,6 +3,7 @@ import '../../../account/domain/role_summary.dart';
 import '../../../account/domain/member_raid_models.dart';
 import 'beta_contract.dart';
 import 'participation_command_evidence.dart';
+import '../batch_completion.dart';
 
 enum RecruitmentCommandOwner { creation, participation, presets }
 
@@ -230,7 +231,10 @@ class RecruitmentCommand {
       (state == RecruitmentCommandState.acknowledged) == (rawAck != null),
     );
     if (rawAck != null) {
-      roleCheck(utf8.encode(rawAck!).length <= 262144);
+      roleCheck(
+        utf8.encode(rawAck!).length <=
+            (isBatchCompletionPath(path) ? 1048576 : 262144),
+      );
       final ack = roleMap(jsonDecode(rawAck!));
       if (contractMode == RecruitmentContractMode.betaWire2) {
         contract.validateResponse(method, path, expectedStatus, ack);

@@ -257,6 +257,28 @@ void main() {
       },
     );
     test(
+      'pending command does not block display reads or get their failures',
+      () async {
+        controller.recoveryIssue = 'LOCAL_STORAGE_UNAVAILABLE';
+        controller.failure = 'REQUEST_IN_PROGRESS';
+        expect(controller.canAct, false);
+        await model.load();
+        expect(model.failure, isNull);
+        expect(model.comparison!.members, hasLength(8));
+        expect(controller.failure, 'REQUEST_IN_PROGRESS');
+        api.respond = (_, _) async => throw const AccountReadException(
+          'WEEKLY_PARTICIPANT_REQUIRED',
+          status: 403,
+        );
+        await model.load();
+        expect(model.failure, 'WEEKLY_PARTICIPANT_REQUIRED');
+        expect(model.failureDetails?.status, 403);
+        expect(controller.failure, 'REQUEST_IN_PROGRESS');
+        expect(controller.recoveryIssue, 'LOCAL_STORAGE_UNAVAILABLE');
+      },
+    );
+
+    test(
       'snapshot changed between plan/context is rejected, not combined',
       () async {
         api.respond = (path, q) async {

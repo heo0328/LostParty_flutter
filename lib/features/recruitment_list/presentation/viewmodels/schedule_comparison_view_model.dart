@@ -27,6 +27,7 @@ class ScheduleComparisonViewModel extends ChangeNotifier {
   bool loading = false, disposed = false, readOnly = false;
   int epoch = 0, weekday = 3;
   String? failure;
+  AccountReadException? failureDetails;
   CycleScheduleView? plan, contextView;
   MembershipReadView? profile;
   ScheduleComparison? comparison;
@@ -45,14 +46,16 @@ class ScheduleComparisonViewModel extends ChangeNotifier {
     selected.clear();
     loading = false;
     failure = 'SESSION_CHANGED';
+    failureDetails = null;
     notifyListeners();
   }
 
   Future<void> load() async {
-    if (!valid || loading || !controller.canAct) return;
+    if (!valid || loading) return;
     final e = ++epoch;
     loading = true;
     failure = null;
+    failureDetails = null;
     notifyListeners();
     try {
       CycleScheduleView? p;
@@ -76,7 +79,7 @@ class ScheduleComparisonViewModel extends ChangeNotifier {
           );
         }
       } else {
-        p = await controller.scheduleRead(room, target, 'plan');
+        p = await controller.readScheduleForDisplay(room, target, 'plan');
       }
       if (!valid || e != epoch) return;
       final ro =
@@ -86,11 +89,12 @@ class ScheduleComparisonViewModel extends ChangeNotifier {
           p?.data['target_state'] == 'ended';
       CycleScheduleView? context;
       if (p != null && !ro) {
-        context = await controller.scheduleRead(room, target, 'context');
+        context = await controller.readScheduleForDisplay(
+          room,
+          target,
+          'context',
+        );
         if (!valid || e != epoch) return;
-        if (context == null) {
-          throw StateError(controller.failure ?? 'INVALID_RESPONSE');
-        }
         final permission = context.data['permissions']['view_schedule_context'];
         if (permission['allowed'] != true) {
           throw StateError(permission['reason'] ?? 'FORBIDDEN');
@@ -121,6 +125,7 @@ class ScheduleComparisonViewModel extends ChangeNotifier {
       }
     } catch (error) {
       if (valid && e == epoch) {
+        failureDetails = error is AccountReadException ? error : null;
         failure = error is StateError
             ? error.message.toString()
             : error is AccountReadException

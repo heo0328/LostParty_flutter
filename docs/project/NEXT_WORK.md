@@ -1,10 +1,33 @@
-# NEXT WORK — 완료 오류·계정 복구 보관·묶음 완료 후속
+# NEXT WORK — 묶음 완료·복구 안내 로컬 dev 통합 및 차후 작업
 
-## 현재 상태와 다음 개발 후속 (2026-11-10)
+## 현재 보관·통합 상태 (2026-11-10)
 
-완료 오류/기존 계정 복구 구간은 Native 연결·자동 검증과 사용자 디바이스 인수를 마쳤다. 기존 계정 복구는 문구 수정 요청 전에 이미 완료됐으며 이후에는 버튼명 ‘현재 정보로 화면갱신’과 두 번째 안내 표시만 변경했다. 동일 복구 재현을 다시 요구하지 않는다. [사용자 인수 회신6756433040](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6756433040).
+사용자 지시로 feature/raid-batch-completion의 기존 묶음 선택 완료47a30dad와 이후 BUG-035/공통 복구 카드·시험·문서/이슈 최신화 전체를 6cee5b54에 보관하고 **로컬 dev 통합을 완료**했다. 병합 충돌은 없고 병합 결과의 lib/test/tool·의존성은 해당 목적 브랜치와 동일하다. 원격 push는 하지 않았다. main·운영/APK·DB/자료는 변경하지 않는다. 작업 브랜치는 삭제하지 않고 유지한다.
 
-다음 개발 후속은 [묶음 생성 레이드의 선택 일괄 완료](../product/DETAIL_IMPROVEMENTS.md#묶음-생성-레이드의-선택-일괄-완료--사용자-확정미구현)다. 완료 알럿을 레이드 이름별 체크박스 목록으로 바꾸고 기본 전체 선택·선택 대상 동시 완료를 제공한다. 현재는 요구사항 기록 상태이며 설계/구현·API 지원 대조·Backend 협의는 미착수다. 이번 보관 작업에서 기능 개발을 시작하지 않는다.
+- 새로 연결한 흐름: 상세 공대장/개인의 기본 전체·부분 선택 원자 완료, 개인 미선택 취소/해당 주차 탈퇴와 완료/취소/과거 이력·승계/마지막 종료 안내. 내 계정의 기존 단건 API·누른 레이드 고정·계정 잔류는 유지한다.
+- 복구 안내: 정상/축약/조회 실패 상세, 내 계정의 주간 참가 영역, 현황/빈 목록에 붉은 공통 카드·채워진 해결 버튼·접힌 진단정보를 제공한다. 원요청 미확정/영역 조회 실패/성공 후 갱신 실패/저장 정리 실패를 구분한다. 자동 팝업은 없으며 다른 방의 이전 요청을 현재 방/캐릭터 오류로 표시하지 않는다.
+- 보존 확인: 원종류/선택/본문/query/key/token/ACK·기존 단건 해석·participation 단일 journal과 새 쓰기 제한 유지. 일정 표시 조회는 canAct/공용 실패에서 분리해 pending 중에도 회원/환경·화면 세대/서버 권한을 검증한다. 복구 이름 전용 GET은 제거하고 카드 복구 후 현재 화면/선택 주차를 유지한다. ACK 뒤 실패는 조회만 재시도한다. 장기 계약은 [설계37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#selected-batch-completion)·[계약26](../backend-migration/26-roster-character-lifecycle-design.md#batch-completion-recovery-boundary)을 따른다.
+- 자동 검증: 최종 전체 flutter test **2,913PASS**, flutter analyze **문제0**. 직접80PASS는 전체 수에 포함한다. 로그는 추적 제외 .dart_tool/batch_completion_review/bug035_{targeted,full,analyze}_final.log다. 이번 문서/보관·통합에서 기능 코드를 바꾸지 않으므로 같은 시험을 반복하지 않고 변경 Dart 포맷 확인·diffcheck/diff 검토와 통합 전후 코드 동일성으로 검증한다.
+- 사용자 확인: 기존 일반 동작 대부분과 BUG-034 뒤 내 계정/기존 조작 정상화 보고는 확인했다. 새 카드 디자인은 차후 Penpot 확인이며 실제 새 카드의 기기 세부 결과는 미확인으로 보존한다. 이 때문에 과거 장애 재현·새 미리보기·정상 기능 전수 재시험을 요구하지 않는다.
+- Git: 기존 게시47a30dad 위 누적 변경26파일 전체를 6cee5b54cb6da70105bc8721bbb5216bec0a94e2에 한 커밋으로 보관하고 dev에 일반 병합했다. 최신 origin/dev f79443e2를 fetch해 조상 관계를 확인했다. origin/dev는f79443e2·origin/feature는47a30dad에 남아 있으며 새 목적 커밋/로컬 병합은 미push다. 최종 병합 SHA/청결 상태는 Git 종료 확인을 따른다.
+
+## 공식 협업 상태
+
+- [#47 completed](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6767992300): Backend가2026-11-10 사용자 지시로 종료했다. Native의 실제 DI→두 상세 선택→Controller/transport/DTO·원ACK 복구·계정 단건 고정 근거와 추가 미연결 없음 판정, Backend 구현/계약/dev 지원 확인을 연결했다. ACK 예측/실제 group_policy 의미 질문도 해소됐으며 추가 구현/계약·동일 시험 대기는 없다.
+- [#48 completed](https://github.com/heo0328/lostparty-backend/issues/48#issuecomment-6767764278): Native 코드 연결/자동 검증과 [Backend 정책3항목6767569951](https://github.com/heo0328/lostparty-backend/issues/48#issuecomment-6767569951) 수용·사용자 회복으로 종료됐다. T−30 합류 마감과 기존 조작/조회·주차/예외 상태는 구분하며 탈퇴 cancelled 뒤 plan403은 성공 ACK를 무효화하지 않는다. Penpot 디자인은 독립 후속이다.
+- [#17 OPEN](https://github.com/heo0328/lostparty-backend/issues/17): 기존 완료 오류/계정 복구 인수·5df515f7 게시·dev f79443e2 통합은 완료다. 오래된 미구현/미통합 표현은 이슈 본문에서 교체하고 #47/#48과 분리했다. 남은 누락 캐릭터/부분 완료 자료와 기기 확인은 아래 별도 후속이며 지금 재현·자료 조작·추가 Backend 변경을 요청하지 않는다.
+- #34·#38·#46은2026-11-08 completed 종료 상태를 직접 재확인했다. 로컬의 OPEN/종료 가능 대기는 해소한다. 원요청 완료와 별도의 운영/서명·보관/복원 미확인을 구분한다.
+- #15 소유권 이전 영향, #18 활동 자동 추가, #19 통계는 별도 후속으로 유지한다. 이 보관·통합은 새 기능 선택/구현·Issue 종료의 승인이 아니다. 순차 이슈 정리 경과와 코드 근거 전달은 DEV_LOG 및 각 Issue를 따른다.
+
+## 다음 단일 작업 — 웹소켓 이전 화면 갱신·모집 변경 알림
+
+이번 보관 다음에는 **수동 새로고침과 화면 이동/재진입 시 필요한 리로드로 갱신·변경 알림 기반을 먼저 설계하고 구현**한다. 웹소켓 구현은 그 이후 별도다. 상세 요구 대장은 [DETAIL_IMPROVEMENTS](../product/DETAIL_IMPROVEMENTS.md)의 ‘계정 참가 갱신·모집 변경 레드닷’, 장기 경계는 [설계37 §37.50](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)이다. 지금은 문서 예약이며 코드 착수는 아니다.
+
+- 계정: 본인 참가 성공 뒤와 내 계정 진입/복귀·수동 새로고침에서 레이드 참가 표시의 유효성을 갱신한다.
+- 모집 변경 발견: 참가 캐릭터 변경·시간 제안·묶음 일부 완료·탈퇴/방 해체 등을 현황/상세와 레드닷으로 확인한다. 읽음/소거 시점·주차/회원별 소유와 오류 시 표시를 먼저 정한다.
+- 데이터 책임: 이미 받은 자료·기존 캐시와 진행 조회를 재사용하고 변경 revision/읽음 근거로 필요한 방·실제 주차/영역만 무효화·조회한다. 변경마다 전체 자료를 다시 조회하지 않는다.
+- 순서: 실제 계정/현황/상세 데이터 흐름·원장/캐시·권한/수명 조사 → 대상/계기/표시·읽음·갱신 계약 설계 → 필요한 Backend 협의 → 수동/진입 갱신 및 레드닷 연결 → 직접 검증/사용자 기기 인수. API/wire·DB/읽음 저장 방식은 아직 미확정이다.
+- 보존: 필터/선택 주차/스크롤/페이지·작성 중 입력·완료 기록/다음주·타인 권한을 유지하고 늦은 응답/중복 조회를 막는다. 후속 웹소켓은 같은 범위 무효화/변경 식별 경계에 연결한다. 별도 푸시 알림/알림함·운영 배포·자료 삭제를 자동 포함하지 않는다.
 
 ## 보관하는 완료 범위와 검증
 
@@ -14,13 +37,13 @@
 - 검증: 최종 전체 Flutter **2,856PASS**, flutter analyze **문제0**. 사용자 **디바이스 테스트 통과(2026-11-10)**는 별도 근거다. 이후 문구/문서 변경은 포맷·diffcheck로 확인했으며 기능 시험을 반복하지 않았다. 자동 로그는 추적 제외 .dart_tool/issue17_review/bug033_adoption_full_final.log·bug033_adoption_analyze_final.log에 보관한다.
 - 현재 계약은 [계약26](../backend-migration/26-roster-character-lifecycle-design.md), 원인/해결 상태는 [BUG-032·033](BUG_REPORTS.md), 완료 경과·중간 검증/정정은 [DEV_LOG](DEV_LOG.md)에 보관한다. 과거 대기·실행 계획을 현재 작업으로 재사용하지 않는다.
 
-## Git 통합 상태 (2026-11-10 사용자 지시)
+## Git 보관·통합 경계 (2026-11-10)
 
-사용자 보관 지시로 최신 누적 변경 전체를5df515f7 하나의 커밋으로 작업 브랜치에 보관·푸시했다. 이후 사용자 dev 병합 지시로 최신 origin/dev86e53e11을 확인하고 feature/raid-character-missing-recovery의3커밋(56cc66c2·7a165ac1·5df515f7)을 dev에 통합하는 구간이다. 코드 충돌/추가 변경 없이 기존 검증2856PASS/분석0·기기 인수를 재사용하고 통합 문서만 갱신한다. 최종 dev/origin 동일성·작업 트리는 Git으로 확인한다. main 병합·배포·자료 삭제·Issue 종료는 포함하지 않는다. 누락 테스트 후속과 묶음 완료가 남아 기존 작업 브랜치는 삭제하지 않는다.
+기존 Issue17은 dev/origin/dev f79443e2에 통합·push됐고 main은86e53e11이다. 이번 누적 변경은 6cee5b54로 보관했고 로컬 dev 통합을 완료했다. remote push는 하지 않으므로 로컬 dev와 origin/dev의 차이는 미게시 상태로 명시한다. 작업 브랜치를 유지하고 main·release·서버/운영/APK·자료 삭제·Issue 종료는 변경하지 않는다.
 
 ## 남은 작업 — 개발용 테스트 자료 준비 후 사용자 디바이스 확인
 
-2026-11-09 사용자 결정으로 기기 테스트를 남은 작업으로 보관한다. 아래 항목은 아직 미확인이며 정상 인수로 처리하지 않는다. 이번 문서 정리/커밋/푸시에서 테스트 자료 조정이나 기기 시험은 실행하지 않는다.
+2026-11-09 사용자 결정으로 기기 테스트를 남은 작업으로 보관한다. 아래 항목은 아직 미확인이며 정상 인수로 처리하지 않는다. 이번 문서 정리/커밋/로컬 dev 통합에서 테스트 자료 조정이나 기기 시험은 실행하지 않는다.
 
 경고·부분 완료 자료가 없는 구간은 미확인으로 남기고, 검증을 위해 실제 게임 캐릭터의 삭제·개명을 요구하지 않는다.
 
@@ -39,17 +62,17 @@
 
 PC 포맷 후 Flutter3.41.6/Dart3.11.4/Java21·기존 설정/고정 의존성 복구와 사용자 dev 로컬 에뮬레이터 Google 로그인 인수를 마쳤다. 복구 당시 분석0/debug APK 빌드·인증 세션15PASS와 이전 기능 전체2817PASS는 서로 다른 검증 범위이며 이번에 다시 실행한 결과가 아니다. 공개 서명 식별표는 [Google 로그인 계약](../architecture/GOOGLE_LOGIN_CONTRACT.md#포맷-후-로컬-복구oauth-서명-식별-2026-11-07)을 따른다.
 
-복구 문서는 docs/local-development-recovery의7be30088에서 보관했고 dev/main 통합 지점은86e53e11이다. 현재 로컬 main/dev와 저장된 origin/main·origin/dev 참조가 일치한다. 2026-11-08 원격 직접 조회는 네트워크 제한으로 확인하지 못했으므로 원격 최신성을 재검증했다고 표시하지 않는다. devtools_options.yaml은 개발 전 사용자 전체 변경 보관 지시에 따라56cc66c2에 포함했다. 기존 v2.0.0 게시도 완료 이력이며 재실행 대상이 아니다.
+복구 문서는 docs/local-development-recovery의7be30088에서 보관했고 당시 dev/main 통합 지점은86e53e11이다. 이후 dev는 위 f79443e2로 진행했으며 main과 같은 시점이 아니다. 저장된 origin 참조와의 일치 및 이번 Issue17 통합 회신 확인은 원격 직접 조회의 재실행과 구분한다. devtools_options.yaml은56cc66c2에 포함했다. 기존 v2.0.0 게시도 완료 이력이며 재실행 대상이 아니다.
 
 ## 유효 후속·다음 행동
 
-1. **웹소켓 검토 예정·현재 미착수:** Issue17 Native 구현·자동 검증을 마쳤고 테스트 자료 준비·기기 확인은 후속으로 남아 있으며 웹소켓은 별도다. 후속 논의 기준은 [설계37 §37.50](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md)이며 대상·시점·화면 표현부터 협의한다. 다른 기기 탈퇴/방 해체에 따른 참가 목록·내 계정 참가 표시·열린 상세 갱신 요구를 포함한다. 이벤트/HTTP·구독 계약이나 구현 범위를 이번에 확정하지 않는다.
+1. **화면 갱신/레드닷 다음 작업·웹소켓 후순위:** 위 다음 단일 작업과 DETAIL_IMPROVEMENTS를 따른다. 기존 웹소켓과 함께 처리하려던 계정·참가 목록·열린 상세 변경 발견을 수동 새로고침/화면 진입 갱신으로 앞당긴다. 웹소켓 이벤트/구독 계약·구현은 아직 미착수다.
 2. **새 release 키 전환·자동 게시 검증:** 추가 기능 개발과 개발 로컬 테스트를 모두 마친 뒤 운영 APK 게시 준비 시 진행한다. 기존 Secret 키 회수 대신 새 키 생성·백업 후 서명 통일이 사용자 결정이다. 지금 키 생성·Secret/CI/OAuth 변경·수동 Actions 시험을 진행하거나 개발 재개 조건으로 요구하지 않는다. 실행 순서·백업 안내와 사본 접근 확인 조건은 [릴리즈 계약 B-1](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup)을 따른다. 실제 게시 버전은 미정이며 게시 자체는 별도 지시가 필요하다.
-3. **Backend 백업·회신/기록 완료:** [최종 인계](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706731221) 기준 로컬 고정자료는 사용자 보관 보고, 운영 기준본은 온라인 생성·PC 내장 SSD 전송·파일 무결성 확인 및 Backend 문서 게시 완료다. 로컬 DB dump는 사용자 제외, 외장 매체 사본은 미확인, 실제 DB/서비스 복원·정기 자동화는 미실행이다. 추가 Native 구현·반복 수용/로그인 시험 요청은 없다. Issue46은 OPEN 유지하며 다음은 사용자 파일 보관과 이후 관련 변경 시 Backend의 필요한 최신 사본 안내다. 복원 시험·정기 자동화를 개발 재개 선행 조건으로 추가하지 않는다.
+3. **Backend 백업·회신/기록 완료:** [최종 인계](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706731221) 기준 로컬 고정자료는 사용자 보관 보고, 운영 기준본은 온라인 생성·PC 내장 SSD 전송·파일 무결성 확인 및 Backend 문서 게시 완료다. 로컬 DB dump는 사용자 제외, 외장 매체 사본은 미확인, 실제 DB/서비스 복원·정기 자동화는 미실행이다. 추가 Native 구현·반복 수용/로그인 시험 요청은 없다. Issue46은2026-11-08 completed로 종료됐으며 사용자 파일 보관과 이후 관련 변경 시 Backend의 필요한 최신 사본 안내는 독립 후속이다. 복원 시험·정기 자동화를 개발 재개 선행 조건으로 추가하지 않는다.
 4. **그 밖의 차후 수정안:** [DETAIL_IMPROVEMENTS](../product/DETAIL_IMPROVEMENTS.md)의 확정/보류/미채택 상태를 따른다. 이번 문서 정리를 별도 제품 개선·전면 기술 진단의 착수 승인으로 사용하지 않는다.
 
-## Issue 종료 준비 — 게시·재조회 완료 (2026-11-08)
+## 종료된 협업 기록 (2026-11-10 재확인)
 
-- [Issue34 최신화 회신](https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6718443740): 양측 v2.0.0 배포/게시 완료로 과거 통합·게시 대기를 교체했다. 운영 전체 인수 미확인·다음 서명 전환은 별도 후속이다.
-- [Issue38 최신화 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6718445004): 양측 구현·검증·로컬 사용자 인수와 후속 운영/Native 게시를 반영했다. 원요청 종료 가능이다.
-- [Issue46 최신화 회신](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6718450091): 합의한 요청 완료로 체크리스트·다음 담당을 교체했다. 상세 백업 정보는 재게시하지 않고 기존 최종 회신을 참조한다. 원요청 종료 가능이다.
+- [#34](https://github.com/heo0328/lostparty-backend/issues/34): Native 릴리즈/Backend 운영 협의의 원요청은2026-11-08 completed 종료. 양측 v2.0.0 게시 이력과 별도 운영 인수·새 서명 전환은 구분한다.
+- [#38](https://github.com/heo0328/lostparty-backend/issues/38): 초대 검색 개선 구현·로컬 사용자 인수 완료로2026-11-08 completed 종료. 추가 요청/동일 시험 대기 없음.
+- [#46](https://github.com/heo0328/lostparty-backend/issues/46): 합의된 백업 조사·보관/문서 인계가 완료돼2026-11-08 completed 종료. 외장 사본·실제 복원·정기 자동화의 미확인/미실행을 새 개발 선행 조건으로 추가하지 않는다.

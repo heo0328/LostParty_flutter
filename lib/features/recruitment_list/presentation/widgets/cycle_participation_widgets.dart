@@ -1,3 +1,4 @@
+import 'participation_recovery_card.dart';
 import 'dart:async';
 import 'recruitment_error_text.dart';
 import 'application_memo_widgets.dart';
@@ -31,6 +32,20 @@ class CycleCommandBanner extends StatelessWidget {
     listenable: controller,
     builder: (context, _) {
       final c = controller;
+      if (c.restoring && !c.hasPending && c.failure == null) {
+        return const Padding(
+          padding: EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Text('이전 요청을 확인하고 있습니다.'),
+              LinearProgressIndicator(minHeight: 2),
+            ],
+          ),
+        );
+      }
+      if (c.recoveryState != null) {
+        return ParticipationRecoveryCard(controller: c);
+      }
       // Completion feedback belongs exclusively to its originating dialog.
       if (c.completionFeedback || c.pendingCompletion) {
         return const SizedBox.shrink();
@@ -46,9 +61,15 @@ class CycleCommandBanner extends StatelessWidget {
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: c.failure != null
+              ? Theme.of(context).colorScheme.errorContainer
+              : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          border: Border.all(
+            color: c.failure != null
+                ? Theme.of(context).colorScheme.error
+                : Theme.of(context).colorScheme.outline,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

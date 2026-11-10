@@ -4,6 +4,7 @@ import '../../../account/domain/role_summary.dart';
 import '../../../account/domain/member_raid_models.dart';
 import '../cycle_interaction_repository.dart';
 import '../cycle_member_actions.dart';
+import '../batch_completion.dart';
 import '../membership_actions.dart';
 import 'beta_contract.dart';
 import 'cycle_group_policy.dart';
@@ -29,6 +30,8 @@ class ParticipationCommandEvidence {
         'membership',
         'removal',
         'departure',
+        'batch_completion',
+        'batch_personal_completion_departure',
       }.contains(kind),
     );
     for (final t in affected) {
@@ -64,6 +67,16 @@ class ParticipationCommandEvidence {
             affected.single == target,
       );
     }
+    if (isBatch) {
+      final e = BatchCompletionAckEvidence(details);
+      roleCheck(
+        e.room == room &&
+            e.target == target &&
+            e.kind.action == kind &&
+            affected.length == 1 &&
+            affected.single == target,
+      );
+    }
     if (kind == 'application') {
       if (wire['application_id'] != null) roleId(wire['application_id']);
       roleCheck(
@@ -78,7 +91,7 @@ class ParticipationCommandEvidence {
     roleCheck((kind == 'submission') == (wire['submission_ack'] != null));
     roleCheck((kind == 'global') == (wire['global_ack'] != null));
     roleCheck(
-      {'membership', 'removal', 'departure'}.contains(kind) ==
+      ({'membership', 'removal', 'departure'}.contains(kind) || isBatch) ==
           (wire['details'] != null),
     );
   }
@@ -138,6 +151,10 @@ class ParticipationCommandEvidence {
     List<String> targets,
   ) => _digest([method, path, query, body, key, status, targets]);
   final Map<String, dynamic> wire;
+  bool get isBatch => const {
+    'batch_completion',
+    'batch_personal_completion_departure',
+  }.contains(kind);
   String get kind => wire['kind'] as String;
   String get room => wire['room'] as String;
   String get target => wire['target'] as String;
@@ -164,6 +181,12 @@ class ParticipationCommandEvidence {
       !path.contains('weekly-incomplete-closures') && !path.contains('resume'),
     );
     final b = roleMap(jsonDecode(body));
+    roleCheck(isBatch == isBatchCompletionPath(path));
+    if (isBatch) {
+      final evidence = BatchCompletionAckEvidence(details);
+      roleCheck(method == 'POST' && path == evidence.path);
+      evidence.bindBody(b);
+    }
     roleCheck((kind == 'membership') == path.endsWith('/membership-actions'));
     roleCheck((kind == 'removal') == path.endsWith('/member-removals'));
     roleCheck(
@@ -227,6 +250,11 @@ class ParticipationCommandEvidence {
   }) {
     final expectedEffects = cycleGroupEffects(wire['group_policy_effects']);
     final actualEffects = cycleGroupEffects(raw);
+    if (isBatch) {
+      BatchCompletionAckEvidence(
+        details,
+      ).validateGroupEffects(expectedEffects, raw);
+    }
     if (expectedEffects.isNotEmpty) {
       for (final actual in actualEffects) {
         roleCheck(
@@ -251,7 +279,9 @@ class ParticipationCommandEvidence {
           .toList();
       roleCheck(matches.isNotEmpty);
       for (final actual in matches) {
-        CycleGroupEffect(expected).validateAck(actual);
+        if (!isBatch) {
+          CycleGroupEffect(expected).validateAck(actual);
+        }
       }
     }
     final decoded = mode == RecruitmentContractMode.betaWire2
@@ -265,6 +295,10 @@ class ParticipationCommandEvidence {
           )
         : null;
     final j = decoded?.value ?? raw;
+    if (isBatch) {
+      BatchCompletionAckEvidence(details).validate(j, key);
+      return null;
+    }
     if (kind == 'membership') {
       return MembershipActionResult.fromEvidence(
         j,
