@@ -8,9 +8,9 @@
 
 ## 현재 작업과 실제 코드 상태
 
-Git: 2026-11-10 사용자 지시로 작업 브랜치의 최신 누적 변경을5df515f7에 보관·푸시한 뒤 dev 통합을 진행한다. 최신 origin/dev86e53e11과 충돌/추가 코드 변경 없이 병합하며 기존 전체2856PASS/분석0·사용자 인수를 재사용한다. 실제 dev/origin 동기화와 checkout은 최종 Git 상태로 확인한다. main 반영·배포·Issue 종료는 별도이며 기존 작업 브랜치는 유지한다.
+Git: 기존 Issue17/완료 오류·계정 복구는 dev f79443e2에 병합·푸시 완료다. [최종 회신](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6756668809)과 저장된 dev/origin 동일성을 확인했다. main은86e53e11이다. 현재는 f79443e2에서 분기한 feature/raid-batch-completion이며 이번 사용자 지시의 보관 범위는 누적 설계·Native 구현·시험 전체의 단일 커밋과 동명 원격 브랜치 푸시다. dev/main은 미통합이며 작업 브랜치는 유지한다. 현재 기능 계획/검증은 NEXT_WORK를 따른다.
 
-완료 오류/기존 계정 복구 구간은 2026-11-10 사용자 디바이스 테스트 통과다. 기존 계정은 문구 수정 전에 이미 복구됐고 이후에는 버튼명/안내 표시만 변경했다. [인수 회신6756433040](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6756433040). 다음 개발 후속은 [묶음 생성 레이드 선택 일괄 완료](../product/DETAIL_IMPROVEMENTS.md#묶음-생성-레이드의-선택-일괄-완료--사용자-확정미구현)이며 문서 기록 상태로 유지한다. 이번 확인에서 구현을 시작하지 않는다.
+완료 오류/기존 계정 복구는 2026-11-10 사용자 인수 완료다. 현재 묶음 일괄 완료는 [Backend44eb4ba3 고정 게시/dev 지원6763005691](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6763005691)을 인계받았다. 원격 전체계약2개 SHA256·새4경로/DTO/profile을 직접 대조해 소비 준비를 확인했다. Native DTO/ACK·기존 단일 저장/복구·Controller와 실제 betaWire2 앱의 두 상세 체크박스 확인창을 연결했다. 계정은 기존 단건/고정 대상을 유지한다. BUG-034 수정 포함 최종 전체 Flutter2,911PASS·분석0이다. 사용자는 일반 흐름 대부분 정상에 이어 수정 앱의 내 계정 표시 정상화를 확인했다. 승계 ACK 소비/사라진 방 복구와 보고된 기기 구간을 보관한다. 미보고 경계 전체를 기기 통과로 확대하지 않는다. 다음은 웹소켓 전에 수동 새로고침·화면 이동/재진입 리로드로 계정/모집 갱신과 레드닷을 먼저 설계·구현하는 작업이다. 변경마다 전체 조회하지 않고 기존 캐시·변경 revision/읽음·필요 범위 무효화를 검토한다. 상세는 NEXT_WORK/DETAIL_IMPROVEMENTS를 따른다. Backend 검증·Native 자동 시험을 실제 회원/기기 성공으로 확대하지 않는다. 기존 구현 보고는 사용자 게시6763748000을 확인했고 새 버그 결과 회신은 미게시다. 고정값/직접회귀·실행순서는 NEXT_WORK를 따른다.
 
 기존 테스트 계정 막힘에 [Backend6742169727](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742169727)의 원무옵션 v3 현재409 거절→정확한 대상 GET→명시적 현재 정보로 화면갱신를 Native에 연결했다. 최종 전체2,856PASS·분석0이며 [결과6742522210](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742522210)으로 인계했다. 과거 전체 전송 이력 증명은 요구하지 않고 현재 근거를 메모리에서만 확인한다. 주차/서버 상태를 표시한 뒤 로컬 활성 대기를 정리하며 원문·ACK·서버 완료 기록을 바꾸지 않는다. 실제 계정 복구와 이번 완료 오류/안내 구간은 사용자 기기 인수를 통과했다. 상세는 NEXT_WORK·계약26을 따른다.
 

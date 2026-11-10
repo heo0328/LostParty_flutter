@@ -393,6 +393,14 @@ class _BackendRecruitmentDetailPageState
     return '${r?.displayName ?? item['raid_id']} · ${d?.name ?? item['difficulty_id']}';
   }
 
+  String _raidName(Map item) =>
+      m.catalog?.raids
+          .where((r) => r.raidId == item['raid_id'])
+          .firstOrNull
+          ?.displayName ??
+      item['raid_name'] as String? ??
+      item['raid_id'] as String;
+
   bool get _canManage =>
       !m.readOnly &&
       m.profile?.projection.readOnly != true &&
@@ -788,6 +796,7 @@ class _BackendRecruitmentDetailPageState
                   true,
               continuation: room['continuation_enabled'] == true,
               raidLabel: _raidLabel,
+              raidName: _raidName,
             ),
           ),
         Wrap(

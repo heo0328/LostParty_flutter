@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'batch_completion.dart';
 import 'roster_participation.dart';
 import '../domain/departure_search_selection.dart';
 import 'beta/beta_contract.dart';
@@ -570,6 +571,7 @@ abstract interface class CycleInteractionGateway {
 class CycleInteractionRepository
     implements
         CycleInteractionGateway,
+        CycleBatchCompletionGateway,
         CycleDepartureGateway,
         CycleRemovalGateway,
         MembershipActionGateway,
@@ -583,6 +585,69 @@ class CycleInteractionRepository
     this.contractMode = RecruitmentContractMode.legacy,
   });
   final RecruitmentContractMode contractMode;
+  @override
+  bool get batchCompletionEnabled =>
+      contractMode == RecruitmentContractMode.betaWire2;
+  @override
+  Future<BatchCompletionPreview> batchCompletion(
+    String room,
+    String target,
+    BatchCompletionKind kind,
+    List<String> rounds,
+  ) => _decode(() async {
+    roleId(room);
+    raidCycleKey(target);
+    final ids = batchRoundIds(rounds);
+    final path = '/v2/raid-rooms/$room/${kind.contextSuffix}';
+    final query = {'target_cycle_key': target, 'round_ids': jsonEncode(ids)};
+    if (interactionApi is BetaInteractionApi) {
+      final decoded = await (interactionApi as BetaInteractionApi)
+          .requestDecoded(path, query: query);
+      return BatchCompletionPreview(
+        room,
+        target,
+        kind,
+        ids,
+        decoded.value,
+        metadata: decoded.metadata,
+      );
+    }
+    final raw = await interactionApi.request(path, query: query);
+    return BatchCompletionPreview(room, target, kind, ids, raw!);
+  });
+
+  @override
+  Future<void> writeBatchCompletion(
+    BatchCompletionPreview preview,
+    String key,
+    Map<String, dynamic> body,
+  ) => _decode(() async {
+    roleId(key);
+    roleCheck(scheduleStable(body) == scheduleStable(preview.body()));
+    final client = interactionApi;
+    final Map<String, dynamic> raw, metadata;
+    if (client is BetaInteractionApi) {
+      final response = await client.requestDecoded(
+        preview.path,
+        method: 'POST',
+        body: body,
+        idempotencyKey: key,
+      );
+      raw = response.value;
+      metadata = response.metadata ?? raw;
+    } else {
+      raw = (await client.request(
+        preview.path,
+        method: 'POST',
+        body: body,
+        idempotencyKey: key,
+      ))!;
+      metadata = raw;
+    }
+    final evidence = BatchCompletionAckEvidence.fromPreview(preview);
+    evidence.validateGroupEffects(preview.groupEffects, metadata);
+    evidence.validate(raw, key);
+  });
   final bool includeGroupList;
   @override
   bool get applicationMessagesEnabled =>

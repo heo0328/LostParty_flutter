@@ -224,7 +224,7 @@ void main() {
   );
   group('closed beta models and explicit profile', () {
     test(
-      'all 64 existing operations are profiled; only two preset operations are unprofiled',
+      'all 68 operations including four batch routes are profiled; presets stay unprofiled',
       () {
         final wire = jsonDecode(betaWireSchemaJson) as Map<String, dynamic>;
         final operations = wire['operations'] as List;
@@ -245,7 +245,18 @@ void main() {
             profiles++;
           }
         }
-        expect(profiles, 64);
+        expect(profiles, 68);
+        for (final suffix in [
+          'batch-completion-context',
+          'batch-completions',
+          'batch-personal-completion-departure-context',
+          'batch-personal-completion-departures',
+        ]) {
+          expect(
+            operations.where((o) => (o['path'] as String).endsWith('/$suffix')),
+            hasLength(1),
+          );
+        }
         expect(presets, 2);
       },
     );

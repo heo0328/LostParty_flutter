@@ -1,5 +1,123 @@
 # 개발 이력
 
+## 2026-11-10 — 묶음 완료 계정 표시 정상화 확인·문서 정리와 브랜치 보관
+
+사용자가 BUG-034 수정 앱에서 내 계정 표시 정상화를 확인하고, 이번 브랜치 작업 내역/다음 갱신·알림 작업을 문서에 정리한 뒤 커밋·푸시하도록 지시했다. 이전의 일반 동작 대부분 정상·계정 묶음 영향 안내 정상 보고와 이번 계정 복구 확인을 구분해 기록했다. 계정 회색 표시 복구 대기는 해소하며, 미보고된 모든 예외/기기 경계의 재시험까지 통과로 확대하지 않는다. 현재 캐릭터 후보 표시는 기존 서버 계약의 정상 동작으로 판정한 사용자 결정을 유지한다.
+
+새로 가능해진 흐름은 상세 공대/개인 체크박스 선택 완료·단일 원자 명령과 정확한 효과/이력 ACK 검증, 사라진 방의 기존 batch 결과 확인/복구다. 내 계정 단건 고정 대상·계정 잔류, 기존 단건/저장 원문·원ACK, 확인창 수명·조회만 복구를 보존했다. 생성 projection의 기존67 operation/기존 definition이 모두 동일하고 신규4 operation만 추가됐음을 다시 대조했다. 기능 계약은 설계37/계약26, 현재 상태/후속은 NEXT_WORK/AI_CONTEXT, 정상화는 BUG-034, 예약된 UX는 DETAIL_IMPROVEMENTS에 반영하고 오래된 조사/구현/기기 대기 문구를 교체했다.
+
+다음 작업은 웹소켓 전에 수동 새로고침과 화면 이동/재진입 리로드를 통해 계정 참가·모집 변경을 갱신하고 레드닷으로 확인하는 기반을 조사·설계·구현하는 것이다. 캐릭터 변경·시간 제안·묶음 일부 완료·탈퇴/해체의 변경 식별/읽음과 기존 캐시·진행 조회 재사용·필요한 방/실제 주차만 무효화하는 경계를 먼저 정한다. 매 변경 전체 자료 조회는 기본 해법으로 삼지 않는다. 과거 웹소켓과 함께 하려던 범위를 앞당겼으며 웹소켓/푸시 알림/새 알림함 구현, 서버/DB 변경은 이번 보관 범위가 아니다. 이 후속 코드에는 착수하지 않았다.
+
+이번은 문서 정리/보관이며 마지막 전체 flutter test **2,911PASS**·analyze **문제0**을 재사용한다. Dart 포맷0변경·diffcheck·전체 변경/신규 파일 검토와 원격 dev/목적 브랜치를 확인한다. 사용자 설치·조작은 에이전트가 수행하지 않았다. 커밋 대상은 추적 제외 자료를 제외한 현재 누적 코드·시험·문서 전체이며 단일 커밋으로 feature/raid-batch-completion에 보관하고 같은 이름 origin 브랜치로 푸시한다. dev/main 통합·브랜치 삭제·운영/APK 배포·자료 초기화·Issue 종료는 제외한다. 실제 커밋/원격 동일성과 잔여 작업 트리는 Git 결과로 확인한다.
+
+Issue47의 기존 구현 보고6763748000은 사용자 게시/재조회 완료다. BUG-034 수정·계정 정상화·이번 보관의 최신 회신은 댓글 도구의 PR 목적지 문제 때문에 미게시이며 게시된 것으로 기록하지 않는다. 수동 회신 초안을 최신화하고 커밋/푸시 결과와 함께 인계한다. 별도 선택창 로딩 요청6765184015의 기기별 식별 대조는 미확인으로 남기며 승계 ACK 오류/현재 캐릭터 표시 정상 판정과 혼동하지 않는다.
+
+## 2026-11-10 — BUG-034 승계 batch 원ACK 소비 수정·기기 복구 대기
+
+사용자는 공대/개인·계정 묶음 영향 안내 등 대부분 정상과 A로 일부 완료→남은 참가 B로 변경→개인 완료·탈퇴의 승계 뒤 INVALID_RESPONSE를 보고했다. 공대장 승계는 반영됐고 계정 회색 표시/이전 참가 목록이 남았다. 마지막 참가자 종료는 정상이다. 전체 인수 완료로 처리하지 않는다. 현재 캐릭터의 후보 표시는 사용자 판단으로 기존 계약의 정상 동작이며 수정하지 않았다.
+
+직전 diff/고정 Backend와 dev HTTP/저장 ACK 내부 판정으로 조사했다.19:46:19/29 KST 승계 요청200 뒤에 weekly-summary 호출이 없고19:50:39 마지막 종료200 뒤에는 조회가 이어졌다. 승계 ACK의 group_policy_effect.after.revision=null과 기존 Native rolePositive 검사가 충돌했다. 같은 ACK의 known group_policy는 같은 방/T/cycle/세대/public 유지/revision1을 증명했다. 원ACK 반출은 자동 승인 검토가 민감정보 위험으로 거절해 실행하지 않았고, READ ONLY 서버 내부 schema/관계 검사 결과(enum·건수·revision·boolean)만 출력했다. 확인한 종료 assignment 두 건은 completed/ended·해당 주간 활성 점유 없음이었지만 사용자 A/B 식별자 대조나 다른 참가까지 정상임을 확정하지 않았다. 서버/DB·원ACK·사용자 자료는 변경하지 않았다.
+
+신규 batch 개인 승계에만 원ACK 내부 policy 증거로 정확한 유지/변경 revision과 예상 효과를 검증한다. 원문/body/query/key/token/checksum은 보존하고 일반 그룹 ACK 검사를 완화하지 않는다. 저장 근거 누락/대상·state·revision 위조를 거절한다. 실제 transport의 저장→송신→ACK→정리/조회 경로와 직접 Gateway 모두 metadata를 보존한다. 이미 탈퇴한 방의 상세 진입에 의존하지 않도록 현황에 batch pending 전용 ‘완료 요청 결과 확인’을 연결해 기존 확인창을 재사용한다. 재시도 성공 후 조회를 두 번 하던 조건도 제거했다.
+
+수정 전 합성1실패가 CycleGroupEffect.validateAck→rolePositive(null)를 재현했다. 보강 후 batch 직접55개 포함 최종 전체 flutter test **2,911PASS**, analyze **문제0**, 포맷·diffcheck·diff 검토 완료다. group 공개 유지/연결 해제(+1), 잘못된 proof/다른 주차·세대 거절, 일반 그룹 strict 유지, 원요청 재시작 복원/원ACK 재검증·강제 이동 없음, 읽기 권한 없는 방 복구·단일 후속 조회를 확인했다. 중간 widget 시험의 조회2회 실패에서 실제 중복 조회를 수정했으며 기대값을 완화하지 않았다. Backend 시험은 합산하지 않는다. 로그는 .dart_tool/batch_completion_review/bug034_reproduce.log·bug034_direct.log·bug034_full_final.log·bug034_analyze_final.log다.
+
+다음은 사용자의 수정 앱 재실행→현황 결과 확인/재시도→계정/목록 최신 반영 확인 한 구간이다. 실제 회색 표시 해소/회원 인수는 미확인이다. 사용자가 보고한 기존 계정 진입 참가 갱신·모집 변경 레드닷은 현재 기기 검증을 끝낸 뒤 다음 작업으로 DETAIL_IMPROVEMENTS에 기록했다. 전체 재조회 대신 기존 캐시·변경 revision/읽음·선택 무효화와 후속 웹소켓 연결 경계를 검토하며 이번에는 구현하지 않았다. 기존 구현 보고6763748000의 사용자 게시를 확인했으며 이번 버그 회신은 아직 미게시다. feature/raid-batch-completion 유지·누적 미커밋/미push·dev 미통합, 배포·기기 조작·자료 초기화·Issue 종료 없음.
+
+## 2026-11-10 — 선택 일괄 완료 Native 연결·자동 검증
+
+고정 Backend44eb4ba3/two-cycle SHA256 2c51d2f2…를 소비해 새4 operation과 재귀 schema를 생성했다. 기존 단건 schema·원요청을 보존하고 BatchCompletionPreview/AckEvidence/Gateway, 기존 participation 단일 저장/transport와 Controller를 연결했다. 신규 batch 두 종류만 ACK1MiB, 기존256KiB는 유지한다. 체크박스 선택은 실제 BackendApp betaWire2 DI와 상세 두 진입에서 사용한다. 최초 전체·재조회 교집합/신규 자동 선택 없음·빈 선택 금지·직렬 미리보기/선택 세대·제출 직전 재확인과 변경 시 재확정을 적용했다. 개인 완료/취소/이력 보존·승계/마지막 종료·그룹 영향 안내를 연결했다.
+
+보존한 기존 흐름은 계정의 누른 round1개 고정·단건 API/계정 잔류, 구형 단건 pending 해석/원문 재송, 신규 batch 원선택 잠금 복구와 계정 단건 구분, ACK 후 조회만 복구, 재시작·닫힌 창의 늦은 성공 강제 이동 차단이다. 마지막 개인 종료는 표시 assignment가 없는 활성 round도 변경하므로 round revision 전체를 plan 활성 집합과 결합한다. 일반 성공 이벤트와 갱신 경로는 재사용하며 부분 완료의 잔여 방을 강제로 제거하지 않는다.
+
+신규 직접 경계38개와 기존 회귀를 포함해 최종 전체 Flutter **2,894PASS**, analyze **문제0**이다. 포맷·git diff --check·diff 검토와 생성 재실행 동일성을 확인했다. 중간 신규 시험4실패는 테스트 미리보기의 group metadata 누락으로 의미 서명이 달랐던 fixture를 수정했고, 기존 API 개수 기대64는 신규4개를 명시 검증하는68로 갱신했다. 프로덕션 검증을 완화하지 않았다. SDK wrapper 대기로 정체됐던 자체 helper 프로세스를 확인·정리한 뒤 직접 Dart/Flutter snapshot 호출로 검증을 마쳤다. 로그는 .dart_tool/batch_completion_review의 full_final.log/analyze_final.log다.
+
+실기기·회원 업무 성공은 미확인이다. 다음은 사용자의 dev 로컬 공대/개인 전체·부분 선택, 계정 고정 대상, 기존 이력/재가입·다음주·예약/사용량 인수다. Backend 원자성 시험을 Native 통과 수에 합산하지 않았다. Issue47 회신은 댓글 도구의 PR 목적지 문제/기존 자동 승인 거절로 미게시이며 같은 차단 호출을 반복하지 않았다. feature/raid-batch-completion 유지·전체 변경 미커밋/미push·dev 미통합, 배포·기기 조작·자료 삭제·Issue 종료 없음.
+
+## 2026-11-10 — Backend44eb4ba3 게시/dev 지원 확인·고정 전체계약 직접 대조
+
+사용자가 개발서버 반영 완료를 알렸고 [Backend6763005691](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6763005691)에서44eb4ba34844eb81801608ed5953cf3bb1ba0852 게시·원격일치/dev image 반영/healthy·실행파일/두계약 일치·기존 DB0036/자료/키/환경 보존 인계를 확인했다. 실제 리스너HTTP8개/구조화오류0은 Backend 보고이며 새경로401을 회원 명령 성공으로 취급하지 않는다. 운영/APK·merge·자료초기화 없이 로컬dev만 반영됐다는 범위를 유지한다.
+
+고정 구현 설명과 두 전체계약을 조회했다. 대용량 fetch_file이 content를 비워 반환해 Git blob54fe3e60/d1fbe8f4의 원문을 읽었다. 기본SHA25618491bc0…/two-cycle2c51d2f2… 직접 계산값이 회신과 일치했고 기본125/142·two-cycle192/213, Batch4경로의 필수T/JSON round_ids·profile3종과 BatchCommand/Party·PersonalContext/ACK를 대조했다. 계산함수는 알려진abc SHA256 벡터와 먼저 대조했다. 이는 계약 원문 검토이며 Flutter/서버 기능 시험이 아니다. 게시 고정 구현 설명에 남은 당시 미커밋/미반영 문구는 작성 당시 이력이며 최신 실행/게시 상태는 이번 Issue 회신을 따른다.
+
+Backend 게시/실행 선행 대기를 NEXT_WORK/AI_CONTEXT/제품 대장에서 해소하고 다음 담당을 Native 연결로 교체했다. 현재 새로 가능한 앱 흐름은 아직 없고 lib/test/tool·생성 PIN·기존 원문/ACK는 미수정이다. 이후 고정계약 projection/DTO/ACK·저장복구·Controller/두확인창/계정고정 연결·신규자동검증·사용자 기기 인수가 남았다. 문서 diffcheck/내용과 원격계약 읽기만 수행했으며 feature/raid-batch-completion·누적 미커밋/미push·dev 미반영 유지, 배포/자료 변경·Issue 종료 없음.
+
+## 2026-11-10 — Issue47 Backend 공개 명령 로컬 구현/검증 수신·게시/dev 인계 대기
+
+사용자의 회신 확인 요청으로 [Native 수용6761376813](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6761376813) 실제 게시와 [Backend 결과6762507528](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6762507528)를 확인했다. 공개4경로·v3 context/ACK/proof·권한/CAS/원자 공대/개인 완료와 실행 OpenAPI를 로컬 구현했고 최종 고유123PASS(신규24/선택회귀99)·도구63PASS 별도를 보고했다. 기본 전체 계약/기존 component 보존·two-cycle4경로/22Batch schema 추가와 profile선언69동작 일치도 Backend 보고다. Native가 원본파일/소스나 실행서버를 독립 검증한 것은 아니다.
+
+새 구현은 feat/raid-batch-completion의 미커밋·미push이며 기준084a6af/검증image manifest를 새 Git SHA로 취급하지 않는다. 계약 해시는 로컬 파일 보고로만 NEXT_WORK에 기록했고 생성 PIN/기능 코드를 변경하지 않았다. 실제 dev API/DB0036·운영은 미교체이므로 다음 담당은 Backend의 게시/로컬 반영 지시 범위 내 고정 커밋·계약/실행 지원 인계다. NEXT_WORK/AI_CONTEXT/제품 대장의 미게시 수용/제안만 상태를 최신화했다.
+
+새 앱 흐름은 없고 lib/test/tool·기존 원문/ACK는 보존됐다. Native 연결·신규 자동검증·실제dev/기기 인수는 미완료다. 문서 diffcheck/내용·댓글 재조회만 수행했다. feature/raid-batch-completion 유지·누적 미커밋/미push·dev 미반영, 배포/자료 변경·Issue 종료 없음.
+
+## 2026-11-10 — v3 수용 확정·공개 구현 인계문 준비
+
+현재 담당 브리핑 후 사용자가 진행을 승인했다. 최신 Issue47이 v3까지이고 Native 수용 회신이 없는 것을 확인해 수용/공개 DTO·API 구현·고정 계약/검증/dev 지원 인계 요청을 준비했다. 소비 필드 교체·전체활성 표시·과거 이력proof 저장/원context·ACK 동일성, 기존 단건/계정고정·주차/권한·승계/원문복구 보존을 수용하며 Native 원장 해시 재계산/과거ID 재조회는 요구하지 않는다. NEXT_WORK/AI_CONTEXT의 확인 전용 상태를 수용 확정/전달 준비로 교체했다.
+
+댓글 도구 정의가 계속 PR Conversation/pr_number이므로 이전과 동일한 차단 호출을 반복하지 않았다. 수용 답변은 아직 미게시이며 인계 완료나 Backend 공개 구현 착수를 확인한 것으로 보고하지 않는다. 사용자가 전달할 원문은 NEXT_WORK에 보관했다. 새 기능·lib/test/tool 변경 없음, 문서 내용/diffcheck만 수행했다. feature/raid-batch-completion 유지·미커밋/미push·dev 미반영, 배포/자료 삭제·Issue 종료 없음.
+
+## 2026-11-10 — Issue47 v3 회신 확인·표시/이력proof 소비 대조
+
+사용자가 회신 요청을 회신 확인으로 정정해 새 댓글 없이 [Backend6761002885](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6761002885)를 읽었다. v3는 활성 effect의 정확한 ID/전체round 표시와 과거 완료의 레이드별 count/digest proof를 분리하고 이력5/40 상한을 폐기했다. 과거 기록 scope·인증본인 분리·배치해시/새완료 제외 proof와 원context/ACK 동일성이 명시돼 두 추천안의 Native 연결이 가능한 방향으로 판단했다. v2의5개 Schema 정의 교체와12개 JSON 예시를 파싱하고6context의 round/assignment 매핑·효과별ID·이력 합계/해시형식,5개context/ACK 쌍의 proof/선택/expected_after state를 읽기 대조해 불일치가 없었다. 이력 원본은 응답에 없으므로 Native가 과거 원장 해시 자체를 독립 재계산했다고 주장하지 않는다.
+
+Backend 내부 PostgreSQL4PASS/34.09s·개인258/공대259 이력/재가입/범위/배치/원본보존 근거는 별도 보고다. 공개 API/실행 OpenAPI·실제 dev/운영 반영은 없고 미커밋·미push다. Native 수용 회신 후 공개 계약 확정/구현을 요청하는 단계이며 이번에는 새 요청/수용 댓글을 게시하지 않았다. NEXT_WORK/설계37/AI_CONTEXT에 소비 정의·미게시/다음 담당을 갱신했다.
+
+새 기능은 아직 없고 lib/test/tool·기존 단건 원문/ACK는 그대로다. 공개 명령/HTTP·권한/CAS/동시성/원자 rollback/원ACK·Native 연결·신규 시험/기기 인수는 미완료다. 문서 diffcheck/내용과 댓글/예시 읽기만 수행했다. feature/raid-batch-completion·누적 미커밋/미push·dev 미반영 유지, 배포·자료 삭제·Issue 종료 없음.
+
+## 2026-11-10 — 추천안 구현 의뢰 사용자 게시·인계 확인
+
+사용자의 수동 게시 보고 후 [Issue47 댓글6760758009](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6760758009)를 재조회했다. v2 보완 수용·두 추천안과 기존 기록/재가입 보호·회귀 검증/고정 source·OpenAPI SHA256/dev 지원 요청이 게시됐다. NEXT_WORK의 미게시 대기/전달문을 게시 링크와 Backend 보완·구현 인계 대기로 교체하고 AI_CONTEXT도 갱신했다. 도구 자체가 복구된 것으로 해석하거나 중복 게시하지 않는다. 앱 기능/원요청/ACK는 미수정이고 신규 시험·서버 지원·기기 인수는 미완료다. 문서 diffcheck/내용 및 게시 본문 재조회만 수행했다. feature/raid-batch-completion 유지·누적 미커밋/미push·dev 미반영, 배포·자료 변경·Issue 종료 없음.
+
+## 2026-11-10 — 추천 보완2건 사용자 채택·설계 반영/구현 의뢰 게시 차단
+
+사용자가 기능별 영향·달라지는 UX 설명을 확인하고 추천안 채택·기획/Backend 구현 의뢰를 승인했다. 선택 round_ids와 별개인 모든 영향 assignment의 round 표시 매핑, 활성 참가 한도와 누적 완료 이력 분리/기존 다른 캐릭터 재가입·기록 보존을 설계37·제품 대장에 반영했다. 추가 화면/사용자 정리 단계·이력 삭제/접근 축소·재가입 제한은 도입하지 않으며 v2의 총합40/5 일률413은 채택하지 않는다. 실제1MiB 응답 상한은 유지한다. 정확한 집계/보존 증명·변경 wire는 Backend가 제시한다.
+
+최신 Issue47은 v2까지임을 재조회했다. v2의 기존 보완 수용·두 변경 목표·예시/Schema와 직접 회귀/구현/고정 계약·dev 지원 인계를 포함한 댓글을 준비했으나, 도구 필수 pr_number를 자동 승인 검토가 PR 목적지 위험으로 거절해 새 의뢰는 게시되지 않았다. 중복 승인이나 우회 게시를 하지 않고 NEXT_WORK에 전달문/미게시 상태를 기록한다.
+
+새 앱 기능은 없고 Native 코드/기존 동작·원요청/ACK는 그대로다. Backend 변경 wire/구현/실행 지원·Native 연결/신규 시험·기기 인수는 미완료다. 검증은 문서 내용/diffcheck·최신 댓글 조회이며 Flutter 시험은 반복하지 않는다. feature/raid-batch-completion 유지·누적 미커밋/미push·dev 미반영, 운영/APK 배포·자료 삭제·Issue 종료 없음.
+
+## 2026-11-10 — Issue47 보완v2 소비 대조·잔여 표시/이력 상한 확인
+
+사용자의 회신 확인 요청으로 [Backend6760087700](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6760087700)을 읽었다. profile=beta-recruitment-1 정정과 닫힌 Schema/전체응답12개·거절/null·expected_after/동일 revision키 집합 및 상태/leadership 대조 정의가 제공됐다. Schema와12개 합성 JSON을 파싱해 표시 round/assignment 범위를 읽기 대조했다. Backend 보고의 Schema/format12개·잘못된36개 거절은 Backend 자체 근거이며 Native나 서버/HTTP/기기 시험 통과로 합산하지 않는다.
+
+v2 personal_leave/successor는 선택11/12의 이름만 제공하지만 assignments에는 취소13/완료보존14가 있고, 마지막 부분 선택도 취소12 이름이 없다. 기존 개인 확인창/DeparturePreview는 context의 raid_name/difficulty_name으로 영향 이름을 검증·표시한다. v2 AssignmentDisplay에는 UUID/effect만 있어 미선택의 표시 근거 보완이 필요하다. 또한 총 영향 공대40/개인5 초과의413 거절은 이미 인수된 완료 후 다른 캐릭터 재가입/기록 보존(설계37 §37.88)과 대조해 실제 집계 범위·이력 누적 영향을 확인해야 한다. 확정 제한으로 채택하지 않고 NEXT_WORK의 기존3개 요청을 해결 사실/잔여2건으로 교체했다.
+
+새 기능/최종 합의는 아직 없고 lib/test/tool·기존 요청/ACK는 미수정이다. 추가 검토 결과는 아직 Issue 미게시이며 기존 도구/자동 검토 충돌을 우회하지 않았다. 문서 내용/diffcheck만 수행하고 기능 시험은 반복하지 않았다. feature/raid-batch-completion 유지·누적 미커밋/미push·dev 미반영, Backend는 여전히 제안·서버 미지원이며 운영/APK/자료 변경·Issue 종료 없음.
+
+## 2026-11-10 — Issue47 사용자 직접 답변 게시·재조회 확인
+
+사용자가 검토 답변 게시를 보고했고 [Native 검토6759918260](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6759918260)을 재조회했다. 전용4경로/선택 집합 원자성/기존 단건 보존 방향 수용과 profile 값·닫힌 context/ACK 및 전체 예시·revision/탈퇴 결과 대조 기준의3개 보완 요청, 현재 미구현 경계가 게시된 것을 확인했다. 도구 차단으로 남았던 회신 인계는 사용자 직접 게시로 해소됐고 NEXT_WORK/AI_CONTEXT의 미게시 상태를 Backend 보완 회신 대기로 교체했다. 같은 댓글을 중복 게시하지 않는다.
+
+새 앱 기능/계약 합의는 아직 없고 lib/test/tool·원요청/ACK는 미수정이다. Backend 보완·구현/실행 지원·Native 연결/신규 시험·기기 인수는 미완료다. 검증은 게시 본문 재조회·문서 내용/diffcheck이며 Flutter 시험은 반복하지 않았다. feature/raid-batch-completion 유지·누적 미커밋/미push·dev 미반영, 배포/자료 변경·Issue 종료 없음.
+
+## 2026-11-10 — Issue47 답변 명시 게시 승인 후 도구 차단 지속
+
+사용자가 이슈 답변 게시를 명시 지시했다. 최신 Issue47 댓글을 다시 읽어 기존 Backend 제안1개/Native 회신 미게시를 확인한 뒤 준비한 검토 답변을 add_comment_to_issue에 전달했다. 필수 pr_number=47 인수를 자동 승인 검토가 다시 PR 댓글 목적지 위험으로 거절해 게시되지 않았다. 사용자 권한 부족이 아니므로 같은 승인을 반복 요청하지 않으며 우회 게시도 하지 않는다. 이슈 대상 게시가 가능한 도구 경로 확보가 필요한 상태로 NEXT_WORK를 교체했다. 코드/서버/기기·commit/push 변경 없음, 문서 diffcheck만 수행했다.
+
+## 2026-11-10 — Issue47 Backend 제안v1 소비 검토·회신 게시 차단
+
+사용자 요청으로 [Backend6759461926](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6759461926)과 최신 본문/댓글·작업 브랜치/누적 문서를 확인했다. 네 전용경로·신규operation·정렬된1~5개round 집합/단일JSON query·공대/개인 원자 처리와 단건 보존 방향은 승인 설계에 맞고 기존 participation 슬롯 연결이 가능하다. UI는 모집 순서, wire는 정렬 집합, 재송은 원문을 유지한다. Backend는 로컬 문서/합성 예시만 작성·미push·서버 미지원이며 원격 계약 구현을 받은 것은 아니다.
+
+현재 BetaContract.version=beta-recruitment-wire-2와 profile=beta-recruitment-1을 구분해 제안의 contract_profile=wire-2 불일치를 확인했다. 추가로 전체 닫힌 context/ACK·거절/nullable/display 한도, revisions 전이/개인 탈퇴 최종 state/leadership 대조 정의를 보완 대상으로 정리했다. 기존 단일 departure 검사/kind를 느슨하게 하지 않고 신규 batch 종류/ACK 근거를 분리하는 소비 방향이다. 정확한 차이는 NEXT_WORK에 둔다.
+
+검토 댓글을 작성했으나 add_comment_to_issue 도구는 issue_number 호출에 pr_number/comment 필수 schema 오류를 반환했다. 해당 인수로 게시하자 자동 승인 검토가 PR 댓글 목적지 위험으로 거절했다. fetch_issue로 실제 생성한 Issue47 URL/번호/제목/OPEN을 재확인하고 issue_number도 함께 명시했지만 같은 이유로 거절되어 게시를 중단했다. 우회 도구로 게시하지 않았으며 사용자에게 이유/승인을 요청한다. 회신/계약 합의 완료로 표시하지 않는다.
+
+- 새로 가능해진 흐름: 기능 없음, 제안 소비 검토/보완 내용 기록.
+- 보존 확인: lib/test/tool·저장/원문/ACK·기존 기능 미수정. 기존 미커밋6개 문서에 검토 기록을 누적했다.
+- 미확인: Backend 보완/최종 계약·구현·dev 지원·Native 연결/신규 시험·기기 인수. 댓글 미게시가 현재 인계 장애다.
+- 검증: 제안/현재 코드 대조·문서 diffcheck/내용 검토. 기능 변경 없어 Flutter 시험 미반복. 현재 feature/raid-batch-completion 유지·미커밋/미push·dev 미반영, 배포/자료 변경·Issue 종료 없음.
+
+## 2026-11-10 — 묶음 선택 완료 착수·Backend 계약 확장 요청
+
+사용자가 기획/설계를 승인하고 구현을 지시했다. clean dev f79443e2와 local/저장된 origin 브랜치를 확인했으며 별개 대단원 feature/raid-batch-completion을 생성했다. 종료 조건은 양측 계약·실제 연결·검증·사용자 인수다. 기존 Issue17 최신 회신6756668809에서 이전 dev 통합 완료를 확인하고 NEXT_WORK/AI_CONTEXT의 진행 중 문구와 main/dev 동일시점 오해를 정정했다.
+
+상세 공대장·개인 모두 복수 선택/기본 전체 선택, 개인 미선택은 참가 취소 후 주차 탈퇴, 계정 개별 완료는1개 고정이 사용자 확정이다. 기존 단건 계약·개인 complete1 제한·pending 단일round·ACK/저장/계정 진입·성공 갱신 경계를 조사했고 제품/설계37/계약26에 현재 구현과 승인 목표를 구분했다. 기존 묶음 전용 Issue가 없는 것을 검색하고 [Backend Issue47](https://github.com/heo0328/lostparty-backend/issues/47)에 원자 명령·집합 증명·기존 원문 호환·dev 지원 및 담당/완료 조건을 요청했다. endpoint/DTO/profile은 미확정으로 Native가 임의 구현하지 않는다.
+
+- 새로 가능해진 흐름: 앱 기능은 아직 없다. 설계 기록·공식 계약 요청/추적을 마련했다. 다음 담당 Backend, 계약 제안/고정 지원 인계 후 Native 연결이다.
+- 보존 확인: lib/test/tool·의존성은 미수정이며 기존 완료/계정 복구/원요청·사용자 인수 흐름은 그대로다. 신규 화면·완료 효과를 활성화하지 않았다.
+- 미확인: 신규 계약/서버 구현·실제 dev 지원·Native 기능/자동 검증·사용자 기기 인수. 기존2856PASS/분석0을 신규 기능 결과로 재사용하지 않는다. 누락 캐릭터 자료/기기·웹소켓은 별도 후속이다.
+- 검증: 문서 내용/diffcheck·링크와 게시 본문 재조회 대조. 기능 코드 변경이 없어 Flutter 시험은 반복하지 않는다. 설계 문서는 미커밋·미push이고 Backend가 읽을 요청은 Issue 본문에 직접 수록했다. dev/main 병합·배포·자료 삭제·Issue 종료·기존 브랜치 삭제는 실행하지 않는다.
+
 ## 2026-11-10 — Issue17 Native·완료 오류/계정 복구의 dev 통합
 
 사용자가 dev 병합을 지시했다. 최신 원격 dev/작업 브랜치를 fetch했고 local dev=origin/dev86e53e11, 작업 브랜치의 추가3커밋56cc66c2·7a165ac1·5df515f7을 확인했다. dev에서 no-ff 병합을 준비했으며 충돌 없이 기존 코드 트리가 그대로 통합됐다. 사용자 인수 후 최신 변경30파일은 앞선5df515f7 하나의 커밋으로 이미 보관·푸시한 상태다. 이번 병합 문서도 같은 merge commit에 포함한다.

@@ -1,5 +1,13 @@
 # 버그 리포트
 
+## BUG-034. 묶음 개인 완료·공대장 승계 후 INVALID_RESPONSE (2026-11-10)
+
+상태: Native 수정·최종 전체2,911PASS/분석0 완료 후 2026-11-10 사용자가 수정 앱의 내 계정 표시 정상화를 확인했다. 보고된 계정 회색 표시 복구는 해소됐으며 모든 미보고 경계의 기기 재시험까지 통과했다고 확대하지 않는다. 사용자는 다른 일반 흐름 대부분 정상과 계정의 묶음 영향 안내 정상도 보고했다. A 캐릭터로 묶음 생성→1번 완료→남은 참가를 B로 변경→2번 개인 완료·탈퇴 시 승계 안내 후 INVALID_RESPONSE다. 승계는 반영됐으며 계정에는 A의1/2번 회색 표시와 현황의 이전 참가 목록/상세 진입 이상이 관찰됐다. 이후 목록 재조회에서는 사라졌으나 회색 표시는 남았다. 후계자의 마지막 참가 종료는 정상이다. 확인한 종료 참가의 assignment는 completed/ended·주간 활성 점유 없음이었으며, 해당 회원의 다른 참가가 있어 전체 점유0으로 보고하지 않는다. 사용자 A/B와 읽은 원ACK의 정확한 식별자 대조는 하지 않았으므로 전체 계정 원장 정상으로 확대하지 않는다. 계정 표시는 후속 사용자 정상화 보고를 반영한다. 이전 목록의 모든 상세 상태까지 별도 보고된 것으로 추정하지 않는다.
+
+직접 근거: dev HTTP19:46:19/19:46:29 KST batch-personal-completion-departures는200(요청0ad18fda-e476-4b9d-b4ff-541aea53e41e/c05fc5c5-5e22-4a71-832e-cf26d62b9ebd)이며 뒤의 계정 갱신은 없다.19:50:39 마지막 참가 종료200 뒤에는 weekly-summary200이 있다. READ ONLY 서버 내부 schema 검사에서 첫 원ACK는 automatic_successor·actor cancelled·history1/합계 일치·group_policy_effect 존재다. public→public/before.revision1/after.revision=null이며 같은 ACK의 group_policy에 실제 revision이 있다. Native CycleGroupEffect.validateAck는 after.revision 양수를 요구한다. 원ACK 원문/실제 회원·방·캐릭터 ID·토큰은 문서/댓글에 보관하지 않는다.
+
+원ACK 반출은 자동 승인 검토가 민감정보 위험으로 거절했다. 안전한 대안으로 서버 안에서 schema/필드 검사를 수행하고 enum·건수·revision·판정만 출력했다. 서버/DB 쓰기·재실행·자료 정리는 하지 않았다. 합성 회귀에서 CycleGroupEffect.validateAck→rolePositive(null)의 정확한 실패를 재현했다. 신규 batch 개인 승계에만 같은 원ACK의 known group_policy를 동일 방/T/cycle/세대·after state·before 대비 유지/+1 revision과 결합해 검증한다. 원ACK/원요청은 그대로 두고 일반 그룹 ACK 검사는 유지한다. 근거 누락·다른 대상·revision/state 위조는 거절한다. 레이드 현황에 batch pending 전용 ‘완료 요청 결과 확인’을 연결해 방 목록/읽기 권한이 사라져도 기존 잠긴 확인창에서 명시 재시도한다. 복구 후 중복 계정 조회도 제거했다. 최종 검증/사용자 인수 상태는 NEXT_WORK를 따른다.
+
 ## BUG-033. 계정 완료 해제 CLIENT_UPGRADE_REQUIRED 및 재조회/저장 재시도 반복 (2026-11-09)
 
 상태: 신규 옵션 누락 수정에 이어 Backend6742169727의 기존 원무옵션 v3 현재 거절→대상 GET→명시적 현재 정보로 화면갱신를 Native에 연결했다. 최종 전체 Flutter2,856PASS·분석0이며 [결과6742522210](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742522210)으로 인계했다. 서버 완료 기록/과거 결과를 바꾸지 않고 로컬 활성 대기만 정리한다. 2026-11-10 사용자가 문구 수정 전 계정 복구 완료 및 디바이스 테스트 통과를 확인했다. 이 구간의 사용자 인수 완료이며 GitHub Issue 종료는 수행하지 않는다. 서버/DB·실자료 변경 없음.

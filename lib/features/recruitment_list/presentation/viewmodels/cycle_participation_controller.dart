@@ -20,6 +20,7 @@ import '../../data/cycle_interaction_repository.dart';
 import '../../data/cycle_management.dart';
 import '../../data/cycle_schedule.dart';
 import '../../data/cycle_outcome.dart';
+import '../../data/batch_completion.dart';
 import '../../data/cycle_resume.dart';
 import '../../domain/backend_recruitment.dart';
 import '../../domain/policies/party_cycle_policy.dart';
@@ -70,15 +71,19 @@ class CompletionDialogFeedback {
               (matchesPending && controller.pendingAcknowledged));
 
   Future<void> readTargetLabel(String Function(Map) label) async {
-    final key = requestKey, savedRound = round;
+    final key = requestKey;
+    final savedRounds = controller.pendingCompletionRounds;
     if (!active || !matchesPending) return;
     final plan = await controller.scheduleRead(room, target, 'plan');
     if (!active || !matchesPending || requestKey != key) return;
     final items = plan?.data['game_items'] as List? ?? [];
-    final item = items
-        .where((item) => item['round_id'] == savedRound)
-        .firstOrNull;
-    if (item is Map) targetLabel = label(item);
+    final labels = [
+      for (final item in items)
+        if (savedRounds.contains(item['round_id']) && item is Map) label(item),
+    ];
+    if (labels.length == savedRounds.length && labels.isNotEmpty) {
+      targetLabel = labels.join(' / ');
+    }
   }
 
   void capture({bool query = false}) {
@@ -131,6 +136,7 @@ class _CycleCommand {
     this.submissionAck,
     this.resumeAck,
     this.departure,
+    this.batch,
     this.removal,
     this.removalMode,
     this.membership,
@@ -160,6 +166,7 @@ class _CycleCommand {
       submissionAck = info.wire['submission_ack'] as Map<String, dynamic>?,
       resumeAck = null,
       departure = null,
+      batch = null,
       removal = null,
       removalMode = null,
       membership = null,
@@ -172,7 +179,9 @@ class _CycleCommand {
         query = contract.query(method, path, {});
     final affected = affectedTargets ?? [target],
         targets = <String>{target, ...affected}.toList();
-    final kind = membership != null
+    final kind = batch != null
+        ? batch!.kind.action
+        : membership != null
         ? 'membership'
         : removal != null
         ? 'removal'
@@ -196,7 +205,9 @@ class _CycleCommand {
       affected: affected,
       globalAck: globalAck,
       submissionAck: submissionAck,
-      details: membership != null
+      details: batch != null
+          ? BatchCompletionAckEvidence.fromPreview(batch!).wire
+          : membership != null
           ? MembershipAckEvidence.fromPreview(membership!).wire
           : removal != null
           ? RemovalAckEvidence.fromPreview(removal!, removalMode!).wire
@@ -239,6 +250,7 @@ class _CycleCommand {
   final Map<String, dynamic>? submissionAck;
   final String? resumeAck;
   final DeparturePreview? departure;
+  final BatchCompletionPreview? batch;
   final RemovalPreview? removal;
   final String? removalMode;
   final MembershipActionPreview? membership;
@@ -321,18 +333,44 @@ class CycleParticipationController extends ChangeNotifier {
       _pending?.room == room &&
       _pending?.target == target &&
       switch (action) {
-        'complete_item' => _pending!.path.endsWith('/completion'),
+        'complete_item' =>
+          _pending!.path.endsWith('/completion') ||
+              _pending!.path.endsWith('/batch-completions'),
         'personal_completion' =>
-          _pending!.path.endsWith('/personal-completion-departures') ||
+          _pending!.path.endsWith('/batch-personal-completion-departures') ||
+              _pending!.path.endsWith('/personal-completion-departures') ||
               _pending!.path.endsWith('/personal-completion'),
         _ => false,
       };
   String? get pendingCompletionRound {
     final command = _pending;
     if (command == null) return null;
+    if (isBatchCompletionPath(command.path)) return null;
     final body = jsonDecode(command.encoded) as Map;
     return body['round_id'] as String? ??
         command.path.split('/').reversed.skip(1).firstOrNull;
+  }
+
+  BatchCompletionKind? get pendingBatchKind {
+    final path = _pending?.path;
+    if (path == null || !isBatchCompletionPath(path)) return null;
+    return BatchCompletionKind.values.singleWhere(
+      (k) => path.endsWith('/${k.suffix}'),
+    );
+  }
+
+  bool get batchCompletionEnabled =>
+      gateway is CycleBatchCompletionGateway &&
+      (gateway as CycleBatchCompletionGateway).batchCompletionEnabled;
+
+  List<String> get pendingCompletionRounds {
+    if (pendingBatchKind != null) {
+      return List<String>.unmodifiable(
+        (jsonDecode(_pending!.encoded)['round_ids'] as List).cast<String>(),
+      );
+    }
+    final round = pendingCompletionRound;
+    return round == null ? const [] : [round];
   }
 
   bool get pendingCompletion =>
@@ -341,6 +379,8 @@ class CycleParticipationController extends ChangeNotifier {
         'completion',
         'personal-completion',
         'personal-completion-departures',
+        'batch-completions',
+        'batch-personal-completion-departures',
       }.contains(_pending!.path.split('/').last);
 
   Future<void> refreshCompletion(String room, String target) async {
@@ -784,6 +824,79 @@ class CycleParticipationController extends ChangeNotifier {
           () => gateway.outcome(room, target, action, round: round),
           completion: true,
         );
+
+  Future<BatchCompletionPreview?> batchCompletion(
+    String room,
+    String target,
+    BatchCompletionKind kind,
+    List<String> rounds, {
+    required bool Function() isCurrent,
+  }) async {
+    if (_disposed || !canAct || !isCurrent()) return null;
+    final e = _epoch;
+    _completionFeedback = true;
+    failure = notice = null;
+    try {
+      final value = await (gateway as CycleBatchCompletionGateway)
+          .batchCompletion(room, target, kind, rounds);
+      return _valid(e) && isCurrent() && canAct ? value : null;
+    } on AccountReadException catch (error) {
+      if (_valid(e) && isCurrent()) _fail(error);
+    } catch (_) {
+      if (_valid(e) && isCurrent()) {
+        failure = 'INVALID_RESPONSE';
+        _emit();
+      }
+    }
+    return null;
+  }
+
+  /// Returns a changed preview without sending it; the user must confirm again.
+  Future<BatchCompletionPreview?> completeBatch(
+    BatchCompletionPreview preview, {
+    required bool Function() isCurrent,
+  }) async {
+    if (!canAct || !isCurrent()) return null;
+    final e = _epoch;
+    _completionFeedback = true;
+    busy = true;
+    failure = notice = null;
+    _emit();
+    try {
+      final fresh = await (gateway as CycleBatchCompletionGateway)
+          .batchCompletion(
+            preview.room,
+            preview.target,
+            preview.kind,
+            preview.rounds,
+          );
+      if (!_valid(e) || !isCurrent()) return null;
+      if (fresh.signature != preview.signature) return fresh;
+      _pending = _CycleCommand(
+        path: fresh.path,
+        body: fresh.body(),
+        room: fresh.room,
+        target: fresh.target,
+        applicationAck: false,
+        status: 200,
+        createdAt: now(),
+        evidence: fresh.scope,
+        batch: fresh,
+        groupEffects: fresh.groupEffects,
+      );
+      await _send(e);
+    } on AccountReadException catch (error) {
+      if (_valid(e)) _fail(error);
+    } catch (_) {
+      if (_valid(e)) failure = 'INVALID_RESPONSE';
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+    return null;
+  }
 
   Future<void> complete(CycleOutcomePreview preview) async {
     if (preview.action == 'close_weekly' && !weeklyInterruptionEnabled) return;
@@ -1278,6 +1391,8 @@ class CycleParticipationController extends ChangeNotifier {
       'completion',
       'personal-completion',
       'personal-completion-departures',
+      'batch-completions',
+      'batch-personal-completion-departures',
     }.contains(command.path.split('/').last);
     _completionFeedback = completing;
     final feedback = _completionDialog;
@@ -1340,6 +1455,12 @@ class CycleParticipationController extends ChangeNotifier {
           command.key,
           jsonDecode(command.encoded) as Map<String, dynamic>,
         );
+      } else if (command.batch != null) {
+        await (gateway as CycleBatchCompletionGateway).writeBatchCompletion(
+          command.batch!,
+          command.key,
+          jsonDecode(command.encoded) as Map<String, dynamic>,
+        );
       } else if (command.departure != null) {
         await (gateway as CycleDepartureGateway).writeDeparture(
           command.departure!,
@@ -1396,11 +1517,16 @@ class CycleParticipationController extends ChangeNotifier {
         }
         notice = '요청이 반영되었습니다.';
       }
-      if (!_restoredRequest && command.path.endsWith('/completion')) {
+      if (!_restoredRequest &&
+          (command.path.endsWith('/completion') ||
+              command.path.endsWith('/batch-completions'))) {
         completionSuccess = (command.key, command.room, command.target);
       }
       if (!_restoredRequest &&
-          (command.departure != null ||
+          (command.batch?.kind == BatchCompletionKind.personalDeparture ||
+              command.storedEvidence?.kind ==
+                  BatchCompletionKind.personalDeparture.action ||
+              command.departure != null ||
               command.storedEvidence?.kind == 'departure')) {
         departureSuccess = (command.key, command.room, command.target);
       }
@@ -1468,6 +1594,8 @@ class CycleParticipationController extends ChangeNotifier {
         'completion',
         'personal-completion',
         'personal-completion-departures',
+        'batch-completions',
+        'batch-personal-completion-departures',
       }.contains(command.path.split('/').last)) {
         onActiveRoomsChanged?.call(command.key);
       }

@@ -1,4 +1,6 @@
 import 'cycle_action_dialog_route.dart';
+import 'batch_completion_dialog.dart';
+import '../../data/batch_completion.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -18,6 +20,7 @@ class CycleOutcomeActions extends StatelessWidget {
     required this.playable,
     required this.continuation,
     required this.raidLabel,
+    this.raidName,
     this.showCompletion = true,
     this.showClosure = true,
     this.completeLabel = '레이드 완료',
@@ -28,6 +31,7 @@ class CycleOutcomeActions extends StatelessWidget {
   final String room, target, current, role;
   final bool playable, continuation;
   final String Function(Map) raidLabel;
+  final String Function(Map)? raidName;
   final bool showCompletion, showClosure;
   final String completeLabel;
   final bool Function()? isCurrent;
@@ -74,7 +78,23 @@ class CycleOutcomeActions extends StatelessWidget {
             {'leader', 'member'}.contains(role) &&
             (action != 'complete_item' || role == 'leader'));
     final VoidCallback? onPressed = enabled
-        ? () => action == 'personal_completion'
+        ? () =>
+              controller.batchCompletionEnabled &&
+                  action != 'close_weekly' &&
+                  (!controller.matchesCompletion(room, target, action) ||
+                      controller.pendingBatchKind != null)
+              ? showBatchCompletion(
+                  context,
+                  controller,
+                  room: room,
+                  target: target,
+                  kind: action == 'complete_item'
+                      ? BatchCompletionKind.party
+                      : BatchCompletionKind.personalDeparture,
+                  raidName: raidName ?? raidLabel,
+                  isCurrent: isCurrent ?? () => true,
+                )
+              : action == 'personal_completion'
               ? showDeparture(
                   context,
                   controller,

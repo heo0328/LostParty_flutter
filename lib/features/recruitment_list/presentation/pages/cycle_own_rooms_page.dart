@@ -10,6 +10,7 @@ import '../viewmodels/cycle_own_card_info.dart';
 import '../widgets/recruitment_section.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../widgets/cycle_participation_widgets.dart';
+import '../widgets/batch_completion_dialog.dart';
 import '../../data/membership_readers.dart';
 import '../widgets/membership_record_view.dart';
 
@@ -246,8 +247,12 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                       padding: EdgeInsets.all(24),
                       child: Text('표시할 내역이 없습니다.', textAlign: TextAlign.center),
                     ),
-                  if (widget.mutations != null)
+                  if (widget.mutations != null) ...[
+                    BatchCompletionRecoveryAction(
+                      controller: widget.mutations!,
+                    ),
                     CycleCommandBanner(controller: widget.mutations!),
+                  ],
                   for (final row in m.visibleRows)
                     Card(
                       key: ValueKey(row.identity),
