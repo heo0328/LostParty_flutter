@@ -183,6 +183,7 @@ class _BackendRecruitmentDetailPageState
     }
     final departure = c.departureSuccess;
     if (departure != null &&
+        c.completionNavigationAllowed(departure.$1) &&
         departure.$1 != _departureKey &&
         departure.$2 == widget.roomId &&
         departure.$3 == m.target) {
@@ -192,6 +193,7 @@ class _BackendRecruitmentDetailPageState
     }
     final completion = c.completionSuccess;
     if (completion != null &&
+        c.completionNavigationAllowed(completion.$1) &&
         completion.$1 != _completionKey &&
         completion.$2 == widget.roomId &&
         completion.$3 == m.target) {

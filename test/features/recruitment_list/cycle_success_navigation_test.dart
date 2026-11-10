@@ -154,11 +154,19 @@ void main() {
           return;
         }
         expect(c.departureSuccess, isNotNull);
-        expect(find.byType(AlertDialog), findsNothing);
+        // ACK alone must not close the dialog while the follow-up read is pending.
+        expect(find.byType(AlertDialog), findsOneWidget);
         refresh.completeError(
           const AccountReadException('NETWORK_UNAVAILABLE'),
         );
         await command;
+        await tester.pumpAndSettle();
+        expect(find.text('완료되었습니다. 새로고침해 주세요.'), findsOneWidget);
+        expect(find.byType(AlertDialog), findsOneWidget);
+        await tester.tap(find.text('취소'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(api.requests.where((r) => r['method'] == 'POST'), hasLength(1));
         expect(router.routeInformationProvider.value.uri.path, '/raid-status');
         expect(
           router

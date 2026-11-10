@@ -56,6 +56,7 @@ class DioRecruitmentCommandSender {
           throw AccountReadException(
             code as String,
             status: e.response!.statusCode,
+            requestId: (data['error'] as Map)['request_id'] as String?,
             retryAfter: seconds != null && seconds > 0
                 ? Duration(seconds: seconds)
                 : null,

@@ -9,14 +9,14 @@ import sys
 from pathlib import Path
 import extract_cycle_group_wire as base
 
-PIN = '2aeca907115ffc768cad723d227f0c2339b042f56f46ffed251c1037d235b6c4'
+PIN = '864de38b53ec23a305074bb3844a7a603ba1f992815427fdba3e6931793119b6'
 
 
 def main():
     raw = Path(sys.argv[1]).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == PIN
     base.BLOB = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
-    base.SOURCE = 'Issue17 dev ce59926c / SHA256 ' + PIN
+    base.SOURCE = 'Issue17 source 16c9cd4b9016a881bbb26c8438f3347049603902 / SHA256 ' + PIN
     base.main()
     dest = base.DEST / 'beta_wire_schema.g.dart'
     generated = dest.read_text(encoding='utf-8')

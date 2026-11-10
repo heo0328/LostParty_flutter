@@ -652,7 +652,12 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       scopeKey: cycleScopeKey,
       onMutation: (t) async {
         rosterIssues.invalidate(notifyRooms: false);
-        await _memberAccount?.weekly?.refreshTarget(t);
+        final weekly = _memberAccount?.weekly;
+        await weekly?.refreshTarget(t);
+        if (identical(weekly, _memberAccount?.weekly) &&
+            weekly?.refreshFailure != null) {
+          throw weekly!.refreshFailure!;
+        }
       },
       onRelationEnded: (targets) async {
         rosterIssues.invalidate(notifyRooms: false);
@@ -783,6 +788,15 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             participationChanges: participation,
                             canUseParticipationCommands: () =>
                                 participation.canAct,
+                            canRecoverParticipationCompletion:
+                                (room, target, round) =>
+                                    participation.matchesCompletion(
+                                      room,
+                                      target,
+                                      'personal_completion',
+                                    ) &&
+                                    participation.pendingCompletionRound ==
+                                        round,
                             onCompleteParticipation:
                                 (
                                   ctx,

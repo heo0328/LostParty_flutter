@@ -1,11 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/account_read_session.dart';
 import 'package:lost_party/features/recruitment_list/data/cycle_interaction_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/cycle_outcome.dart';
 import 'package:lost_party/features/recruitment_list/data/cycle_schedule.dart';
+import 'package:lost_party/features/recruitment_list/data/beta/beta_contract.dart';
+import 'package:lost_party/features/recruitment_list/data/beta/recruitment_command.dart';
+import 'package:lost_party/features/recruitment_list/data/beta/recruitment_command_store.dart';
+import 'package:lost_party/features/recruitment_list/data/beta/recruitment_command_transport.dart';
+import 'package:lost_party/features/recruitment_list/data/local/recruitment_command_database.dart';
+import 'package:lost_party/features/recruitment_list/presentation/widgets/cycle_outcome_widgets.dart';
+import 'package:lost_party/features/recruitment_list/presentation/widgets/cycle_participation_widgets.dart';
 import 'package:lost_party/features/recruitment_list/presentation/viewmodels/cycle_participation_controller.dart';
 import '../../support/server_account_read_fakes.dart';
 import '../../support/retained_weekly_interruption_controller.dart';
@@ -155,6 +163,256 @@ void main() {
     action,
     round: action == 'close_weekly' ? null : round,
   );
+
+  test(
+    'closed completion retains original and explicit matching reentry recovers it',
+    () async {
+      final view = CompletionDialogFeedback(
+        controller,
+        room,
+        c,
+        'complete_item',
+      );
+      loseAck = true;
+      await controller.complete(await preview('complete_item'));
+      view.capture();
+      final original = copy(getWrites().single);
+      expect(view.matchesPending, true);
+      expect(
+        controller.matchesCompletion(room, c, 'personal_completion'),
+        false,
+      );
+      expect(controller.matchesCompletion(room, n, 'complete_item'), false);
+      expect(view.round, round);
+      view.close();
+      expect(controller.hasPending, true);
+      final reopened = CompletionDialogFeedback(
+        controller,
+        room,
+        c,
+        'complete_item',
+      );
+      expect(reopened.requestKey, original['key']);
+      final gets = api.requests.where((r) => r['method'] == 'GET').length;
+      await controller.retry();
+      reopened.capture();
+      expect(getWrites().last, original);
+      expect(api.requests.where((r) => r['method'] == 'GET').length, gets);
+      expect(controller.hasPending, false);
+      expect(reopened.acknowledged, true);
+      reopened.close();
+    },
+  );
+
+  test(
+    'closed inflight completion accepts late ACK without navigation or resurrected feedback',
+    () async {
+      final p = await preview('complete_item');
+      final view = CompletionDialogFeedback(
+        controller,
+        room,
+        c,
+        'complete_item',
+      );
+      final respond = api.respond!;
+      final delayed = Completer<void>();
+      api.respond = (path, query) async {
+        final value = await respond(path, query);
+        if (path.endsWith('/completion')) await delayed.future;
+        return value;
+      };
+      final sending = controller.complete(p);
+      while (getWrites().isEmpty) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      final key = controller.pendingRequestKey!;
+      view.close();
+      delayed.complete();
+      await sending;
+      view.capture();
+      expect(view.code, isNull);
+      expect(controller.hasPending, false);
+      expect(controller.completionSuccess?.$1, key);
+      expect(controller.completionNavigationAllowed(key), false);
+      expect(refreshes, [c]);
+    },
+  );
+
+  test(
+    'ACK refresh-only retry and close release navigation without a second POST',
+    () async {
+      controller.dispose();
+      var failRead = true;
+      controller = RetainedWeeklyInterruptionController(
+        gateway: repository,
+        session: session,
+        changes: changes,
+        scopeKey: () => session.userId!,
+        now: () => DateTime.parse(f2.nowStamp),
+        onMutation: (_) async {
+          if (failRead) throw const AccountReadException('NETWORK_UNAVAILABLE');
+        },
+      );
+      final view = CompletionDialogFeedback(
+        controller,
+        room,
+        c,
+        'complete_item',
+      );
+      await controller.complete(await preview('complete_item'));
+      view.capture();
+      final key = view.requestKey!;
+      expect(view.refreshFailed, true);
+      expect(controller.completionNavigationAllowed(key), false);
+      failRead = false;
+      await controller.refreshCompletion(room, c);
+      view.capture();
+      expect(view.refreshFailed, false);
+      expect(getWrites(), hasLength(1));
+      view.close();
+      expect(controller.completionNavigationAllowed(key), true);
+    },
+  );
+
+  test(
+    'member change invalidates the dialog feedback and recovery identity',
+    () async {
+      final view = CompletionDialogFeedback(
+        controller,
+        room,
+        c,
+        'complete_item',
+      );
+      loseAck = true;
+      await controller.complete(await preview('complete_item'));
+      session.change(authenticated: false);
+      view.capture();
+      expect(view.active, false);
+      expect(view.matchesPending, false);
+      expect(view.code, isNull);
+      view.close();
+    },
+  );
+
+  testWidgets(
+    'completion banner stays in dialog; cancel preserves retry through original entry',
+    (tester) async {
+      loseAck = true;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                CycleCommandBanner(controller: controller),
+                CycleOutcomeActions(
+                  controller: controller,
+                  room: room,
+                  target: c,
+                  current: c,
+                  role: 'leader',
+                  playable: true,
+                  continuation: false,
+                  showClosure: false,
+                  raidLabel: (_) => '테스트 레이드',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('레이드 완료'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '확인'));
+      await tester.pumpAndSettle();
+      expect(find.text('결과를 확인하지 못했습니다. 다시 시도해 주세요.'), findsOneWidget);
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+      expect(controller.hasPending, true);
+      expect(find.text('결과를 확인하지 못했습니다. 다시 시도해 주세요.'), findsNothing);
+      await tester.tap(find.text('레이드 완료'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('재시도'));
+      await tester.pumpAndSettle();
+      expect(controller.hasPending, false);
+      expect(getWrites(), hasLength(2));
+      expect(getWrites().first, getWrites().last);
+      expect(find.byType(AlertDialog), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  for (final action in ['complete_item', 'personal_completion']) {
+    test(
+      'beta $action uses matching profile in preview, confirmation and POST',
+      () async {
+        controller.dispose();
+        session.userId = '33333333-3333-4333-8333-333333333333';
+        plan['data']['beta_schedule'] = null;
+        plan['data']['recruitment_identity'] = null;
+        repository = CycleInteractionRepository(
+          api: api,
+          recruitment: f2.CycleGateway(),
+          contractMode: RecruitmentContractMode.betaWire2,
+        );
+        final store = DriftRecruitmentCommandStore(
+          databaseFactory: () =>
+              RecruitmentCommandDatabase(NativeDatabase.memory()),
+        );
+        final transport = RecruitmentCommandTransport(
+          store: store,
+          session: session,
+          baseUrl: () => 'https://example.com',
+          mode: RecruitmentContractMode.betaWire2,
+          clock: () => DateTime.parse(f2.nowStamp),
+          send: (command, _) async {
+            return (await api.request(
+              command.path,
+              method: command.method,
+              query: command.query,
+              body: jsonDecode(command.rawBody),
+              idempotencyKey: command.key,
+              expectedStatus: command.expectedStatus,
+            ))!;
+          },
+        );
+        addTearDown(transport.dispose);
+        controller = CycleParticipationController(
+          gateway: repository,
+          session: session,
+          changes: changes,
+          scopeKey: () => session.userId!,
+          now: () => DateTime.parse(f2.nowStamp),
+          commandTransport: transport,
+        );
+        while (controller.restoring) {
+          await Future<void>.delayed(Duration.zero);
+        }
+        final p = await repository.outcome(room, c, action, round: round);
+        loseAck = true;
+        await controller.complete(p);
+        final saved = await transport.restore(
+          RecruitmentCommandOwner.participation,
+        );
+        expect(saved!.query['participation_profile'], 'remaining-active-1');
+        final gets = api.requests.where((r) => r['method'] == 'GET').length;
+        await controller.retry();
+        expect(controller.failure, isNull);
+        expect(getWrites(), hasLength(2));
+        expect(getWrites().first, getWrites().last);
+        expect(api.requests.where((r) => r['method'] == 'GET').length, gets);
+        expect(
+          await transport.restore(RecruitmentCommandOwner.participation),
+          isNull,
+        );
+        for (final request in api.requests) {
+          expect(
+            request['query']['participation_profile'],
+            'remaining-active-1',
+          );
+        }
+      },
+    );
+  }
 
   test(
     'only validated weekly completion publishes the current-page receipt',
@@ -442,6 +700,51 @@ void main() {
     expect(getWrites(), isEmpty);
     expect(controller.hasPending, isFalse);
   });
+  test(
+    'completion failure retains safe diagnostics and clears on account change',
+    () async {
+      const id = '0d505a6f-4d83-457b-add0-84213a182bfa';
+      final p = await preview('complete_item');
+      changeAck = (_) => throw const AccountReadException(
+        'CONTEXT_INVALID',
+        status: 400,
+        requestId: id,
+      );
+      await controller.complete(p);
+      expect(controller.failure, 'CONTEXT_INVALID');
+      expect(controller.failureDetails?.status, 400);
+      expect(controller.failureDetails?.requestId, id);
+      expect(controller.completionFeedback, true);
+      expect(controller.hasPending, false);
+      session.change(authenticated: false);
+      expect(controller.failureDetails, isNull);
+      expect(controller.completionFeedback, false);
+    },
+  );
+  test(
+    'completion ACK survives refresh failure and retry never resends completion',
+    () async {
+      controller.dispose();
+      controller = RetainedWeeklyInterruptionController(
+        gateway: repository,
+        session: session,
+        changes: changes,
+        scopeKey: () => '${session.userId}/${session.generation}',
+        now: () => DateTime.parse(f2.nowStamp),
+        onMutation: (_) async =>
+            throw const AccountReadException('NETWORK_UNAVAILABLE'),
+      );
+      await controller.complete(await preview('complete_item'));
+      expect(controller.completionSuccess, isNotNull);
+      expect(controller.hasPending, false);
+      expect(controller.completionRefreshFailed, true);
+      expect(controller.failure, isNull);
+      expect(controller.completionRefreshError?.code, 'NETWORK_UNAVAILABLE');
+      expect(controller.notice, contains('완료 처리되었습니다'));
+      await controller.retry();
+      expect(getWrites(), hasLength(1));
+    },
+  );
   test(
     'old original ACK can finish after device week rollover without retargeting',
     () async {

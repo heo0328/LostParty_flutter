@@ -24,6 +24,95 @@ import '../../data/cycle_resume.dart';
 import '../../domain/backend_recruitment.dart';
 import '../../domain/policies/party_cycle_policy.dart';
 
+/// Dialog-owned feedback only. Durable command state remains in the controller.
+class CompletionDialogFeedback {
+  CompletionDialogFeedback(
+    this.controller,
+    this.room,
+    this.target,
+    this.action,
+  ) {
+    controller._completionDialog = this;
+    controller._completionFeedback = true;
+    if (matchesPending) {
+      code = controller.failure;
+      error = controller.failureDetails;
+      requestKey = controller.pendingRequestKey;
+      controller._detachedCompletionKey = null;
+    } else {
+      controller.failure = controller.notice = null;
+    }
+  }
+  final CycleParticipationController controller;
+  final String room, target, action;
+  String? code, requestKey;
+  String? targetLabel;
+  AccountReadException? error;
+  bool active = true,
+      queryFailure = false,
+      refreshFailed = false,
+      committed = false;
+  int readFailures = 0;
+  bool get matchesPending => controller.matchesCompletion(room, target, action);
+  bool get finished =>
+      acknowledged &&
+      !controller.busy &&
+      !controller.hasPending &&
+      !refreshFailed &&
+      controller.failure == null;
+  String? get round =>
+      matchesPending ? controller.pendingCompletionRound : null;
+  bool get acknowledged =>
+      committed ||
+      requestKey != null &&
+          (controller.completionSuccess?.$1 == requestKey ||
+              controller.departureSuccess?.$1 == requestKey ||
+              (matchesPending && controller.pendingAcknowledged));
+
+  Future<void> readTargetLabel(String Function(Map) label) async {
+    final key = requestKey, savedRound = round;
+    if (!active || !matchesPending) return;
+    final plan = await controller.scheduleRead(room, target, 'plan');
+    if (!active || !matchesPending || requestKey != key) return;
+    final items = plan?.data['game_items'] as List? ?? [];
+    final item = items
+        .where((item) => item['round_id'] == savedRound)
+        .firstOrNull;
+    if (item is Map) targetLabel = label(item);
+  }
+
+  void capture({bool query = false}) {
+    if (!active || controller._completionDialog != this) return;
+    code = controller.failure;
+    error = controller.failureDetails;
+    queryFailure = query;
+    refreshFailed = controller.completionRefreshFailed && acknowledged;
+    if (refreshFailed) error = controller.completionRefreshError;
+    if (query && code != null) readFailures++;
+  }
+
+  void close() {
+    if (!active) return;
+    active = false;
+    if (controller._completionDialog != this) return;
+    if (acknowledged) {
+      controller._releasedCompletionKey = requestKey;
+    } else if (requestKey != null) {
+      controller._detachedCompletionKey = requestKey;
+    }
+    controller._completionDialog = null;
+    // Clearing presentation never releases a journal or cancels a transmission.
+    if (controller.completionFeedback && !matchesPending) {
+      controller._failure = null;
+      controller.failureDetails = null;
+      controller.notice = null;
+    }
+    scheduleMicrotask(() {
+      if (!controller._disposed) controller._emit();
+    });
+  }
+}
+
 class _CycleCommand {
   _CycleCommand({
     required this.path,
@@ -208,7 +297,71 @@ class CycleParticipationController extends ChangeNotifier {
   bool _disposed = false, busy = false;
   int _epoch = 0, mutationVersion = 0;
   final _managementEpochs = Expando<int>();
-  String? failure, lastRoom, lastTarget, notice;
+  String? lastRoom, lastTarget, notice;
+  String? _failure;
+  AccountReadException? failureDetails;
+  String? get failure => _failure;
+  set failure(String? value) {
+    _failure = value;
+    failureDetails = null;
+    completionRefreshFailed = false;
+    completionRefreshError = null;
+  }
+
+  bool _completionFeedback = false;
+  CompletionDialogFeedback? _completionDialog;
+  String? _detachedCompletionKey, _releasedCompletionKey;
+  bool completionNavigationAllowed(String key) =>
+      !busy &&
+      key != _detachedCompletionKey &&
+      (!completionRefreshFailed || key == _releasedCompletionKey);
+  bool matchesCompletion(String room, String target, String action) =>
+      session.isAuthenticated &&
+      _binding == scopeKey() &&
+      _pending?.room == room &&
+      _pending?.target == target &&
+      switch (action) {
+        'complete_item' => _pending!.path.endsWith('/completion'),
+        'personal_completion' =>
+          _pending!.path.endsWith('/personal-completion-departures') ||
+              _pending!.path.endsWith('/personal-completion'),
+        _ => false,
+      };
+  String? get pendingCompletionRound {
+    final command = _pending;
+    if (command == null) return null;
+    final body = jsonDecode(command.encoded) as Map;
+    return body['round_id'] as String? ??
+        command.path.split('/').reversed.skip(1).firstOrNull;
+  }
+
+  bool get pendingCompletion =>
+      _pending != null &&
+      const {
+        'completion',
+        'personal-completion',
+        'personal-completion-departures',
+      }.contains(_pending!.path.split('/').last);
+
+  Future<void> refreshCompletion(String room, String target) async {
+    if (_disposed || busy || !session.isAuthenticated) return;
+    final e = _epoch;
+    busy = true;
+    failure = notice = null;
+    _completionFeedback = true;
+    try {
+      await changed(room, target, completion: true);
+    } finally {
+      if (_valid(e)) {
+        busy = false;
+        _emit();
+      }
+    }
+  }
+
+  bool get completionFeedback => _completionFeedback;
+  bool completionRefreshFailed = false;
+  AccountReadException? completionRefreshError;
   _CycleCommand? _pending;
   bool restoring = false;
   String? recoveryIssue;
@@ -274,6 +427,12 @@ class CycleParticipationController extends ChangeNotifier {
   String? get pendingRoom => _pending?.room;
   String? get pendingTarget => _pending?.target;
   void _emit() {
+    final feedback = _completionDialog;
+    if (_completionFeedback &&
+        feedback?.requestKey != null &&
+        (feedback!.matchesPending || feedback.acknowledged)) {
+      feedback.capture();
+    }
     if (!_disposed) notifyListeners();
   }
 
@@ -284,6 +443,15 @@ class CycleParticipationController extends ChangeNotifier {
       scopeKey() == _binding;
   void _access() {
     if (_binding == scopeKey() && session.isAuthenticated) return;
+    final feedback = _completionDialog;
+    if (feedback != null) {
+      feedback.active = false;
+      feedback.code = null;
+      feedback.error = null;
+      feedback.targetLabel = null;
+    }
+    _completionDialog = null;
+    _detachedCompletionKey = _releasedCompletionKey = null;
     _binding = scopeKey();
     _epoch++;
     _pending = null;
@@ -298,6 +466,7 @@ class CycleParticipationController extends ChangeNotifier {
     relationEnded = null;
     admissionSuccess = null;
     scheduleSuccess = null;
+    _completionFeedback = false;
     busy = false;
     failure = notice = lastRoom = lastTarget = null;
     _retryAt = null;
@@ -311,7 +480,12 @@ class CycleParticipationController extends ChangeNotifier {
   Future<T?> _read<T>(
     Future<T> Function() f, {
     bool allowPending = false,
+    bool completion = false,
   }) async {
+    if (!completion && !hasPending && _completionFeedback) {
+      failure = notice = null;
+    }
+    if (!hasPending) _completionFeedback = completion;
     if (allowPending) {
       if (_disposed || !session.isAuthenticated) return null;
       final e = _epoch;
@@ -321,6 +495,7 @@ class CycleParticipationController extends ChangeNotifier {
       } on AccountReadException catch (error) {
         if (_valid(e)) {
           failure = error.code;
+          failureDetails = error;
           _emit();
         }
       } catch (_) {
@@ -488,6 +663,7 @@ class CycleParticipationController extends ChangeNotifier {
     String round,
   ) => _read(
     () => (gateway as CycleDepartureGateway).departure(room, target, round),
+    completion: true,
   );
 
   Future<RemovalPreview?> removal(String room, String target, String member) =>
@@ -555,6 +731,7 @@ class CycleParticipationController extends ChangeNotifier {
     void Function(String key)? onPrepared,
   }) async {
     if (!canAct) return;
+    _completionFeedback = true;
     final e = _epoch;
     busy = true;
     failure = notice = null;
@@ -603,11 +780,15 @@ class CycleParticipationController extends ChangeNotifier {
     String? round,
   }) => action == 'close_weekly' && !weeklyInterruptionEnabled
       ? Future.value(null)
-      : _read(() => gateway.outcome(room, target, action, round: round));
+      : _read(
+          () => gateway.outcome(room, target, action, round: round),
+          completion: true,
+        );
 
   Future<void> complete(CycleOutcomePreview preview) async {
     if (preview.action == 'close_weekly' && !weeklyInterruptionEnabled) return;
     if (!canAct) return;
+    _completionFeedback = true;
     final room = preview.plan.room, target = preview.plan.target;
     final action = preview.action,
         round = preview.round,
@@ -655,6 +836,8 @@ class CycleParticipationController extends ChangeNotifier {
   }) => _read(
     () => gateway.scheduleRead(room, target, kind, id: id, cursor: cursor),
     allowPending: true,
+    completion:
+        _completionDialog?.room == room && _completionDialog?.target == target,
   );
   Future<CycleSchedulePreview?> schedulePreview(
     String room,
@@ -1091,6 +1274,19 @@ class CycleParticipationController extends ChangeNotifier {
 
   Future<void> _send(int e) async {
     final command = _pending!;
+    final completing = const {
+      'completion',
+      'personal-completion',
+      'personal-completion-departures',
+    }.contains(command.path.split('/').last);
+    _completionFeedback = completing;
+    final feedback = _completionDialog;
+    if (completing && feedback == null) _detachedCompletionKey = command.key;
+    if (completing &&
+        feedback != null &&
+        matchesCompletion(feedback.room, feedback.target, feedback.action)) {
+      feedback.requestKey = command.key;
+    }
     try {
       String? resumeOutcome;
       MembershipActionResult? membershipResult;
@@ -1173,6 +1369,12 @@ class CycleParticipationController extends ChangeNotifier {
         );
       }
       if (!_valid(e)) return;
+      final receiving = _completionDialog;
+      if (completing &&
+          receiving?.active == true &&
+          receiving?.requestKey == command.key) {
+        receiving!.committed = true;
+      }
       if (!_restoredRequest &&
           (command.path.endsWith('/applications') ||
               command.path.endsWith('/join') ||
@@ -1280,6 +1482,7 @@ class CycleParticipationController extends ChangeNotifier {
         await changed(
           command.room,
           target,
+          completion: completing,
           outcomeNotice: command.resumeAck == null
               ? null
               : resumeOutcome == 'applied'
@@ -1409,6 +1612,7 @@ class CycleParticipationController extends ChangeNotifier {
     String target, {
     bool applied = true,
     String? outcomeNotice,
+    bool completion = false,
   }) async {
     if (_disposed || !session.isAuthenticated) return;
     final e = _epoch;
@@ -1419,8 +1623,17 @@ class CycleParticipationController extends ChangeNotifier {
     _emit();
     try {
       await onMutation?.call(target);
-    } catch (_) {
+    } catch (error) {
       if (_valid(e)) {
+        if (completion && applied) {
+          _completionFeedback = true;
+          completionRefreshError = error is AccountReadException
+              ? error
+              : const AccountReadException('INVALID_RESPONSE');
+          completionRefreshFailed = true;
+          notice = '완료 처리되었습니다. 최신 상태를 불러오지 못했습니다. 조회만 다시 시도해 주세요.';
+          return;
+        }
         notice = outcomeNotice != null
             ? '$outcomeNotice 최신 상태를 다시 불러와 주세요.'
             : applied
@@ -1432,6 +1645,7 @@ class CycleParticipationController extends ChangeNotifier {
 
   void _fail(AccountReadException e) {
     failure = e.code;
+    failureDetails = e;
     _retryAt =
         e.retryAt ?? (e.retryAfter == null ? null : now().add(e.retryAfter!));
     _retryTimer?.cancel();

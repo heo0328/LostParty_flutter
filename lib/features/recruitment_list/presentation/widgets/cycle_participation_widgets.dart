@@ -3,6 +3,8 @@ import 'recruitment_error_text.dart';
 import 'application_memo_widgets.dart';
 import '../viewmodels/application_memo_draft.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../viewmodels/completion_failure.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../account/domain/member_cycle_models.dart';
 import '../../../account/domain/role_summary.dart';
@@ -17,13 +19,23 @@ import 'recruitment_character_card.dart';
 import 'cycle_session_display_widgets.dart';
 
 class CycleCommandBanner extends StatelessWidget {
-  const CycleCommandBanner({required this.controller, super.key});
+  const CycleCommandBanner({
+    required this.controller,
+    this.completion = false,
+    super.key,
+  });
   final CycleParticipationController controller;
+  final bool completion;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) {
       final c = controller;
+      // Completion feedback belongs exclusively to its originating dialog.
+      if (c.completionFeedback || c.pendingCompletion) {
+        return const SizedBox.shrink();
+      }
+      final completing = completion;
       if (!c.restoring &&
           !c.hasPending &&
           c.failure == null &&
@@ -52,16 +64,33 @@ class CycleCommandBanner extends StatelessWidget {
                     ? '${c.pendingTarget ?? ''} 요청 · 잠시 후 같은 요청을 다시 확인할 수 있습니다.'
                     : '${const {'application': '신청', 'membership': '탈퇴·해산', 'removal': '내보내기', 'departure': '완료 후 탈퇴', 'submission': '내 일정 갱신', 'global': '모집 설정', 'basic': '참가·일정 변경'}[c.pendingKind] ?? '참가'} 요청 · ${c.pendingTarget ?? '대상 날짜 확인 필요'}\n아직 결과를 확인하지 못했습니다.',
               ),
-            if (c.failure != null)
+            if (c.failure != null || c.completionRefreshFailed)
               RecruitmentErrorText(
-                c.failure == 'REQUEST_REVIEW_REQUIRED'
+                completing
+                    ? c.completionRefreshFailed
+                          ? '완료 처리되었습니다. 최신 상태를 불러오지 못했습니다. 조회만 다시 시도해 주세요.'
+                          : completionFailureMessage(
+                                  c.failure,
+                                  unresolved:
+                                      c.hasPending && !c.pendingAcknowledged,
+                                ) ??
+                                recruitmentFailureMessage(c.failure)
+                    : c.failure == 'REQUEST_REVIEW_REQUIRED'
                     ? '이전 참가 요청의 결과를 확인해야 합니다.'
                     : c.failure == 'LOCAL_STORAGE_UNAVAILABLE'
                     ? '저장된 요청을 불러오거나 정리하지 못했습니다. 다시 시도해 주세요.'
                     : recruitmentFailureMessage(c.failure),
               ),
+            if (completing && (c.failure != null || c.completionRefreshFailed))
+              CompletionDiagnosticInfo(
+                diagnostic: completionDiagnostic(
+                  c.completionRefreshError?.code ?? c.failure!,
+                  c.completionRefreshError ?? c.failureDetails,
+                ),
+              ),
             if (c.notice != null)
-              Text(c.notice!, style: const TextStyle(fontSize: 12)),
+              if (!c.completionRefreshFailed)
+                Text(c.notice!, style: const TextStyle(fontSize: 12)),
             if (c.hasPending)
               TextButton(
                 onPressed: c.canRetry ? () => c.retry() : null,
@@ -78,6 +107,33 @@ class CycleCommandBanner extends StatelessWidget {
       );
     },
   );
+}
+
+class CompletionDiagnosticInfo extends StatelessWidget {
+  const CompletionDiagnosticInfo({required this.diagnostic, super.key});
+  final String diagnostic;
+  @override
+  Widget build(BuildContext context) {
+    if (diagnostic.isEmpty) return const SizedBox.shrink();
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: const Text('오류 정보'),
+      children: [
+        SelectableText(diagnostic),
+        TextButton.icon(
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: diagnostic));
+            if (!context.mounted) return;
+            ScaffoldMessenger.maybeOf(
+              context,
+            )?.showSnackBar(const SnackBar(content: Text('오류 정보를 복사했습니다.')));
+          },
+          icon: const Icon(Icons.copy),
+          label: const Text('오류 정보 복사'),
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> showCycleAdmission(

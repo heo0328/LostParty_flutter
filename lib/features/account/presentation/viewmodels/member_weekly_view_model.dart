@@ -24,6 +24,7 @@ String memberWeeklyFailure(String? code) => switch (code) {
   'CYCLE_CHANGED' => '주차가 바뀌었습니다. 다시 확인해 주세요.',
   'COMPLETION_NOT_FOUND' => '이미 완료가 해제되었습니다. 최신 상태를 확인해 주세요.',
   'CORRECTION_REFRESH_FAILED' => '완료 해제는 반영되었습니다. 최신 상태를 다시 불러와 주세요.',
+  'CLIENT_UPGRADE_REQUIRED' => '이전 저장을 진행할 수 없습니다. 현재 상태를 확인해 주세요.',
   'COMPLETION_CONTEXT_CHANGED' ||
   'COMMAND_CONTEXT_EXPIRED' ||
   'CONTEXT_INVALID' => '완료 정보가 변경됐습니다. 다시 확인해 주세요.',
@@ -50,6 +51,10 @@ class _WeeklyCommand {
     this.ack = false,
     this.failed = false,
     this.correction,
+    this.query,
+    this.uncertain = false,
+    this.blockedCode,
+    this.transportTracked = false,
   });
   factory _WeeklyCommand.fromJson(
     Map<String, dynamic> json, {
@@ -59,10 +64,23 @@ class _WeeklyCommand {
       json,
       schema == 1
           ? 'character raid key body started ack failed'
-          : 'character raid key body started ack failed wire_version${schema == 3 && json['wire_version'] == 3 ? ' correction_context' : ''}',
+          : 'character raid key body started ack failed wire_version${schema >= 3 && json['wire_version'] == 3 ? ' correction_context' : ''}${schema == 4 ? ' query uncertain blocked_code' : ''}',
     );
     final version = schema == 1 ? 1 : json['wire_version'];
-    roleCheck(version == 1 || version == 2 || (schema == 3 && version == 3));
+    roleCheck(version == 1 || version == 2 || (schema >= 3 && version == 3));
+    final query = schema == 4 && json['query'] != null
+        ? roleMap(json['query'])
+        : null;
+    if (query != null) {
+      roleCheck(
+        query.isEmpty ||
+            query.length == 1 &&
+                query['group_policy_version'] ==
+                    MemberRaidClient.groupPolicyQuery['group_policy_version'],
+      );
+    }
+    final blocked = schema == 4 ? json['blocked_code'] : null;
+    roleCheck(blocked == null || blocked == 'CLIENT_UPGRADE_REQUIRED');
     final body = roleMap(json['body']);
     MemberCompletionCorrection? correction;
     if (version == 3) {
@@ -112,6 +130,10 @@ class _WeeklyCommand {
       ack: raidBool(json['ack']),
       failed: raidBool(json['failed']),
       correction: correction,
+      query: query == null ? null : Map.unmodifiable(query),
+      uncertain: schema == 4 ? raidBool(json['uncertain']) : true,
+      blockedCode: blocked as String?,
+      transportTracked: schema == 4,
     );
   }
   final String character, raid, key;
@@ -119,6 +141,13 @@ class _WeeklyCommand {
   final DateTime started;
   final int wireVersion;
   final MemberCompletionCorrection? correction;
+
+  /// null means the original predates option persistence: replay with no query.
+  final Map<String, dynamic>? query;
+  bool uncertain, transportTracked;
+  String? blockedCode;
+  bool get tracksTransport =>
+      transportTracked || query != null || blockedCode != null;
   String get target =>
       body[wireVersion == 3 ? 'target_cycle_key' : 'expected_cycle_key']
           as String;
@@ -134,6 +163,11 @@ class _WeeklyCommand {
     'failed': failed,
     'wire_version': wireVersion,
     if (wireVersion == 3) 'correction_context': correction!.wire,
+    if (tracksTransport) ...{
+      'query': query,
+      'uncertain': uncertain,
+      'blocked_code': blockedCode,
+    },
   };
 }
 
@@ -162,6 +196,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   Future<void> refreshTarget(String target) {
     if (_disposed || !model.signedIn) return Future.value();
     raidCycleKey(target);
+    refreshFailure = null;
     _targetRefreshes[target] = ++_targetRefreshVersion;
     return refresh();
   }
@@ -186,6 +221,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   RaidCatalog? catalog;
   MemberRaidCycle? cycle;
   String? failure;
+  AccountReadException? refreshFailure;
   bool loading = false, writing = false;
   bool _saving = false;
   bool get busy => loading || writing || _saving || preparingCorrection;
@@ -214,10 +250,27 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   Map<String, MemberWeeklyEntry> _entries = {};
   Map<String, CharacterWeeklyRaidDisplayPreference> _display = {};
   _WeeklyCommand? _pending;
+  _WeeklyCommand? _adoptionCommand;
+  MemberCompletionCorrection? _adoptionState;
+  int? _adoptionGeneration;
+  String? _adoptionTargets;
+  bool get _unprofiledCorrection =>
+      twoCycleEnabled &&
+      _pending?.wireVersion == 3 &&
+      _pending?.ack == false &&
+      (_pending!.query == null || _pending!.query!.isEmpty);
+  bool get _adoptionCurrent =>
+      identical(_adoptionCommand, _pending) &&
+      _adoptionCommand != null &&
+      _adoptionGeneration == model.runtime.readGeneration &&
+      _adoptionTargets == _targets();
+  MemberCompletionCorrection? get pendingCurrentState =>
+      _adoptionCurrent ? _adoptionState : null;
   bool get hasPending => _pending != null;
   String? get pendingCharacter => _pending?.character;
   String? get pendingRaid => _pending?.raid;
   bool get pendingFailed => _pending?.failed == true;
+  bool get pendingReview => _pending?.blockedCode != null;
   int get retrySeconds => _retryAt == null
       ? 0
       : ((_retryAt!.difference(now().toUtc()).inMilliseconds / 1000).ceil())
@@ -227,8 +280,13 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       !busy &&
       hasPending &&
       !pendingFailed &&
+      (!pendingReview || (_unprofiledCorrection && !_adoptionCurrent)) &&
       retrySeconds == 0;
-  bool get canUseCurrent => hasPending && pendingFailed && _current && !busy;
+  bool get canUseCurrent =>
+      hasPending &&
+      ((pendingFailed && !pendingReview) || pendingCurrentState != null) &&
+      _current &&
+      !busy;
   bool get ready =>
       _current &&
       !loading &&
@@ -304,6 +362,8 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       _selectedCycle = null;
       _display = {};
       _pending = null;
+      _adoptionCommand = null;
+      _adoptionState = null;
       _correction = null;
       preparingCorrection = false;
       failure = null;
@@ -325,6 +385,10 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       return;
     }
     final signature = _targets();
+    if (!_adoptionCurrent) {
+      _adoptionCommand = null;
+      _adoptionState = null;
+    }
     final bootstrap = model.runtime.bootstrap;
     if (signature == _signature &&
         _signatureGeneration == model.runtime.readGeneration &&
@@ -347,7 +411,11 @@ class MemberWeeklyViewModel extends ChangeNotifier {
 
   Future<void> _persist(StorageScope scope) {
     final encoded = jsonEncode({
-      'schema': _pending?.wireVersion == 3 ? 3 : 2,
+      'schema': _pending?.tracksTransport == true
+          ? 4
+          : _pending?.wireVersion == 3
+          ? 3
+          : 2,
       'pending': _pending?.toJson(),
       'display': {
         for (final entry in _display.entries)
@@ -372,7 +440,10 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       final data = roleMap(jsonDecode(raw));
       roleShape(data, 'schema pending display');
       roleCheck(
-        data['schema'] == 1 || data['schema'] == 2 || data['schema'] == 3,
+        data['schema'] == 1 ||
+            data['schema'] == 2 ||
+            data['schema'] == 3 ||
+            data['schema'] == 4,
       );
       final prefs = <String, CharacterWeeklyRaidDisplayPreference>{};
       for (final e in roleMap(data['display']).entries) {
@@ -439,6 +510,8 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     loading = true;
     _current = false;
     failure = null;
+    refreshFailure = null;
+    _adoptionState = null;
     late final Future<void> flight;
     flight =
         Future<void>(
@@ -474,6 +547,16 @@ class MemberWeeklyViewModel extends ChangeNotifier {
               }
               if (twoCycleEnabled) {
                 await _readTwoCycles(ids, guard);
+                if (_adoptionCurrent) {
+                  final command = _adoptionCommand!;
+                  final state = await client.correction(
+                    command.character,
+                    command.raid,
+                    command.target,
+                  );
+                  guard();
+                  if (_adoptionCurrent) _adoptionState = state;
+                }
                 return;
               }
               final snapshot = model.runtime.bootstrap;
@@ -560,6 +643,11 @@ class MemberWeeklyViewModel extends ChangeNotifier {
                     : e is FormatException || e is TypeError
                     ? 'INVALID_RESPONSE'
                     : 'LOCAL_STORAGE_FAILED';
+                refreshFailure = e is AccountReadException
+                    ? e
+                    : AccountReadException(failure!);
+                _adoptionState = null;
+                _current = false;
                 if (e is AccountReadException) _cooldown(e);
               }
             } finally {
@@ -999,6 +1087,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         now().toUtc(),
         wireVersion: 3,
         correction: fresh,
+        query: Map.unmodifiable(client.commandQuery),
       );
       _correction = null;
     } catch (e) {
@@ -1020,6 +1109,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   List<WeeklyRaidStatusItem> items(
     ScopedCharacterRef ref, {
     bool allowParticipationCompletion = false,
+    bool Function(String raidId)? recoverParticipationCompletion,
   }) => [
     for (final c in displayed(ref))
       WeeklyRaidStatusItem(
@@ -1035,6 +1125,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
             ? WeeklyRaidStatusKind.active
             : null,
         toggleAllowed:
+            recoverParticipationCompletion?.call(c.raidId) == true ||
             canChange(ref, c.raidId) ||
             (allowParticipationCompletion &&
                 canCompleteParticipation(ref, c.raidId)),
@@ -1068,6 +1159,9 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       body,
       now().toUtc(),
       wireVersion: twoCycleEnabled ? 2 : 1,
+      query: Map.unmodifiable(
+        twoCycleEnabled ? client.commandQuery : const <String, dynamic>{},
+      ),
     );
     await _send();
   }
@@ -1096,11 +1190,16 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     final epoch = _epoch,
         member = accountReadScope(model.runtime.session),
         scope = model.runtime.scope;
+    final generation = model.runtime.readGeneration, targets = _targets();
     void guard() => _guard(epoch, member, scope);
     writing = true;
+    _adoptionCommand = null;
+    _adoptionState = null;
     _current = false;
     failure = null;
     _emit();
+    final hadUnknownResult = command.uncertain;
+    var sent = false;
     try {
       final age = now().toUtc().difference(command.started);
       if (!command.ack &&
@@ -1109,19 +1208,29 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         await _persist(scope);
         throw const AccountReadException('REQUEST_EXPIRED');
       }
+      command.transportTracked = true;
+      if (!command.ack) command.uncertain = true;
       await _persist(scope);
       guard();
       if (!command.ack) {
         if (command.wireVersion == 3) {
-          await client.correct(command.correction!, command.key, command.body);
+          sent = true;
+          await client.correct(
+            command.correction!,
+            command.key,
+            command.body,
+            query: command.query ?? const {},
+          );
           guard();
         } else {
+          sent = true;
           final ack =
               await (command.wireVersion == 2 ? client.putTarget : client.put)(
                 command.character,
                 command.raid,
                 command.key,
                 command.body,
+                query: command.query ?? const {},
               );
           guard();
           roleCheck(
@@ -1139,6 +1248,8 @@ class MemberWeeklyViewModel extends ChangeNotifier {
           );
         }
         command.ack = true;
+        command.uncertain = false;
+        command.blockedCode = null;
         await _persist(scope);
         guard();
       }
@@ -1150,8 +1261,26 @@ class MemberWeeklyViewModel extends ChangeNotifier {
             ? 'INVALID_RESPONSE'
             : 'LOCAL_STORAGE_FAILED';
         failure = code;
+        if (!sent) command.uncertain = hadUnknownResult;
         if (e is AccountReadException) _cooldown(e);
-        if ({
+        if (code == 'CLIENT_UPGRADE_REQUIRED') {
+          command.blockedCode = code;
+          // Current-state adoption does not assert the historical outcome.
+          // Only the current HTTP refusal of this unchanged original qualifies.
+          if (sent &&
+              e is AccountReadException &&
+              e.status == 409 &&
+              _unprofiledCorrection) {
+            _adoptionCommand = command;
+            _adoptionGeneration = generation;
+            _adoptionTargets = targets;
+          }
+          try {
+            await _persist(scope);
+          } catch (_) {
+            /* Keep the original. */
+          }
+        } else if ({
               'REVISION_CONFLICT',
               'CATALOG_VERSION_CONFLICT',
               'CYCLE_CHANGED',
@@ -1189,6 +1318,10 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       }
     }
     if (_disposed || epoch != _epoch) return;
+    if (_adoptionCurrent && !command.ack) {
+      await refreshTarget(command.target);
+      return;
+    }
     if (command.ack) {
       if (command.wireVersion == 3) {
         // A persisted original ACK is final. A failed subsequent read cannot

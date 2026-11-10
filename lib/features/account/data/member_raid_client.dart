@@ -10,7 +10,11 @@ import '../domain/role_summary.dart';
 import 'backend_account_read_api.dart';
 
 class MemberRaidClient {
-  MemberRaidClient(this.api);
+  MemberRaidClient(this.api, {this.commandQuery = groupPolicyQuery});
+  static const groupPolicyQuery = <String, dynamic>{
+    'group_policy_version': 'cycle-group-policy-1',
+  };
+  final Map<String, dynamic> commandQuery;
   final DioBackendAccountReadApi api;
   Future<MemberCompletionCorrection> correction(
     String character,
@@ -26,15 +30,16 @@ class MemberRaidClient {
       target,
       (await api.request(
         '/v2/me/characters/$character/raid-weekly-states/$raid/completion-correction-context',
-        query: {'target_cycle_key': target},
+        query: {'target_cycle_key': target, ...commandQuery},
       ))!,
     );
   });
   Future<void> correct(
     MemberCompletionCorrection original,
     String key,
-    Map<String, dynamic> body,
-  ) => _decode(() async {
+    Map<String, dynamic> body, {
+    Map<String, dynamic>? query,
+  }) => _decode(() async {
     roleId(key);
     roleCheck(
       correctionStableJson(body) == correctionStableJson(original.body()),
@@ -44,6 +49,7 @@ class MemberRaidClient {
         '/v2/me/characters/${original.character}/raid-weekly-states/${original.raid}/completion-corrections',
         method: 'POST',
         body: body,
+        query: query ?? commandQuery,
         idempotencyKey: key,
       ))!,
       original,
@@ -130,8 +136,9 @@ class MemberRaidClient {
     String character,
     String raid,
     String key,
-    Map<String, dynamic> body,
-  ) => _decode(() async {
+    Map<String, dynamic> body, {
+    Map<String, dynamic> query = const {},
+  }) => _decode(() async {
     roleId(character);
     raidIdentifier(raid);
     roleId(key);
@@ -140,6 +147,7 @@ class MemberRaidClient {
         '/v1/me/characters/$character/raid-weekly-states/$raid/manual-completion',
         method: 'PUT',
         body: body,
+        query: query.isEmpty ? null : query,
         idempotencyKey: key,
       ))!,
     );
@@ -149,8 +157,9 @@ class MemberRaidClient {
     String character,
     String raid,
     String key,
-    Map<String, dynamic> body,
-  ) => _decode(() async {
+    Map<String, dynamic> body, {
+    Map<String, dynamic>? query,
+  }) => _decode(() async {
     roleId(character);
     raidIdentifier(raid);
     roleId(key);
@@ -161,6 +170,7 @@ class MemberRaidClient {
         '/v2/me/characters/$character/raid-weekly-states/$raid/manual-completion',
         method: 'PUT',
         body: body,
+        query: query ?? commandQuery,
         idempotencyKey: key,
       ))!,
       target,

@@ -237,8 +237,10 @@ void main() {
       respond = (r) {
         if (r.method == 'PUT') {
           final saved = disk();
-          expect(saved['schema'], 2);
+          expect(saved['schema'], 4);
           expect(saved['pending']['wire_version'], 2);
+          expect(saved['pending']['query'], MemberRaidClient.groupPolicyQuery);
+          expect(r.queryParameters, MemberRaidClient.groupPolicyQuery);
           expect(saved['pending']['body'], r.data);
           expect(saved['pending']['key'], r.headers['Idempotency-Key']);
         }
@@ -280,6 +282,8 @@ void main() {
       await weekly.retry();
       expect(writes().last.path, first.path);
       expect(writes().last.method, 'PUT');
+      expect(writes().last.queryParameters, first.queryParameters);
+      expect(first.queryParameters, MemberRaidClient.groupPolicyQuery);
       expect(jsonEncode(writes().last.data), body);
       expect(writes().last.headers['Idempotency-Key'], key);
       expect(weekly.hasPending, false);

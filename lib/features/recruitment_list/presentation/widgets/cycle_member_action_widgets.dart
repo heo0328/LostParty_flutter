@@ -1,8 +1,8 @@
 import '../../data/beta/cycle_group_policy.dart';
-import 'recruitment_error_text.dart';
 import 'cycle_action_dialog_route.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'completion_dialog_feedback.dart';
 import '../../data/cycle_member_actions.dart';
 import '../../data/cycle_schedule.dart';
 import '../viewmodels/cycle_participation_controller.dart';
@@ -279,6 +279,7 @@ class _DepartureDialog extends StatefulWidget {
 class _DepartureDialogState extends State<_DepartureDialog> {
   CycleParticipationController get c => widget.controller;
   late final String binding;
+  late final CompletionDialogFeedback feedback;
   CycleScheduleView? plan;
   DeparturePreview? preview;
   String? round, submittedKey, selectionFailure;
@@ -287,6 +288,7 @@ class _DepartureDialogState extends State<_DepartureDialog> {
   int epoch = 0;
   bool get valid =>
       mounted &&
+      feedback.active &&
       c.session.isAuthenticated &&
       c.scopeKey() == binding &&
       widget.isCurrent();
@@ -304,8 +306,25 @@ class _DepartureDialogState extends State<_DepartureDialog> {
   void initState() {
     super.initState();
     binding = c.scopeKey();
+    feedback = CompletionDialogFeedback(
+      c,
+      widget.room,
+      widget.target,
+      'personal_completion',
+    );
+    c.addListener(completionChanged);
     if (widget.closeOnSuccess) c.addListener(_success);
-    unawaited(load());
+    if (feedback.matchesPending) {
+      round = feedback.round;
+      loading = false;
+      unawaited(
+        feedback.readTargetLabel(widget.raidLabel).then((_) {
+          if (valid) setState(() {});
+        }),
+      );
+    } else {
+      unawaited(load());
+    }
   }
 
   void _success() {
@@ -315,6 +334,7 @@ class _DepartureDialogState extends State<_DepartureDialog> {
         submittedKey == null ||
         c.scopeKey() != binding ||
         success?.$1 != submittedKey ||
+        !c.completionNavigationAllowed(submittedKey!) ||
         success?.$2 != widget.room ||
         success?.$3 != widget.target) {
       return;
@@ -327,24 +347,65 @@ class _DepartureDialogState extends State<_DepartureDialog> {
     });
   }
 
+  void completionChanged() {
+    if (!valid || closing || !feedback.finished) return;
+    closing = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (valid && ModalRoute.of(context)?.isCurrent == true) close();
+    });
+  }
+
   @override
   void dispose() {
+    c.removeListener(completionChanged);
+    feedback.close();
     if (widget.closeOnSuccess) c.removeListener(_success);
     super.dispose();
   }
 
   Future<void> load() async {
-    if (!valid) return;
+    if (!valid || feedback.matchesPending) return;
     setState(() {
       loading = true;
       preview = null;
     });
+    c.failure = null;
     plan = await c.scheduleRead(widget.room, widget.target, 'plan');
     if (!valid) return;
+    feedback.capture(query: true);
+    if (plan == null) {
+      setState(() => loading = false);
+      return;
+    }
     round =
         choices.where((i) => i['round_id'] == round).firstOrNull?['round_id'] ??
         choices.firstOrNull?['round_id'];
     await contextRead();
+  }
+
+  void close() {
+    feedback.close();
+    Navigator.pop(context);
+  }
+
+  Future<void> recover({bool refresh = false}) async {
+    if (!valid || loading || c.busy) return;
+    setState(() => loading = true);
+    if (feedback.matchesPending) await c.retry();
+    if (!valid) return;
+    if ((refresh || feedback.acknowledged) && !feedback.matchesPending) {
+      await c.refreshCompletion(widget.room, widget.target);
+    }
+    if (!valid) return;
+    feedback.capture();
+    if (feedback.acknowledged &&
+        !feedback.refreshFailed &&
+        !c.hasPending &&
+        c.failure == null) {
+      close();
+    } else {
+      setState(() => loading = false);
+    }
   }
 
   Future<void> contextRead() async {
@@ -358,6 +419,8 @@ class _DepartureDialogState extends State<_DepartureDialog> {
         ? null
         : await c.departure(widget.room, widget.target, round!);
     if (!valid || e != epoch) return;
+    feedback.capture(query: true);
+    if (round == null && plan != null) feedback.code = 'ROUND_NOT_ACTIVE';
     setState(() {
       final sameCharacter =
           widget.expectedCharacter == null ||
@@ -378,7 +441,14 @@ class _DepartureDialogState extends State<_DepartureDialog> {
       onPrepared: (key) => submittedKey = key,
     );
     if (!valid) return;
-    // Page consumes the explicit success event, including successful retries.
+    feedback.capture(query: feedback.requestKey == null);
+    if (feedback.acknowledged &&
+        !feedback.refreshFailed &&
+        !c.hasPending &&
+        c.failure == null) {
+      close();
+      return;
+    }
     setState(() {
       loading = false;
       preview = null;
@@ -400,12 +470,8 @@ class _DepartureDialogState extends State<_DepartureDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text('대상 주차 · ${widget.target}'),
-                if (selectionFailure != null)
-                  RecruitmentErrorText(
-                    recruitmentFailureMessage(selectionFailure),
-                  ),
                 if (loading) const LinearProgressIndicator(),
-                if (!loading && choices.length > 1)
+                if (!loading && !feedback.matchesPending && choices.length > 1)
                   DropdownButtonFormField<String>(
                     key: ValueKey(round),
                     initialValue: round,
@@ -449,36 +515,38 @@ class _DepartureDialogState extends State<_DepartureDialog> {
                     'close_',
                   ))
                     const Text('마지막 참가자이므로 이 주차의 모집이 종료됩니다.'),
-                  if (!p.permission.allowed)
-                    Text(
-                      p.permission.reason == 'SUCCESSOR_UNAVAILABLE'
-                          ? '승계 가능한 공대원이 없어 완료 후 탈퇴할 수 없습니다.'
-                          : recruitmentFailureMessage(p.permission.reason),
-                    ),
                 ],
-                if (!loading && p == null && c.failure == null)
-                  const Text('완료 후 탈퇴할 수 있는 레이드가 없습니다.'),
-                CycleCommandBanner(controller: c),
-                if (!loading)
-                  TextButton(
-                    onPressed: valid && c.canAct ? load : null,
-                    child: const Text('최신 상태 다시 확인'),
-                  ),
+                if (feedback.matchesPending)
+                  Text(feedback.targetLabel ?? '선택했던 레이드의 요청을 다시 시도합니다.'),
+                CompletionDialogNotice(
+                  feedback: feedback,
+                  reason:
+                      selectionFailure ??
+                      (p?.permission.allowed == false
+                          ? p?.permission.reason
+                          : null),
+                ),
               ],
             ),
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: loading ? null : () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed:
-                valid && !loading && c.canAct && p?.permission.allowed == true
-                ? submit
-                : null,
-            child: const Text('완료 후 탈퇴'),
+          CompletionDialogButtons(
+            feedback: feedback,
+            loading: loading,
+            canSubmit:
+                valid &&
+                c.canAct &&
+                p?.permission.allowed == true &&
+                selectionFailure == null,
+            onClose: close,
+            onSubmit: submit,
+            onRead: load,
+            onRetry: recover,
+            onRefresh: () => recover(refresh: true),
+            reason:
+                selectionFailure ??
+                (p?.permission.allowed == false ? p?.permission.reason : null),
           ),
         ],
       );

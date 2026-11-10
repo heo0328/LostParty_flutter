@@ -1,16 +1,22 @@
-# NEXT WORK — Issue17 Native 구현·자동 검증 완료, 테스트 자료 준비·기기 확인 후속
+# NEXT WORK — 완료 오류·계정 복구 보관·묶음 완료 후속
 
-## 현재 파트·범위 — 2026-11-09
+## 현재 상태와 다음 개발 후속 (2026-11-10)
 
-사용자 구현 지시에 따라 [Issue17 계약26](../backend-migration/26-roster-character-lifecycle-design.md#issue17--native-구현-기획설계-2026-11-08)의 Native 코드·기존 화면을 연결했다. 두 Backend 선처리/소비 대조·[개발서버 반영](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722917497) 대기는 해소됐고 개발 로컬 image ce59926c…/DB0036·two-cycle2aeca907…를 기준으로 한다. [Backend 고정 구현 게시](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722956197) 기준 caffaf3405a53be941250132a2b50779943b15f6와 같은 실행 계약이며 소스 게시 대기도 해소됐다.
+완료 오류/기존 계정 복구 구간은 Native 연결·자동 검증과 사용자 디바이스 인수를 마쳤다. 기존 계정 복구는 문구 수정 요청 전에 이미 완료됐으며 이후에는 버튼명 ‘현재 정보로 화면갱신’과 두 번째 안내 표시만 변경했다. 동일 복구 재현을 다시 요구하지 않는다. [사용자 인수 회신6756433040](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6756433040).
 
-- 연결: 실제 고정 계약 검증·지원 V2 새 요청의 participation_profile, bootstrap/characters presence 수신·독립 캐시 저장과 일반 표시/공용 원본 분리, M만 교체하는 후보/미리보기/plan/본문 CAS 검증을 연결했다. 원본·완료P·저장 query/본문/키/원ACK를 보존한다.
-- 연결: 앱 공통 경고 요약과 시작/복귀·명령/초기 갱신 뒤 갱신, 주차별 본인/전체 참가자 경고·기존 카드·상세 안내/해당 원정대 새로고침, 기존 변경 버튼/활동 관리 저장·취소 후 방/실제 주차/변경 sheet 복귀를 연결했다. 정상0/미조회/권한 없음·조회 실패/늦은 응답·명령 성공 후 재조회 실패를 구분한다.
-- 검증: 신규9개 경계 시험을 포함한 최종 전체 Flutter2,826PASS를 확인했다. 실제 일반 앱 DI/Router의 opt-in 활성화를 확인했고 전체 flutter analyze 문제0, 변경 Dart40파일 포맷0변경·git diff --check를 확인했다. Backend 실회원 참가 명령·Native 기기 인수는 아직 수행하지 않았다.
-- 디자인: Penpot 선확인 없이 기능 개발 후 사용자 디바이스 테스트에서 배지 위치/가독성·갱신/복귀 동선을 확인한다. 기존 배치·조작을 유지한다.
-- 제외: WebSocket/polling, Issue18 활동 자동추가·소유권 이전·퇴역/claim해제/자료 삭제, 서버/DB 변경·운영/APK 게시·Issue 종료. 기기 설치/조작은 사용자 담당이다.
-- 저장: 2026-11-09 사용자 지시로 feature/raid-character-missing-recovery의 추적 제외 파일 외 최신 변경 전체를 한 커밋으로 보관하고 같은 브랜치에 푸시한다. dev 병합·배포·Issue 종료는 포함하지 않으며 테스트 후속이 남아 브랜치를 유지한다.
-- 협업: [Native 구현/검증 결과6723317207](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6723317207)과 [테스트 후속 보관6723640225](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6723640225)을 인계했다. 누락 상태를 실제 게임 변경 없이 재현할 자료/절차 준비와 사용자 기기 확인은 아래 후속으로 남긴다. 이번에는 서버 자료 조정 실행을 요청하지 않았다.
+다음 개발 후속은 [묶음 생성 레이드의 선택 일괄 완료](../product/DETAIL_IMPROVEMENTS.md#묶음-생성-레이드의-선택-일괄-완료--사용자-확정미구현)다. 완료 알럿을 레이드 이름별 체크박스 목록으로 바꾸고 기본 전체 선택·선택 대상 동시 완료를 제공한다. 현재는 요구사항 기록 상태이며 설계/구현·API 지원 대조·Backend 협의는 미착수다. 이번 보관 작업에서 기능 개발을 시작하지 않는다.
+
+## 보관하는 완료 범위와 검증
+
+- BUG-032: 고정 Backend16c9cd4b/계약864de38b의 선택 query10개 선언을 생성 projection에 반영했다. 완료2개/일정5개 Beta 경로의 profile을 일치시키고 DTO·본문·ACK를 유지했다.
+- 완료 UX: 짧은 안내·표준 버튼·접힌 진단정보, 첫 오류 취소·확인창 전용 수명·같은 작업 복구, ACK 성공 후 조회만 복구를 연결했다. 오류가 다른 화면을 따라가거나 닫힌 창의 늦은 성공이 화면을 강제로 이동하지 않게 했다.
+- BUG-033: 신규 계정3경로에 그룹 옵션만 연결했다. 기존 단일 슬롯 schema4는 실제 query를 보관하며 과거 원무옵션·본문/키/token·ACK를 바꾸지 않는다. 기존 v3의 현재409 거절→정확한 대상 GET→명시적 현재 정보로 화면갱신으로 활성 대기를 정리한다. 과거 결과를 성공/실패로 합성하지 않는다. [Backend6742169727](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742169727), [Native 결과6742522210](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742522210).
+- 검증: 최종 전체 Flutter **2,856PASS**, flutter analyze **문제0**. 사용자 **디바이스 테스트 통과(2026-11-10)**는 별도 근거다. 이후 문구/문서 변경은 포맷·diffcheck로 확인했으며 기능 시험을 반복하지 않았다. 자동 로그는 추적 제외 .dart_tool/issue17_review/bug033_adoption_full_final.log·bug033_adoption_analyze_final.log에 보관한다.
+- 현재 계약은 [계약26](../backend-migration/26-roster-character-lifecycle-design.md), 원인/해결 상태는 [BUG-032·033](BUG_REPORTS.md), 완료 경과·중간 검증/정정은 [DEV_LOG](DEV_LOG.md)에 보관한다. 과거 대기·실행 계획을 현재 작업으로 재사용하지 않는다.
+
+## 이번 사용자 보관 지시
+
+feature/raid-character-missing-recovery를 유지하고 추적 제외 파일 외 최신 누적 변경 전체를 **하나의 커밋으로 보관 후 같은 origin 브랜치에 푸시**한다. dev/main 병합·배포·자료 삭제·Issue 종료는 포함하지 않는다. 아래 누락 테스트 후속과 묶음 완료가 남아 브랜치를 유지한다. 실제 커밋/원격 동기화 결과는 Git 확인 및 작업 종료 보고를 기준으로 구분한다.
 
 ## 남은 작업 — 개발용 테스트 자료 준비 후 사용자 디바이스 확인
 
