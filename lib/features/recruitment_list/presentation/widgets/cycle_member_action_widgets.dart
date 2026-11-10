@@ -317,11 +317,6 @@ class _DepartureDialogState extends State<_DepartureDialog> {
     if (feedback.matchesPending) {
       round = feedback.round;
       loading = false;
-      unawaited(
-        feedback.readTargetLabel(widget.raidLabel).then((_) {
-          if (valid) setState(() {});
-        }),
-      );
     } else {
       unawaited(load());
     }

@@ -70,22 +70,6 @@ class CompletionDialogFeedback {
               controller.departureSuccess?.$1 == requestKey ||
               (matchesPending && controller.pendingAcknowledged));
 
-  Future<void> readTargetLabel(String Function(Map) label) async {
-    final key = requestKey;
-    final savedRounds = controller.pendingCompletionRounds;
-    if (!active || !matchesPending) return;
-    final plan = await controller.scheduleRead(room, target, 'plan');
-    if (!active || !matchesPending || requestKey != key) return;
-    final items = plan?.data['game_items'] as List? ?? [];
-    final labels = [
-      for (final item in items)
-        if (savedRounds.contains(item['round_id']) && item is Map) label(item),
-    ];
-    if (labels.length == savedRounds.length && labels.isNotEmpty) {
-      targetLabel = labels.join(' / ');
-    }
-  }
-
   void capture({bool query = false}) {
     if (!active || controller._completionDialog != this) return;
     code = controller.failure;
@@ -260,6 +244,26 @@ class _CycleCommand {
   final Map<String, dynamic> evidence;
 }
 
+/// A presentation snapshot only; journal and ACK evidence remain unchanged.
+class ParticipationRecoveryState {
+  const ParticipationRecoveryState({
+    required this.requestKey,
+    required this.room,
+    required this.target,
+    required this.kind,
+    required this.completion,
+    required this.acknowledged,
+    required this.rounds,
+    required this.canRecover,
+    required this.needsReview,
+    required this.waiting,
+    required this.storageIssue,
+  });
+  final String? requestKey, room, target, kind, storageIssue;
+  final bool completion, acknowledged, canRecover, needsReview, waiting;
+  final List<String> rounds;
+}
+
 /// App-owned command recovery. Reads never substitute for an original write ACK.
 class CycleParticipationController extends ChangeNotifier {
   CycleParticipationController({
@@ -323,8 +327,26 @@ class CycleParticipationController extends ChangeNotifier {
   bool _completionFeedback = false;
   CompletionDialogFeedback? _completionDialog;
   String? _detachedCompletionKey, _releasedCompletionKey;
+  final _stationaryCompletionKeys = <String>{};
+  bool recoveryStaysOnCurrentScreen(String key) =>
+      _stationaryCompletionKeys.contains(key);
+  void keepRecoveryOnCurrentScreen() {
+    final key = pendingRequestKey;
+    if (key != null) {
+      _stationaryCompletionKeys.add(key);
+    } else if (completionRefreshFailed) {
+      for (final event in [completionSuccess, departureSuccess]) {
+        if (event != null && event.$2 == lastRoom && event.$3 == lastTarget) {
+          _stationaryCompletionKeys.add(event.$1);
+        }
+      }
+    }
+  }
+
+  bool get completionDialogOpen => _completionDialog?.active == true;
   bool completionNavigationAllowed(String key) =>
       !busy &&
+      !recoveryStaysOnCurrentScreen(key) &&
       key != _detachedCompletionKey &&
       (!completionRefreshFailed || key == _releasedCompletionKey);
   bool matchesCompletion(String room, String target, String action) =>
@@ -492,6 +514,7 @@ class CycleParticipationController extends ChangeNotifier {
     }
     _completionDialog = null;
     _detachedCompletionKey = _releasedCompletionKey = null;
+    _stationaryCompletionKeys.clear();
     _binding = scopeKey();
     _epoch++;
     _pending = null;
@@ -938,6 +961,41 @@ class CycleParticipationController extends ChangeNotifier {
         _emit();
       }
     }
+  }
+
+  /// Display reads never publish into the shared command failure channel.
+  /// Callers own their room/week and request-generation lifetime.
+  Future<CycleScheduleView> readScheduleForDisplay(
+    String room,
+    String target,
+    String kind,
+  ) async {
+    final e = _epoch;
+    if (!_valid(e)) throw const AccountReadException('SESSION_CHANGED');
+    final value = await gateway.scheduleRead(room, target, kind);
+    if (!_valid(e)) throw const AccountReadException('SESSION_CHANGED');
+    return value;
+  }
+
+  ParticipationRecoveryState? get recoveryState {
+    if (_disposed || !session.isAuthenticated || _binding != scopeKey()) {
+      return null;
+    }
+    if (!hasPending && !completionRefreshFailed) return null;
+    return ParticipationRecoveryState(
+      requestKey: pendingRequestKey,
+      room: pendingRoom ?? (completionRefreshFailed ? lastRoom : null),
+      target: pendingTarget ?? (completionRefreshFailed ? lastTarget : null),
+      kind: pendingKind,
+      completion: pendingCompletion || completionRefreshFailed,
+      acknowledged:
+          pendingAcknowledged || (!hasPending && completionRefreshFailed),
+      rounds: pendingCompletion ? pendingCompletionRounds : const [],
+      canRecover: canRetry,
+      needsReview: needsReview,
+      waiting: waitingToRetry,
+      storageIssue: recoveryIssue,
+    );
   }
 
   Future<CycleScheduleView?> scheduleRead(

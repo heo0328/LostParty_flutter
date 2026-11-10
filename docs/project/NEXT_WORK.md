@@ -1,26 +1,23 @@
-# NEXT WORK — 묶음 완료 보관·화면 갱신/변경 알림 후속
+# NEXT WORK — 묶음 완료·복구 안내 로컬 dev 통합 및 차후 작업
 
-## 현재 상태 (2026-11-10)
+## 현재 보관·통합 상태 (2026-11-10)
 
-feature/raid-batch-completion의 묶음 선택 완료·BUG-034 수정과 자동 검증을 마쳤다. 사용자는 일반 동작 대부분과 계정의 묶음 영향 안내가 정상이라고 보고했고, 후속 수정 앱에서 **내 계정 표시 정상화**를 확인했다. BUG-034의 계정 회색 표시 복구 대기는 해소한다. 보고된 구간의 인수이며 미보고 경계 전체의 기기 재시험이나 다른 누락 캐릭터 자료 인수를 뜻하지 않는다.
+사용자 지시로 feature/raid-batch-completion의 기존 묶음 선택 완료47a30dad와 이후 BUG-035/공통 복구 카드·시험·문서/이슈 최신화 전체를 보관하고 **로컬 dev에 통합**한다. 통합 결과의 working tree/조상 관계/코드 동일성을 확인해 종료하며 원격 push는 이번 지시 범위가 아니다. main·운영/APK·DB/자료는 변경하지 않는다. 작업 브랜치는 삭제하지 않고 유지한다.
 
-이번 사용자 지시는 누적 코드·시험·문서 전체의 단일 커밋·동명 원격 브랜치 푸시 보관이다. dev/main 통합·운영/APK 배포·자료 초기화·Issue 종료는 포함하지 않는다. 이 보관에서 새 기능 코드를 수정하거나 이미 통과한 Flutter 시험을 반복하지 않는다.
+- 새로 연결한 흐름: 상세 공대장/개인의 기본 전체·부분 선택 원자 완료, 개인 미선택 취소/해당 주차 탈퇴와 완료/취소/과거 이력·승계/마지막 종료 안내. 내 계정의 기존 단건 API·누른 레이드 고정·계정 잔류는 유지한다.
+- 복구 안내: 정상/축약/조회 실패 상세, 내 계정의 주간 참가 영역, 현황/빈 목록에 붉은 공통 카드·채워진 해결 버튼·접힌 진단정보를 제공한다. 원요청 미확정/영역 조회 실패/성공 후 갱신 실패/저장 정리 실패를 구분한다. 자동 팝업은 없으며 다른 방의 이전 요청을 현재 방/캐릭터 오류로 표시하지 않는다.
+- 보존 확인: 원종류/선택/본문/query/key/token/ACK·기존 단건 해석·participation 단일 journal과 새 쓰기 제한 유지. 일정 표시 조회는 canAct/공용 실패에서 분리해 pending 중에도 회원/환경·화면 세대/서버 권한을 검증한다. 복구 이름 전용 GET은 제거하고 카드 복구 후 현재 화면/선택 주차를 유지한다. ACK 뒤 실패는 조회만 재시도한다. 장기 계약은 [설계37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#selected-batch-completion)·[계약26](../backend-migration/26-roster-character-lifecycle-design.md#batch-completion-recovery-boundary)을 따른다.
+- 자동 검증: 최종 전체 flutter test **2,913PASS**, flutter analyze **문제0**. 직접80PASS는 전체 수에 포함한다. 로그는 추적 제외 .dart_tool/batch_completion_review/bug035_{targeted,full,analyze}_final.log다. 이번 문서/보관·통합에서 기능 코드를 바꾸지 않으므로 같은 시험을 반복하지 않고 변경 Dart 포맷 확인·diffcheck/diff 검토와 통합 전후 코드 동일성으로 검증한다.
+- 사용자 확인: 기존 일반 동작 대부분과 BUG-034 뒤 내 계정/기존 조작 정상화 보고는 확인했다. 새 카드 디자인은 차후 Penpot 확인이며 실제 새 카드의 기기 세부 결과는 미확인으로 보존한다. 이 때문에 과거 장애 재현·새 미리보기·정상 기능 전수 재시험을 요구하지 않는다.
+- Git: 기존 게시47a30dad 위의 최신 변경 전체를 현재 목적 브랜치에서 한 커밋으로 보관한 뒤 로컬 dev에 통합하는 범위다. 최신 origin/dev f79443e2를 fetch해 충돌 없는 조상 관계를 확인했다. 이번 결과는 로컬 보관/통합이며 origin/dev·origin/feature의 갱신은 별도 push 지시 대상이다. 실제 최종 SHA/청결 상태는 Git 종료 확인과 DEV_LOG를 따른다.
 
-### 이번 브랜치에서 연결·검증한 내용
+## 공식 협업 상태
 
-- 상세 공대장/개인 완료: 기본 전체 선택·모집 순서의 이름별 체크박스(난이도 생략)·부분 선택·0개 확정 금지. 공대장은 선택 레이드 전체 참가 완료/미선택 유지, 개인은 본인 선택 완료/미선택 활성 취소 후 해당 주차 탈퇴다. 완료/취소/기존 이력과 승계·마지막 종료·그룹 영향을 구분한다.
-- Native 연결: 실제 betaWire2 DI→Repository/Gateway→Controller→상세 확인창→context/단일 POST/ACK→기존 계정·주차·목록/사용량 갱신 경로다. 기존 단건 DTO·원본 schema와 내 계정의 누른1개 고정/기존 API·계정 잔류를 유지한다.
-- 선택/수명: 최초 전체 선택, 재조회 교집합/새 후보 자동 선택 없음, 직렬 context·선택 세대 격리, 제출 직전 동일 선택 재확인·의미 변경 시 재확정이다. 닫힌 창·재시작의 늦은 성공으로 강제 이동하지 않는다.
-- 저장/복구: participation 단일 슬롯에 batch 두 종류를 구분해 원선택/효과/이력proof·예상 결과/revision을 보관한다. 원문/query/key/token·과거 단건 해석을 유지하고 batch ACK만1MiB(기존256KiB)다. ACK 뒤 조회 실패는 조회만 복구한다.
-- BUG-034: 개인 승계 원ACK의 effect.after.revision=null을 같은 원ACK의 known group_policy와 동일 scope/state·before 대비 유지/+1 근거로 정확히 검증한다. 일반 그룹 ACK 검사를 완화하거나 현재 GET으로 성공을 합성하지 않는다. 방이 사라져도 현황의 batch pending 전용 ‘완료 요청 결과 확인’에서 기존 잠긴 확인창으로 명시 재시도한다. 복구 성공 후 중복 조회를 제거했다.
-- 기존 현재 캐릭터의 후보 표시는 고정 후보 계약과 일치하며 사용자가 버그가 아닌 것으로 판단했다. 이번 기능의 부작용으로 수정하지 않는다.
-- 최종 검증: 전체 flutter test **2,911PASS**, analyze **문제0**, batch 직접55개는 전체 수에 포함한다. 포맷·diffcheck·diff 검토·계약 생성 재실행 동일성을 확인했다. 기존67 operation/기존 definition 모두 동일하고 신규4 operation을 추가했다. 로그는 추적 제외 .dart_tool/batch_completion_review/bug034_full_final.log·bug034_analyze_final.log다. Backend 원자성/동시성 근거와 Native 시험/사용자 기기 확인은 별도다.
-
-### 계약·협업 상태
-
-소비 기준은 [Backend44eb4ba3 고정 게시/dev 지원6763005691](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6763005691)이다. 기본 OpenAPI SHA256=18491bc066d08a578aa9228cd0da85eee508288c28d14d563d788e73e324c3dd, two-cycle=2c51d2f206100e9a305bafa6dd537a1b1b40cc23f9cf1ac6f65d254a4ff5faf7을 직접 확인했다. 상세 제품/집합·이력 계약은 [설계37](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#selected-batch-completion), 원요청/ACK 복구는 [계약26](../backend-migration/26-roster-character-lifecycle-design.md#batch-completion-recovery-boundary), 원인/해결은 [BUG-034](BUG_REPORTS.md), 진행 이력은 DEV_LOG에 둔다.
-
-기존 구현 보고는 [사용자 수동 게시6763748000](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6763748000)을 재조회했다. BUG-034 수정·계정 정상화와 이번 보관 결과의 새 회신은 아직 미게시다. .dart_tool/batch_completion_review/issue47_bug034_reply.md는 사용자 수동 게시용 초안이며 추적 제외다. 댓글 도구의 PR 목적지 문제로 같은 차단 호출/우회 게시를 반복하지 않고 게시·재조회 전까지 협업 인계 완료로 처리하지 않는다. [Backend 선택창 로딩 조사6765184015](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6765184015)는 이번 승계 ACK 오류와 별개이며, 해당 기기 request_id/실패 분류 대조는 미확인으로 보관한다. 재발 근거 없이 현재 캐릭터 표시 정상 판정과 같은 문제로 합치거나 동일 기기 시험을 강제하지 않는다.
+- [#47 completed](https://github.com/heo0328/lostparty-backend/issues/47#issuecomment-6767992300): Backend가2026-11-10 사용자 지시로 종료했다. Native의 실제 DI→두 상세 선택→Controller/transport/DTO·원ACK 복구·계정 단건 고정 근거와 추가 미연결 없음 판정, Backend 구현/계약/dev 지원 확인을 연결했다. ACK 예측/실제 group_policy 의미 질문도 해소됐으며 추가 구현/계약·동일 시험 대기는 없다.
+- [#48 completed](https://github.com/heo0328/lostparty-backend/issues/48#issuecomment-6767764278): Native 코드 연결/자동 검증과 [Backend 정책3항목6767569951](https://github.com/heo0328/lostparty-backend/issues/48#issuecomment-6767569951) 수용·사용자 회복으로 종료됐다. T−30 합류 마감과 기존 조작/조회·주차/예외 상태는 구분하며 탈퇴 cancelled 뒤 plan403은 성공 ACK를 무효화하지 않는다. Penpot 디자인은 독립 후속이다.
+- [#17 OPEN](https://github.com/heo0328/lostparty-backend/issues/17): 기존 완료 오류/계정 복구 인수·5df515f7 게시·dev f79443e2 통합은 완료다. 오래된 미구현/미통합 표현은 이슈 본문에서 교체하고 #47/#48과 분리했다. 남은 누락 캐릭터/부분 완료 자료와 기기 확인은 아래 별도 후속이며 지금 재현·자료 조작·추가 Backend 변경을 요청하지 않는다.
+- #34·#38·#46은2026-11-08 completed 종료 상태를 직접 재확인했다. 로컬의 OPEN/종료 가능 대기는 해소한다. 원요청 완료와 별도의 운영/서명·보관/복원 미확인을 구분한다.
+- #15 소유권 이전 영향, #18 활동 자동 추가, #19 통계는 별도 후속으로 유지한다. 이 보관·통합은 새 기능 선택/구현·Issue 종료의 승인이 아니다. 순차 이슈 정리 경과와 코드 근거 전달은 DEV_LOG 및 각 Issue를 따른다.
 
 ## 다음 단일 작업 — 웹소켓 이전 화면 갱신·모집 변경 알림
 
@@ -42,11 +39,11 @@ feature/raid-batch-completion의 묶음 선택 완료·BUG-034 수정과 자동 
 
 ## Git 보관·통합 경계 (2026-11-10)
 
-기존 Issue17 작업은 dev/origin/dev f79443e2에 통합·푸시 완료이며 main은86e53e11이다. 이번 feature/raid-batch-completion은 f79443e2에서 분기한 누적 코드·시험·문서 전체를 한 커밋으로 보관하고 동명 origin 브랜치에 푸시하는 범위다. dev/main 통합은 별도이며 현재 브랜치를 유지한다. 운영/APK 배포·자료 삭제·Issue 종료는 하지 않는다.
+기존 Issue17은 dev/origin/dev f79443e2에 통합·push됐고 main은86e53e11이다. 이번에는 feature/raid-batch-completion의 전체 누적 변경을 커밋하고 로컬 dev에 통합한다. remote push는 하지 않으므로 로컬 dev와 origin/dev의 차이는 미게시 상태로 명시한다. 작업 브랜치를 유지하고 main·release·서버/운영/APK·자료 삭제·Issue 종료는 변경하지 않는다.
 
 ## 남은 작업 — 개발용 테스트 자료 준비 후 사용자 디바이스 확인
 
-2026-11-09 사용자 결정으로 기기 테스트를 남은 작업으로 보관한다. 아래 항목은 아직 미확인이며 정상 인수로 처리하지 않는다. 이번 문서 정리/커밋/푸시에서 테스트 자료 조정이나 기기 시험은 실행하지 않는다.
+2026-11-09 사용자 결정으로 기기 테스트를 남은 작업으로 보관한다. 아래 항목은 아직 미확인이며 정상 인수로 처리하지 않는다. 이번 문서 정리/커밋/로컬 dev 통합에서 테스트 자료 조정이나 기기 시험은 실행하지 않는다.
 
 경고·부분 완료 자료가 없는 구간은 미확인으로 남기고, 검증을 위해 실제 게임 캐릭터의 삭제·개명을 요구하지 않는다.
 
@@ -71,11 +68,11 @@ PC 포맷 후 Flutter3.41.6/Dart3.11.4/Java21·기존 설정/고정 의존성 �
 
 1. **화면 갱신/레드닷 다음 작업·웹소켓 후순위:** 위 다음 단일 작업과 DETAIL_IMPROVEMENTS를 따른다. 기존 웹소켓과 함께 처리하려던 계정·참가 목록·열린 상세 변경 발견을 수동 새로고침/화면 진입 갱신으로 앞당긴다. 웹소켓 이벤트/구독 계약·구현은 아직 미착수다.
 2. **새 release 키 전환·자동 게시 검증:** 추가 기능 개발과 개발 로컬 테스트를 모두 마친 뒤 운영 APK 게시 준비 시 진행한다. 기존 Secret 키 회수 대신 새 키 생성·백업 후 서명 통일이 사용자 결정이다. 지금 키 생성·Secret/CI/OAuth 변경·수동 Actions 시험을 진행하거나 개발 재개 조건으로 요구하지 않는다. 실행 순서·백업 안내와 사본 접근 확인 조건은 [릴리즈 계약 B-1](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup)을 따른다. 실제 게시 버전은 미정이며 게시 자체는 별도 지시가 필요하다.
-3. **Backend 백업·회신/기록 완료:** [최종 인계](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706731221) 기준 로컬 고정자료는 사용자 보관 보고, 운영 기준본은 온라인 생성·PC 내장 SSD 전송·파일 무결성 확인 및 Backend 문서 게시 완료다. 로컬 DB dump는 사용자 제외, 외장 매체 사본은 미확인, 실제 DB/서비스 복원·정기 자동화는 미실행이다. 추가 Native 구현·반복 수용/로그인 시험 요청은 없다. Issue46은 OPEN 유지하며 다음은 사용자 파일 보관과 이후 관련 변경 시 Backend의 필요한 최신 사본 안내다. 복원 시험·정기 자동화를 개발 재개 선행 조건으로 추가하지 않는다.
+3. **Backend 백업·회신/기록 완료:** [최종 인계](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706731221) 기준 로컬 고정자료는 사용자 보관 보고, 운영 기준본은 온라인 생성·PC 내장 SSD 전송·파일 무결성 확인 및 Backend 문서 게시 완료다. 로컬 DB dump는 사용자 제외, 외장 매체 사본은 미확인, 실제 DB/서비스 복원·정기 자동화는 미실행이다. 추가 Native 구현·반복 수용/로그인 시험 요청은 없다. Issue46은2026-11-08 completed로 종료됐으며 사용자 파일 보관과 이후 관련 변경 시 Backend의 필요한 최신 사본 안내는 독립 후속이다. 복원 시험·정기 자동화를 개발 재개 선행 조건으로 추가하지 않는다.
 4. **그 밖의 차후 수정안:** [DETAIL_IMPROVEMENTS](../product/DETAIL_IMPROVEMENTS.md)의 확정/보류/미채택 상태를 따른다. 이번 문서 정리를 별도 제품 개선·전면 기술 진단의 착수 승인으로 사용하지 않는다.
 
-## Issue 종료 준비 — 게시·재조회 완료 (2026-11-08)
+## 종료된 협업 기록 (2026-11-10 재확인)
 
-- [Issue34 최신화 회신](https://github.com/heo0328/lostparty-backend/issues/34#issuecomment-6718443740): 양측 v2.0.0 배포/게시 완료로 과거 통합·게시 대기를 교체했다. 운영 전체 인수 미확인·다음 서명 전환은 별도 후속이다.
-- [Issue38 최신화 회신](https://github.com/heo0328/lostparty-backend/issues/38#issuecomment-6718445004): 양측 구현·검증·로컬 사용자 인수와 후속 운영/Native 게시를 반영했다. 원요청 종료 가능이다.
-- [Issue46 최신화 회신](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6718450091): 합의한 요청 완료로 체크리스트·다음 담당을 교체했다. 상세 백업 정보는 재게시하지 않고 기존 최종 회신을 참조한다. 원요청 종료 가능이다.
+- [#34](https://github.com/heo0328/lostparty-backend/issues/34): Native 릴리즈/Backend 운영 협의의 원요청은2026-11-08 completed 종료. 양측 v2.0.0 게시 이력과 별도 운영 인수·새 서명 전환은 구분한다.
+- [#38](https://github.com/heo0328/lostparty-backend/issues/38): 초대 검색 개선 구현·로컬 사용자 인수 완료로2026-11-08 completed 종료. 추가 요청/동일 시험 대기 없음.
+- [#46](https://github.com/heo0328/lostparty-backend/issues/46): 합의된 백업 조사·보관/문서 인계가 완료돼2026-11-08 completed 종료. 외장 사본·실제 복원·정기 자동화의 미확인/미실행을 새 개발 선행 조건으로 추가하지 않는다.

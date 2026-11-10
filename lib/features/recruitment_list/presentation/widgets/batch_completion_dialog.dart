@@ -8,43 +8,6 @@ import '../viewmodels/cycle_participation_controller.dart';
 import 'completion_dialog_feedback.dart';
 import 'cycle_action_dialog_route.dart';
 
-/// An applied departure may remove the room before its ACK is recovered.
-/// Keep access to the same locked confirmation in the participant list.
-class BatchCompletionRecoveryAction extends StatelessWidget {
-  const BatchCompletionRecoveryAction({required this.controller, super.key});
-  final CycleParticipationController controller;
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
-    builder: (context, _) {
-      final kind = controller.pendingBatchKind;
-      final room = controller.pendingRoom, target = controller.pendingTarget;
-      if (kind == null ||
-          room == null ||
-          target == null ||
-          !controller.session.isAuthenticated) {
-        return const SizedBox.shrink();
-      }
-      return TextButton(
-        onPressed: controller.busy || controller.restoring
-            ? null
-            : () => showBatchCompletion(
-                context,
-                controller,
-                room: room,
-                target: target,
-                kind: kind,
-                raidName: (item) =>
-                    item['raid_name'] as String? ?? item['raid_id'] as String,
-                isCurrent: () => context.mounted,
-              ),
-        child: const Text('완료 요청 결과 확인'),
-      );
-    },
-  );
-}
-
 Future<void> showBatchCompletion(
   BuildContext context,
   CycleParticipationController controller, {
@@ -129,11 +92,6 @@ class _BatchCompletionDialogState extends State<_BatchCompletionDialog> {
       selected = c.pendingCompletionRounds.toSet();
       initialized = true;
       loadingPlan = false;
-      unawaited(
-        feedback.readTargetLabel(widget.raidName).then((_) {
-          if (valid) setState(() {});
-        }),
-      );
     } else {
       unawaited(load());
     }

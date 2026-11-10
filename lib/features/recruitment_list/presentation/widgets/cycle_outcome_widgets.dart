@@ -144,6 +144,25 @@ class CycleOutcomeActions extends StatelessWidget {
   }
 }
 
+Future<void> showOutcomeRecovery(
+  BuildContext context,
+  CycleParticipationController controller, {
+  required String room,
+  required String target,
+  required bool Function() isCurrent,
+}) => showDialog<void>(
+  context: context,
+  routeSettings: cycleActionDialogRoute(room, target),
+  builder: (_) => _OutcomeDialog(
+    controller: controller,
+    room: room,
+    target: target,
+    action: 'complete_item',
+    raidLabel: (_) => '이전 요청의 레이드',
+    isCurrent: isCurrent,
+  ),
+);
+
 class _OutcomeDialog extends StatefulWidget {
   const _OutcomeDialog({
     required this.controller,
@@ -190,11 +209,6 @@ class _OutcomeDialogState extends State<_OutcomeDialog> {
     if (feedback.matchesPending) {
       round = feedback.round;
       loading = false;
-      unawaited(
-        feedback.readTargetLabel(widget.raidLabel).then((_) {
-          if (valid) setState(() {});
-        }),
-      );
     } else {
       unawaited(load());
     }

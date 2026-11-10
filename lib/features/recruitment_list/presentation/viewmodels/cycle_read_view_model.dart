@@ -23,6 +23,7 @@ class CycleReadViewModel extends ChangeNotifier {
   bool _disposed = false, loading = false;
   int _epoch = 0;
   String? target, failure;
+  AccountReadException? failureDetails;
   int tab = 0;
   List<CycleOwnRow> rows = const [];
   List<CycleOwnRow> get visibleRows => tab == 0
@@ -48,6 +49,7 @@ class CycleReadViewModel extends ChangeNotifier {
     card = null;
     cursor = null;
     failure = null;
+    failureDetails = null;
     loading = false;
     notifyListeners();
     if (signedIn && target != null) unawaited(load());
@@ -70,6 +72,7 @@ class CycleReadViewModel extends ChangeNotifier {
     tab = section;
     loading = false;
     failure = null;
+    failureDetails = null;
     card = null;
     _cursors.clear();
     final cached = _pages[(t, section, repository.membershipProfile)];
@@ -90,6 +93,7 @@ class CycleReadViewModel extends ChangeNotifier {
     final e = ++_epoch, t = target!, section = tab, next = more ? cursor : null;
     loading = true;
     failure = null;
+    failureDetails = null;
     notifyListeners();
     try {
       if (roomId != null) {
@@ -122,6 +126,7 @@ class CycleReadViewModel extends ChangeNotifier {
     } on AccountReadException catch (e2) {
       if (_valid(e)) {
         failure = e2.code;
+        failureDetails = e2;
         if ({
           'CURSOR_STALE',
           'FILTER_CONTEXT_STALE',

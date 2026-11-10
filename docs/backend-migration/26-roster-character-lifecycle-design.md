@@ -7,10 +7,12 @@
 사용자 승인 [설계37](37-raid-scheduling-and-multi-raid-planning.md#selected-batch-completion)의 상세 공대장/개인 복수 완료 확장은 [Issue47](https://github.com/heo0328/lostparty-backend/issues/47)에서 별도로 요청했다. 기존 완료 오류/계정 복구 인수와 구분하며 고정44eb4ba3 계약의 신규 wire/기능을 Native에 연결했다. 사용자는 일반 흐름 대부분 정상과 BUG-034 수정 뒤 내 계정 표시 정상화를 확인했다. 실제 보고 범위의 인수이며 세부 결과는 NEXT_WORK/BUG-034를 따른다.
 
 - 현재 단일 원요청/query·body·key/token·snapshot·ACK와 구형 단건 해석을 보존한다. 신규 복수에는 원 선택 집합과 ACK 검증 근거를 보관하고 정확히 대조한다. 복원 시 최신 전체 선택/plan으로 원문을 재구성하지 않는다.
-- 상세 복수 완료의 결과불명은 같은 종류·room/T·원선택 집합으로 재진입하며 선택 변경을 막는다. 내 계정의 누른1개 고정 진입은 해당 단건 요청만 복구하며 복수 요청을 대신 실행하지 않는다.
-- BUG-034: 고정44eb4ba3의 개인 승계 batch 원ACK는 effect.after.revision이null일 수 있다. 이때만 같은 원ACK의 known group_policy와 room/T/cycle/세대·after scope/group·before 대비 유지/+1을 대조해 검증용 효과를 구성한다. 원ACK·journal은 재작성하지 않고 현재 GET으로 증거를 대체하지 않는다. 일반 그룹 ACK 검사는 유지한다. 탈퇴 반영으로 방이 사라져도 레이드 현황의 batch pending 전용 진입에서 기존 잠긴 확인창으로 명시 재시도한다. 2026-11-10 사용자가 내 계정 표시 정상화를 확인했으며 실제 보고 범위는 BUG-034/NEXT_WORK에서 관리한다.
+- 상세 복수 완료의 결과불명은 같은 종류·room/T·원선택 집합으로 재진입하며 선택 변경을 막는다. 내 계정의 개별 레이드 완료 진입은 누른1개 고정 단건 요청만 복구하며 복수 요청으로 바꾸지 않는다. 별도 공통 복구 카드는 저장된 원종류/선택의 batch 요청을 같은 기존 확인창으로 열 수 있으며 계정의 누른 레이드 단건 명령으로 변환하지 않는다.
+- BUG-034: 고정44eb4ba3의 개인 승계 batch 원ACK는 effect.after.revision이null일 수 있다. 이때만 같은 원ACK의 known group_policy와 room/T/cycle/세대·after scope/group·before 대비 유지/+1을 대조해 검증용 효과를 구성한다. 원ACK·journal은 재작성하지 않고 현재 GET으로 증거를 대체하지 않는다. 일반 그룹 ACK 검사는 유지한다. 탈퇴 반영으로 방이 사라져도 상세(정상/축약/조회 실패)·내 계정 주간 영역·현황/빈 목록의 공통 복구 카드에서 기존 원요청의 잠긴 확인창으로 명시 재시도한다. 복구 이름 전용 plan GET은 제거해 성공 ACK 뒤 권한 거절이 성공을 덮지 못하게 했고, 카드 복구는 현재 화면/선택 주차를 유지한다. 2026-11-10 사용자가 내 계정 표시 정상화를 확인했으며 실제 보고 범위는 BUG-034/NEXT_WORK에서 관리한다.
 - 완료 안내의 확인창 전용 수명·취소는 표시 종료이며 서버/원요청 취소가 아니라는 의미·늦은 ACK 강제이동 차단·ACK 성공 후 조회만 복구를 유지한다. 원ACK 부재/현재 GET만으로 성공 합성·pending 자동 삭제를 하지 않는다.
 - 기존 participation 단일 owner 저장/transport를 재사용한다. 별도 큐·다중 저장·종결 API·계정 초기화나 BUG-033 현재 상태 채택의 범위 확대는 포함하지 않는다. 실제 betaWire2 앱 경로에 신규 기능을 연결했다. batch 두 종류만 ACK1MiB를 허용하고 기존 명령256KiB·원본 단건 schema/해석은 유지한다. 새 ACK 근거는 선택·효과·이력proof·예상 결과/revision·확인 시각을 저장하며 인증정보/전체 화면 상태는 저장하지 않는다.
+
+공통 카드·일정 표시 조회의 오류/수명 격리는 [설계37](37-raid-scheduling-and-multi-raid-planning.md#selected-batch-completion)을 따른다. #47/#48은 담당 코드 확인과 사용자 보고 범위에 따라 completed 종료됐으며 Penpot 디자인·새 카드 기기 미확인과 별도 후속을 종료 조건으로 다시 붙이지 않는다. 로컬 dev 통합/원격 보관 상태는 NEXT_WORK에서 관리한다.
 
 ## 완료 오류 안내 UX — 사용자 협의 정리 (2026-11-09)
 

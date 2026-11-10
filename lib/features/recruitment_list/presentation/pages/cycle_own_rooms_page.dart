@@ -1,3 +1,5 @@
+import '../viewmodels/completion_failure.dart';
+import '../widgets/recovery_notice_card.dart';
 import 'package:flutter/material.dart';
 import '../viewmodels/roster_issue_controller.dart';
 import '../../data/beta/beta_read.dart';
@@ -10,7 +12,6 @@ import '../viewmodels/cycle_own_card_info.dart';
 import '../widgets/recruitment_section.dart';
 import '../viewmodels/cycle_participation_controller.dart';
 import '../widgets/cycle_participation_widgets.dart';
-import '../widgets/batch_completion_dialog.dart';
 import '../../data/membership_readers.dart';
 import '../widgets/membership_record_view.dart';
 
@@ -108,7 +109,8 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
     final departure = c.departureSuccess;
     if (departure != null && departure.$1 != _departureKey) {
       _departureKey = departure.$1;
-      if (widget.weekly.cycles?.find(departure.$3) != null) {
+      if (!c.recoveryStaysOnCurrentScreen(departure.$1) &&
+          widget.weekly.cycles?.find(departure.$3) != null) {
         m.select(departure.$3);
       }
     }
@@ -235,9 +237,15 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                       child: LinearProgressIndicator(),
                     ),
                   if (m.failure != null)
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(cycleReadFailure(m.failure)),
+                    RecoveryNoticeCard(
+                      title: '정보를 불러오지 못했습니다',
+                      message: cycleReadFailure(m.failure),
+                      diagnostic: completionDiagnostic(
+                        m.failure!,
+                        m.failureDetails,
+                      ),
+                      actionLabel: '새로고침',
+                      onAction: () => m.load(),
                     ),
                   if (!m.loading &&
                       m.failure == null &&
@@ -248,9 +256,6 @@ class _CycleOwnRoomsPageState extends State<CycleOwnRoomsPage> {
                       child: Text('표시할 내역이 없습니다.', textAlign: TextAlign.center),
                     ),
                   if (widget.mutations != null) ...[
-                    BatchCompletionRecoveryAction(
-                      controller: widget.mutations!,
-                    ),
                     CycleCommandBanner(controller: widget.mutations!),
                   ],
                   for (final row in m.visibleRows)

@@ -1,3 +1,4 @@
+import '../features/recruitment_list/presentation/widgets/participation_recovery_card.dart';
 import '../shared/diagnostics/startup_timing.dart';
 import '../shared/diagnostics/startup_http_timing.dart';
 import '../features/group/data/backend/group_repository.dart';
@@ -786,6 +787,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             availability: _memberAccount!.availability,
                             weekly: _memberAccount!.weekly,
                             participationChanges: participation,
+                            participationRecoveryBuilder: (_) =>
+                                ParticipationRecoveryCard(
+                                  controller: participation,
+                                ),
                             canUseParticipationCommands: () =>
                                 participation.canAct,
                             canRecoverParticipationCompletion:

@@ -1,3 +1,4 @@
+import 'package:lost_party/features/recruitment_list/presentation/widgets/participation_recovery_card.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -15,7 +16,6 @@ import 'package:lost_party/features/recruitment_list/data/beta/participation_com
 import 'package:lost_party/features/recruitment_list/data/cycle_interaction_repository.dart';
 import 'package:lost_party/features/recruitment_list/data/local/recruitment_command_database.dart';
 import 'package:lost_party/features/recruitment_list/presentation/viewmodels/cycle_participation_controller.dart';
-import 'package:lost_party/features/recruitment_list/presentation/widgets/batch_completion_dialog.dart';
 import '../../support/server_account_read_fakes.dart';
 import 'backend_recruitment_test.dart' as base;
 import 'cycle_recruitment_test.dart' as cycles;
@@ -547,10 +547,14 @@ void main() {
       f.capture();
       expect(f.acknowledged, true);
       expect(f.refreshFailed, true);
+      final successKey = controller.completionSuccess!.$1;
+      f.close();
+      controller.keepRecoveryOnCurrentScreen();
       failRefresh = false;
       await controller.refreshCompletion(p.room, p.target);
+      expect(controller.completionNavigationAllowed(successKey), false);
       f.capture();
-      expect(f.refreshFailed, false);
+      expect(controller.completionRefreshFailed, false);
       expect(writes, hasLength(1));
       f.close();
     });
@@ -615,13 +619,16 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: BatchCompletionRecoveryAction(controller: controller),
+              body: ParticipationRecoveryCard(controller: controller),
             ),
           ),
         );
-        await tester.tap(find.text('완료 요청 결과 확인'));
+        final readsBeforeRecovery = api.requests.length;
+        expect(find.textContaining('이전 완료 요청'), findsOneWidget);
+        await tester.tap(find.text('요청 결과 확인'));
         await tester.pumpAndSettle();
         expect(find.byType(AlertDialog), findsOneWidget);
+        expect(api.requests.length, readsBeforeRecovery);
         expect(find.byType(CheckboxListTile), findsNothing);
         expect(writes, hasLength(1));
         await tester.tap(find.widgetWithText(FilledButton, '재시도'));
@@ -631,10 +638,51 @@ void main() {
         expect(writes, hasLength(2));
         expect(writes.last.sameOriginal(original), true);
         expect(find.byType(AlertDialog), findsNothing);
-        expect(find.text('완료 요청 결과 확인'), findsNothing);
+        expect(find.text('요청 결과 확인'), findsNothing);
+        expect(controller.failure, isNull);
+        expect(
+          controller.completionNavigationAllowed(
+            controller.departureSuccess!.$1,
+          ),
+          false,
+        );
         await tester.pumpWidget(const SizedBox.shrink());
       },
     );
+    test(
+      'late display failure after ACK never changes command result',
+      () async {
+        loseAck = true;
+        final p = preview(currentContext);
+        await controller.completeBatch(p, isCurrent: () => true);
+        final original = writes.single;
+        final reply = Completer<Map<String, dynamic>>();
+        api.respond = (_, _) => reply.future;
+        final reading = controller.readScheduleForDisplay(
+          p.room,
+          p.target,
+          'plan',
+        );
+        final failed = expectLater(
+          reading,
+          throwsA(isA<AccountReadException>()),
+        );
+        await controller.retry();
+        expect(controller.hasPending, false);
+        expect(controller.failure, isNull);
+        reply.completeError(
+          const AccountReadException(
+            'WEEKLY_PARTICIPANT_REQUIRED',
+            status: 403,
+          ),
+        );
+        await failed;
+        expect(controller.failure, isNull);
+        expect(controller.completionSuccess, isNotNull);
+        expect(writes.last.sameOriginal(original), true);
+      },
+    );
+
     test(
       'direct beta gateway preserves original ACK metadata for successor proof',
       () async {

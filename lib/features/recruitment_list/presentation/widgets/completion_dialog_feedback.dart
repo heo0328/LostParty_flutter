@@ -22,17 +22,35 @@ class CompletionDialogNotice extends StatelessWidget {
         reason ??
         feedback.controller.recoveryIssue ??
         'REQUEST_IN_PROGRESS';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(guidance.$1),
-        CompletionDiagnosticInfo(
-          diagnostic: completionDiagnostic(code, feedback.error),
-        ),
-        if ((feedback.queryFailure && feedback.readFailures >= 2) ||
-            code == 'LOCAL_STORAGE_UNAVAILABLE')
-          const Text('계속 문제가 발생하면 앱을 다시 실행해 주세요.'),
-      ],
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.errorContainer,
+        border: Border.all(color: colors.error),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.error_outline, color: colors.error),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(guidance.$1, style: TextStyle(color: colors.error)),
+              ),
+            ],
+          ),
+          CompletionDiagnosticInfo(
+            diagnostic: completionDiagnostic(code, feedback.error),
+          ),
+          if ((feedback.queryFailure && feedback.readFailures >= 2) ||
+              code == 'LOCAL_STORAGE_UNAVAILABLE')
+            const Text('계속 문제가 발생하면 앱을 다시 실행해 주세요.'),
+        ],
+      ),
     );
   }
 }

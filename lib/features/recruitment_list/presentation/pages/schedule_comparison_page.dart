@@ -1,3 +1,5 @@
+import '../widgets/recovery_notice_card.dart';
+import '../viewmodels/completion_failure.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -265,11 +267,14 @@ class _ScheduleComparisonPageState extends State<ScheduleComparisonPage> {
               const SizedBox(height: 12),
               if (model.loading) const LinearProgressIndicator(),
               if (model.failure != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    recruitmentFailureMessage(model.failure),
-                    style: const TextStyle(color: AppColors.error),
+                RecoveryNoticeCard(
+                  title: '정보를 불러오지 못했습니다',
+                  message: recruitmentFailureMessage(model.failure),
+                  actionLabel: '새로고침',
+                  onAction: model.valid && !model.loading ? load : null,
+                  diagnostic: completionDiagnostic(
+                    model.failure!,
+                    model.failureDetails,
                   ),
                 ),
               if (model.profile?.projection.record case final record?)

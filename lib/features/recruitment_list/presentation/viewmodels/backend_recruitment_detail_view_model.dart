@@ -87,6 +87,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
   bool nextParticipationAvailable = false, endAvailable = false;
   RaidCatalog? catalog;
   String? failure;
+  AccountReadException? failureDetails;
   String? groupName;
   void _sessionChanged() {
     final binding = (session.userId, session.generation);
@@ -113,6 +114,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     groupName = null;
     loading = false;
     failure = null;
+    failureDetails = null;
     notifyListeners();
     if (session.isAuthenticated) unawaited(load());
   }
@@ -147,6 +149,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     membershipFailure = null;
     loading = true;
     failure = null;
+    failureDetails = null;
     notifyListeners();
     try {
       if (recordIdentity != null && (target == null || reader == null)) {
@@ -308,6 +311,7 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
     } on AccountReadException catch (e) {
       if (_current(epoch)) {
         failure = e.code;
+        failureDetails = e;
         profile = null;
         if (e.code == 'TARGET_NOT_OPEN' && target != null) notOpen.add(target!);
         value = null;

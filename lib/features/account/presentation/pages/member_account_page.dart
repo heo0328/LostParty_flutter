@@ -1,3 +1,5 @@
+import '../../../recruitment_list/presentation/viewmodels/completion_failure.dart';
+import '../../../recruitment_list/presentation/widgets/recovery_notice_card.dart';
 import '../../../../shared/diagnostics/startup_timing.dart';
 import '../../../../shared/formatters/display_number_formatter.dart';
 import 'dart:convert';
@@ -178,6 +180,7 @@ class MemberAccountPage extends StatelessWidget {
     this.onParticipation,
     this.onCompleteParticipation,
     this.participationChanges,
+    this.participationRecoveryBuilder,
     this.canUseParticipationCommands,
     this.canRecoverParticipationCompletion,
     super.key,
@@ -201,6 +204,7 @@ class MemberAccountPage extends StatelessWidget {
   )?
   onCompleteParticipation;
   final Listenable? participationChanges;
+  final WidgetBuilder? participationRecoveryBuilder;
   final bool Function()? canUseParticipationCommands;
   final bool Function(String room, String target, String round)?
   canRecoverParticipationCompletion;
@@ -255,6 +259,8 @@ class MemberAccountPage extends StatelessWidget {
                     enabled: !weekly!.busy && !weekly!.hasPending,
                     onChanged: weekly!.selectCycle,
                   ),
+                if (participationRecoveryBuilder != null)
+                  participationRecoveryBuilder!(context),
                 if (weekly != null) _weeklyStatus(context, weekly!),
                 if (model.failure != null)
                   Text(
@@ -755,6 +761,19 @@ class MemberAccountPage extends StatelessWidget {
   }
 
   Widget _weeklyStatus(BuildContext context, MemberWeeklyViewModel state) {
+    if (!state.busy && state.failure != null && !state.hasPending) {
+      return RecoveryNoticeCard(
+        title: state.refreshFailure != null
+            ? '정보를 불러오지 못했습니다'
+            : '요청을 처리하지 못했습니다',
+        message: memberWeeklyFailure(state.failure),
+        diagnostic: completionDiagnostic(state.failure!, state.refreshFailure),
+        actionLabel: '새로고침',
+        onAction: state.loading || state.writing || state.retrySeconds > 0
+            ? null
+            : () => state.refresh(reloadCatalog: true),
+      );
+    }
     if (state.busy || (state.failure == null && !state.hasPending)) {
       return const SizedBox.shrink();
     }
