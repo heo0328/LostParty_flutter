@@ -456,6 +456,18 @@ class ScopedCharacterCacheRepository {
       final sequence = (old?.snapshotSequence ?? 0) + 1;
       await _putHead(s.id, incoming, old, complete: true, sequence: sequence);
       for (final value in snapshot.characters) {
+        final stored = value.toStorage();
+        final presence = value.rosterPresence;
+        if (presence != null) {
+          cacheRequire(
+            presence.scope['registration_id'] == incoming.registrationId &&
+                presence.scope['registration_version'] == incoming.version &&
+                presence.scope['ownership_revision'] ==
+                    incoming.ownershipRevision &&
+                presence.scope['roster_revision'] == incoming.rosterRevision,
+            'SCOPE_CHANGED',
+          );
+        }
         final existing =
             await (db.select(db.cachedCharacters)..where(
                   (t) =>
@@ -471,6 +483,17 @@ class ScopedCharacterCacheRepository {
           final before = CacheCharacterObservation.fromStorage(
             jsonDecode(existing.payload) as Map<String, dynamic>,
           );
+          // An opt-out read can preserve an observation only in its original scope.
+          final prior = before.rosterPresence;
+          if (presence == null &&
+              prior != null &&
+              before.lifecycleRevision == value.lifecycleRevision &&
+              prior.scope['registration_id'] == incoming.registrationId &&
+              prior.scope['registration_version'] == incoming.version &&
+              prior.scope['ownership_revision'] == incoming.ownershipRevision &&
+              prior.scope['roster_revision'] == incoming.rosterRevision) {
+            stored['rosterPresence'] = prior.toStorage();
+          }
           // Under the current contract a renamed character starts with a new ID.
           cacheRequire(
             before.serverName == value.serverName &&
@@ -499,7 +522,7 @@ class ScopedCharacterCacheRepository {
                 accountId: value.accountId,
                 seenSequence: sequence,
                 localVersion: Value((existing?.localVersion ?? 0) + 1),
-                payload: jsonEncode(value.toStorage()),
+                payload: jsonEncode(stored),
               ),
             );
       }

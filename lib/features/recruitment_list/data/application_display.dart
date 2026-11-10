@@ -348,9 +348,11 @@ class ApplicationDisplayReader
     this.api, {
     this.contractMode = RecruitmentContractMode.legacy,
     this.includeGroupState = false,
+    this.includeCharacterIssues = false,
   });
   final RecruitmentContractMode contractMode;
   final bool includeGroupState;
+  final bool includeCharacterIssues;
   final BackendRegistrationApi api;
   Future<T> _read<T>(Future<T> Function() action) async {
     try {
@@ -378,6 +380,9 @@ class ApplicationDisplayReader
       query: {
         'target_cycle_key': target,
         'reader_profile': applicationDisplayProfile,
+        if (includeCharacterIssues &&
+            contractMode == RecruitmentContractMode.betaWire2)
+          'include_character_issues': 'true',
         if (includeCoordinationWait &&
             contractMode == RecruitmentContractMode.betaWire2)
           'include_coordination_wait': 'true',

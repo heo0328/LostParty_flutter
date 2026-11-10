@@ -14,6 +14,7 @@ class BackendAccountLifecycle {
     bool enabled = configuredEnabled,
     bool allowHttp = false,
     bool bootstrapEnabled = false,
+    bool rosterPresenceEnabled = false,
     ScopedCacheDatabaseFactory databaseFactory = openScopedAccountCacheDatabase,
   }) {
     runtime = enabled
@@ -23,6 +24,7 @@ class BackendAccountLifecycle {
             enabled: true,
             allowHttp: allowHttp,
             bootstrapEnabled: bootstrapEnabled,
+            rosterPresenceEnabled: rosterPresenceEnabled,
             databaseFactory: databaseFactory,
           )
         : null;

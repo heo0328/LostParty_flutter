@@ -4,11 +4,28 @@
 
 1인 개발, Firebase 구현 제거·자체 Python Backend·단일 Google 로그인. dev 로컬 서버를 기본 개발·검증 대상으로 사용한다. debug 기본은 Android 에뮬레이터용 http://10.0.2.2:8000, release 기본은 AWS https://lostparty.duckdns.org이며 명시 URL override는 유지한다. 운영 반영은 개발자의 명시 지시가 있을 때만 진행하고 개발 연결의 선행 조건으로 요구하지 않는다. 베타 시작 전 개발자료를 비우며 베타 이후 자료는 보존한다. 실제 초기화 실행은 별도 대상/시점 지시가 필요하다. [정책09 D08](../backend-migration/09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정).
 
-설계는 위 환경/방침과 이미 확정된 UX/제품 의도를 선행 조건으로 적용한다. 사용자의 기능 흐름 확인을 기술 조건 전체의 검수로 취급하지 않는다. 작업/문서 책임은 [AGENTS](../../AGENTS.md), 상세 [ai_rules](ai_rules.md), 현재 단일 실행 계획과 유효 후속은 [NEXT_WORK](NEXT_WORK.md)다. 브랜치는 대단원, 소분류 파트 완료에 커밋/푸시, 통합은 대단원 완료 시 별도다. 같은 브랜치에서 지침·버그기록·UI 보완도 처리한다.
+설계는 위 환경/방침과 이미 확정된 UX/제품 의도를 선행 조건으로 적용한다. 사용자의 기능 흐름 확인을 기술 조건 전체의 검수로 취급하지 않는다. 작업/문서 책임은 [AGENTS](../../AGENTS.md), 상세 [ai_rules](ai_rules.md), 현재 단일 실행 계획과 유효 후속은 [NEXT_WORK](NEXT_WORK.md)다. 브랜치는 대단원이며 작은 변경은 누적한다. 커밋/푸시는 사용자 지시 시점에 수행하고 특정 범위 지시가 없으면 추적 제외 파일 외 최신 변경 전체를 함께 담는다. 통합은 별도다. 같은 브랜치에서 지침·버그기록·UI 보완도 처리한다.
 
 ## 현재 작업과 실제 코드 상태
 
+Git: 2026-11-10 사용자 지시로 작업 브랜치의 최신 누적 변경을5df515f7에 보관·푸시한 뒤 dev 통합을 진행한다. 최신 origin/dev86e53e11과 충돌/추가 코드 변경 없이 병합하며 기존 전체2856PASS/분석0·사용자 인수를 재사용한다. 실제 dev/origin 동기화와 checkout은 최종 Git 상태로 확인한다. main 반영·배포·Issue 종료는 별도이며 기존 작업 브랜치는 유지한다.
+
+완료 오류/기존 계정 복구 구간은 2026-11-10 사용자 디바이스 테스트 통과다. 기존 계정은 문구 수정 전에 이미 복구됐고 이후에는 버튼명/안내 표시만 변경했다. [인수 회신6756433040](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6756433040). 다음 개발 후속은 [묶음 생성 레이드 선택 일괄 완료](../product/DETAIL_IMPROVEMENTS.md#묶음-생성-레이드의-선택-일괄-완료--사용자-확정미구현)이며 문서 기록 상태로 유지한다. 이번 확인에서 구현을 시작하지 않는다.
+
+기존 테스트 계정 막힘에 [Backend6742169727](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742169727)의 원무옵션 v3 현재409 거절→정확한 대상 GET→명시적 현재 정보로 화면갱신를 Native에 연결했다. 최종 전체2,856PASS·분석0이며 [결과6742522210](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742522210)으로 인계했다. 과거 전체 전송 이력 증명은 요구하지 않고 현재 근거를 메모리에서만 확인한다. 주차/서버 상태를 표시한 뒤 로컬 활성 대기를 정리하며 원문·ACK·서버 완료 기록을 바꾸지 않는다. 실제 계정 복구와 이번 완료 오류/안내 구간은 사용자 기기 인수를 통과했다. 상세는 NEXT_WORK·계약26을 따른다.
+
+BUG-033 신규 계정3경로의 그룹 옵션·단일 주간 슬롯 schema4 보관은 유지한다. 최신 복구 구현/검증은 위 현재 상태와 NEXT_WORK를 따른다. 서버/API/DB·앱 초기화 변경 없이 기존 로컬 정리 절차를 재사용하며 단일 슬롯/다른 명령의 일반 제한을 전면 재설계하지 않는다.
+
+보정 Backend16c9cd4b/계약864de38b 소비·완료 오류/복구 연결을 마쳤다. 이전2832/2840/2845PASS는 중간 이력이며 현재 자동 검증은2856PASS·분석0, 사용자 디바이스 인수는2026-11-10 통과다. 계약/원인/완료 경과는 계약26·BUG-032/033·DEV_LOG를 따른다.
+
+사용자 확정 UX에 따라 완료 안내는 해당 확인창의 수명에 한정하고 저장 요청/ACK와 분리했다. 현재 신규 완료2개/일정5개는 participation profile을, 신규 계정3개는 그룹 옵션만 사용한다. 과거 저장 원query/키/본문/ACK는 변경하지 않는다. 이전 무옵션 계정 판단은 BUG-033에서 정정됐으며 완료 오류/계정 복구 구간의 기기 인수는 통과했다. 누락 캐릭터 테스트 자료 준비/해당 기기 검증은 별도 후속이다.
+
+Issue17의 두 선처리 항목은 [Backend 로컬 보완 결과](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722487011) 소비 대조·수용에 이어 [개발서버 실제 반영](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722917497)까지 확인했다. 실행 image ce59926c…/DB0036·계약 일치로 Native 착수의 선행 대기는 해소됐다. 새 CHARACTER_SELECTION_REQUIRED는 Native 안내/오류 분류에 반영한다. 후속 [보완 구현 게시](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6722956197)로 caffaf3405a53be941250132a2b50779943b15f6 고정 원격 기준도 확보됐다. Native 코드 연결·자동 검증은 아래 구현 상태를 따르며 다음은 사용자 기기 확인이다. 상세 기준은 NEXT_WORK를 따른다.
+
+현재 브랜치 feature/raid-character-missing-recovery에서 사용자 지시로 Issue17 Native 계약/DTO·presence 원본 보존/표시 분리·부분 완료 교체·앱 공통 경고/갱신·기존 화면/활동 관리 왕복을 연결했다. 실제 일반 앱 DI에서 새 opt-in을 활성화하며 구현/자동 검증과 사용자 실기기 인수는 구분한다. Penpot 선확인은 제외하고 기능 개발 후 사용자 디바이스에서 화면을 확인한다. 최종 전체 Flutter2,826PASS·전체 분석 문제0이다. 2026-11-09 사용자 결정으로 기기 테스트는 개발용 누락/부분 완료 자료와 재현·원복 절차 준비 후의 남은 작업으로 보관한다. 실제 게임 캐릭터 삭제·개명을 요구하지 않으며 자료 조정 방식은 아직 미확정이다. 상세 담당·순서·기기 항목은 NEXT_WORK, 완료 이력은 DEV_LOG를 따른다. 같은 날 사용자 지시로 추적 제외 파일 외 최신 변경 전체를 한 커밋으로 보관하고 같은 작업 브랜치에 푸시하며, dev 병합·배포·Issue 종료는 하지 않는다.
 2026-11-07 PC 포맷 후 Flutter 3.41.6·Dart 3.11.4·Java21과 기존 설정/고정 의존성을 복구했다. 분석0/debug APK 빌드·인증 세션15PASS, GitHub CLI/저장소 권한·push dry-run·IDE 확장을 확인했고 사용자가 dev 로컬 에뮬레이터 Google 로그인 정상 동작·과거 debug OAuth 삭제·debug 키 파일 백업을 보고했다. 운영 서버는 사용자 정상 사용 보고와 공개 읽기 점검을 유지한다. 사용자는 기존 release 키 회수 대신 새 키 전환·확실한 별도 백업을 선택했다. 새 키/CI/운영 설정 변경·배포는 미실행이며 사용자 백업 안내·확인 조건과 물리 파일 원장은 [릴리즈 계약 B-1](../architecture/GITHUB_ANDROID_RELEASE_PIPELINE.md#release-key-backup), 현재 순서는 NEXT_WORK, 공개 지문 원장은 GOOGLE_LOGIN_CONTRACT다.
+
+2026-11-08 개발 재개 전 문서 대조에서 복구 문서의 dev/main 통합 지점86e53e11과 로컬/저장된 origin 참조 일치를 확인했다. 원격 직접 조회는 네트워크 제한으로 재검증하지 못했다. [Issue46 최종 인계](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706731221)로 Backend 백업 회신 대기는 해소했다. 로컬 고정자료는 사용자 보관 보고, 운영 기준본은 PC 내장 SSD 보관·파일 무결성 확인·문서 게시 완료다. 외장 사본은 미확인, 실제 서비스 복원·정기 자동화는 미실행, 로컬 DB dump는 사용자 제외다. 상세는 릴리즈 계약 B-1/Backend 원장을 따른다. 웹소켓은 설계37 §37.50의 사전 협의 후속이며 새 설계·구현에 착수하지 않았다. 초기 문서 정리는 main에서 수행했고 이후 사용자 지시로 Issue17 작업 브랜치를 생성했다. 현재 브랜치와 범위는 위 최신 상태를 따른다.
 
 2026-11-04 사용자 승인으로 Native2.0.0+5를 [GitHub Release](https://github.com/heo0328/LostParty_flutter/releases/tag/v2.0.0)에 게시했다. 태그 소스703f7b8a·서명 APK CI41675349499 성공, APK/체크섬 첨부·실제 누적 안내문 동일성과 기존 v1.1.2 본문 하단 보존을 확인했다. Backend도 v2.0.0 운영 배포 성공과 batch/기존 참가 유지 지원을 Issue34에서 인계받았다. 새 APK 업데이트 설치·운영 실회원 전체 인수는 미확인이다. 현재 Git/후속과 상세 검증은 NEXT_WORK/DEV_LOG를 따른다.
 

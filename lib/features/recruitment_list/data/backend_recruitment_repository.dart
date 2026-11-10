@@ -26,13 +26,17 @@ class BackendRecruitmentRepository
   BackendRecruitmentRepository({
     required this.api,
     this.includeGroupState = false,
+    this.includeCharacterIssues = false,
     required this.accounts,
     required this.raids,
     this.twoCycleEnabled = false,
     this.preferredRoles,
+    this.characterSelectable,
     this.contractMode = RecruitmentContractMode.legacy,
   });
   final bool includeGroupState;
+  final bool includeCharacterIssues;
+  final bool Function(String character)? characterSelectable;
   final BackendRegistrationApi api;
   final RecruitmentContractMode contractMode;
   @override
@@ -56,6 +60,7 @@ class BackendRecruitmentRepository
         api,
         contractMode: contractMode,
         includeGroupState: includeGroupState,
+        includeCharacterIssues: includeCharacterIssues,
       ).applicationDisplayDetail(
         room,
         target,
@@ -141,6 +146,7 @@ class BackendRecruitmentRepository
           .where(
             (c) =>
                 c.characterId != null &&
+                (characterSelectable?.call(c.characterId!) ?? true) &&
                 c.eligible &&
                 c.rosterStatus == 'confirmed' &&
                 active.contains(c.characterId) &&
@@ -332,7 +338,12 @@ class BackendRecruitmentRepository
           mode: contractMode,
           includeGroupState: includeGroupState,
           path: '/v2/raid-rooms/$id/detail',
-          query: {'target_cycle_key': target},
+          query: {
+            'target_cycle_key': target,
+            if (includeCharacterIssues &&
+                contractMode == RecruitmentContractMode.betaWire2)
+              'include_character_issues': 'true',
+          },
           parse: (j) => parseCycleDetail(j, id, target),
         );
         return result.value..betaData = betaDisplayData(result.metadata);

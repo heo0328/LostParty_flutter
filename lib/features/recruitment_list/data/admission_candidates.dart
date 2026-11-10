@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'beta/beta_interaction_api.dart';
+import 'roster_participation.dart';
 import '../../account/domain/account_read_session.dart';
 import '../../account/domain/role_summary.dart';
 import '../../account/domain/member_raid_models.dart';
@@ -201,7 +203,9 @@ class AdmissionCandidateActor {
   final Map<String, dynamic> wire;
   List<Map<String, dynamic>> get assignments =>
       List.unmodifiable(raidList(wire['assignments']).map(roleMap));
-  String get signature => scheduleStable(wire);
+  String? participationBinding;
+  String get signature =>
+      '${scheduleStable(wire)}/${participationBinding ?? ''}';
 }
 
 class AdmissionExclusion {
@@ -298,7 +302,9 @@ class AdmissionCandidatePage {
   late final AdmissionCandidateActor? actor;
   late final List<AdmissionCandidate> items;
   late final List<AdmissionExclusion> exclusions;
+  RosterParticipationMember? participation;
   String get identity => scheduleStable({
+    'participation_binding': participation?.binding,
     'scope': {...scope}..remove('server_now'),
     'data': {...data}
       ..remove('evaluated_at')
@@ -330,21 +336,40 @@ class AdmissionCandidatesReader implements AdmissionCandidatesGateway {
     raidCycleKey(target);
     roleCheck({'apply', 'join', 'change_character'}.contains(intent));
     try {
-      final raw = await api.request(
-        '/v2/raid-rooms/$room/admission-character-candidates',
-        query: {
-          'target_cycle_key': target,
-          'intent': intent,
-          'limit': 100,
-          'cursor': ?cursor,
-        },
-      );
-      return AdmissionCandidatePage(
+      final path = '/v2/raid-rooms/$room/admission-character-candidates';
+      final query = <String, dynamic>{
+        'target_cycle_key': target,
+        'intent': intent,
+        'limit': 100,
+        'cursor': ?cursor,
+      };
+      final decoded = api is BetaInteractionApi
+          ? await (api as BetaInteractionApi).requestDecoded(path, query: query)
+          : null;
+      final raw = decoded?.value ?? await api.request(path, query: query);
+      final result = AdmissionCandidatePage(
         raw!,
         room: room,
         target: target,
         intent: intent,
       );
+      final context = decoded?.metadata?['participation_context'];
+      if (context != null) {
+        final member = RosterParticipationContext(
+          roleMap(context),
+        ).members.single;
+        roleCheck(
+          member.wire['room_id'] == room &&
+              member.wire['target_cycle_key'] == target &&
+              member.wire['room_cycle_id'] == result.scope['room_cycle_id'] &&
+              member.wire['target_generation'] ==
+                  result.scope['target_generation'],
+        );
+        member.matchActor(result.actor!.wire);
+        result.participation = member;
+        result.actor!.participationBinding = member.binding;
+      }
+      return result;
     } on FormatException {
       rethrow;
     }

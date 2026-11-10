@@ -298,6 +298,9 @@ class AdmissionSelectionViewModel extends ChangeNotifier {
         final actor = page.actor;
         if (actor != null) {
           roleCheck(
+            page.participation?.binding == value.participation?.binding,
+          );
+          roleCheck(
             actor.assignments.length ==
                     (value.data['targets'] as List).length &&
                 actor.assignments.every(

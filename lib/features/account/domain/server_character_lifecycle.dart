@@ -1,3 +1,4 @@
+import 'roster_presence.dart';
 import 'services/account_detail_access.dart';
 import 'scoped_cache_models.dart';
 import 'server_account_models.dart';
@@ -76,7 +77,16 @@ class LifecycleCharacter {
   LifecycleCharacter.fromJson(
     Map<String, dynamic> json, {
     bool basicOnly = false,
+    Map<String, dynamic>? presenceScope,
   }) {
+    final raw = Map<String, dynamic>.of(json);
+    if (presenceScope != null) {
+      presence = RosterPresenceObservation(
+        presenceScope,
+        _map(raw.remove('roster_presence')),
+      );
+    }
+    json = raw;
     _shape(
       json,
       'server_name character_name class_name character_level item_level combat_power character_id roster_status summary_fetched_at last_confirmed_at requires_refresh eligible power_stale power_fetched_at power_checked_at power_status power_reason lifecycle_state lifecycle_revision usable blocked_reason',
@@ -139,6 +149,7 @@ class LifecycleCharacter {
             as Map<String, dynamic>;
   }
   late final Map<String, dynamic> wire;
+  RosterPresenceObservation? presence;
   String? get characterId =>
       wire['character_id'] == null ? null : _uuid(wire['character_id']);
   String get serverName => wire['server_name'] as String;
@@ -153,7 +164,13 @@ class LifecycleCharacterPage {
   LifecycleCharacterPage.fromJson(
     Map<String, dynamic> json, {
     int maximumItems = 50,
+    bool includePresence = false,
   }) {
+    final raw = Map<String, dynamic>.of(json);
+    final presenceScope = includePresence
+        ? _map(raw.remove('roster_presence_scope'))
+        : null;
+    json = raw;
     _shape(
       json,
       'registration_id game_account_id is_main registration_version ownership_status ownership_revision roster_revision settings items next_cursor server_fetched_at',
@@ -173,6 +190,15 @@ class LifecycleCharacterPage {
         ? null
         : _positive(json['ownership_revision']);
     rosterRevision = _positive(json['roster_revision']);
+    if (presenceScope != null) {
+      _require(
+        presenceScope['registration_id'] == registrationId &&
+            presenceScope['registration_version'] == version &&
+            presenceScope['ownership_revision'] == ownershipRevision &&
+            presenceScope['roster_revision'] == rosterRevision,
+      );
+      presenceRevision = _text(presenceScope['presence_revision']);
+    }
     settings = ServerCharacterSettings.fromJson(_map(json['settings']));
     if (settings.nextChangeAt != null) {
       _utc(_map(json['settings'])['next_change_at']);
@@ -190,6 +216,7 @@ class LifecycleCharacterPage {
         (item) => LifecycleCharacter.fromJson(
           _map(item),
           basicOnly: ownershipStatus != 'owned',
+          presenceScope: presenceScope,
         ),
       ),
     );
@@ -217,6 +244,7 @@ class LifecycleCharacterPage {
   late final ServerCharacterSettings settings;
   late final Map<String, dynamic> settingsWire;
   late final List<LifecycleCharacter> items;
+  String? presenceRevision;
 
   CacheRegistrationSnapshot registration(
     String label, [
@@ -249,6 +277,7 @@ class LifecycleCharacterPage {
 
   /// Compare all settings fields, allowing set ordering and optional default.
   bool sameStructure(LifecycleCharacterPage other) =>
+      presenceRevision == other.presenceRevision &&
       registration('').sameStructure(other.registration('')) &&
       sameLifecycleSettings(settingsWire, other.settingsWire);
 }

@@ -179,6 +179,7 @@ class MemberAccountPage extends StatelessWidget {
     this.onCompleteParticipation,
     this.participationChanges,
     this.canUseParticipationCommands,
+    this.canRecoverParticipationCompletion,
     super.key,
   });
   final MemberAccountViewModel model;
@@ -201,6 +202,8 @@ class MemberAccountPage extends StatelessWidget {
   onCompleteParticipation;
   final Listenable? participationChanges;
   final bool Function()? canUseParticipationCommands;
+  final bool Function(String room, String target, String round)?
+  canRecoverParticipationCompletion;
   @override
   Widget build(BuildContext context) => UiFrameProbe(
     child: ListenableBuilder(
@@ -590,7 +593,7 @@ class MemberAccountPage extends StatelessWidget {
               _pendingSettings(context, reg, count!),
             _characterGrid(context, reg, section),
             if (section.displayReady &&
-                section.visible.isEmpty &&
+                section.presentVisible.isEmpty &&
                 section.characters.isNotEmpty)
               const Text('표시하도록 선택한 캐릭터가 없습니다. 표시 설정에서 변경할 수 있습니다.'),
           ],
@@ -617,7 +620,7 @@ class MemberAccountPage extends StatelessWidget {
         spacing: spacing,
         runSpacing: spacing,
         children: [
-          for (final row in section.visible)
+          for (final row in section.presentVisible)
             SizedBox(
               width: width,
               child: _character(
@@ -707,6 +710,8 @@ class MemberAccountPage extends StatelessWidget {
             allowParticipationCompletion:
                 onCompleteParticipation != null &&
                 (canUseParticipationCommands?.call() ?? true),
+            recoverParticipationCompletion: (raidId) =>
+                _canRecoverCompletion(row.ref, raidId),
           ) ??
           const [],
       weeklyColumns: weekly?.twoCycleEnabled == true ? 3 : 1,
@@ -757,7 +762,14 @@ class MemberAccountPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (state.failure != null) Text(memberWeeklyFailure(state.failure)),
-        if (state.hasPending) const Text('주간 레이드 저장 확인 필요'),
+        if (state.pendingReview && state.failure == null)
+          Text(memberWeeklyFailure('CLIENT_UPGRADE_REQUIRED')),
+        if (state.canUseCurrent)
+          const Text('현재 정보로 화면을 갱신하면 다시 사용할 수 있습니다.')
+        else if (state.hasPending)
+          const Text('이전 저장 결과를 확인해야 합니다.'),
+        if (state.pendingCurrentState case final current?)
+          Text('${current.target} 주차 서버 상태: ${current.allowed ? '완료' : '미완료'}'),
         if (state.retrySeconds > 0)
           Text('${state.retrySeconds}초 후 다시 시도해 주세요.'),
         if (!state.loading)
@@ -767,22 +779,39 @@ class MemberAccountPage extends StatelessWidget {
                 onPressed: state.writing || state.retrySeconds > 0
                     ? null
                     : () => state.refresh(reloadCatalog: true),
-                child: const Text('주간 레이드 다시 불러오기'),
+                child: const Text('새로고침'),
               ),
-              if (state.hasPending && !state.pendingFailed)
+              if (state.hasPending &&
+                  !state.pendingFailed &&
+                  (!state.pendingReview || state.canRetry))
                 TextButton(
                   onPressed: state.canRetry ? state.retry : null,
-                  child: const Text('저장 재시도'),
+                  child: const Text('재시도'),
                 ),
               if (state.canUseCurrent)
                 TextButton(
                   onPressed: state.useCurrent,
-                  child: const Text('현재 상태 유지'),
+                  child: const Text('현재 정보로 화면갱신'),
                 ),
             ],
           ),
       ],
     );
+  }
+
+  bool _canRecoverCompletion(ScopedCharacterRef ref, String raidId) {
+    final entry = weekly?.entry(ref, raidId);
+    final target = weekly?.selectedCycleKey;
+    final round = entry?.wire['participation']?['round_id'];
+    return entry?.roomId != null &&
+        target != null &&
+        round is String &&
+        canRecoverParticipationCompletion?.call(
+              entry!.roomId!,
+              target,
+              round,
+            ) ==
+            true;
   }
 
   Future<void> _weeklyChange(
@@ -793,9 +822,12 @@ class MemberAccountPage extends StatelessWidget {
   ) async {
     final state = weekly;
     if (state == null) return;
-    if (completed && state.canCompleteParticipation(ref, raid.raidId)) {
+    final recovering = _canRecoverCompletion(ref, raid.raidId);
+    if (recovering ||
+        completed && state.canCompleteParticipation(ref, raid.raidId)) {
       final action = onCompleteParticipation;
-      if (action == null || canUseParticipationCommands?.call() == false) {
+      if (action == null ||
+          (!recovering && canUseParticipationCommands?.call() == false)) {
         return;
       }
       final entry = state.entry(ref, raid.raidId)!;

@@ -308,6 +308,417 @@ void main() {
         cycles.current,
       ]);
       expect(calls.where((r) => r.method == 'PUT'), isEmpty);
+      for (final call in calls.where(
+        (r) => r.path.contains('completion-correction'),
+      )) {
+        expect(
+          call.queryParameters['group_policy_version'],
+          'cycle-group-policy-1',
+        );
+        expect(call.queryParameters.containsKey('contract_profile'), false);
+        expect(
+          call.queryParameters.containsKey('participation_profile'),
+          false,
+        );
+      }
+    },
+  );
+  void rejectUpgrade(
+    RequestOptions r, {
+    int status = 409,
+    String code = 'CLIENT_UPGRADE_REQUIRED',
+  }) {
+    throw DioException(
+      requestOptions: r,
+      response: Response(
+        requestOptions: r,
+        statusCode: status,
+        data: {
+          'error': {'code': code},
+        },
+      ),
+      type: DioExceptionType.badResponse,
+    );
+  }
+
+  Future<void> restoreBlockedOriginal() async {
+    await load();
+    lose = true;
+    await clear();
+    final raw = disk();
+    raw['pending']['query'] = null;
+    raw['pending']['blocked_code'] = 'CLIENT_UPGRADE_REQUIRED';
+    store.data[runtime.scope] = jsonEncode(raw);
+    completed = true;
+    weekly.dispose();
+    create();
+    await load();
+    calls.clear();
+    expect(weekly.canUseCurrent, false);
+    expect(weekly.canRetry, true);
+  }
+
+  test(
+    'current refusal then failed target GET preserves request and retries only reads',
+    () async {
+      await restoreBlockedOriginal();
+      var fail = true;
+      respond = (r) {
+        if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+        if (fail && r.path.endsWith('/completion-correction-context')) {
+          throw DioException(requestOptions: r);
+        }
+        return serve(r);
+      };
+      await weekly.retry();
+      expect(weekly.canUseCurrent, false);
+      expect(weekly.pendingCurrentState, null);
+      expect(weekly.canRetry, false);
+      await weekly.useCurrent();
+      expect(weekly.hasPending, true);
+      fail = false;
+      await weekly.refresh();
+      expect(weekly.canUseCurrent, true);
+      expect(posts(), hasLength(1));
+      await weekly.useCurrent();
+      expect(weekly.hasPending, false);
+      expect(completed, true);
+    },
+  );
+
+  for (final refusal in [
+    (503, 'CLIENT_UPGRADE_REQUIRED'),
+    (409, 'REQUEST_IN_PROGRESS'),
+    (503, 'SERVER_ERROR'),
+    (409, 'IDEMPOTENCY_CONFLICT'),
+  ]) {
+    test(
+      'nonqualifying current refusal $refusal cannot adopt historical state',
+      () async {
+        await restoreBlockedOriginal();
+        respond = (r) {
+          if (r.path.endsWith('/completion-corrections')) {
+            rejectUpgrade(r, status: refusal.$1, code: refusal.$2);
+          }
+          return serve(r);
+        };
+        await weekly.retry();
+        await weekly.refresh();
+        expect(weekly.pendingCurrentState, null);
+        expect(weekly.canUseCurrent, false);
+        await weekly.useCurrent();
+        expect(weekly.hasPending, true);
+        expect(completed, true);
+      },
+    );
+  }
+
+  test('profiled pending cannot use unprofiled adoption rule', () async {
+    await load();
+    lose = true;
+    await clear();
+    respond = (r) {
+      if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+      return serve(r);
+    };
+    await weekly.retry();
+    await weekly.refresh();
+    expect(weekly.canUseCurrent, false);
+    expect(weekly.canRetry, false);
+    expect(weekly.pendingCurrentState, null);
+    expect(weekly.hasPending, true);
+  });
+
+  test(
+    'adoption persistence failure preserves original, then explicit retry releases restrictions',
+    () async {
+      await restoreBlockedOriginal();
+      respond = (r) {
+        if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+        return serve(r);
+      };
+      await weekly.retry();
+      final original = store.data[runtime.scope];
+      store.failWrite = true;
+      await weekly.useCurrent();
+      expect(weekly.hasPending, true);
+      expect(store.data[runtime.scope], original);
+      expect(weekly.failure, 'LOCAL_STORAGE_FAILED');
+      store.failWrite = false;
+      await weekly.useCurrent();
+      expect(weekly.hasPending, false);
+      expect(completed, true);
+      expect(posts(), hasLength(1));
+    },
+  );
+
+  test(
+    'read generation change invalidates adoption until a new original refusal',
+    () async {
+      await restoreBlockedOriginal();
+      respond = (r) {
+        if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+        return serve(r);
+      };
+      await weekly.retry();
+      expect(weekly.canUseCurrent, true);
+      runtime.invalidateReads();
+      expect(weekly.pendingCurrentState, null);
+      expect(weekly.canUseCurrent, false);
+      await weekly.useCurrent();
+      expect(weekly.hasPending, true);
+      await weekly.refresh();
+      expect(weekly.canUseCurrent, false);
+      await weekly.retry();
+      expect(weekly.canUseCurrent, true);
+      expect(posts(), hasLength(2));
+    },
+  );
+
+  test(
+    'current incomplete state may be adopted without asserting past command outcome',
+    () async {
+      await restoreBlockedOriginal();
+      completed = false;
+      wire = copy(samples['no_completion_context']);
+      wire['data']['character_id'] = ref().characterId;
+      respond = (r) {
+        if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+        return serve(r);
+      };
+      await weekly.retry();
+      expect(weekly.canUseCurrent, true);
+      expect(weekly.pendingCurrentState!.allowed, false);
+      expect(weekly.pendingFailed, false);
+      expect(disk()['pending']['ack'], false);
+      await weekly.useCurrent();
+      expect(weekly.hasPending, false);
+      expect(completed, false);
+      expect(posts(), hasLength(1));
+    },
+  );
+
+  test('late target GET after member switch grants no adoption', () async {
+    await restoreBlockedOriginal();
+    final read = Completer<Map<String, dynamic>>();
+    final started = Completer<void>();
+    respond = (r) {
+      if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+      if (r.path.endsWith('/completion-correction-context')) {
+        started.complete();
+        return read.future;
+      }
+      return serve(r);
+    };
+    final task = weekly.retry();
+    await started.future;
+    final oldScope = runtime.scope;
+    final original = store.data[oldScope];
+    session.change(
+      authenticated: true,
+      user: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    );
+    read.complete(copy(wire));
+    await task;
+    expect(weekly.canUseCurrent, false);
+    expect(weekly.pendingCurrentState, null);
+    expect(store.data[oldScope], original);
+  });
+
+  test(
+    'overlapping retry taps send once and target mismatch never grants adoption',
+    () async {
+      await restoreBlockedOriginal();
+      final read = Completer<Map<String, dynamic>>();
+      final started = Completer<void>();
+      respond = (r) {
+        if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+        if (r.path.endsWith('/completion-correction-context')) {
+          started.complete();
+          return read.future;
+        }
+        return serve(r);
+      };
+      final task = weekly.retry();
+      await started.future;
+      await weekly.retry();
+      await weekly.useCurrent();
+      final wrong = copy(wire);
+      wrong['data']['target_cycle_key'] = '2026-10-14';
+      read.complete(wrong);
+      await task;
+      expect(posts(), hasLength(1));
+      expect(weekly.canUseCurrent, false);
+      expect(weekly.pendingCurrentState, null);
+      expect(weekly.hasPending, true);
+    },
+  );
+
+  test(
+    'tracked first unprofiled gate refusal uses existing current-state cleanup then a fresh profiled command',
+    () async {
+      weekly.dispose();
+      client = MemberRaidClient(
+        DioBackendAccountReadApi(dio, session),
+        commandQuery: const {},
+      );
+      create();
+      await load();
+      respond = (r) {
+        if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+        return serve(r);
+      };
+      await clear();
+      expect(weekly.pendingFailed, false);
+      expect(weekly.canUseCurrent, true);
+      expect(weekly.canRetry, false);
+      final oldKey = posts().single.headers['Idempotency-Key'];
+      await weekly.refresh();
+      expect(posts(), hasLength(1), reason: 'Refresh is read-only');
+      expect(weekly.canUseCurrent, true);
+      await weekly.useCurrent();
+      expect(weekly.hasPending, false);
+      expect(
+        completed,
+        true,
+        reason: 'Cleanup does not clear server completion',
+      );
+      weekly.dispose();
+      client = MemberRaidClient(DioBackendAccountReadApi(dio, session));
+      create();
+      await load();
+      respond = serve;
+      await clear();
+      expect(posts().last.headers['Idempotency-Key'], isNot(oldKey));
+      expect(posts().last.queryParameters, MemberRaidClient.groupPolicyQuery);
+      expect(completed, false);
+    },
+  );
+
+  test(
+    'restored v3 adopts current state after a fresh refusal, and restart requires fresh evidence',
+    () async {
+      await load();
+      lose = true;
+      await clear();
+      final raw = disk();
+      raw['schema'] = 3;
+      for (final field in ['query', 'uncertain', 'blocked_code']) {
+        (raw['pending'] as Map).remove(field);
+      }
+      final originalBody = copy(raw['pending']['body']);
+      final originalKey = raw['pending']['key'];
+      store.data[runtime.scope] = jsonEncode(raw);
+      completed = true;
+      weekly.dispose();
+      create();
+      await load();
+      calls.clear();
+      respond = (r) {
+        if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+        return serve(r);
+      };
+      await weekly.retry();
+      expect(posts().single.queryParameters, isEmpty);
+      expect(posts().single.data, originalBody);
+      expect(posts().single.headers['Idempotency-Key'], originalKey);
+      expect(weekly.pendingReview, true);
+      expect(weekly.pendingFailed, false);
+      expect(weekly.canRetry, false);
+      await weekly.refresh();
+      await weekly.retry();
+      expect(posts(), hasLength(1));
+      expect(weekly.hasPending, true);
+      expect(weekly.canUseCurrent, true);
+      expect(weekly.pendingCurrentState!.allowed, true);
+      weekly.dispose();
+      create();
+      await load();
+      expect(weekly.pendingReview, true);
+      expect(weekly.canRetry, true);
+      expect(weekly.canUseCurrent, false);
+      expect(disk()['pending']['query'], null);
+      expect(disk()['pending']['body'], originalBody);
+      await weekly.retry();
+      expect(posts(), hasLength(2));
+      expect(posts().last.data, originalBody);
+      expect(posts().last.headers['Idempotency-Key'], originalKey);
+      expect(posts().last.queryParameters, isEmpty);
+      expect(weekly.canUseCurrent, true);
+      await weekly.useCurrent();
+      expect(weekly.hasPending, false);
+      expect(disk()['pending'], null);
+      expect(completed, true);
+      expect(weekly.entry(ref(), wire['data']['raid_id'])!.completed, true);
+      expect(weekly.canChange(ref(), wire['data']['raid_id']), true);
+      weekly.selectCycle(cycles.next);
+      expect(weekly.selectedCycleKey, cycles.next);
+    },
+  );
+
+  test(
+    'unknown historical outcome stays unknown while current state may be adopted',
+    () async {
+      weekly.dispose();
+      client = MemberRaidClient(
+        DioBackendAccountReadApi(dio, session),
+        commandQuery: const {},
+      );
+      create();
+      await load();
+      lose = true;
+      await clear();
+      respond = (r) {
+        if (r.path.endsWith('/completion-corrections')) rejectUpgrade(r);
+        return serve(r);
+      };
+      await weekly.retry();
+      expect(weekly.pendingReview, true);
+      expect(weekly.pendingFailed, false);
+      expect(weekly.canUseCurrent, true);
+      expect(disk()['pending']['uncertain'], true);
+    },
+  );
+
+  test(
+    'legacy v3 ACK recovery stays no-query even when fresh client defaults have group options',
+    () async {
+      await load();
+      lose = true;
+      await clear();
+      final raw = disk();
+      raw['schema'] = 3;
+      for (final field in ['query', 'uncertain', 'blocked_code']) {
+        (raw['pending'] as Map).remove(field);
+      }
+      store.data[runtime.scope] = jsonEncode(raw);
+      weekly.dispose();
+      create();
+      await load();
+      calls.clear();
+      await weekly.retry();
+      expect(posts().single.queryParameters, isEmpty);
+      expect(weekly.hasPending, false);
+    },
+  );
+
+  test(
+    'schema4 rejects unsupported stored query without replacing the original',
+    () async {
+      await load();
+      lose = true;
+      await clear();
+      final raw = disk();
+      raw['pending']['query'] = {'contract_profile': 'beta-recruitment-1'};
+      final saved = jsonEncode(raw);
+      store.data[runtime.scope] = saved;
+      weekly.dispose();
+      create();
+      calls.clear();
+      await weekly.refresh();
+      expect(weekly.failure, 'INVALID_RESPONSE');
+      expect(posts(), isEmpty);
+      expect(store.data[runtime.scope], saved);
     },
   );
   test(
@@ -364,14 +775,15 @@ void main() {
     expect(weekly.hasPending, false);
   });
   test(
-    'lost ACK schema3 survives restart; original POST token/body/key without context',
+    'lost ACK schema4 survives restart; original POST query/token/body/key without context',
     () async {
       await load();
       lose = true;
       await clear();
       expect(weekly.hasPending, true);
       final first = posts().single;
-      expect(disk()['schema'], 3);
+      expect(disk()['schema'], 4);
+      expect(disk()['pending']['query'], MemberRaidClient.groupPolicyQuery);
       weekly.dispose();
       create();
       await load();
@@ -380,6 +792,7 @@ void main() {
       expect(posts().single.path, first.path);
       expect(posts().single.method, 'POST');
       expect(posts().single.data, first.data);
+      expect(posts().single.queryParameters, first.queryParameters);
       expect(
         posts().single.headers['Idempotency-Key'],
         first.headers['Idempotency-Key'],

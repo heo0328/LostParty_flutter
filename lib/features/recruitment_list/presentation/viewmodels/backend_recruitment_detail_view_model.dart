@@ -123,6 +123,15 @@ class BackendRecruitmentDetailViewModel extends ChangeNotifier {
       session.isAuthenticated &&
       _binding == (session.userId, session.generation) &&
       _scopeBinding == scopeKey?.call();
+  void invalidate() {
+    if (_disposed || readOnly) return;
+    _epoch++;
+    loading = false;
+    value = null;
+    profile = null;
+    unawaited(load());
+  }
+
   Future<void> load() async {
     if (_disposed || loading || !session.isAuthenticated) return;
     final epoch = ++_epoch;

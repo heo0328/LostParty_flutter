@@ -8,6 +8,7 @@ import '../features/recruitment_list/presentation/widgets/cycle_member_action_wi
 import '../features/recruitment_list/data/raid_room_usage_repository.dart';
 import '../features/recruitment_list/presentation/viewmodels/raid_room_usage_controller.dart';
 import 'dart:async';
+import '../features/recruitment_list/presentation/viewmodels/roster_issue_controller.dart';
 import 'dart:convert';
 import '../features/recruitment_list/data/beta/beta_contract.dart';
 import '../features/recruitment_list/data/beta/recruitment_command_store.dart';
@@ -127,6 +128,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   BackendMemberAccount? _memberAccount;
   BackendRecruitmentCreateViewModel? _recruitmentCreate;
   RaidRoomUsageController? _raidUsage;
+  RosterIssueController? _rosterIssues;
   CycleParticipationController? _participation;
   RecruitmentCommandTransport? _recruitmentCommands;
   final _managementGateways =
@@ -242,6 +244,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       registrations: serverAccounts,
       enabled: true,
       allowHttp: kDebugMode,
+      rosterPresenceEnabled: true,
       bootstrapEnabled: const bool.fromEnvironment(
         'BACKEND_ACCOUNT_BOOTSTRAP_ENABLED',
         defaultValue: true,
@@ -257,6 +260,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       cooldown: _cooldown,
       onCommandStarted: lifecycle.onCommandStarted,
       onCommandFinished: lifecycle.onCommandFinished,
+      onCommandApplied: (_) => _rosterIssues?.invalidate(),
     );
     _serverPowers = ServerCombatPowerViewModel(
       serverAccounts,
@@ -451,6 +455,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       accountApi,
       includeGroupList: true,
       membershipProfile: true,
+      includeCharacterIssues: true,
       contractMode: widget.recruitmentContractMode,
     );
     final commandTransport = _recruitmentCommands = RecruitmentCommandTransport(
@@ -464,6 +469,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final membershipReads = MembershipReadRepository(
       accountApi,
       includeGroupState: true,
+      includeCharacterIssues: true,
       contractMode: widget.recruitmentContractMode,
     );
     String cycleScopeKey() =>
@@ -474,6 +480,44 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       scopeKey: cycleScopeKey,
       changes: _memberAccount?.model ?? auth,
     );
+    final rosterIssues = _rosterIssues = RosterIssueController(
+      api: accountApi,
+      session: readSession,
+      scopeKey: cycleScopeKey,
+      changes: Listenable.merge([
+        _memberAccount?.model ?? auth,
+        if (_memberAccount != null) _memberAccount!.runner,
+      ]),
+    );
+    Future<void> refreshIssueRoster(String registration) async {
+      final owner = accountReadScope(readSession);
+      final environment = _dio!.options.baseUrl;
+      final writes = _serverWrites!;
+      if (!writes.canWrite || _memberAccount?.runner.isBusy == true) {
+        throw const AccountReadException('REQUEST_IN_PROGRESS');
+      }
+      final regs = await serverAccounts.loadRegistrations(shareInFlight: true);
+      requireAccountReadScope(readSession, owner);
+      if (environment != _dio!.options.baseUrl) {
+        throw const AccountReadException('ENVIRONMENT_CHANGED');
+      }
+      final reg = regs
+          .where(
+            (r) =>
+                r.registrationId == registration &&
+                r.ownershipStatus == 'owned',
+          )
+          .firstOrNull;
+      if (reg == null) throw const AccountReadException('OWNERSHIP_REQUIRED');
+      final version = writes.appliedVersion;
+      await writes.refresh(reg);
+      requireAccountReadScope(readSession, owner);
+      if (version == writes.appliedVersion) {
+        throw writes.failure ??
+            const AccountReadException('REQUEST_IN_PROGRESS');
+      }
+    }
+
     Future<Iterable<String>> ownInviteNames() async {
       final runtime = lifecycle.runtime;
       if (runtime == null || !runtime.canRead) return const [];
@@ -563,6 +607,16 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       onLogin: () => showLoginRequired(context, auth),
     );
     final recruitmentGateway = BackendRecruitmentRepository(
+      includeCharacterIssues: true,
+      characterSelectable: (id) =>
+          !(_memberAccount?.model.sections
+                  .expand((s) => s.characters)
+                  .any(
+                    (c) =>
+                        c.ref.characterId == id &&
+                        c.observation.rosterPresence?.missing == true,
+                  ) ??
+              false),
       includeGroupState: true,
       contractMode: widget.recruitmentContractMode,
       api: accountApi,
@@ -597,9 +651,16 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       changes: _memberAccount?.model ?? auth,
       scopeKey: cycleScopeKey,
       onMutation: (t) async {
-        await _memberAccount?.weekly?.refreshTarget(t);
+        rosterIssues.invalidate(notifyRooms: false);
+        final weekly = _memberAccount?.weekly;
+        await weekly?.refreshTarget(t);
+        if (identical(weekly, _memberAccount?.weekly) &&
+            weekly?.refreshFailure != null) {
+          throw weekly!.refreshFailure!;
+        }
       },
       onRelationEnded: (targets) async {
+        rosterIssues.invalidate(notifyRooms: false);
         for (final t in targets) {
           await _memberAccount?.weekly?.refreshTarget(t);
         }
@@ -671,6 +732,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
           builder: (context, state, shell) => AppShell(
             navigationShell: shell,
             raidUsage: raidUsage,
+            rosterIssues: rosterIssues,
             onRaidStatusSelected: () => unawaited(raidUsage.refresh()),
             scopedStartupRefresh:
                 _memberAccount?.automaticRefreshEnabled == true
@@ -685,6 +747,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                   builder: (context, state) => _memberAccount?.weekly == null
                       ? pending('레이드 현황')
                       : CycleOwnRoomsPage(
+                          rosterIssues: rosterIssues,
                           initialTarget:
                               state.uri.queryParameters['target_cycle_key'],
                           returnCommandKey:
@@ -725,6 +788,15 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             participationChanges: participation,
                             canUseParticipationCommands: () =>
                                 participation.canAct,
+                            canRecoverParticipationCompletion:
+                                (room, target, round) =>
+                                    participation.matchesCompletion(
+                                      room,
+                                      target,
+                                      'personal_completion',
+                                    ) &&
+                                    participation.pendingCompletionRound ==
+                                        round,
                             onCompleteParticipation:
                                 (
                                   ctx,
@@ -945,6 +1017,44 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                           gateway: recruitmentGateway,
                           participation: participation,
                           session: readSession,
+                          rosterIssues: rosterIssues,
+                          onRefreshRoster: refreshIssueRoster,
+                          onManageCharacters: (registration) async {
+                            final binding = cycleScopeKey();
+                            var id = registration;
+                            if (id == null) {
+                              final regs =
+                                  _memberAccount?.model.sections
+                                      .where(
+                                        (s) =>
+                                            s.registration.ownershipStatus ==
+                                            'owned',
+                                      )
+                                      .toList() ??
+                                  [];
+                              id = await showDialog<String>(
+                                context: context,
+                                builder: (dialogContext) => SimpleDialog(
+                                  title: const Text('활동 캐릭터를 선택할 원정대'),
+                                  children: [
+                                    for (final s in regs)
+                                      SimpleDialogOption(
+                                        onPressed: () => Navigator.pop(
+                                          dialogContext,
+                                          s.registration.registrationId,
+                                        ),
+                                        child: Text(s.registration.label),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }
+                            if (id != null &&
+                                context.mounted &&
+                                binding == cycleScopeKey()) {
+                              await openCharacters(context, id);
+                            }
+                          },
                           roomId: state.pathParameters['recruitmentId']!,
                           onLogin: () => showLoginRequired(context, auth),
                           onCreateAnother: recruitmentCreate.startAnother,
@@ -1102,6 +1212,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       unawaited(_memberAccount?.weekly?.refresh());
       unawaited(_recruitmentCreate?.refreshCycles());
       unawaited(_raidUsage?.refresh());
+      unawaited(_rosterIssues?.refresh());
     }
   }
 
@@ -1115,6 +1226,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     _entryGate.removeListener(_entryReady);
     _entryGate.dispose();
     _raidUsage?.dispose();
+    _rosterIssues?.dispose();
     _recruitmentCreate?.dispose();
     _groupChanges.dispose();
     _participation?.dispose();

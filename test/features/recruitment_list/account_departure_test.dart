@@ -114,20 +114,24 @@ void main() {
         await tester.tap(find.text('내 계정'));
         await tester.pumpAndSettle();
         expect(find.byType(AlertDialog), findsOneWidget);
-        final button = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, '완료 후 탈퇴'),
+        expect(
+          find.widgetWithText(
+            FilledButton,
+            scenario == 'different-character' ? '새로고침' : '확인',
+          ),
+          findsOneWidget,
         );
         if (scenario == 'different-character') {
-          expect(button.onPressed, isNull);
+          expect(find.text('정보가 변경되었습니다. 다시 확인해 주세요.'), findsOneWidget);
         } else if (scenario == 'cancel') {
           await tester.tap(find.text('취소'));
         } else {
-          await tester.tap(find.text('완료 후 탈퇴'));
+          await tester.tap(find.widgetWithText(FilledButton, '확인'));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 400));
           await tester.pump(const Duration(milliseconds: 400));
           expect(c.departureSuccess, isNotNull);
-          expect(find.byType(AlertDialog), findsNothing);
+          expect(find.byType(AlertDialog), findsOneWidget);
           expect(find.text('내 계정'), findsOneWidget);
         }
         expect(
@@ -136,6 +140,10 @@ void main() {
         );
         refresh.complete();
         await tester.pumpAndSettle();
+        expect(
+          find.byType(AlertDialog),
+          scenario == 'different-character' ? findsOneWidget : findsNothing,
+        );
         await tester.pumpWidget(const SizedBox.shrink());
       },
     );

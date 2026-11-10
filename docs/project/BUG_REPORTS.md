@@ -1,5 +1,47 @@
 # 버그 리포트
 
+## BUG-033. 계정 완료 해제 CLIENT_UPGRADE_REQUIRED 및 재조회/저장 재시도 반복 (2026-11-09)
+
+상태: 신규 옵션 누락 수정에 이어 Backend6742169727의 기존 원무옵션 v3 현재 거절→대상 GET→명시적 현재 정보로 화면갱신를 Native에 연결했다. 최종 전체 Flutter2,856PASS·분석0이며 [결과6742522210](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742522210)으로 인계했다. 서버 완료 기록/과거 결과를 바꾸지 않고 로컬 활성 대기만 정리한다. 2026-11-10 사용자가 문구 수정 전 계정 복구 완료 및 디바이스 테스트 통과를 확인했다. 이 구간의 사용자 인수 완료이며 GitHub Issue 종료는 수행하지 않는다. 서버/DB·실자료 변경 없음.
+
+증상: 공대 완료한 레이드를 내 계정에서 체크 해제하면 ‘주간 레이드 저장 확인 필요’가 남는다. 다시 불러오기는 안내가 남고, 저장 재시도는 일반 불러오기/저장 실패로 돌아간다. Native 신규 요청 수정 후에도 사용자는 테스트 계정이 막혀 사용하지 못한다고 재보고했다. 코드상 이력 불명 보존 상태는 재시도/현재 정보로 화면갱신가 모두 불가하고 주차 전환·다른 레이드 완료/해제 제한을 지속한다. 기존 계정 사용 복구 인수는 실패이며 추가 시험을 중단했다. [Backend6742169727](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742169727)로 현재 원무옵션409 거절·대상 GET 성공·명시적 현재 정보로 화면갱신의 계약은 확정됐으며 과거 전체 이력 증명은 필수가 아니다. 이후 Native 복구 연결·자동 검증을 마쳤고 2026-11-10 사용자가 기존 계정 복구와 이번 기기 테스트 통과를 확인했다. 앞선 실패는 당시 이력이다. 앱 전체의 차단 범위/현재 문구 세부는 미확인이다.
+
+근거: 2026-11-09 21:26:25/26 KST 정정 context GET200 이후, 21:26:27부터21:28:27까지 POST5회가 모두409 CLIENT_UPGRADE_REQUIRED다. 첫 request_id는0ed2d5f2-6ac1-445a-8bd2-536ded3e2755, 마지막은97e9259b-6840-4a53-93d9-4830f9bb1fe8이다. 인증/본문/회원 식별 자료는 게시하지 않았다.
+
+- 원인은 MemberRaidClient.correction/correct의 group_policy_version 누락이다. Backend cycles.execute는 원ACK 재생 뒤 group_policy.require_client의 업무 전 검사에서 DB0036의 무옵션 요청을 거절한다. 새 정정 GET/POST·수동 PUT은 group_policy_version만 사용하도록 수정했다. 이전 ‘계정3개 대칭 무옵션 유지’ 판단은 이 검사 적용을 놓친 것으로 정정한다.
+- MemberWeeklyViewModel.refresh는 조회만 하고 pending을 지우지 않는다. 조회 성공 때 failure는 사라져도 hasPending 안내는 유지된다. 따라서 화면을 다시 그렸다는 것만으로 이전 저장 문제가 해결되지 않는다.
+- CLIENT_UPGRADE_REQUIRED에 별도 문구를 연결했다. 기존 원무옵션 v3는 현재 실제409와 정확한 대상 GET 확인 뒤 명시적 현재 정보로 화면갱신으로 정리할 수 있다. 과거 전체 이력 증명이나 실패 확정은 요구하지 않는다. 조회 뒤에도 검토 상태 안내를 유지한다. 임의 성공 처리나 전체409 삭제는 없다.
+
+저장은 기존 단일 슬롯 schema4에 query·결과불명 여부·재시도 불가 거절 코드만 추가한다. 과거 query/본문/키/token/ACK는 바꾸지 않는다. 검증과 다음 행동은 NEXT_WORK를 따른다. 공용 복구 큐·새 API·DB 변경은 요청하지 않았다. 자동 시험을 기존 기기 요청의 복구 성공으로 확대하지 않는다.
+
+## BUG-032. 레이드 완료 CONTEXT_INVALID와 오류 원인 안내 부족 (2026-11-09)
+
+상태: 사용자 승인 UX와 보정864de38b 계약을 Native에 연결했다. [Backend 최종6738491069](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6738491069)으로 협의 대기는 해소됐다. 확정 문구·접힌 오류 정보·첫 오류 취소·확인창 수명, 동일 작업 재진입/원요청 복구·ACK 후 조회만 복구를 연결했다. 최종 전체 Flutter2,840PASS·전체 분석0이다. 2026-11-10 사용자가 이번 완료 오류/안내 구간의 기기 테스트 통과를 보고했다. 서버 내부의 과거 개별 오류 분기 입증과 사용자 인수는 구분한다.
+
+범위: [계약26](../backend-migration/26-roster-character-lifecycle-design.md#완료-오류-안내-ux--사용자-협의-정리-2026-11-09). 새 서버 API/code·복구 큐·다중 저장·DB 변경 없음. 단일 슬롯의 다른 작업 제한/장기 미해결 안전 종료는 이번 해결 범위가 아니다. 실제 사용자 실패와 서버 로그의 상관관계는 미확인으로 유지한다.
+증상: 레이드 완료 처리 시 ‘확인 정보가 유효하지 않습니다. 최신 내용을 다시 확인해 주세요.’가 표시된다. Native 공통 recruitmentFailureMessage의 CONTEXT_INVALID 문구이며 실제 HTTP/request_id·서버 세부 분기는 아직 확보하지 않았다.
+
+확인 근거: Native7a165ac1의 BetaInteractionApi→BetaContract.query는 실제 지원 목록에 따라 GET `/v2/raid-rooms/{room_id}/command-context`에 participation_profile=remaining-active-1을 추가한다. 고정 Backend caffaf340의 실제 two-cycle OpenAPI2aeca907…는 POST `/v2/raid-rounds/{round_id}/completion`과 `/personal-completion`에는 해당 query를 정의하지 않는다. Native가 이 POST에 profile을 붙이지 않는 것은 계약과 일치한다. 서버 cycle_lifecycle.sign/command_context.seal은 GET의 profile을 토큰에 넣고 unseal/roster_participation.check_marker는 POST와 profile이 다르면 CONTEXT_INVALID/400을 반환한다. 따라서 현재 조회/완료 조합의 확정적인 불일치 경로를 확인했다. weekly-incomplete-closures는 GET/POST 모두 profile을 지원하며 앱 비활성 정책은 유지한다. 실제 사용자 실패 분기가 이 검사였다는 서버 로그 입증과 다른 토큰 해독 실패 가능성은 구분한다.
+
+안내 보완: CONTEXT_INVALID의 내부 분기는 추측하지 않고 검증 실패로 안내한다. 실제 Dio sender→AccountReadException→controller에 code/status/requestId를 보존하고 완료 오류 영역에 ‘오류 정보’ 펼침/복사를 연결했다. 안전한 코드/HTTP 상태/UUID만 표시하며 토큰/인증/본문은 포함하지 않는다. 새 오류/회원 전환에서 과거 진단을 정리한다. 만료·상태 변경·주차 변경·권한·서버 준비·결과불명을 완료 전용 문구로 구분하며 비완료 공용 문구는 변경하지 않았다.
+
+완료 전용 분류의 기술 기반(최신 문구/버튼은 계약26을 우선):
+
+| 구분 | 기존 코드/판별 근거 | 안내 방향 |
+|---|---|---|
+| 확인 시간 만료 | COMMAND_CONTEXT_EXPIRED 등 | ‘확인 시간이 지났습니다. 완료할 레이드를 다시 확인해 주세요.’ |
+| 대상/참가/주차 변경 | TARGET_CONTEXT_STALE·REVISION_CONFLICT·CYCLE_CHANGED 등 | 변경된 내용을 다시 확인하도록 안내. 주차 변경은 별도 표현 |
+| 권한 제한 | TARGET_LEADER_REQUIRED·PERMISSION_DENIED 등 | 완료 가능한 담당자/권한 안내 |
+| 이미 완료/대상 없음 | ROUND_NOT_ACTIVE 등, 실제 상태 근거 필요 | 이미 완료와 진행 대상 없음을 근거 없이 단정하지 않고 구분 |
+| 확인 정보 검증 불가 | CONTEXT_INVALID | ‘완료 요청을 확인하지 못했습니다. 다시 확인한 뒤에도 같으면 오류 정보를 알려 주세요.’ 내부 원인을 단정하지 않음 |
+| 연결 실패/결과불명 | 통신 오류·pending/ACK 상태 | 연결 안내와 결과 확인을 구분. 새 완료 명령 자동 실행 금지 |
+
+오류의 쉬운 설명/다음 행동과 안전한 원코드·request_id를 함께 추적할 방식을 검토한다. 서버 키/토큰 내부정보는 노출하지 않는다. [Issue17 조사·분류 요청6732895692](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6732895692)에 대한 [Backend6733182655](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6733182655)·[Native 수신6733447639](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6733447639)를 확인했다. 권장안은 새 wire code/필드 없이 기존 code+status+request_id 활용이다. details.reason은 extra-forbid 계약에 임의 추가하지 않으며 CONTEXT_PROFILE_MISMATCH는 미확정 제안일 뿐이다. 일반503/응답 유실은 결과불명, 기능 준비 거절은 해당 시도 미실행, 성공ACK 뒤 GET 실패는 완료 성공 유지로 구분한다. 현재 오류가 이전 시도의 미반영까지 보증하지 않는다.
+
+Backend 원인/보정: 실제 CycleRoute가 허용하는 완료 POST의 participation_profile이 경로 필터 누락으로 공개 선언에서 빠졌다. 원인 진단8PASS에 이어16c9cd4b에서 선택 query10개를 보정하고 영향114PASS·도구63PASS, 개발image101cd82d…/DB0036·새 계약864de38b… 반영을 보고했다. Native도 실제 새 계약 hash와 이전 계약 대비 전체 객체에서10개 선택 query만 달라짐을 읽기 확인했다. 추가8개(일정5·개인 주간 상태3)는 동일한 완료 오류로 단정하지 않는다. Native 검증 projection은10개 모두 지원하도록 갱신하되 실제 Beta 호출7개만 신규 query에 자동 반영하고 별도 계정3개는 현재 대칭 무옵션/주간 pending을 유지하는 설계다. 기존 dev400로그3건의 내부 분기/제보 기기 상관관계는 여전히 미확정이다. Native 연결·검증/기기 확인 전까지 해결 완료로 닫지 않는다.
+
+기존2,826PASS는 실제 서버의 조회→완료 POST 간 profile 표식 연계를 포착하지 못했다. 이번에는 Native 안내/진단·실제 앱의 ACK 후 주간 조회 실패 전달을 보완했으며 서버/DB/자료 변경과 실제 회원 완료 명령은 실행하지 않았다. ACK가 있으면 완료 성공을 유지하고 조회만 재시도하며 pending 결과불명 안내는 특정 거절 문구보다 우선한다. 새 계약 소비 후 profile 연계와 완료 기록/주차/권한·원요청/ACK 복구를 직접 검증해야 한다. 현재 검증 수치는 NEXT_WORK/DEV_LOG를 따른다.
+
 ## 레이드 모집 현재 판정 — 2026-10-27
 
 BUG-026의 후보/집계/일정 표시, BUG-027 완료 후 복귀, BUG-028 시간 입력/계정 완료/편성 잠금, BUG-029 해산 로그, BUG-030 가독성/재신청은 각각 아래 근거의 수정과 사용자가 보고한 정상 흐름 통과를 반영했다. 원 제보의 미확인 ACK를 새로 입증했다는 뜻은 아니며, 재현 없는 배너를 추가 필수 시험으로 남기지 않는다. 다음주 개방 알럿의 유사 로그는 사용자 보류로 별도 원인 조사 전이고, 제안 정밀도 경계1건/UX 개선은 [NEXT_WORK](NEXT_WORK.md)·[인수표](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027)에서 관리한다. 이후의 과거 원인·검증 설명을 새 대기로 재사용하지 않는다. BUG-025는 별도 계정 흐름 조사로 유지한다.

@@ -4,9 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../data/cycle_outcome.dart';
 import '../../data/cycle_schedule.dart';
-import '../viewmodels/backend_recruitment_create_view_model.dart';
 import '../viewmodels/cycle_participation_controller.dart';
-import 'cycle_participation_widgets.dart';
+import 'completion_dialog_feedback.dart';
 import 'cycle_member_action_widgets.dart';
 
 class CycleOutcomeActions extends StatelessWidget {
@@ -42,10 +41,20 @@ class CycleOutcomeActions extends StatelessWidget {
         for (final action in cycleOutcomeLabels.keys)
           if ((action == 'complete_item' &&
                   showCompletion &&
-                  role == 'leader') ||
+                  (role == 'leader' ||
+                      controller.matchesCompletion(
+                        room,
+                        target,
+                        'complete_item',
+                      ))) ||
               (action == 'personal_completion' &&
                   showCompletion &&
-                  {'leader', 'member'}.contains(role)) ||
+                  ({'leader', 'member'}.contains(role) ||
+                      controller.matchesCompletion(
+                        room,
+                        target,
+                        'personal_completion',
+                      ))) ||
               (action == 'close_weekly' &&
                   controller.weeklyInterruptionEnabled &&
                   showClosure &&
@@ -58,11 +67,12 @@ class CycleOutcomeActions extends StatelessWidget {
 
   Widget _action(BuildContext context, String action) {
     final enabled =
-        controller.canAct &&
-        target == current &&
-        playable &&
-        {'leader', 'member'}.contains(role) &&
-        (action != 'complete_item' || role == 'leader');
+        controller.matchesCompletion(room, target, action) ||
+        (controller.canAct &&
+            target == current &&
+            playable &&
+            {'leader', 'member'}.contains(role) &&
+            (action != 'complete_item' || role == 'leader'));
     final VoidCallback? onPressed = enabled
         ? () => action == 'personal_completion'
               ? showDeparture(
@@ -82,6 +92,7 @@ class CycleOutcomeActions extends StatelessWidget {
                     target: target,
                     action: action,
                     raidLabel: raidLabel,
+                    isCurrent: isCurrent ?? () => true,
                   ),
                 )
         : null;
@@ -120,10 +131,12 @@ class _OutcomeDialog extends StatefulWidget {
     required this.target,
     required this.action,
     required this.raidLabel,
+    required this.isCurrent,
   });
   final CycleParticipationController controller;
   final String room, target, action;
   final String Function(Map) raidLabel;
+  final bool Function() isCurrent;
   @override
   State<_OutcomeDialog> createState() => _OutcomeDialogState();
 }
@@ -133,15 +146,78 @@ class _OutcomeDialogState extends State<_OutcomeDialog> {
   CycleScheduleView? plan;
   String? round;
   late final String binding;
+  late final CompletionDialogFeedback feedback;
   bool loading = true;
+  bool closing = false;
   CycleParticipationController get c => widget.controller;
   bool get valid =>
-      mounted && c.session.isAuthenticated && binding == c.scopeKey();
+      mounted &&
+      feedback.active &&
+      c.session.isAuthenticated &&
+      binding == c.scopeKey() &&
+      widget.isCurrent();
   @override
   void initState() {
     super.initState();
     binding = c.scopeKey();
-    unawaited(load());
+    feedback = CompletionDialogFeedback(
+      c,
+      widget.room,
+      widget.target,
+      widget.action,
+    );
+    c.addListener(completionChanged);
+    if (feedback.matchesPending) {
+      round = feedback.round;
+      loading = false;
+      unawaited(
+        feedback.readTargetLabel(widget.raidLabel).then((_) {
+          if (valid) setState(() {});
+        }),
+      );
+    } else {
+      unawaited(load());
+    }
+  }
+
+  @override
+  void dispose() {
+    c.removeListener(completionChanged);
+    feedback.close();
+    super.dispose();
+  }
+
+  void close() {
+    feedback.close();
+    Navigator.pop(context);
+  }
+
+  void completionChanged() {
+    if (!valid || closing || !feedback.finished) return;
+    closing = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (valid && ModalRoute.of(context)?.isCurrent == true) close();
+    });
+  }
+
+  Future<void> recover({bool refresh = false}) async {
+    if (!valid || loading || c.busy) return;
+    setState(() => loading = true);
+    if (feedback.matchesPending) await c.retry();
+    if (!valid) return;
+    if ((refresh || feedback.acknowledged) && !feedback.matchesPending) {
+      await c.refreshCompletion(widget.room, widget.target);
+    }
+    if (!valid) return;
+    feedback.capture();
+    if (feedback.acknowledged &&
+        !feedback.refreshFailed &&
+        !c.hasPending &&
+        c.failure == null) {
+      close();
+    } else {
+      setState(() => loading = false);
+    }
   }
 
   List<Map<String, dynamic>> get choices => [
@@ -155,19 +231,26 @@ class _OutcomeDialogState extends State<_OutcomeDialog> {
         Map<String, dynamic>.from(item as Map),
   ];
   Future<void> load() async {
-    if (!valid) return;
+    if (!valid || feedback.matchesPending) return;
     setState(() {
       loading = true;
       preview = null;
     });
+    c.failure = null;
     final result = await c.scheduleRead(widget.room, widget.target, 'plan');
     if (!valid) return;
+    feedback.capture(query: true);
     plan = result;
+    if (result == null) {
+      setState(() => loading = false);
+      return;
+    }
     if (widget.action != 'close_weekly') {
       if (!choices.any((i) => i['round_id'] == round)) {
         round = choices.firstOrNull?['round_id'] as String?;
       }
       if (round == null) {
+        feedback.code = 'ROUND_NOT_ACTIVE';
         setState(() => loading = false);
         return;
       }
@@ -188,6 +271,7 @@ class _OutcomeDialogState extends State<_OutcomeDialog> {
       round: round,
     );
     if (!valid) return;
+    feedback.capture(query: true);
     setState(() {
       preview = result;
       plan = result?.plan ?? plan;
@@ -201,8 +285,9 @@ class _OutcomeDialogState extends State<_OutcomeDialog> {
     setState(() => loading = true);
     await c.complete(p);
     if (!mounted || !valid) return;
-    if (c.failure == null && !c.hasPending) {
-      Navigator.pop(context);
+    feedback.capture(query: feedback.requestKey == null);
+    if (c.failure == null && !c.hasPending && !feedback.refreshFailed) {
+      close();
     } else {
       setState(() {
         loading = false;
@@ -229,6 +314,7 @@ class _OutcomeDialogState extends State<_OutcomeDialog> {
                 Text('대상 주차 · ${widget.target}'),
                 if (loading) const LinearProgressIndicator(),
                 if (!loading &&
+                    !feedback.matchesPending &&
                     widget.action != 'close_weekly' &&
                     choices.isNotEmpty)
                   DropdownButtonFormField<String>(
@@ -275,29 +361,32 @@ class _OutcomeDialogState extends State<_OutcomeDialog> {
                   ),
                   if (widget.action != 'close_weekly')
                     const Text('완료된 참가와 예약은 복구할 수 없습니다.'),
-                  if (!p.permission.allowed)
-                    Text(recruitmentFailureMessage(p.permission.reason)),
                 ],
-                if (!loading && p == null && c.failure == null)
-                  const Text('진행 가능한 레이드가 없습니다.'),
-                CycleCommandBanner(controller: c),
-                if (!loading && valid && c.canAct)
-                  TextButton(onPressed: load, child: const Text('최신 상태 다시 확인')),
+                if (feedback.matchesPending && round != null)
+                  Text(feedback.targetLabel ?? '선택했던 레이드의 요청을 다시 시도합니다.'),
+                CompletionDialogNotice(
+                  feedback: feedback,
+                  reason: p?.permission.allowed == false
+                      ? p?.permission.reason
+                      : null,
+                ),
               ],
             ),
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed:
-                valid && !loading && c.canAct && p?.permission.allowed == true
-                ? submit
+          CompletionDialogButtons(
+            feedback: feedback,
+            loading: loading,
+            canSubmit: valid && c.canAct && p?.permission.allowed == true,
+            onClose: close,
+            onSubmit: submit,
+            onRead: load,
+            onRetry: recover,
+            onRefresh: () => recover(refresh: true),
+            reason: p?.permission.allowed == false
+                ? p?.permission.reason
                 : null,
-            child: const Text('확인'),
           ),
         ],
       );

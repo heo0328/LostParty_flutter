@@ -40,6 +40,15 @@ Future<BetaDecoded<T>> readRecruitment<T>({
     body: body,
   ))!;
   final raw = Map<String, dynamic>.of(received);
+  if (q['include_character_issues'] == 'true') {
+    roleCheck(
+      raw.containsKey(
+        path.endsWith('/raid-room-memberships')
+            ? 'character_issues'
+            : 'character_issue_context',
+      ),
+    );
+  }
   Map<String, dynamic>? groupState;
   if (includeGroupState) {
     roleCheck(
@@ -88,6 +97,12 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   );
   return BetaDecoded(result.value, {
     ...roleMap(result.metadata['data']),
+    for (final key in [
+      'participation_context',
+      'character_issues',
+      'character_issue_context',
+    ])
+      if (result.metadata.containsKey(key)) key: result.metadata[key],
     if (result.metadata['group_policy'] != null)
       'group_policy': result.metadata['group_policy'],
     if (includeGroupState) 'group_state': groupState,
@@ -111,6 +126,12 @@ Map<String, dynamic>? betaDisplayData(Map<String, dynamic>? raw) {
         if (raw.containsKey('group_state')) 'group_state': raw['group_state'],
         if (raw.containsKey('group_policy'))
           'group_policy': CycleGroupPolicy(roleMap(raw['group_policy'])).wire,
+        for (final key in [
+          'participation_context',
+          'character_issues',
+          'character_issue_context',
+        ])
+          if (raw.containsKey(key)) key: raw[key],
         if (raw.containsKey('recruitment_identity'))
           'recruitment_identity': raw['recruitment_identity'],
       })

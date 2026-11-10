@@ -137,7 +137,91 @@ class JournalSession extends ReadSessionFake {
   void sameIdentityNotification() => notifyListeners();
 }
 
+class ErrorWireAdapter extends WireAdapter {
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    await super.fetch(options, requestStream, cancelFuture);
+    return ResponseBody.fromString(
+      jsonEncode({
+        'error': {
+          'code': 'CONTEXT_INVALID',
+          'message': 'context invalid',
+          'request_id': otherKey,
+          'details': null,
+          'retry_after_seconds': null,
+          'retry_at': null,
+        },
+      }),
+      400,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+}
+
 void main() {
+  test(
+    'fixed completion and schedule contract declares all ten added optional profiles',
+    () {
+      for (final (method, path) in [
+        (
+          'GET',
+          '/v2/me/characters/$key/raid-weekly-states/$otherKey/completion-correction-context',
+        ),
+        ('GET', '/v2/me/raid-schedule-overlaps'),
+        ('GET', '/v2/raid-schedule-groups/$key/candidates'),
+        (
+          'POST',
+          '/v2/me/characters/$key/raid-weekly-states/$otherKey/completion-corrections',
+        ),
+        ('POST', '/v2/raid-rounds/$key/completion'),
+        ('POST', '/v2/raid-rounds/$key/personal-completion'),
+        ('POST', '/v2/raid-schedule-groups/$key/selections'),
+        ('POST', '/v2/raid-schedule-proposals/$key/responses'),
+        ('POST', '/v2/raid-sessions/$key/participation-confirmations'),
+        (
+          'PUT',
+          '/v2/me/characters/$key/raid-weekly-states/$otherKey/manual-completion',
+        ),
+      ]) {
+        expect(
+          beta.query(method, path)['participation_profile'],
+          'remaining-active-1',
+          reason: '$method $path',
+        );
+      }
+    },
+  );
+  test(
+    'Dio command errors preserve status and request id without exposing response body',
+    () async {
+      final session = ReadSessionFake()..userId = user;
+      final dio = Dio(BaseOptions(baseUrl: 'https://example.com'))
+        ..httpClientAdapter = ErrorWireAdapter();
+      try {
+        await expectLater(
+          DioRecruitmentCommandSender(
+            dio,
+            session,
+          ).call(command(), accountReadScope(session)),
+          throwsA(
+            isA<AccountReadException>()
+                .having((e) => e.code, 'code', 'CONTEXT_INVALID')
+                .having((e) => e.status, 'status', 400)
+                .having((e) => e.requestId, 'requestId', otherKey),
+          ),
+        );
+      } finally {
+        dio.close();
+        session.dispose();
+      }
+    },
+  );
   group('closed beta models and explicit profile', () {
     test(
       'all 64 existing operations are profiled; only two preset operations are unprofiled',
@@ -151,6 +235,11 @@ void main() {
           if (p == path) {
             expect(q, isEmpty);
             presets++;
+          } else if (p == '/v2/me/raid-room-character-issues') {
+            expect(
+              q['participation_profile'],
+              BetaContract.participationProfile,
+            );
           } else {
             expect(q['contract_profile'], BetaContract.profile);
             profiles++;
@@ -167,6 +256,7 @@ void main() {
         expect(beta.query('POST', '/v2/raid-rooms'), {
           'contract_profile': BetaContract.profile,
           'group_policy_version': BetaContract.groupPolicyVersion,
+          'participation_profile': BetaContract.participationProfile,
         });
         expect(beta.query('GET', path), isEmpty);
         expect(beta.query('PUT', path), isEmpty);

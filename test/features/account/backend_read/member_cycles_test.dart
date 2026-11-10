@@ -737,6 +737,7 @@ void main() {
       expect((writes.single.data as Map)['expected_cycle_key'], current);
       expect((writes.single.data as Map)['target_cycle_key'], current);
       expect(writes.single.path, startsWith('/v2/me/characters/'));
+      expect(writes.single.queryParameters, MemberRaidClient.groupPolicyQuery);
       expect(writes.single.headers['Idempotency-Key'], isNotEmpty);
       weekly.selectCycle(next);
       expect(weekly.entry(ref, raid.raidId)?.manual, false);

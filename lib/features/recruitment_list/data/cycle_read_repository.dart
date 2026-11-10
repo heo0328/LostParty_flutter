@@ -6,6 +6,7 @@ import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/member_raid_models.dart';
 import '../../account/domain/role_summary.dart';
 import 'membership_readers.dart';
+import 'roster_participation.dart';
 
 class CycleReadScope {
   CycleReadScope(Map<String, dynamic> j, String target) {
@@ -110,6 +111,7 @@ class CycleRoomCard {
 }
 
 class CycleOwnRow {
+  List<RosterCharacterIssue> characterIssues = const [];
   Map<String, dynamic>? betaData;
   CycleOwnRow.profile(this.profile, String target) {
     final p = profile!;
@@ -309,11 +311,13 @@ class CycleReadRepository {
     this.api, {
     this.membershipProfile = false,
     this.includeGroupList = false,
+    this.includeCharacterIssues = false,
     this.contractMode = RecruitmentContractMode.legacy,
   });
   final RecruitmentContractMode contractMode;
   final DioBackendAccountReadApi api;
   final bool membershipProfile, includeGroupList;
+  final bool includeCharacterIssues;
   Future<T> _read<T>(Future<T> Function() f) async {
     try {
       return await f();
@@ -349,6 +353,10 @@ class CycleReadRepository {
         'cursor': ?cursor,
         if (membershipProfile && !applications)
           'reader_profile': membershipReaderProfile,
+        if (!applications &&
+            includeCharacterIssues &&
+            contractMode == RecruitmentContractMode.betaWire2)
+          'include_character_issues': 'true',
       },
       parse: (j) => membershipProfile && !applications
           ? CycleOwnPage.profile(target, j)
@@ -364,6 +372,18 @@ class CycleReadRepository {
           row.roomId,
         );
         row.card?.betaData = row.betaData;
+        if (result.metadata?['character_issues'] != null) {
+          row.characterIssues =
+              RosterIssuePage(roleMap(result.metadata!['character_issues']))
+                  .items
+                  .where(
+                    (v) =>
+                        v.room == row.roomId &&
+                        v.target == target &&
+                        v.cycleMember == row.profile?.viewer['cycle_member_id'],
+                  )
+                  .toList();
+        }
       }
     }
     return result.value;

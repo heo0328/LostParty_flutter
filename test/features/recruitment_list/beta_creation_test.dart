@@ -231,6 +231,7 @@ void main() {
         expect(c.query, {
           'contract_profile': BetaContract.profile,
           'group_policy_version': BetaContract.groupPolicyVersion,
+          'participation_profile': BetaContract.participationProfile,
         });
         expect(
           gateway.api.requests.last['query']['next_early_additional_members'],

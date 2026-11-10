@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'roster_participation.dart';
 import '../domain/departure_search_selection.dart';
 import 'beta/beta_contract.dart';
 import 'beta/beta_read.dart';
@@ -348,11 +349,13 @@ class CycleAdmissionPreview {
     rolePositive(leader['leadership_revision']);
   }
   final String room, target, character, role, intent;
+  RosterParticipationMember? participation;
   late final Map<String, dynamic> scope, data;
   late final CyclePermission permission;
   late final CycleSessionDisplay display;
   late final List<Map<String, dynamic>> sessions;
   String get confirmationSignature => cycleStableJson({
+    'participation_binding': participation?.binding,
     for (final k in [
       'room_revision',
       'members_revision',
@@ -881,17 +884,23 @@ class CycleInteractionRepository
     roleId(character);
     raidCycleKey(target);
     roleCheck({'apply', 'join', 'change_character'}.contains(intent));
-    final j = (await interactionApi.request(
-      '/v2/raid-rooms/$room/admission-context',
-      query: {
-        'target_cycle_key': target,
-        'character_id': character,
-        'selected_role': role,
-        'intent': intent,
-        'include_session_display': 'true',
-      },
-    ))!;
-    return CycleAdmissionPreview(
+    final path = '/v2/raid-rooms/$room/admission-context';
+    final query = <String, dynamic>{
+      'target_cycle_key': target,
+      'character_id': character,
+      'selected_role': role,
+      'intent': intent,
+      'include_session_display': 'true',
+    };
+    final decoded = interactionApi is BetaInteractionApi
+        ? await (interactionApi as BetaInteractionApi).requestDecoded(
+            path,
+            query: query,
+          )
+        : null;
+    final j =
+        decoded?.value ?? (await interactionApi.request(path, query: query))!;
+    final result = CycleAdmissionPreview(
       j,
       room: room,
       target: target,
@@ -899,6 +908,17 @@ class CycleInteractionRepository
       role: role,
       intent: intent,
     );
+    final context = decoded?.metadata?['participation_context'];
+    if (context != null) {
+      result.participation = RosterParticipationContext(
+        roleMap(context),
+      ).members.single;
+      roleCheck(
+        result.participation!.wire['room_id'] == room &&
+            result.participation!.wire['target_cycle_key'] == target,
+      );
+    }
+    return result;
   });
   @override
   Future<CycleApplicationView> application(String id, String target) =>
@@ -995,10 +1015,16 @@ class CycleInteractionRepository
     CycleAdmissionPreview p,
     Set<String> sessions,
   ) => _decode(() async {
-    final j = (await interactionApi.request(
-      '/v2/me/raid-rooms/${p.room}/plan',
-      query: {'target_cycle_key': p.target},
-    ))!;
+    final path = '/v2/me/raid-rooms/${p.room}/plan';
+    final query = <String, dynamic>{'target_cycle_key': p.target};
+    final decoded = interactionApi is BetaInteractionApi
+        ? await (interactionApi as BetaInteractionApi).requestDecoded(
+            path,
+            query: query,
+          )
+        : null;
+    final j =
+        decoded?.value ?? (await interactionApi.request(path, query: query))!;
     roleShape(j, 'scope data');
     final scope = roleMap(j['scope']);
     CycleReadScope(scope, p.target);
@@ -1015,8 +1041,33 @@ class CycleInteractionRepository
     }
     roleId(mine['cycle_member_id']);
     final revision = rolePositive(mine['cycle_member_revision']);
+    Set<String>? activeIds;
+    List<Map<String, dynamic>>? remainingCas;
+    if (p.participation != null) {
+      final raw = decoded?.metadata?['participation_context'];
+      roleCheck(raw != null);
+      final member = RosterParticipationContext(
+        roleMap(raw),
+      ).forMember(p.room, p.target, mine['cycle_member_id']);
+      roleCheck(
+        member != null &&
+            member.binding == p.participation!.binding &&
+            member.wire['cycle_member_revision'] == revision,
+      );
+      activeIds = member!.active
+          .map((a) => a['assignment_id'] as String)
+          .toSet();
+      remainingCas = remainingAssignmentCas(
+        raidList(d['my_assignments']).map(roleMap).toList(),
+        member,
+      );
+    }
     final assignments = raidList(d['my_assignments'])
-        .where((raw) => roleMap(raw)['ended_at'] == null)
+        .where(
+          (raw) => activeIds == null
+              ? roleMap(raw)['ended_at'] == null
+              : activeIds.contains(roleMap(raw)['assignment_id']),
+        )
         .map((raw) {
           final a = roleMap(raw);
           roleCheck(
@@ -1039,6 +1090,18 @@ class CycleInteractionRepository
           assignments.map((a) => a['assignment_id']).toSet().length ==
               assignments.length,
     );
+    if (remainingCas != null) {
+      final byId = {
+        for (final a in remainingCas)
+          a['assignment_id']: a['expected_revision'],
+      };
+      roleCheck(
+        assignments.length == remainingCas.length &&
+            assignments.every(
+              (a) => byId[a['assignment_id']] == a['expected_revision'],
+            ),
+      );
+    }
     return {
       ...p.body(sessions),
       'assignments': assignments,

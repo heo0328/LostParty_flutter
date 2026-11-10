@@ -7,12 +7,14 @@ class MemberCycleSelector extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.enabled = true,
+    this.issueCycles = const {},
     super.key,
   });
   final MemberCycles cycles;
   final String value;
   final void Function(String) onChanged;
   final bool enabled;
+  final Set<String> issueCycles;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -21,8 +23,18 @@ class MemberCycleSelector extends StatelessWidget {
       children: [
         SegmentedButton<String>(
           segments: [
-            ButtonSegment(value: cycles.current.key, label: const Text('이번 주')),
-            ButtonSegment(value: cycles.next.key, label: const Text('다음 주')),
+            ButtonSegment(
+              value: cycles.current.key,
+              label: Text(
+                '이번 주${issueCycles.contains(cycles.current.key) ? ' ❗' : ''}',
+              ),
+            ),
+            ButtonSegment(
+              value: cycles.next.key,
+              label: Text(
+                '다음 주${issueCycles.contains(cycles.next.key) ? ' ❗' : ''}',
+              ),
+            ),
           ],
           selected: cycles.find(value) == null ? {} : {value},
           emptySelectionAllowed: cycles.find(value) == null,

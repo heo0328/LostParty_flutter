@@ -84,21 +84,21 @@
 
 새 키 생성→사용자 물리 백업·접근 확인→새 공개 지문 기록→운영 Android OAuth 등록 및 Backend `azp` 허용 설정 협의→GitHub Secret4개와 CI 예상 인증서 지문을 같은 새 키 기준으로 전환→배포 없는 서명 빌드/로그인·기존 서버 회원 연결 확인→사용자 명시 게시 지시 후 삭제·재설치/로컬 자료 영향 안내와 함께 게시한다. 실제 앱 설치·조작은 사용자 담당이다. 서버 설정 변경은 Backend 담당이며 검증 우회나 자료 초기화로 대신하지 않는다. 새 키 전환 후의 업데이트는 같은 키를 재사용한다.
 
-#### Backend 백업 항목·시기 — 기준 수용·실행 대기
+#### Backend 백업 항목·시기 — 기준본 보관·문서 게시 완료
 
-Native 외 Backend 백업 항목·시기는 [Issue46의 Backend 수용 회신](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6705402315)으로 기준 수용을 확인했다. 이후 사용자는 외장하드에 직접 복사하고 비밀번호는 기존 본인 관리 방식으로 보관한다고 범위를 명확히 했다. [범위 정정 회신](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6705693077)에 따라 실제 파일 경로/복사 방법·초회 저장 항목을 안내하고, 운영은 지금 무중단으로 가능한지/다음 배포 전 해야 하는지 실제 영향과 시기만 확인한다. 암호화 도구·새 저장소·정기 주기/보관기간 선정을 현재 안내의 선행 조건으로 두지 않는다. 외부 사본은 미확인이고 **실제 운영 백업 실행 보류**는 유지한다. Native 키 전환은 Backend 키 교체 지시가 아니다.
+[Issue46 실행 결과](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706589300)와 [최종 인계](https://github.com/heo0328/lostparty-backend/issues/46#issuecomment-6706731221)를 기준으로 한다. Backend source `c62f2a739dc48fda23bf0cc97959b01ae17b0a30`의 [백업 원장](https://github.com/heo0328/lostparty-backend/blob/c62f2a739dc48fda23bf0cc97959b01ae17b0a30/docs/engineering/operations/backup-and-recovery.md)이 실제 경로·복사/다운로드 방법·안내 시점의 원본이다. 과거 운영 실행 보류·복사 방법 회신 대기는 Backend 대화의 별도 사용자 지시와 실행으로 해소됐다. Native가 백업 파일을 직접 읽거나 검증한 것은 아니며 아래는 Backend 인계·사용자 보관 보고의 소비 기록이다.
 
-| 시점 | 백업 안내·갱신 대상 | 상태·담당 |
-|---|---|---|
-| 현재 복구 마감 | 현재 debug 키, Backend 로컬 키4개·현행 설정, 유지할 개발 DB의 보관 범위 | debug 파일 복사만 사용자 보고 완료. Backend 로컬 대상5개 제시, 복사 가능한 경로/방법 안내 후 사용자가 외장하드로 직접 복사 |
-| 새 Native release 키 생성/첫 게시 전 | 새 키/비밀번호·alias의 별도 사본과 접근 확인 | 본 절의 Native 확정 기준, 실행 전 |
-| 키·설정·DB/자료 변경 또는 PC/서버 재구성 전후 | 해당 변경의 직전 복구 자료와 변경 후 유효 키·설정/DB 짝 | Backend 수용. 변경되지 않은 키 사본은 재사용, 앱 버전 증가만으로 모든 자료 재백업/키 재발급 요구 안 함 |
-| AWS 최초 외부 보관 | 운영 DB·현행 환경·기존 키4종·필요한 배포/접속 복구 정보 | Backend가 현재 무중단 생성/다운로드 가능 여부와 부하·잠금·권한/공간을 대조하고 지금/다음 배포 전 시기를 제안. 실제 실행은 별도 진행 지시 때 |
-| 운영 DB 정기 보관 | 최신 DB와 대응 schema/source·키 백업 버전 참조 | 현재 사용자 요청에서 별도 후속으로 분리. 파일 경로 안내·개발 재개의 차단 조건이 아니며 자동 작업 생성 안 함 |
+| 구분·시점 | 현재 상태·다음 행동 |
+|---|---|
+| 로컬 복구 마감 | debug 키 복사 사용자 보고 완료. Backend `.env`·기존 키4개와 콘솔 자료/다운로드 JSON·Lightsail 기본키도 사용자 보관 보고. 로컬 DB dump는 사용자 제외. 외장 매체 사본은 미확인이며 내장 SSD 보관을 외장하드 완료로 표시하지 않음 |
+| AWS 최초 외부 보관 | 2026-11-07 운영 DB·현재 환경·기존 키4종·배포 상태/동결 구성·필요한 복구/접속 구성의 온라인 백업과 PC 내장 SSD 전송 완료. 서버/PC SHA-256 일치·dump 목차/아카이브 내용 확인. 실제 DB/서비스 복원 성공으로 확대하지 않음 |
+| 새 Native release 키 생성/첫 게시 전 | 새 키/비밀번호·alias의 별도 사본과 접근 확인은 실행 전. 본 절의 Native 기준·착수 시점을 따르며 Backend 키 교체 지시가 아님 |
+| 키·설정·DB/자료 변경 또는 PC/서버 재구성 전후 | Backend가 해당 변경 직전 필요한 최신 사본과 변경 후 유효 키·설정/DB 짝을 안내. 변경 없는 키는 재사용하고 앱 버전 증가만으로 전부 재백업/키 재발급하지 않음 |
+| 실제 복원·정기 자동화 | 이번에는 미실행. 개발 재개 선행 조건으로 추가하지 않으며 별도 필요·지시에서 검토 |
 
-Backend가 제시한 로컬 우선 대상은 프로젝트 `.env`, `.secrets/jwt.pem`, `.secrets/recovery.key`, `.secrets/lostark-credential.key`, `.secrets/lostark-fingerprint.key`다. 로컬 DB는 보존할 개발자료가 있으면 실행 PostgreSQL에서 dump를 만들고 source/schema/호환 키를 식별한다. 운영 대상은 `/home/ubuntu/lostparty-backend/.env.lightsail`, `.secrets/lightsail/`의 동일4종 키, 운영 DB dump, `/var/lib/lostparty-deploy/`의 복구 상태/동결 구성과 배포·SSH 복구 정보이며, SSH 개인키 원본 보유 여부는 별도 확인한다. 이는 Backend 인계 목록으로, Native가 실제 파일/키를 읽거나 보관한 것은 아니다.
+운영 백업은 서비스 중단·재배포·키 교체 없이 수행됐다고 인계받았다. 사용자 직접 보관용 사본은 암호화되지 않았으며 Git/채팅/공개 artifact에 게시하지 않는다. 분실한 자동 배포 SSH 개인키 원본은 백업에 포함되지 않았고 정상 동작하는 GitHub 배포 Secret은 유지했다. 원본 회수·보유 여부의 반복 확인이나 Secret 교체를 새 필수 작업으로 만들지 않는다. 사용자 확인 후 별도로 추가한 관리자 SSH 공개키와 기존 배포키를 구분한다.
 
-로컬 경로는 Windows 탐색기 기준 `\\wsl.localhost\Ubuntu-24.04\home\heowork\projects\lostparty-backend`다. 경로만 조회했을 때 `.env`는 확인됐고 `.secrets`의 키4개는 Access denied였으므로 파일 누락으로 판단하지 않는다. Backend가 원본 권한을 무작정 완화하지 않고 사용자 복사 방법을 안내한다. 실제 운영 dump는 PostgreSQL 온라인 백업 가능 여부뿐 아니라 서버 권한/여유공간·부하/잠금·안전한 다운로드를 확인한다. 현재 사본과 다음 배포 직전 최신 사본을 나눌 필요도 Backend가 제안한다. 후보 정기 주기는 DEV_LOG의 당시 협의 이력이며 현재 확정 과제가 아니다. 파일 안내·실제 사용자 보관·필요 검증을 구분하고 비밀번호나 파일 내용은 공개하지 않는다.
+Issue46은 OPEN이며 추가 Native 구현·동일 기준 재수용·정상 로그인 반복 시험 요청은 없다. 개인 저장 경로·비밀값·백업 파일은 이 문서에 복제하지 않는다.
 
 #### 향후 스토어 준비 때만 확인할 다운로드·보관 항목
 

@@ -169,7 +169,9 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
           isVisible: values.visible,
           displayOrder: values.displayOrder,
           preferredRole: values.preferredRole,
-          isRosterMissing: row.lifecycleState != 'active',
+          isRosterMissing:
+              row.rosterPresence?.missing == true ||
+              row.lifecycleState != 'active',
         ),
       );
     }
@@ -245,6 +247,7 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
     return level != null &&
         level.isFinite &&
         level >= 0 &&
+        row.rosterPresence?.missing != true &&
         row.usable == true &&
         row.lifecycleState == 'active' &&
         p['roster_status'] == 'confirmed';

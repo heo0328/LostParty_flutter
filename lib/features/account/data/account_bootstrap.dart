@@ -8,14 +8,20 @@ import 'representative_client.dart';
 
 /// Backend 8d03e962: one complete read snapshot, never a write permission.
 class AccountBootstrap {
-  AccountBootstrap.fromJson(Map<String, dynamic> json) {
+  AccountBootstrap.fromJson(
+    Map<String, dynamic> json, {
+    bool includePresence = false,
+  }) {
     roleShape(json, 'server_now complete registrations weekly_states');
     serverNow = roleUtc(json['server_now']);
     roleCheck(json['complete'] == true);
     final values = raidList(json['registrations']);
     roleCheck(values.length <= 20);
     registrations = List.unmodifiable(
-      values.map((v) => BootstrapRegistration(roleMap(v))),
+      values.map(
+        (v) =>
+            BootstrapRegistration(roleMap(v), includePresence: includePresence),
+      ),
     );
     roleCheck(
       registrations.map((r) => r.snapshot.registrationId).toSet().length ==
@@ -54,7 +60,10 @@ class AccountBootstrap {
 }
 
 class BootstrapRegistration {
-  BootstrapRegistration(Map<String, dynamic> json) {
+  BootstrapRegistration(
+    Map<String, dynamic> json, {
+    bool includePresence = false,
+  }) {
     roleShape(
       json,
       'registration characters representative presentation personal_profiles unavailable_characters',
@@ -64,6 +73,7 @@ class BootstrapRegistration {
     characters = LifecycleCharacterPage.fromJson(
       roleMap(json['characters']),
       maximumItems: 200,
+      includePresence: includePresence,
     );
     roleCheck(characters.nextCursor == null);
     snapshot = characters.registration(registration.label, characters.items);
