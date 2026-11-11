@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/auth/data/android_google_authentication_gateway.dart';
@@ -12,6 +13,37 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+  test('missing plugin diagnostics expose no client or nonce values', () async {
+    final messages = <String>[];
+    final previous = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (message != null) messages.add(message);
+    };
+    try {
+      await expectLater(
+        AndroidGoogleAuthenticationGateway().authenticate(
+          serverClientId: 'private-client-value',
+          nonce: 'private-nonce-value',
+        ),
+        throwsA(
+          isA<GoogleAuthenticationException>().having(
+            (error) => error.failure,
+            'failure',
+            GoogleAuthenticationFailure.unavailable,
+          ),
+        ),
+      );
+      final output = messages.join('\n');
+      expect(output, contains('clientIdPresent=true noncePresent=true'));
+      expect(output, contains('exception=MissingPluginException'));
+      expect(output, contains('code=missing_plugin mappedFailure=unavailable'));
+      expect(output, isNot(contains('private-client-value')));
+      expect(output, isNot(contains('private-nonce-value')));
+    } finally {
+      debugPrint = previous;
+    }
+  });
 
   test(
     'each new attempt sends its own server nonce and returns evidence only',

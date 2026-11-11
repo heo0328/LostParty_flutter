@@ -17,6 +17,21 @@ enum AuthStatus {
   reauthenticationRequired,
 }
 
+/// Memory-only, single-use transaction. Never serialize or log this object.
+class PreparedGoogleLogin {
+  PreparedGoogleLogin._(this._epoch, this._secret, this.challenge)
+    : state = newAuthSecret();
+  final int _epoch;
+  final String _secret;
+  final AuthChallenge challenge;
+  final String state;
+  bool _consumed = false;
+  String get nonce => challenge.nonce;
+  DateTime get expiresAt => challenge.expiresAt;
+  @override
+  String toString() => 'PreparedGoogleLogin(***)';
+}
+
 class AuthSessionController extends ChangeNotifier {
   AuthSessionController({
     required BackendAuthApi api,
@@ -45,6 +60,7 @@ class AuthSessionController extends ChangeNotifier {
   Future<void> _storageQueue = Future<void>.value();
   int _epoch = 0;
   bool _disposed = false;
+  PreparedGoogleLogin? _googleAttempt;
   bool get isAuthenticated =>
       status == AuthStatus.signedIn && _user?.status == 'active';
   bool get isBusy =>
@@ -90,6 +106,7 @@ class AuthSessionController extends ChangeNotifier {
 
   Future<void> restore() async {
     final epoch = ++_epoch;
+    _googleAttempt = null;
     _emit(AuthStatus.restoring);
     try {
       final raw = await StartupTiming.run(StartupWork.sessionRead, _store.read);
@@ -150,36 +167,26 @@ class AuthSessionController extends ChangeNotifier {
   Future<bool> login({required bool remember}) async {
     if (isBusy) return false;
     final epoch = ++_epoch;
+    _googleAttempt = null;
     _emit(AuthStatus.authenticating);
     try {
-      final secret = newAuthSecret();
-      final challenge = await _api.challenge(authSecretDigest(secret));
-      if (!_current(epoch)) return false;
+      final attempt = await _prepareGoogleAttempt(epoch);
+      if (attempt == null) return false;
       final proof = await _google.authenticate(
         serverClientId: serverClientId,
-        nonce: challenge.nonce,
+        nonce: attempt.nonce,
       );
       if (!_current(epoch)) return false;
-      // Do not retry a proof exchange; each new attempt creates a new challenge.
-      final result = await _api.login(
-        transactionId: challenge.id,
-        secret: secret,
-        proof: proof.idToken,
-        remember: remember,
-      );
-      if (!_current(epoch)) return false;
-      if (result.user.status != 'active' ||
-          result.tokens.session.remember != remember) {
-        throw const AuthApiException('INVALID_RESPONSE');
-      }
-      _user = result.user;
-      _tokens = result.tokens;
-      _pending = null;
-      await _persist(epoch);
-      if (!_current(epoch)) return false;
-      _emit(AuthStatus.signedIn);
-      return true;
+      return await completeGoogleLogin(attempt, proof, remember: remember);
     } on GoogleAuthenticationException catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          '[google-auth] exception=GoogleAuthenticationException '
+          'failure=${error.failure.name} '
+          'appCode=${error.failure == GoogleAuthenticationFailure.cancelled ? 'none' : 'GOOGLE_AUTH_UNAVAILABLE'} '
+          'exchangeSent=false',
+        );
+      }
       if (_current(epoch)) {
         _emit(
           _tokens == null ? AuthStatus.guest : AuthStatus.unavailable,
@@ -197,6 +204,119 @@ class AuthSessionController extends ChangeNotifier {
       }
     } catch (_) {
       if (_current(epoch)) _emit(AuthStatus.unavailable, 'STORAGE_UNAVAILABLE');
+    } finally {
+      if (_current(epoch)) _googleAttempt = null;
+    }
+    return false;
+  }
+
+  Future<PreparedGoogleLogin?> _prepareGoogleAttempt(int epoch) async {
+    final secret = newAuthSecret();
+    final challenge = await _api.challenge(authSecretDigest(secret));
+    if (!_current(epoch)) return null;
+    if (!_clock().isBefore(challenge.expiresAt)) {
+      throw const AuthApiException('AUTH_TRANSACTION_EXPIRED');
+    }
+    return _googleAttempt = PreparedGoogleLogin._(epoch, secret, challenge);
+  }
+
+  Future<PreparedGoogleLogin?> prepareGoogleLogin() async {
+    if (isBusy || isAuthenticated) return null;
+    final epoch = ++_epoch;
+    _googleAttempt = null;
+    _emit(AuthStatus.authenticating);
+    try {
+      final attempt = await _prepareGoogleAttempt(epoch);
+      if (_current(epoch)) _emit(AuthStatus.guest);
+      return attempt;
+    } on AuthApiException catch (error) {
+      if (_current(epoch)) _emit(AuthStatus.guest, error.code);
+    } catch (_) {
+      if (_current(epoch)) _emit(AuthStatus.guest, 'GOOGLE_AUTH_UNAVAILABLE');
+    }
+    return null;
+  }
+
+  bool isGoogleLoginCurrent(PreparedGoogleLogin attempt) =>
+      identical(_googleAttempt, attempt) &&
+      _current(attempt._epoch) &&
+      !attempt._consumed &&
+      _clock().isBefore(attempt.expiresAt);
+
+  void cancelGoogleLogin(
+    PreparedGoogleLogin? attempt, {
+    bool deferNotification = false,
+  }) {
+    if (attempt != null && !identical(_googleAttempt, attempt)) return;
+    _googleAttempt = null;
+    if (_disposed || isAuthenticated) return;
+    final epoch = ++_epoch;
+    final previousCode = errorCode;
+    void notify() {
+      if (_current(epoch)) {
+        _emit(
+          _tokens == null ? AuthStatus.guest : AuthStatus.unavailable,
+          previousCode,
+        );
+      }
+    }
+
+    if (deferNotification) {
+      scheduleMicrotask(notify);
+    } else {
+      notify();
+    }
+  }
+
+  Future<bool> completeGoogleLogin(
+    PreparedGoogleLogin attempt,
+    GoogleAuthenticationProof proof, {
+    required bool remember,
+  }) async {
+    if (!isGoogleLoginCurrent(attempt)) {
+      if (identical(_googleAttempt, attempt) &&
+          _current(attempt._epoch) &&
+          !attempt._consumed) {
+        _googleAttempt = null;
+        _emit(AuthStatus.guest, 'AUTH_TRANSACTION_EXPIRED');
+      }
+      return false;
+    }
+    attempt._consumed = true;
+    final epoch = attempt._epoch;
+    _emit(AuthStatus.authenticating);
+    try {
+      // Exactly one exchange. An uncertain result never triggers replay here.
+      final result = await _api.login(
+        transactionId: attempt.challenge.id,
+        secret: attempt._secret,
+        proof: proof.idToken,
+        remember: remember,
+      );
+      if (!_current(epoch)) return false;
+      if (result.user.status != 'active' ||
+          result.tokens.session.remember != remember) {
+        throw const AuthApiException('INVALID_RESPONSE');
+      }
+      _user = result.user;
+      _tokens = result.tokens;
+      _pending = null;
+      await _persist(epoch);
+      if (!_current(epoch)) return false;
+      _googleAttempt = null;
+      _emit(AuthStatus.signedIn);
+      return true;
+    } on AuthApiException catch (error) {
+      if (_current(epoch)) {
+        _emit(
+          _tokens == null ? AuthStatus.guest : AuthStatus.unavailable,
+          error.code,
+        );
+      }
+    } catch (_) {
+      if (_current(epoch)) _emit(AuthStatus.unavailable, 'STORAGE_UNAVAILABLE');
+    } finally {
+      if (identical(_googleAttempt, attempt)) _googleAttempt = null;
     }
     return false;
   }
@@ -314,6 +434,7 @@ class AuthSessionController extends ChangeNotifier {
   Future<void> logout() async {
     final token = _tokens?.refresh;
     final epoch = ++_epoch;
+    _googleAttempt = null;
     _user = null;
     _tokens = null;
     _pending = null;
@@ -369,6 +490,7 @@ class AuthSessionController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _googleAttempt = null;
     _epoch++;
     super.dispose();
   }

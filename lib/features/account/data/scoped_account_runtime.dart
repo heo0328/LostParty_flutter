@@ -3,7 +3,7 @@ import 'dart:async';
 import 'account_bootstrap.dart';
 
 import 'package:dio/dio.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+import '../../../shared/storage/app_database_connection.dart';
 
 import '../domain/account_read_session.dart';
 import '../domain/scoped_cache_models.dart';
@@ -28,7 +28,7 @@ typedef ScopedCacheDatabaseFactory =
 
 /// Explicit factory only. Constructing a runtime/controller never opens a DB.
 ScopedAccountCacheDatabase openScopedAccountCacheDatabase() =>
-    ScopedAccountCacheDatabase(driftDatabase(name: 'lost_party_server_cache'));
+    ScopedAccountCacheDatabase(openAppDatabase('lost_party_server_cache'));
 
 class ScopedRegistrationRead {
   ScopedRegistrationRead(this.metadata, this.cached);

@@ -1,11 +1,11 @@
 {
-    "name": "lost_party",
-    "short_name": "lost_party",
+    "name": "LOSTPARTY 사전 테스트",
+    "short_name": "LOSTPARTY",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "로스트아크 레이드 모집·일정 사전 테스트",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

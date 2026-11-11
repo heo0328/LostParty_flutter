@@ -22,6 +22,18 @@
 - 로컬 AccountRepository와캐릭터/빌드/토큰설정화면을재사용한다. 새경로에는Firestoregateway·serverSync를주입하지않고기존Firebase소유인증badge를표시하지않는다. local원본/과거ID는삭제하지않고새권한으로승계하지않는다.
 - 공개모집목록/필터UI는접근가능하지만Backend공개API계약이없어준비안내와unavailable조회상태를표시한다. 성공한빈결과나Firebase조회로대체하지않는다. 그룹/원정대/private기능은로그인알럿과준비화면이며본구현은후속계약의존성이다.
 
+### 웹 Google 로그인 연결 — Issue49 (2026-11-11)
+
+현재 feature/web-support의 일반 DI는 conditional export로 Android MethodChannel과 웹 GIS 구현을 선택한다. 기존 GOOGLE_SERVER_CLIENT_ID override/공개 기본값을 재사용하며 웹 기본 원본은 http://localhost:3000, dev Backend는 http://localhost:8000이다. 공식 협업은 [Issue49](https://github.com/heo0328/lostparty-backend/issues/49), 초기 원인/Backend 설정 확인 요청은 [Native 착수](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6790881456)를 따른다. 코드 연결·합성 시험은 실제 Google 인증/서버 검증 인수와 구분한다.
+
+- 웹 로그인 화면의 기존 버튼 자리에 공식 GIS outline/large/continue_with 한국어 버튼을 렌더링한다. 다른 배치와 로그인 유지 선택·성공 후 이전 화면 복귀는 유지한다. 페이지당 SDK script 1회 로드하며 실패/20초 timeout은 제거 후 명시 재시도다. One Tap·자동선택·쿠키 인증 전환은 없다.
+- SDK 준비 뒤 화면 진입 challenge를 한 번 발급받고, 메모리의 거래 ID/secret/nonce/expires_at와 독립 임의 button state를 보관한다. nonce를 원문 그대로 GIS initialize에 전달하고 config/버튼은 새 거래에서만 갱신한다. 일반 rebuild에서 재초기화하지 않는다. 전역 owner는 한 거래의 렌더링/콜백만 허용한다.
+- 클릭 시 remember 값을 고정하고 버튼 pointer/checkbox 연타를 막는다. 현재 owner/화면 세대/미소비/서버 만료 시각 및 callback state를 통과한 credential만 기존 교환 API로 1회 보낸다. 회원 권한은 기존 Backend 검증·자체 세션을 사용한다.
+- 만료/SDK 실패/거래 이탈은 타이머·요청 세대·버튼을 정리한다. 팝업 종료 callback이 없으면 취소로 합성하지 않고 '취소하고 다시 시도'를 제공한다. 새 시도는 새 거래이며 교환 실패를 자동 재전송하지 않는다. 늦은 callback/서버 응답은 이전 화면을 로그인시키지 않는다.
+- 준비/교환/취소는 AuthSessionController의 공통 로직이다. Android의 기존 한 번 클릭·nonce 전달·로그아웃/세션복원은 유지한다. 웹 gateway의 authenticate 직접 호출은 허용하지 않고 공식 버튼 callback만 교환에 연결한다.
+- web 패키지는 기존 잠금1.1.1을 직접 의존성으로 선언했으며 버전 상승은 없다. SDK 오류 상세·토큰·nonce·secret·인증헤더는 로그/문서/Issue에 기록하지 않는다. debug 단계 로그는 고정 code와 입력 존재 여부뿐이다.
+- Google 콘솔의 실제 Web client와 원본 등록, Backend audience/존재하는 azp 수용 및 실제 서명/nonce 검증·회원 데이터 조회는 사용자/Backend 인수 대기다. 기존 CORS의 로컬 미커밋 반영을 원격 dev 게시나 운영 완료로 확대하지 않는다.
+
 #### 실행 설정·인수
 
 현재 시작 정책은 [scoped 복원 계약30](../backend-migration/30-scoped-storage-write-contract.md)의 후속 정정을 따른다. 기존 정적 이미지를 서비스 초기화부터4초 표시한 뒤 인증/자료 준비와 무관하게 앱으로 진입하며 앱 소유 복원 작업은 계속한다. 애니메이션 추가는 보류다. 과거2200ms·인증완료 대기·debug URL 알럿 정책은 적용하지 않는다.
@@ -48,7 +60,7 @@ Android OAuth 클라이언트를 새로 만들면 로컬 Backend의 Google `azp`
 
 - Android 우선, 신규 FastAPI/PostgreSQL Backend를 사용한다. 기존 Firebase 사용자·UID·Player·데이터를 연결하거나 이관하지 않는다.
 - 앱 실행에 로그인을 강제하지 않는다. 비로그인은 서버 회원·guest UID·사용자별 서버 자료를 생성하지 않는다.
-- 기존 로컬 계정·캐릭터 조회·빌드 관리와 기본 설정은 비로그인에서도 유지한다. 원정대 인증은 로그인 후에만 가능하다.
+- 비로그인 일반 경로는 현재 basicOnly로 연결되어 로컬 계정·캐릭터 기본 정보와 설정을 사용한다. 상세 조회·빌드 관리는 이 경로에서 제한되며 Repository의 빌드 목록은 빈 목록이다. 과거 빌드 저장 구조는 남아 있고 이번 웹 초기 실행 준비에서 삭제하거나 제품 정책을 새로 확정하지 않는다. 원정대 인증은 로그인 후에만 가능하다.
 - Google 로그인은 앱 회원 인증이다. 게임 원정대 소유권이나 운영 권한을 부여하지 않으며 기존 소유권·역할 검증을 대체하지 않는다.
 - 보호된 기능 선택 시 `로그인이 필요합니다.` 알럿과 `취소`/`로그인` 버튼을 제공한다. 로그인 후 원래 화면으로 복귀하며 요청한 쓰기는 자동 재실행하지 않는다.
 - 가입·로그인은 한 화면/Google 버튼으로 통합한다. 첫 인증 성공은 신규 가입, 재로그인은 동일 회원을 사용한다. 별도 닉네임·비밀번호 입력과 최초 동의 전용 화면은 두지 않는다. 가입 안내와 서비스 약관·개인정보 처리방침 링크는 제공한다.
@@ -69,7 +81,7 @@ Android OAuth 클라이언트를 새로 만들면 로컬 Backend의 Google `azp`
 | 기능 | 비로그인 | 로그인 후 조건 |
 |---|---|---|
 | 공개 모집 목록·상세·필터 | 허용 | 동일 공개 조회 |
-| 로컬 계정·캐릭터 조회·빌드·설정 | 기존 기능 유지 | 기존 기능 유지 |
+| 로컬 계정·캐릭터 조회·빌드·설정 | 현재 basicOnly 기본 정보·설정; 상세/빌드 제한 | 회원 경로의 기존 권한 적용 |
 | 원정대 인증·수동 인증 요청 | 로그인 알럿 | 기존 인증 절차 |
 | 모집 생성·신청·참가 | 로그인 알럿 | 원정대 소유·참가 조건 추가 검사 |
 | 내 파티·신청·이력·내 그룹·요청 | 안내 화면, private 요청 미시작 | 본인 scope |

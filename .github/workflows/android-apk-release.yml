@@ -172,6 +172,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out approved release notes
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
       - name: Download verified APK artifact
         uses: actions/download-artifact@v7
         with:
@@ -198,4 +203,4 @@ jobs:
           --verify-tag
           --repo "$GITHUB_REPOSITORY"
           --title "LOSTPARTY $VERSION_NAME"
-          --generate-notes
+          --notes-file "docs/releases/v${VERSION_NAME}.md"

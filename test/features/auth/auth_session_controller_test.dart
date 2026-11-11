@@ -81,6 +81,8 @@ class FakeApi implements BackendAuthApi {
   DateTime now = initialTime;
   int challenges = 0, logins = 0, meCalls = 0, refreshCalls = 0;
   String? challengeHash, loginSecret;
+  String? loginTransaction, loginProof;
+  bool? loginRemember;
   final refreshRequests = <(String, String)>[];
   final revoked = <String>[];
   Future<AuthLogin>? loginResult;
@@ -106,6 +108,9 @@ class FakeApi implements BackendAuthApi {
     required bool remember,
   }) async {
     logins++;
+    loginTransaction = transactionId;
+    loginProof = proof;
+    loginRemember = remember;
     loginSecret = secret;
     return loginResult ??
         AuthLogin.fromJson({
@@ -163,6 +168,136 @@ void main() {
     controller = create();
   });
   tearDown(() => controller.dispose());
+
+  test('prepared login binds transaction and exchanges at most once', () async {
+    await controller.restore();
+    final attempt = (await controller.prepareGoogleLogin())!;
+    expect(attempt.nonce, 'server-nonce');
+    expect(attempt.state, isNot(attempt.nonce));
+    expect(attempt.toString(), 'PreparedGoogleLogin(***)');
+    expect(api.logins, 0);
+    expect(controller.isAuthenticated, isFalse);
+    final first = controller.completeGoogleLogin(
+      attempt,
+      GoogleAuthenticationProof('web-proof'),
+      remember: true,
+    );
+    expect(
+      await controller.completeGoogleLogin(
+        attempt,
+        GoogleAuthenticationProof('duplicate'),
+        remember: false,
+      ),
+      isFalse,
+    );
+    expect(await first, isTrue);
+    expect(api.logins, 1);
+    expect(api.loginTransaction, attempt.challenge.id);
+    expect(api.loginProof, 'web-proof');
+    expect(api.loginRemember, isTrue);
+    expect(authSecretDigest(api.loginSecret!), api.challengeHash);
+    expect(store.value, isNotNull);
+  });
+
+  test(
+    'cancelled and previous prepared transactions cannot exchange',
+    () async {
+      await controller.restore();
+      final old = (await controller.prepareGoogleLogin())!;
+      controller.cancelGoogleLogin(old);
+      final current = (await controller.prepareGoogleLogin())!;
+      expect(current.state, isNot(old.state));
+      controller.cancelGoogleLogin(old);
+      expect(controller.isGoogleLoginCurrent(current), isTrue);
+      expect(
+        await controller.completeGoogleLogin(
+          old,
+          GoogleAuthenticationProof('stale'),
+          remember: true,
+        ),
+        isFalse,
+      );
+      expect(api.logins, 0);
+      expect(
+        await controller.completeGoogleLogin(
+          current,
+          GoogleAuthenticationProof('current'),
+          remember: false,
+        ),
+        isTrue,
+      );
+      expect(store.value, isNull);
+    },
+  );
+
+  test('expired prepared transaction is rejected without exchange', () async {
+    await controller.restore();
+    final attempt = (await controller.prepareGoogleLogin())!;
+    api.now = attempt.expiresAt;
+    expect(
+      await controller.completeGoogleLogin(
+        attempt,
+        GoogleAuthenticationProof('expired'),
+        remember: true,
+      ),
+      isFalse,
+    );
+    expect(api.logins, 0);
+    expect(controller.errorCode, 'AUTH_TRANSACTION_EXPIRED');
+    expect(controller.isBusy, isFalse);
+  });
+
+  test(
+    'route exit invalidates an exchange response before session mutation',
+    () async {
+      await controller.restore();
+      final attempt = (await controller.prepareGoogleLogin())!;
+      final pending = Completer<AuthLogin>();
+      api.loginResult = pending.future;
+      final result = controller.completeGoogleLogin(
+        attempt,
+        GoogleAuthenticationProof('proof'),
+        remember: true,
+      );
+      controller.cancelGoogleLogin(attempt, deferNotification: true);
+      pending.complete(
+        AuthLogin.fromJson({
+          ...tokenJson(api.now),
+          'user': userJson(),
+          'is_new_user': false,
+        }),
+      );
+      expect(await result, isFalse);
+      expect(controller.isAuthenticated, isFalse);
+      expect(store.value, isNull);
+    },
+  );
+
+  test('uncertain exchange is not retried with the same transaction', () async {
+    await controller.restore();
+    final attempt = (await controller.prepareGoogleLogin())!;
+    api.loginResult = Future.error(
+      const AuthApiException('NETWORK_UNAVAILABLE'),
+    );
+    expect(
+      await controller.completeGoogleLogin(
+        attempt,
+        GoogleAuthenticationProof('proof'),
+        remember: true,
+      ),
+      isFalse,
+    );
+    expect(
+      await controller.completeGoogleLogin(
+        attempt,
+        GoogleAuthenticationProof('proof'),
+        remember: true,
+      ),
+      isFalse,
+    );
+    expect(api.logins, 1);
+    expect(controller.errorCode, 'NETWORK_UNAVAILABLE');
+  });
 
   test(
     'a delayed logout must not clear the next login provider state or cache',

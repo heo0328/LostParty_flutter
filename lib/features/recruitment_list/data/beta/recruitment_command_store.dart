@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+import '../../../../shared/storage/app_database_connection.dart';
 import '../../../account/domain/scoped_cache_models.dart';
 import '../local/recruitment_command_database.dart';
 import 'recruitment_command.dart';
@@ -25,7 +25,7 @@ class DriftRecruitmentCommandStore implements RecruitmentCommandStore {
   }) : _factory =
            databaseFactory ??
            (() => RecruitmentCommandDatabase(
-             driftDatabase(name: 'lost_party_recruitment_commands'),
+             openAppDatabase('lost_party_recruitment_commands'),
            ));
   final RecruitmentCommandDatabase Function() _factory;
   RecruitmentCommandDatabase? _opened;

@@ -153,3 +153,33 @@ workflow가 tag를 자동 생성하거나 브랜치를 병합하지 않는다. r
 - iOS·Windows·웹 배포
 - 자동 버전 증가, 자동 태그 생성, 자동 `dev`/`main` 병합
 - 기존 임시 패키지 앱의 로컬 데이터 마이그레이션
+
+## 8. 2.1.0 통합 릴리즈 준비 — 웹·Backend·새 Android키 (2026-11-11)
+
+사용자 확정: 앱2.1.0+6/v2.1.0, 기존 AWS/https://lostparty.duckdns.org 루트 웹, 베타 전 사전 테스트·접속자 제한 없음·현재 운영자료 유지. 실제 순서는 Backend→웹→APK이며 현재 준비/미확인 상태는 NEXT_WORK, 공식 협업은 Backend Issue49다. 이 절은 기존 Android 전용 pipeline의 웹 배포 제외를 웹 별도 bundle 준비로 확장하며 기존 APK 태그/서명/게시 검증은 유지한다. 서버측 Caddy/동결Compose·migration·최신 운영백업은 Backend 소유다.
+
+### 웹 산출물
+
+- `powershell -NoProfile -File tool/package_web_release.ps1`은 clean Git source만 게시용으로 빌드한다. 미커밋 단계의 `-AllowDirty`는 검토 후보(`candidate_only=true`)일 뿐 업로드/게시용이 아니다.
+- 운영 HTTPS origin·release·로컬 web resources·source-map 미포함으로 빌드한다. 서비스워커 등록 산출물은 거절하며 문서/map/symbols/worker 캐시파일을 배포 site에서 제외한다.
+- `build/web-releases/<version>-<code>-<release|candidate>-<UTC>/` 안에 `site/`와 `release-manifest.json`, 외부 zip와 `.zip.sha256`를 만든다. manifest schema1에 source_commit/source_dirty/candidate_only/version/backend_origin/build_mode와 site 상대 파일명·bytes·sha256을 기록한다. manifest는 정적 site 밖에 둔다.
+- Backend 인계 시 clean source SHA·bundle hash/manifest를 대조하고 실제 파일 검증 뒤 활성화한다. 버전별 디렉터리는 보존하고 Caddy가 읽는 안정된 상위 디렉터리를 read-only mount한다. host의 current symlink만 bind mount하면 교체가 컨테이너에 안 보일 수 있으므로 parent mount와 내부 상대 symlink를 사용한다. 실제 경로·서버 도구 반영은 Backend가 정한다.
+- API/health 보존, 없는 자산404, SPA 화면 fallback, no-cache 재검증 및 WASM MIME을 분리한다. API 권한 오류·없는 JS/WASM을 index.html200으로 바꾸지 않는다. COOP/COEP 추가 없음.
+
+### 새 키 사용자 실행·백업
+
+생성 예정 경로는 `G:\project\LostParty_flutter\android\keystores\lostparty-release-2026.jks`, alias는 `lostparty-release`다. android/.gitignore의 JKS 제외를 먼저 검사하며 파일이 이미 있으면 스크립트가 중단한다. 기존 키/Secret을 덮어쓰지 않는다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tool/new_android_release_key.ps1 -JavaHome G:\dev\Java\jbr-21.0.11
+```
+
+키tool의 암호 입력은 사용자 터미널에서만 한다. 암호를 명령 인수·채팅에 쓰지 않는다. 생성 후 원본 파일을 생성PC와 독립된 안전한 저장소에 복사하고 store 암호·alias·key 암호를 별도 보관한다. 원본/사본 SHA-256 일치와 `keytool -list -v -keystore <백업사본> -alias lostparty-release`의 접근 확인을 수행한다. 공개 SHA-1/SHA-256만 공유할 수 있고 키파일·비밀번호·Base64 원문은 공유하지 않는다. 인증서 조회만으로 private key 암호 확인을 대신하지 않으며 서명 빌드로 key 접근도 확인한다.
+
+사용자 별도 사본 보관 보고와 사본의 store/key 접근 확인 전에는 B-1 기준 첫 게시 준비 완료로 처리하지 않는다. 새 공개 지문이 확정된 뒤 OAuth/azp와 Secrets4개·CI EXPECTED_CERT_SHA256을 함께 전환한다. 지금 workflow의 기존 예상지문은 의도적으로 그대로이며 새 키 준비 전 태그/Actions 게시를 실행하지 않는다.
+
+### 게시·복귀
+
+Release 본문 원본은 `docs/releases/v2.1.0.md`다. workflow는 태그 소스의 동일 버전 안내문을 checkout해 `--notes-file`로 게시하며 누락 시 실패한다. 새 키 때문에 삭제·재설치·동일 Google 로그인 및 로컬 자료 손실 가능성을 반드시 포함한다. 웹과 APK는 같은 운영 회원/자료를 사용한다.
+
+서명 artifact 검증과 사용자 운영 인수 후 최종 release를 main/dev에 반영하고 태그/게시한다. 웹은 이전 정적 버전 또는 최초 미공개로 복귀, Backend는 새DB와 호환되는 복귀만 사용하며 새 쓰기를 잃는 dump 덮어쓰기를 하지 않는다. 공개 APK/태그 덮어쓰기·무단 반복배포 없음. Backend 키·정상 배포 SSH Secret은 재사용하고 11월7일 백업을 최신DB로 간주하지 않는다. 실제 운영변경·키 전환/최초 게시 시의 사용자 확인 조건을 현재 실행 게이트로 유지한다.

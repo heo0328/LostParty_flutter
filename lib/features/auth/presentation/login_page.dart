@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../domain/auth_session_controller.dart';
+import 'google_auth_platform.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({
@@ -19,11 +21,16 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _remember = false;
+  bool _webBusy = false;
 
   Future<void> _login() async {
     final router = GoRouter.of(context);
     final success = await widget.auth.login(remember: _remember);
     if (!success || !mounted) return;
+    _returnAfterLogin(router);
+  }
+
+  void _returnAfterLogin(GoRouter router) {
     // Auth notification refreshes GoRouter. Navigate after that refresh rather
     // than using the ListenableBuilder's transient context during its rebuild.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -57,16 +64,26 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 16),
                 const Text('Google 계정으로 로그인하세요. 처음 이용하는 계정은 로스트파티 회원으로 가입됩니다.'),
                 const SizedBox(height: 24),
-                OutlinedButton(
-                  onPressed: widget.auth.isBusy ? null : _login,
-                  child: const Text('Google로 계속하기'),
-                ),
+                if (kIsWeb)
+                  buildWebGoogleButton(
+                    auth: widget.auth,
+                    remember: _remember,
+                    onLocked: (value) {
+                      if (mounted) setState(() => _webBusy = value);
+                    },
+                    onSuccess: () => _returnAfterLogin(GoRouter.of(context)),
+                  )
+                else
+                  OutlinedButton(
+                    onPressed: widget.auth.isBusy ? null : _login,
+                    child: const Text('Google로 계속하기'),
+                  ),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _remember,
                   title: const Text('로그인 유지'),
                   subtitle: const Text('선택하면 다음 앱 실행 시 로그인을 복원합니다.'),
-                  onChanged: widget.auth.isBusy
+                  onChanged: widget.auth.isBusy || _webBusy
                       ? null
                       : (value) => setState(() => _remember = value ?? false),
                 ),

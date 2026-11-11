@@ -8290,3 +8290,42 @@ searchInvites는 local-only 선행 판별을 그대로 두고 미지 이름 GET�
 사용자가 완료 문서 최신화와 작업 브랜치의 dev 병합을 지시했다. origin fetch 후 local dev/origin dev 동일·작업트리 청결을 확인했고, 이번 변경의41PASS/분석0·로컬 사용자 전부통과 결과를 재사용한다. NEXT_WORK/AI_CONTEXT의 상태를 완료·dev 통합으로 맞추고 같은 완료 기록을 포함한 fix/group-invite-search-feedback을 dev에 fast-forward 병합·push한다. 기능 변경 없는 문서/통합으로 Flutter 시험을 반복하지 않는다.
 
 새로 확인된 흐름은 이번 초대 변경 로컬 인수·통합 완료이며 기존 동작/검증을 보존한다. 검증은 diff검토·git diff --check·병합/원격 동기화 확인이다. main·운영서버·태그/Release/APK는 변경하지 않는다. 브랜치는 삭제 후보이나 보존하며 추가 기능은 자동 착수하지 않는다.
+
+## 2026-11-11 — 웹 초기 실행용 Drift 연결 설정
+
+사용자 승인 계획에 따라 feature/web-support에서 세 DB의 기본 factory를 공통 openAppDatabase에 연결했다. drift_flutter 0.3.1/Drift2.34.3/sqlite3 3.5.1 고정 상태로 공식 릴리즈 worker/WASM을 포함하고 GitHub digest와 SHA-256 및 build/web 복사본을 대조했다. 출처·해시는 web/DRIFT_ASSETS.md를 따른다. 영속 불가 inMemory 선택은 닫고 오류로 거절하며 debug 로그는 DB명/저장 구현/누락 기능만 남긴다.
+
+- 새로 가능해진 흐름: web 옵션 누락 예외를 해결하는 기본 연결·자산 제공과 debug 웹 컴파일. 실제 Chrome 진입 성공으로 확대하지 않는다.
+- 보존 확인: 세 DB 이름/schema·주입 QueryExecutor·native 기본 연결·회원 격리/원명령 저장 로직·Android debug/release/profile 주소 선택. API/권한/화면/Google OAuth·Backend 변경 없음. 과거 비로그인 빌드 계약 문구에는 실제 basicOnly 제한을 명시하고 삭제/제품 재결정은 하지 않았다.
+- 실행 검증: 변경 Dart4파일 포맷, flutter analyze --no-pub 문제0, flutter test --no-pub 전체2913PASS(.dart_tool/web_support_tests.log), flutter build web --debug --no-pub --dart-define=BACKEND_BASE_URL=http://localhost:8000 성공. WASM dry-run도 성공했다. flutter build apk --debug --no-pub도 성공했다. 설치·기기 조작은 하지 않았다.
+- 미확인: Chrome 첫 화면/네 탭/설정, secure storage 읽기/쓰기·빈 세션 복원, guest 기본자료 저장/새로고침/브라우저 재실행 복원, 공개 Backend·직접 Lost Ark API 조회/CORS. 웹 Google 로그인/회원 기능·모바일/다중탭/시크릿·배포는 제외다. 사용자 시험에서 오류가 확인되면 계층별 근거를 수집하고 필요한 Backend 협의만 진행한다.
+- Git: feature/web-support 미커밋으로 누적. commit/push/dev 통합·운영/APK 게시·자료 삭제 없음.
+
+## 2026-11-11 — 웹 Google 로그인 교환 전 중단 진단
+
+사용자가 localhost:3000의 challenge201 후 /v1/auth/google 미전송·앱 안내·Console 오류 없음을 보고했다. main/BackendApp DI는 AndroidGoogleAuthenticationGateway만 구성하며 웹 Google SDK/JS adapter는 없다. Controller.login이 현재 serverClientId(define override 또는 기존 기본 OAuth client)와 challenge.nonce를 authenticate에 전달하고 channel authenticate arguments에도 같은 값을 넣는다. Android bridge는 setNonce를 쓰지만 웹에서는 bridge가 없다. MissingPluginException은 unavailable로, Controller는 GOOGLE_AUTH_UNAVAILABLE로 잡아 UI에 표시하므로 미처리 Console 예외가 없는 경로와 일치한다. 실제 사용자 브라우저 예외를 직접 수집한 결과로 단정하지 않는다.
+
+- 새로 가능: debug 로그에서 clientIdPresent/noncePresent·gateway/web/MethodChannel 대상, 원예외 MissingPluginException 또는 PlatformException의 고정 허용 code/OTHER, 매핑 enum/app code·교환 미전송을 확인한다. 원문 ID·nonce·secret·token·플러그인 message/details·stack은 출력하지 않는다. release 로그는 없다.
+- 보존: challenge/nonce/교환 본문·호출 순서·화면 문구·Android gateway·취소/중복·인증 상태 전이는 그대로다. 웹 OAuth 구현/Client ID 설정 변경·Backend 수정은 하지 않았다.
+- 검증: gateway/Controller/API/login navigation 표적28PASS, 새 missing-plugin 시험에서 입력 존재 true·원예외/매핑 및 client/nonce 비노출 확인. 로그 .dart_tool/web_auth_diagnostics_tests.log. flutter analyze --no-pub 문제0·변경 Dart3파일 포맷·git diff --check 통과.
+- 미확인: 실제 Chrome 새 debug 로그, 콘솔 설정 client ID가 Google 콘솔에서 Web 유형인지와 localhost JS origin 등록·Backend audience/azp 허용 상태. 현재 nonce는 Google 웹 SDK까지 전달될 수 없다. 사용자 보고201을 전체 Backend 연동 인수로 확대하지 않는다. 다음은 사용자 재실행 진단과 별도 웹 인증 설계이며 commit/push/배포 없음.
+
+## 2026-11-11 — Issue49 GIS 웹 로그인 구현·합성 검증
+
+사용자가 공식 버튼 한 단계 UX를 승인했다. 일반 BackendApp DI는 conditional import로 웹 GIS/Android MethodChannel을 선택한다. dart:js_interop·web1.1.1 직접 의존성(기존 lock 버전 불변)과 HtmlElementView로 SDK 공식 버튼을 렌더링하고 element DOM 부착 후 초기화한다. SDK는 페이지당1회 로드·실패20초 timeout 후 명시 재시도하며 버튼은 새 거래에만 갱신한다. Controller의 준비/교환/취소는 Android와 공용이고 기존 API/DTO·세션 저장/refresh·기본 Client ID/override는 유지한다.
+
+- 새로 가능: 로그인 화면 진입 준비→한국어 GIS 버튼→원서버 nonce/독립 button state→현재 거래의 credential1회 교환→기존 내부 회원 세션/복귀 연결. remember는 클릭 시 고정한다. 만료·취소/화면 이탈·중복/이전 callback·늦은 서버 응답을 차단하고 팝업 닫힘을 성공/취소로 합성하지 않는다. 실패 교환은 자동 재전송하지 않는다.
+- 보존 확인: Android nonce 전달·취소/중복방지·이전 화면/직접 계정 복귀, 회원/세션 복원·로그아웃·메모리/remember 저장 정책. 기존 navigation 시험의 고정 fake API 시각과 Controller 시계를 일치시켜 과거 만료값이 정상 경로를 막던 시험 fixture를 바로잡았다.
+- 검증: 인증36PASS, 전체2919PASS(표적 포함·Chrome 전용 제외), Chrome 합성2PASS(별도), 정적 분석0·Android debug 빌드 성공. Chrome은 실제 계정/Google SDK가 아닌 주입 GIS/합성 Backend로 nonce/client 전달·SDK 차단/재시도·state 거절·중복callback·remember 고정과 세션 결과를 검증했다. JS callback의 real microtask를 runAsync로 기다렸다. Windows runner 중첩 test 경로 손실로 browser test를 test 루트에 두고 CanvasKit404에는 동일 SDK cache파일만 제공했다(.dart_tool/web_gis_canvas_test.cjs, 추적 제외). 앱 보안 해제·서버 인증 우회 없음. 로그 web_gis_{targeted,full,browser_tests,android,build_final}.log는 .dart_tool에 보관한다. 최종 debug 웹 build도 성공했다.
+- 미확인: 실제 Google 콘솔 Web client/localhost 등록 일치, Backend 고정 audience/azp·실제 서명/nonce·로그인/회원 데이터 조회, Chrome remember/새로고침·로그아웃/계정전환 인수. 실제 브라우저 조작은 사용자에게 전달하고 코드/합성 결과로 완료를 확대하지 않는다.
+- 협업/Git: Issue49 착수 댓글6790881456 게시·재조회, Backend 설정 확인 요청. 구현 결과 댓글6791286749도 게시·재조회했으며 NEXT_WORK 링크를 따른다. feature/web-support 기준801f218f 위 미커밋·미push이며 dev 병합·배포·Issue 종료 없음.
+
+## 2026-11-11 — 2.1.0 웹·새 서명 APK 릴리즈 준비
+
+사용자 승인으로 2.1.0+6/v2.1.0·베타 전 사전테스트·기존 AWS/DuckDNS·자료 유지·접속제한 없음으로 범위를 확정했다. Backend→웹→APK 순서와 기존 포맷후 키/백업 게이트를 적용한다. 운영 점검/서버측 Caddy·동결Compose/migration·필요 최신백업은 Issue49 댓글6792040183에 준비 요청했다. 운영 적용 요청으로 확대하지 않는다.
+
+- 새로 가능: release웹 build와 source/version/API/hash manifest·site zip 묶음 생성 도구, clean source 게시guard와 dirty 후보구분. 2.1.0/웹 제목·설명을 반영하고 기본 serviceworker 자동등록을 제외했다. 새키 생성은 사용자 비밀번호 입력/별도백업 확인이 필요한 interactive script로 준비했으며 아직 생성하지 않았다. 게시 원문은 docs/releases/v2.1.0.md이고 CI는 자동 notes 대신 태그의 대응 파일을 사용한다.
+- 보존 확인: 이번 단계 app lib/업무/권한·로그인/DB는 직전 GIS 검증 시점과 동일하다. 기존 전체2919PASS·Chrome합성2PASS·debug Android 근거를 재사용하고 메타/도구 변경만으로 같은 정상흐름시험을 반복하지 않는다. Caddy/운영자료·서비스키·Secret·OAuth·CI예상서명지문은 미변경이다.
+- 실행 검증: release웹 후보 build성공·35개 자산 SHA-256/zip내용 확인·dirty source 기본실행거절·PowerShell2스크립트문법·git diff --check 통과. 최초 기본 bootstrap의 서비스워커 등록을 확인해 새 bootstrap으로 수정했고 이후 build성공. 로그 .dart_tool/release210_web_candidate.log/release210_clean_guard.log. 후보 manifest의 source_dirty/candidate_only=true는 공개 가능한 최종본으로 해석하지 않는다. flutter analyze --no-pub 문제0.
+- 미확인/다음: Backend 실제 AWS 회신·직전 최신DB/설정 사본, Google 운영원본/새 Android OAuth/azp, 사용자 새키 원본/독립사본·store/key접근, 서명CI/운영 웹·APK 인수. 새키원본 예정 android/keystores/lostparty-release-2026.jks/alias lostparty-release이며 비밀번호를 채팅으로 받지 않는다. 현재 실제 키생성·Secret교체/키전환·서버반영·APK게시·자료초기화 없음.
+- Git: origin/dev801f218f 확인. 승인된 보관/로컬dev 통합/release분기 후 최종 SHA·청결 여부는 Git 종료 확인을 따른다. main/remote/태그·게시를 준비 완료의 조건으로 요구하거나 무단 실행하지 않는다.

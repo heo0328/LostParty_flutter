@@ -21,7 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'account_session_view.dart';
 
-import '../features/auth/data/android_google_authentication_gateway.dart';
+import '../features/auth/presentation/google_auth_platform.dart';
 import '../features/auth/data/auth_session_store.dart';
 import '../features/auth/data/backend_auth_api.dart';
 import '../features/auth/domain/auth_session_controller.dart';
@@ -190,7 +190,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     StartupHttpTiming.attach(_dio!, lostArk: false);
     _auth = AuthSessionController(
       api: DioBackendAuthApi(_dio!),
-      google: AndroidGoogleAuthenticationGateway(),
+      google: createGoogleAuthenticationGateway(),
       store: SecureAuthSessionStore(environment: Uri.parse(base).origin),
       serverClientId: const String.fromEnvironment(
         'GOOGLE_SERVER_CLIENT_ID',
