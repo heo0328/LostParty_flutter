@@ -18,6 +18,9 @@ try {
     $dirty = @(& git status --porcelain=v1 --untracked-files=all)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect Git state.' }
     if ($dirty.Count -gt 0 -and !$AllowDirty) {
+        Write-Output 'Release source differs from its commit (paths only):'
+        $dirty | Write-Output
+        & git diff --stat
         throw 'Commit the complete release source first. -AllowDirty creates a review candidate only.'
     }
     $api = 'https://lostparty.duckdns.org'

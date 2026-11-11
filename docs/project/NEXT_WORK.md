@@ -22,21 +22,21 @@
 | 브라우저 | 첫공개 새탭/재접속, 교체 당시 열린 준비/구탭은 닫고재접속·필요시강력새로고침. 저장소삭제요구없음. 구탭무중단/미전송자동이전·버전고정asset URL 미지원. Backend는 이번 버전고정URL 구현을 필수로 요구하지 않음 |
 | 활성화·복귀·인수 | inactive→호환Backend/적용지시 뒤 활성화. 정상Backend+웹실패는 웹만 이전/API-only, DB0036 downgrade금지. Native 사용자기능/새서명APK·Backend API/DB/HTTP/조합기록. 실제 인수는 별도 |
 
-현재 Native workflow/exporter 구현·로컬검증 완료, 다음은 고정source와 실제 artifact 생성/인계, Backend 다음은 수령/서버도구·조건부호환 검증표·최신백업/운영준비다. 전달 원칙이 미합의여서 대기하는 상태로 반복 보고하지 않는다. 실제 source/run/asset이 아직 없음을 유지한다. 추가 Git통합/공개 전 현재 준비 결과·실행지시 범위를 확인한다.
+Native workflow/exporter 구현·로컬검증 뒤 준비 변경 전체를 release/2.1.0 e9bfa96cc4a6ad1dfd7c87da9f0806b171e6ded1에 보관·push했다. 같은 소스의 게시 없는 Android run43003690946·웹 run43003715850을 시작했다. 실제 artifact 검증/식별값 인계는 실행 결과 확인 후이며 아직 완료가 아니다. Backend는 수령/서버도구·조건부호환 검증표·최신백업/운영준비를 병행한다. main/dev 최종통합·태그/Release·운영공개는 별도 게이트다.
 
 ### Native 웹 전달도구 구현 상태 (2026-11-11)
 
 - package_web_release.ps1 + web_bundle.ps1은 고정 ZIP명/외부manifest/sha256, 내부POSIX path·목록/개별hash·내외manifest바이트일치·중복/대소문자충돌·링크/탈출/미등재파일 거절을 적용한다. .last_build_id/map/symbols/문서/오프라인worker는 제외한다.
 - test_web_bundle.ps1의12경계PASS, 실제후보release build/ZIP35entry(34자산+manifest)·backslash0, PS문법/diffcheck와 공식 actionlint1.7.12의2workflow 검증을 통과했다. 로그 .dart_tool/web_w3_package.log. 앱lib/서버/DB는 이번 단계에서 수정하지 않아 기존Flutter/GIS 시험은 재사용한다.
 - web-release.yml은 수동/재사용 workflow로14일보관·루트3파일을 upload한다. 새workflow가 default branch에 아직 없어 초기실행은 이미 등록된 android-apk-release.yml의 manual artifact_target=web 경로에서 같은ref의 reusable workflow를 호출한다. 웹선택이면 Android build/서명Secret/태그게시job을 실행하지 않는다. 태그경로와 기본 android선택은 기존동작을 유지한다.
-- 실행예정 명령: gh workflow run android-apk-release.yml --ref release/2.1.0 -f artifact_target=web. 이는 코드 보관/push 후 실제 적용할 경로이며 현재 실행·업로드·run/artifactID 없음. 별도 web-release.yml의 직접dispatch는 default등록 이후 가능하다. 실제인계에서API로 expires_at을 확인한다.
+- 실행예정 명령: gh workflow run android-apk-release.yml --ref release/2.1.0 -f artifact_target=web. 이는 코드 보관/push 후 실제 적용할 경로이며 현재 웹 run43003715850 진행/대기이며 업로드 성공·artifactID는 아직 미확인이다. 별도 web-release.yml의 직접dispatch는 default등록 이후 가능하다. 실제인계에서API로 expires_at을 확인한다.
 
 ## 현재 검증·담당 대기
 
 - 웹/GIS 코드: 전체2919PASS·인증36PASS 포함·별도Chrome합성2PASS·분석0·debug web/Android build 통과를 재사용한다. 이후 변경은 버전/웹 메타/패키징/배포문서이며 앱 lib는 동일하다. 2.1.0 release웹 후보 빌드·35개 파일hash/zip내용/미커밋게시거절/PS문법 검증을 통과했다. 신규 bootstrap은 서비스워커 등록을 제외한다. 로컬 통합30dde1c3의 clean source release bundle도 생성·검증했다(candidate_only=false). 문서 체크포인트 후 최종 소스 대응 bundle을 재생성하며 식별값은 해당 release-manifest/zip.sha256을 따른다.
 - 사용자 로컬 웹 Google 로그인·모집 생성 통과 보고. 전체/운영 인수로 확대하지 않는다. 공개URL 로그인→모집생성/재조회→새로고침/remember/로그아웃, 새서명APK 운영 로그인/기존회원 연결은 별도 사용자 확인이다.
-- Android 새키 lostparty-release-2026.jks 생성·사용자 별도백업 완료 보고(2026-11-11), 원본 존재/Git제외 확인. 사본 해시/alias/store접근·private key 서명/검증은 2026-11-11 18:41 KST 통과했고 GitHub서명Secrets4개 갱신도 확인했다. CI 예상 SHA256을 검증지문8ef16c58…ed030으로 전환했다. Google Android OAuth 등록/azp·비공개 서명빌드/운영 인수는 대기다. 기존 키를 자동 회수/덮어쓰지 않는다. 기존 Backend 키/정상 SSH Secret은 유지하며 유실된 배포 개인키 재질문·새 키 전부 재발급 없음. 11월7일 백업을 최신DB로 취급하지 않는다.
-- Git 기준 origin/dev 801f218f 확인. 최신변경32파일을 feature/web-support b70a0bb7에 보관했고 로컬dev30dde1c3 통합·release/2.1.0 분기를 완료했다. release의 문서 체크포인트를 별도 보관하며 최종 main/dev 정렬은 인수 후다. 실제 최종SHA/checkout·잔여상태는 종료 Git 확인을 따른다. remote push/main/태그는 아직 실행하지 않는다. 실제 운영 변경·태그/게시·DB삭제 없음. 새키 백업/접근·Secrets 갱신은 확인됐고 Backend W2 실측도 수신했다. W3 공동규격은 합의됐고 남은 실행은 Native ZIP경로보완/실제 artifact 전달·Backend 준비검증·서명CI/OAuth·운영 인수다.
+- Android 새키 lostparty-release-2026.jks 생성·사용자 별도백업 완료 보고(2026-11-11), 원본 존재/Git제외 확인. 사본 해시/alias/store접근·private key 서명/검증은 2026-11-11 18:41 KST 통과했고 GitHub서명Secrets4개 갱신도 확인했다. CI 예상 SHA256을 검증지문8ef16c58…ed030으로 전환했다. 사용자가 새 Android OAuth client 등록과 운영 Web 원본 등록을 확인했고 공개 client ID를 전달했다. [6793405210](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6793405210)으로 Backend azp 대조/준비를 요청했다. 서명 Actions43003690946 성공·다운로드 APK 체크섬/인증서·패키지/2.1.0+6 대조완료, 실제 운영 인수는 별도다. 기존 키를 자동 회수/덮어쓰지 않는다. 기존 Backend 키/정상 SSH Secret은 유지하며 유실된 배포 개인키 재질문·새 키 전부 재발급 없음. 11월7일 백업을 최신DB로 취급하지 않는다.
+- Git 기준 origin/dev 801f218f 확인. 최신변경32파일을 feature/web-support b70a0bb7에 보관했고 로컬dev30dde1c3 통합·release/2.1.0 분기를 완료했다. release의 문서 체크포인트를 별도 보관하며 최종 main/dev 정렬은 인수 후다. 실제 최종SHA/checkout·잔여상태는 종료 Git 확인을 따른다. release 준비 e9bfa96c는 원격 동일 브랜치에 push했고 main/태그는 미실행이다. 실제 운영 변경·태그/게시·DB삭제 없음. 새키 백업/접근·Secrets 갱신은 확인됐고 Backend W2 실측도 수신했다. W3 공동규격은 합의됐고 남은 실행은 Native ZIP경로보완/실제 artifact 전달·Backend 준비검증·서명CI/OAuth·운영 인수다.
 
 ## 보존하는 후속
 

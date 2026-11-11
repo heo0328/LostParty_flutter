@@ -176,7 +176,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tool/new_android_release_key
 
 키tool의 암호 입력은 사용자 터미널에서만 한다. 암호를 명령 인수·채팅에 쓰지 않는다. 생성 후 원본 파일을 생성PC와 독립된 안전한 저장소에 복사하고 store 암호·alias·key 암호를 별도 보관한다. 원본/사본 SHA-256 일치와 `keytool -list -v -keystore <백업사본> -alias lostparty-release`의 접근 확인을 수행한다. 공개 SHA-1/SHA-256만 공유할 수 있고 키파일·비밀번호·Base64 원문은 공유하지 않는다. 인증서 조회만으로 private key 암호 확인을 대신하지 않으며 서명 빌드로 key 접근도 확인한다.
 
-사용자 별도 사본 보관 보고와 사본의 store/key 접근 확인 전에는 B-1 기준 첫 게시 준비 완료로 처리하지 않는다. 새 공개 지문이 확정된 뒤 OAuth/azp와 Secrets4개·CI EXPECTED_CERT_SHA256을 함께 전환한다. 2026-11-11 18:41 KST 새키 사용자 별도백업 보고·사본동일/alias/store접근·private key 서명검증 통과와 GitHub Secrets4개 갱신을 확인했다. 새 공개 SHA-1은 0a415cda3660ca2f7935deec50e72e7cdc3b70a6, SHA-256은 8ef16c58cbb605e2c74c99c4d8e9f252b00c3dd90837594d5e5ca40f0caed030이며 CI 예상지문도 전환했다. 새Android OAuth/client ID 및 azp·서명CI/운영인수는 아직 대기이며 태그/게시를 실행하지 않았다.
+사용자 별도 사본 보관 보고와 사본의 store/key 접근 확인 전에는 B-1 기준 첫 게시 준비 완료로 처리하지 않는다. 새 공개 지문이 확정된 뒤 OAuth/azp와 Secrets4개·CI EXPECTED_CERT_SHA256을 함께 전환한다. 2026-11-11 18:41 KST 새키 사용자 별도백업 보고·사본동일/alias/store접근·private key 서명검증 통과와 GitHub Secrets4개 갱신을 확인했다. 새 공개 SHA-1은 0a415cda3660ca2f7935deec50e72e7cdc3b70a6, SHA-256은 8ef16c58cbb605e2c74c99c4d8e9f252b00c3dd90837594d5e5ca40f0caed030이며 CI 예상지문도 전환했다. 새Android OAuth client와 운영 Web 원본은 사용자 등록확인, 공개 식별값은 GOOGLE_LOGIN_CONTRACT에 기록했다. Backend azp 대조와 운영 실로그인은 대기다. 서명CI43003690946은 성공했고 내려받은 APK의 인증서/패키지/2.1.0+6·체크섬도 대조했다. 태그/게시·기기 설치는 실행하지 않았다.
 
 ### 게시·복귀
 
