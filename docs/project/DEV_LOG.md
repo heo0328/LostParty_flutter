@@ -8365,3 +8365,22 @@ W3 협의종료 확인: Backend6792885928이 A규격을 변경없이 수용하�
 검증: PS구문, 경계12PASS(정상POSIX·탈출/backslash/절대경로/중복/대소문자충돌/미등재/링크/manifest상이/자산변조/candidate/체크섬), 실제release웹 후보패키징·34자산hash/35ZIPentry검증, 공식actionlint1.7.12의web/APK2workflow 무오류·diffcheck통과. 첫test의오류문구expect단수복수를 수정했고 다시12통과. 실제Actions/pwsh7 runner·업로드/수령/운영인수는 미실행이다. app lib/Backend/DB 불변이므로 전체2919/Chrome합성2PASS는 이전근거를 재사용했다.
 
 Git은release/2.1.0에서 기존누적변경과 함께 미커밋이며 이번단계commit/push/merge/태그·게시 없음. Next는고정소스보관/실행지시범위에따른Actions생성·실artifact ID 인계, 새AndroidOAuth/서명CI와Backend수령·검증이다.
+
+## 2026-11-11 — 새서명 APK·웹 Actions 실물 검증 및 Issue49 인계
+
+준비 변경 전체를 release/2.1.0 e9bfa96c에 보관·push했다. 새 Android OAuth client 574337852234-2m3nnr5jaa46okro5vpbvsgddgrloob3.apps.googleusercontent.com 및 운영 Web 원본 등록은 사용자 확인이며 Console 직접 연결은 불가했다. 공개 지문/식별값만 GOOGLE_LOGIN_CONTRACT에 기록하고 Backend azp 설정 대조를 [6793405210](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6793405210)으로 요청했다. audience·nonce/서명검증은 변경하지 않았다.
+
+- 새로 가능한 흐름: 게시 없는 Actions에서 새키 서명 APK·합의된 웹 ZIP/checksum/manifest를 실제 생성·보관하고 Backend가 받을 run/artifact ID·만료·source/hash를 인계할 수 있다. [실물 인계6793794562](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6793794562) 게시/재조회 일치 확인. Backend 수령검증 완료와 구분한다.
+- APK run43003690946 성공(sourcee9bfa96cc4a6ad1dfd7c87da9f0806b171e6ded1), artifact13847258618/android-apk-2.1.0-6, expires2026-11-18T10:33:18Z. 다운로드 APK SHA25619088554d128bdd10d51988fcc1ef1486a2e5f05490b0540a14febac0410a7d0·첨부checksum 일치. 로컬 apksigner verify 성공/새인증서8ef16c58…ed030·aapt 패키지kr.co.heowork0921.lostparty/2.1.0/code6 대조완료.
+- 첫 웹43003715850 실패, 진단7e5f3001/run43005419810에서 pub get 후 tracked desktop registrant7개의 CRLF/LF 변경표시·내용diff없음을 확인했다. 동일커밋 독립 로컬 worktree pub get은 clean이었다. runner checkout 전 core.autocrlf=false를 적용한89951f4b에서 guard 통과. dirty허용·생성물강제삭제·검증우회 없이 원인경계를 수정했다. 진단은 경로/통계만 출력하며 비밀을 출력하지 않는다.
+- 웹 run43005927315 성공(source89951f4b71e7a225d442ccaf9510c83de86aaea7), artifact13849320316/lostparty-web-2.1.0-6-89951f4b71e7, expires2026-11-25T10:46:33Z(API확인). 내부ZIP SHA256f8de14abf365a47101e55c3df949f6ebd24b509bd19aac25d9690a51779f4abc. 다운로드 실물 루트3파일·34자산/35entry·backslash0·내외manifest바이트/목록/전체hash·크기·clean/candidate=false 검증완료. CI 경계12PASS·release웹 build/export/upload, Android·Release 게시job skipped 확인.
+- 보존 확인: APK와 웹 두source 간 lib/test/pubspec·lock/android/web diff0. 앱/Backend/DB는 불변으로 기존Flutter2919PASS·분석0·Chrome합성2PASS 재사용, 추가 전체시험은 반복하지 않았다. actionlint 두workflow 무오류·diffcheck 통과. signing Secret/개인키는 artifact에 포함하지 않는다. 로그 .dart_tool/release_{android_ci,web_ci_failed,web_ci_diagnosis,web_ci_success}.log, 다운로드 build/release-verification/ 아래 Git제외 보관.
+- 미확인/다음: Backend azp/수령검증·원3파일 보존/inactive staging·최신백업/회귀표/서버 준비 회신, 공개URL 핵심왕복·새서명APK 설치/운영로그인·기존회원 연결은 대기다. 기기조작·운영활성화/DB/자료초기화·태그/Release 공개·main/dev 최종통합·Issue종료는 수행하지 않았다. release89951f4b까지 commit/push이며 이후 결과문서는 미커밋 누적한다. 최종공개 함께/승인 게시문을 유지한다.
+
+## 2026-11-11 — 운영 인수 확인·동일 산출물 최종 게시 준비
+
+Backend6793947409의 웹실물 수령/독립검증에 이어6796938066의 고정 Backend2.1.1(source d16734d/image7aa19edf…c061d)와6797454537의 AWS DB0036/azp·동결구성·기존자료/키보존 및 전후백업/PC사본 무결성을 인계받았다. 웹시험완료 사용자보고는 수용했다. 새APK의 계정선택창전 실패/23:03KST는6797901202·6797918282로 회신했고 API요청미도달·휴대폰Maintenance 관측 뒤 사용자가 점검해제를 지시했다(6798279634). 제한해제 후 새APK Google로그인/기존회원자료 정상 사용자 직접보고를 Backend6798604314에서 확인했다. 같은Wi-Fi/IP 조건은 해소됐고 일반웹/API는 공개됐다. 정확한 과거응답·미관찰조작/전수기능까지 독립확인했다고 확대하지 않는다.
+
+사용자가 최종게시 진행을 지시했다. 기존 태그workflow가 재빌드하는 점을 합의된 동일bytes승격과 대조해 v2.1.0 전용 promote job을 추가했다. 고정원장 docs/releases/v2.1.0-artifacts.json의 run/artifactID/source/5파일hash·승인안내문 hash, tag/main 포함·버전·인수source 대비앱소스동일·미만료/성공run·APK체크섬·웹manifest를 검증한 뒤 draft 생성→hosted 재다운로드 검증→공개한다. Secret/Flutter빌드·재압축/파일변형 없이 원본5파일을 게시한다. 다른버전/tag 및 수동준비 경로는 유지한다.
+
+검증: 실제원본5파일/승인안내문·앱소스/웹manifest 로컬승격검증 PASS, 변조파일·추가파일 거절2경계 PASS, actionlint2workflow 무오류·diffcheck 통과. 최초거절시험의 WindowsPowerShell native stderr 처리로 harness가 먼저 멈췄고 기대실패 처리만 고쳐 양쪽거절과 정상재검증을 확인했다. 원본CI run/ID/미만료도 API 대조했다. app/플랫폼/의존성 변경이 없으므로 기존Flutter2919PASS/분석0·Chrome합성2PASS·CI서명/웹빌드·사용자인수 근거를 재사용한다. 최종 태그/Release 공개·hosted 재조회는 다음 실행 결과를 따른다. 키/DB·운영재배포·자료초기화·Issue종료 없음.

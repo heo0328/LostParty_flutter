@@ -28,7 +28,7 @@ jobs:
       contents: read
 
   build:
-    if: github.event_name != 'workflow_dispatch' || inputs.artifact_target != 'web'
+    if: github.ref != 'refs/tags/v2.1.0' && (github.event_name != 'workflow_dispatch' || inputs.artifact_target != 'web')
     name: Build and verify signed APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -182,7 +182,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.ref != 'refs/tags/v2.1.0'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -221,3 +221,61 @@ jobs:
           --repo "$GITHUB_REPOSITORY"
           --title "LOSTPARTY $VERSION_NAME"
           --notes-file "docs/releases/v${VERSION_NAME}.md"
+
+  promote:
+    name: Publish accepted 2.1.0 artifacts without rebuilding
+    if: github.ref == 'refs/tags/v2.1.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify tag and download the exact accepted artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git fetch origin main --no-tags
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect main.' }
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Tag source is not on main.' }
+          if ((git rev-parse HEAD).Trim() -ne $env:GITHUB_SHA) { throw 'Checkout source differs.' }
+          $record = Get-Content -Raw docs/releases/v2.1.0-artifacts.json | ConvertFrom-Json
+          if ($record.tag -ne $env:GITHUB_REF_NAME -or $record.repository -ne $env:GITHUB_REPOSITORY) { throw 'Unexpected release.' }
+          New-Item -ItemType Directory dist | Out-Null
+          foreach ($artifact in $record.artifacts) {
+            $run = gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$($artifact.run_id)" | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0 -or $run.status -ne 'completed' -or $run.conclusion -ne 'success' -or
+                $run.head_sha -ne $artifact.source -or $run.event -ne 'workflow_dispatch') { throw 'Accepted run provenance differs.' }
+            $meta = gh api "repos/$env:GITHUB_REPOSITORY/actions/artifacts/$($artifact.artifact_id)" | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0 -or $meta.expired -or [DateTimeOffset]::Parse($meta.expires_at) -le [DateTimeOffset]::UtcNow -or
+                $meta.name -cne $artifact.name -or $meta.workflow_run.id -ne $artifact.run_id -or
+                $meta.workflow_run.head_sha -ne $artifact.source) { throw 'Accepted artifact is unavailable or differs.' }
+            gh run download $artifact.run_id --repo $env:GITHUB_REPOSITORY --name $artifact.name --dir dist
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot download the accepted artifact. Do not substitute another run.' }
+          }
+          ./tool/verify_prepared_release.ps1 -Directory dist
+      - name: Create draft with the original five files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh release view v2.1.0 --repo $env:GITHUB_REPOSITORY 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'Release exists. Do not overwrite.' }
+          $assets = @(Get-ChildItem dist -File | ForEach-Object { $_.FullName })
+          gh release create v2.1.0 @assets --draft --verify-tag --repo $env:GITHUB_REPOSITORY --title 'LOSTPARTY 2.1.0' --notes-file docs/releases/v2.1.0.md
+          if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed. Inspect the existing state before retrying.' }
+      - name: Verify hosted draft bytes and publish
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh release download v2.1.0 --repo $env:GITHUB_REPOSITORY --dir hosted
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot verify hosted draft.' }
+          ./tool/verify_prepared_release.ps1 -Directory hosted
+          gh release edit v2.1.0 --repo $env:GITHUB_REPOSITORY --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Publication failed. Inspect the release state before retrying.' }

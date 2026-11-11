@@ -189,3 +189,11 @@ Release 본문 원본은 `docs/releases/v2.1.0.md`다. workflow는 태그 소스
 Backend6792858978/6792885928 수용으로 manual-only Actions artifact(lostparty-web-2.1.0-6-<SHA12>,14일)→동일ZIP의 최종Release asset 승격을 확정했다. artifact 루트는 lostparty-v2.1.0-web.zip·동명.zip.sha256·release-manifest.json, 실제bundle 안은 site/와 동일manifest다. 외피ZIP과실ZIP hash를 구분하고 run/ID/name/expiry·source/hash/내부경로를 인계한다. ZIP entry와 manifest경로는 POSIX /이며 기존 Windows backslash ZIP은 제외한다. 만료/불일치는 새식별자로재인계하고 자동대체/덮어쓰기하지 않는다. Native 빌드/고정물 인계와 Backend 수령검증/inactive staging/활성화로 분담한다. 구APK+신서버는 upgrade거절/원ACK 등 조건부범위이며 Backend 고정후보회귀·최종표가 필요하다. 첫공개 새탭/재접속 기준, 구탭무중단/버전고정asset URL 미지원 한계를 수용했고 이번 URL고정 추가구현을 필수로 하지 않는다. 기술적 적용과 최종공동공개, 협의확정과 실제실물/운영인수는 구분한다.
 
 W3 구현: tool/web_bundle.ps1로 ZIP entry를 /로 직접 작성하고 목록/hash/manifest바이트/안전경로·대소문자중복·symlink를 검증한다. tool/test_web_bundle.ps1의12경계검사를 manual workflow에서도 실행한다. web-release.yml은 workflow_dispatch/workflow_call이고14일보관·contents:read만 사용한다. default등록 전 최초실행은 기존 android-apk-release.yml에 추가한 artifact_target=web의 reusable-call 경로를 사용한다. 이때 Android빌드/Secret/job은 건너뛰며 tag APK게시·기본android선택은 기존대로다. 코드준비와 실제Actions실행/업로드를 구분하고 run/artifactID/expiry는 실행후API로 확정한다.
+
+### 2.1.0 인수 산출물의 최종 승격
+
+Backend6797454537의 운영2.1.1/DB0036·백업/키보존 확인 후 사용자가 점검제한 해제를 지시했다(6798279634). 일반 웹/API는 공개됐고 같은Wi-Fi 조건은 해소됐다. 6798604314에서 웹시험과 새APK Google로그인/기존자료의 사용자 인수통과를 확인했다. 전수기능/실제복원 성공으로 확대하지 않는다.
+
+v2.1.0 태그는 기존 재빌드 job을 건너뛰고 promote job에서 docs/releases/v2.1.0-artifacts.json의 고정 수동run/artifactID/source/5파일 hash·승인안내문 hash를 소비한다. tag의 main 포함/버전·원앱소스 동일·run성공/미만료/정확한ID와 다운로드파일·APK checksum·웹manifest 검증 후 draft를 생성한다. hosted draft 재다운로드로 동일bytes를 확인한 뒤 공개하며 서명Secret/Flutter 빌드를 사용하지 않는다. tool/verify_prepared_release.ps1을 로컬/Actions/게시후 검증에 재사용한다. APK는 인수한 lostparty-2.1.0-6-android.apk와 checksum의 파일명을 유지한다. 웹 원3파일도 재압축/변형 없이 게시한다. 다른 버전 태그의 기존 빌드/게시와 수동준비 경로는 유지한다.
+
+서명키 백업/접근 검증과 같은APK의 서명/패키지/버전 검증을 재사용하며 고정 hash와 동일bytes가 아닌 APK는 거절한다. 만료/삭제/기존 Release 또는 asset 존재/불일치는 중단한다. 기존공개파일 덮어쓰기·태그이동·다른run으로 조용한 대체는 하지 않는다. 최종Release URL/asset ID/hash와 사용자 인수근거는 #49에 회신하며 Issue종료는 별도 지시다.

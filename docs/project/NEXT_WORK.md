@@ -1,46 +1,27 @@
-# 현재 작업 — 2.1.0 웹·Backend·새 서명 APK 통합 릴리즈 준비 (2026-11-11)
+# 현재 작업 — 2.1.0 최종 동일 산출물 Release 게시 (2026-11-11)
 
-사용자 승인: 2.1.0+6/v2.1.0, 기존 AWS/https://lostparty.duckdns.org 루트 재사용, 베타 전 사전 테스트, 주소 소수 공유·접속제한 없음. 운영 자료 유지·초기화 없음. APK/GitHub Release 준비를 먼저 진행할 수 있지만 최종 운영 공개는 Backend·웹·APK를 함께 진행한다. 공개 안내문 docs/releases/v2.1.0.md의 최신 수정본은 사용자 확인 완료이며 재확인을 반복 요구하지 않는다. 서버 미반영/웹 예정 안내는 공개문에서 제거한다. 운영 적용/인수의 기술 순서와 최종 공개 시점은 구분한다. 서명/키백업·Google설정 검증 게이트는 유지한다. 웹 디자인/4초로딩·신기능·리전이전·백업자동화는 제외한다.
+사용자가 최종 게시 진행을 지시했다. 앱2.1.0+6/v2.1.0, 기존 AWS/https://lostparty.duckdns.org·현재 회원/자료 유지다. 승인 게시문 docs/releases/v2.1.0.md는 변경하지 않는다. 앱 기능/키/OAuth/DB·운영 재배포·자료초기화·Issue종료·브랜치삭제는 이번 게시에서 수행하지 않는다.
 
-## 순서·완료 조건
+## 확인된 운영·인수
 
-1. feature/web-support 최신 누적 전체·origin 확인 → 버전/웹 메타데이터·산출물·서명키 전환 절차/게시 안내 준비.
-2. [Issue49](https://github.com/heo0328/lostparty-backend/issues/49)에서 Backend 실제 AWS 버전/DB차이·이행/기존 APK 호환·Caddy/동결배포 구성·자원/접속·필요 최신DB/설정백업 확인. [준비 착수 요청](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6792040183). Backend가 서버측 변경을 소유하며 Flutter는 웹코드/build/bundle·버전/인수의 책임을 유지한다. W2회신6792318794 기준 실제AWS v2.0.0/source51b1cb3·DB0035, 최신대비 신규5경로누락·0036 forward-only migration이 필요하다. 서버Caddy/동결구성·최신백업/격리검증은 아직 준비 대기이며 실제운영 적용지시와 구분한다. APK 준비와 실제 공개를 구분하며 선공개를 진행하지 않는다.
-3. 코드 보관/검증된 dev 통합 후 release/2.1.0에서 안정화. 현재 목적에 맞는 feature를 유지하며 작은 준비마다 새 브랜치를 만들지 않는다. 알려진 차단 결함·추가 미검증을 분리한다.
-4. 새 Android키 생성 전 실제 경로·백업 안내→사용자 생성/별도 사본·접근확인→지문/OAuth/azp→Secrets4개/CI지문 동시 전환→게시 없는 수동 서명 빌드. 백업 확인 전 첫 게시 준비 완료 금지. 키 원문/비밀번호는 채팅으로 받지 않는다.
-5. 최종 소스/버전·manifest/checksum release웹·서명 APK 준비→Backend 최신백업/적용/health/계약→웹 활성/공개주소 최소확인→사용자 APK설치·운영 로그인/회원확인→최종 release를 main/dev에 반영하고 승인 태그/게시. 실패 후 무단 반복배포/태그 덮어쓰기 없음.
+- Backend [6797454537](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6797454537): Backend2.1.1/source d16734d86e694579cd4e4e043c2ca89cc81c1b64/image7aa19edf…c061d·DB0036/config lightsail-web-2.1.0 반영과 전후백업/PC사본 무결성·기존회원/키 보존 확인. 실제 전체복원은 미실행.
+- [6798279634](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6798279634): 사용자가 점검제한 해제를 지시해 일반 웹/API 공개완료. 같은Wi-Fi/IP 조건은 해소. 최초 APK 실패는 API미도달/휴대폰 Maintenance 관측과 개방후성공으로 해소됐으며 과거 정확한응답을 독립확인한 것으로 확대하지 않는다.
+- [6798604314](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6798604314): 웹 시험완료 및 새APK Google로그인/기존회원자료 정상 사용자 직접보고를 Backend가 확인했다. 반복인수·재빌드/재압축·재제출 불필요. 전체 기능/모든 경계 통과로 확대하지 않는다.
+- 새 release키의 사용자 독립백업·사본동일/alias/store/private key 접근과 GitHub Secrets4개·CI지문 전환은 검증완료(18:41 KST). 같은키 최초게시 조건을 충족한다. 비밀번호/키는 Git·artifact·로그에 포함하지 않는다.
 
-## Issue49 W3 — 공동 설계·소비 규격 합의 완료 / 구현·인계는 별도
+## 최종 게시 순서·완료 조건
 
-[Backend6792858978](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6792858978)·[구체규격수용6792885928](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6792885928)을 확인해 협의 공백을 해소했다. 최신 안내문 사용자 확인완료·최종공개 함께를 확정한다. Native6792903944의 A/B2 재확인 대기는 시점중복이므로 해소한다. 합의완료와 실제 도구/파일전달/운영/실인수 완료는 구분한다.
+1. origin/main/dev/release 및 기존태그/Release 부재·미커밋 전체 확인. docs/releases/v2.1.0-artifacts.json에 고정 run/artifact/source/5파일 hash·승인문구 hash를 기록한다. APK run43003690946/sourcee9bfa96c·웹run43005927315/source89951f4b의 동일bytes를 최종승격한다.
+2. 기존 태그workflow는 APK를 재빌드하므로 v2.1.0 전용 승격job을 추가한다. tag/main포함·pubspec/승인문구·고정run성공/artifactID/source/미만료·앱소스동일·5파일 hash·APK checksum/웹ZIP manifest를 검증한다. 새키서명 검증은 동일 APK의 기존 성공근거를 재사용하며 Secret을 읽지 않는다.
+3. 다운로드한 원 APK/체크섬·웹ZIP/체크섬/manifest 5파일로 draft를 만들고 draft 재다운로드 검증 뒤 공개한다. 재빌드/재압축·기존Release/asset 덮어쓰기·태그이동은 금지한다. 다른버전 기존 build/tag동작과 수동준비는 유지한다.
+4. 누적전체 보관→release 최종시점을 main/dev에 통합·push/원격일치→v2.1.0 태그 push/Actions게시. 변경없는 앱 시험2919PASS·분석0·Chrome합성2PASS·서명/웹빌드·사용자인수 근거를 재사용하고 승격경계/형식·diffcheck/actionlint를 검증한다.
+5. 최종 Release의 공개상태·승인본문·태그/main/dev 관계·asset ID/크기/다운로드 hash·기존서명/버전/웹원본동일을 확인해 #49로 회신한다. 결과문서·미확인/후속과 브랜치상태를 정리한다. 게시실패는 원인/상태부터 확인하고 무단반복/덮어쓰기하지 않는다.
 
-| 합의 항목 | 담당별 다음 행동·완료 조건 |
-|---|---|
-| 전달 | Native manual-only web workflow(.github/workflows/web-release.yml 구현·실행전) clean source artifact lostparty-web-2.1.0-6-<SHA12>, 14일. 루트 lostparty-v2.1.0-web.zip/.zip.sha256/release-manifest.json 3파일. 실제 runURL/ID·artifactID/name/expiry·source/hash/ZIP내위치를 인계해야 전달완료. Backend download/검증/staging/활성화. 최종 동일바이트 Release asset 승격·덮어쓰기 금지 |
-| ZIP | 기존1ba0b8d4 ZIP 38개 backslash entry는 최종전달대상 제외. Native exporter의 POSIX / entry·manifest일치/안전/중복 검증 보완 완료. 실제ZIP backslash0·경계12PASS/후보release build·workflow actionlint 통과, 새 고정source/실artifact는 아직 미인계. Backend 경로검증 완화 없음 |
-| 호환 | 새앱/웹+구DB0035 지원제외. 구APK+신서버는 capability/group-policy upgrade거절·profile/context·원ACK와새요청 구분의 조건부범위. Backend 고정후보 선택회귀/전체계약·지원표는 후속검증. Native 구APK 모집upgrade문구/계정주간일반실패 fallback 코드대조 회신완료, 실기기인수 아님 |
-| 브라우저 | 첫공개 새탭/재접속, 교체 당시 열린 준비/구탭은 닫고재접속·필요시강력새로고침. 저장소삭제요구없음. 구탭무중단/미전송자동이전·버전고정asset URL 미지원. Backend는 이번 버전고정URL 구현을 필수로 요구하지 않음 |
-| 활성화·복귀·인수 | inactive→호환Backend/적용지시 뒤 활성화. 정상Backend+웹실패는 웹만 이전/API-only, DB0036 downgrade금지. Native 사용자기능/새서명APK·Backend API/DB/HTTP/조합기록. 실제 인수는 별도 |
-
-Native workflow/exporter 구현·로컬검증 뒤 준비 변경 전체를 release/2.1.0 e9bfa96cc4a6ad1dfd7c87da9f0806b171e6ded1에 보관·push했다. 같은 소스의 게시 없는 Android run43003690946·웹 run43003715850을 시작했다. 실제 artifact 검증/식별값 인계는 실행 결과 확인 후이며 아직 완료가 아니다. Backend는 수령/서버도구·조건부호환 검증표·최신백업/운영준비를 병행한다. main/dev 최종통합·태그/Release·운영공개는 별도 게이트다.
-
-### Native 웹 전달도구 구현 상태 (2026-11-11)
-
-- package_web_release.ps1 + web_bundle.ps1은 고정 ZIP명/외부manifest/sha256, 내부POSIX path·목록/개별hash·내외manifest바이트일치·중복/대소문자충돌·링크/탈출/미등재파일 거절을 적용한다. .last_build_id/map/symbols/문서/오프라인worker는 제외한다.
-- test_web_bundle.ps1의12경계PASS, 실제후보release build/ZIP35entry(34자산+manifest)·backslash0, PS문법/diffcheck와 공식 actionlint1.7.12의2workflow 검증을 통과했다. 로그 .dart_tool/web_w3_package.log. 앱lib/서버/DB는 이번 단계에서 수정하지 않아 기존Flutter/GIS 시험은 재사용한다.
-- web-release.yml은 수동/재사용 workflow로14일보관·루트3파일을 upload한다. 새workflow가 default branch에 아직 없어 초기실행은 이미 등록된 android-apk-release.yml의 manual artifact_target=web 경로에서 같은ref의 reusable workflow를 호출한다. 웹선택이면 Android build/서명Secret/태그게시job을 실행하지 않는다. 태그경로와 기본 android선택은 기존동작을 유지한다.
-- 실행예정 명령: gh workflow run android-apk-release.yml --ref release/2.1.0 -f artifact_target=web. 이는 코드 보관/push 후 실제 적용할 경로이며 현재 웹 run43003715850 진행/대기이며 업로드 성공·artifactID는 아직 미확인이다. 별도 web-release.yml의 직접dispatch는 default등록 이후 가능하다. 실제인계에서API로 expires_at을 확인한다.
-
-## 현재 검증·담당 대기
-
-- 웹/GIS 코드: 전체2919PASS·인증36PASS 포함·별도Chrome합성2PASS·분석0·debug web/Android build 통과를 재사용한다. 이후 변경은 버전/웹 메타/패키징/배포문서이며 앱 lib는 동일하다. 2.1.0 release웹 후보 빌드·35개 파일hash/zip내용/미커밋게시거절/PS문법 검증을 통과했다. 신규 bootstrap은 서비스워커 등록을 제외한다. 로컬 통합30dde1c3의 clean source release bundle도 생성·검증했다(candidate_only=false). 문서 체크포인트 후 최종 소스 대응 bundle을 재생성하며 식별값은 해당 release-manifest/zip.sha256을 따른다.
-- 사용자 로컬 웹 Google 로그인·모집 생성 통과 보고. 전체/운영 인수로 확대하지 않는다. 공개URL 로그인→모집생성/재조회→새로고침/remember/로그아웃, 새서명APK 운영 로그인/기존회원 연결은 별도 사용자 확인이다.
-- Android 새키 lostparty-release-2026.jks 생성·사용자 별도백업 완료 보고(2026-11-11), 원본 존재/Git제외 확인. 사본 해시/alias/store접근·private key 서명/검증은 2026-11-11 18:41 KST 통과했고 GitHub서명Secrets4개 갱신도 확인했다. CI 예상 SHA256을 검증지문8ef16c58…ed030으로 전환했다. 사용자가 새 Android OAuth client 등록과 운영 Web 원본 등록을 확인했고 공개 client ID를 전달했다. [6793405210](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6793405210)으로 Backend azp 대조/준비를 요청했다. 서명 Actions43003690946 성공·다운로드 APK 체크섬/인증서·패키지/2.1.0+6 대조완료, 실제 운영 인수는 별도다. 기존 키를 자동 회수/덮어쓰지 않는다. 기존 Backend 키/정상 SSH Secret은 유지하며 유실된 배포 개인키 재질문·새 키 전부 재발급 없음. 11월7일 백업을 최신DB로 취급하지 않는다.
-- Git 기준 origin/dev 801f218f 확인. 최신변경32파일을 feature/web-support b70a0bb7에 보관했고 로컬dev30dde1c3 통합·release/2.1.0 분기를 완료했다. release의 문서 체크포인트를 별도 보관하며 최종 main/dev 정렬은 인수 후다. 실제 최종SHA/checkout·잔여상태는 종료 Git 확인을 따른다. release 준비 e9bfa96c는 원격 동일 브랜치에 push했고 main/태그는 미실행이다. 실제 운영 변경·태그/게시·DB삭제 없음. 새키 백업/접근·Secrets 갱신은 확인됐고 Backend W2 실측도 수신했다. W3 공동규격은 합의됐고 남은 실행은 Native ZIP경로보완/실제 artifact 전달·Backend 준비검증·서명CI/OAuth·운영 인수다.
+현재는 최종게시 준비 중이며 공개 Release 완료로 표시하지 않는다. 일반 웹/API는 이미 공개됐고 그 사실을 과거 공동공개 대기로 되돌리지 않는다.
 
 ## 보존하는 후속
 
-기존 수동/화면진입 갱신·모집변경 레드닷, 누락/부분완료 자료 준비·기기경계, 디자인·통계 등은 아래 기존 대장/NEXT_WORK 후속을 유지한다. 정식 베타 직전 자료 초기화는 대상·시점을 정한 별도 실행 지시가 필요하다.
+수동/화면진입 갱신·모집변경 레드닷·웹소켓, 누락/부분완료 자료 준비/기기경계, 카드 Penpot 디자인·통계는 아래 기존 대장 후속이다. 구탭 무중단/미전송작업 자동이전·반응형개편·전체복원리허설/백업자동화는 이번 완료범위가 아니다. 정식베타 직전자료 초기화는 별도 대상/시점 실행지시가 필요하다. 공개후 필요하면 배포main/태그 기준의 측정·회귀보호를 갖춘 최적화 검토 가능시점을 안내하되 자동착수하지 않는다.
 
 ---
 

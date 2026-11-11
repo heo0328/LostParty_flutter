@@ -1,0 +1,37 @@
+{
+  "version": "2.1.0+6",
+  "tag": "v2.1.0",
+  "repository": "heo0328/LostParty_flutter",
+  "notes_sha256": "d79760adc8591f3f17b125444dbd815f53010a5b2e837b0b57121814006bf9aa",
+  "acceptance": "https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6798604314",
+  "backend": {
+    "version": "2.1.1",
+    "source": "d16734d86e694579cd4e4e043c2ca89cc81c1b64",
+    "image": "ghcr.io/heo0328/lostparty-backend@sha256:7aa19edfd4c526b03b011722e59a8674ee10dfadaf68b2c9906fc442042c061d",
+    "database_revision": "0036",
+    "configuration_revision": "lightsail-web-2.1.0"
+  },
+  "artifacts": [
+    {
+      "run_id": 43003690946,
+      "artifact_id": 13847258618,
+      "name": "android-apk-2.1.0-6",
+      "source": "e9bfa96cc4a6ad1dfd7c87da9f0806b171e6ded1",
+      "files": {
+        "lostparty-2.1.0-6-android.apk": "19088554d128bdd10d51988fcc1ef1486a2e5f05490b0540a14febac0410a7d0",
+        "lostparty-2.1.0-6-android.apk.sha256": "ae5d5d578a566024b07e97ab054d12e85aacbcdcc0f1b22515e55e8256f2eae0"
+      }
+    },
+    {
+      "run_id": 43005927315,
+      "artifact_id": 13849320316,
+      "name": "lostparty-web-2.1.0-6-89951f4b71e7",
+      "source": "89951f4b71e7a225d442ccaf9510c83de86aaea7",
+      "files": {
+        "lostparty-v2.1.0-web.zip": "f8de14abf365a47101e55c3df949f6ebd24b509bd19aac25d9690a51779f4abc",
+        "lostparty-v2.1.0-web.zip.sha256": "17b47de82cca041d02705a7d49ed180e7e1893e0e3fadedf94b45cf6f853f5aa",
+        "release-manifest.json": "a4e0cd7cf1a2976b9f019b3830e4f8b387299b8121fd1fd43fb62333aaa51587"
+      }
+    }
+  ]
+}

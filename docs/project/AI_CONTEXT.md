@@ -1,8 +1,10 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
-## 2.1.0 통합 릴리즈 준비 (2026-11-11)
+## 2.1.0 통합 릴리즈 최종 게시 (2026-11-11)
 
-release/2.1.0에서 웹/GIS와 누적 변경을 2.1.0+6로 준비한다. 베타 전 사전테스트·기존주소/운영자료 유지·접속제한 없음이며 APK 준비를 먼저 하되 최종 운영 공개는 Backend·웹·APK를 함께 진행한다. 안내문은 사용자 확인 완료다. 로컬 웹 로그인/모집 생성은 사용자 확인, 전체2919PASS·Chrome합성2PASS·분석0·debug build 근거를 재사용한다. 새키 독립백업/접근·Secrets4개 전환을 확인했고 W3 웹 전달규격 협의·exporter/workflow 로컬검증을 완료했다. 다음은 준비소스 보관/push와 게시 없는 Actions 산출물 검증·실제 인계다. Android OAuth 등록/Client ID·Backend azp, 운영 웹 원본, Backend 서버준비/최신백업·양측 운영 인수는 별도 대기다. 현재 브라우저 도구 연결 불가로 Console 상태를 추정하지 않는다. 상세 상태는 NEXT_WORK, 장기 계약은 GITHUB_ANDROID_RELEASE_PIPELINE §8, 게시문은 docs/releases/v2.1.0.md를 따른다. 현재 공개/초기화 완료로 보고하지 않는다.
+Backend2.1.1/DB0036/config lightsail-web-2.1.0과 고정 웹2.1.0+6는 실제 AWS 반영·백업/키보존 확인 후 일반공개됐다. 사용자가 점검제한 해제를 지시해 같은Wi-Fi/IP 조건은 해소됐다. 웹시험·새서명APK Google로그인/기존회원자료 정상 사용자보고를 Backend6798604314에서 확인했다. 실제전수시험/전체복원 성공으로 확대하지 않는다. 새키 독립백업/접근·Secrets 전환과 기존2919PASS/분석0·Chrome합성2PASS·서명/웹CI 근거를 재사용한다.
+
+현재 승인 작업은 고정 APK/run43003690946와 웹/run43005927315의 동일bytes 최종Release 승격이다. 승인된 게시문은 유지하며 v2.1.0 전용 tag promote job에서 정확한 artifactID/source/hash·앱소스/본문·웹manifest를 확인하고 draft 재다운로드 후 공개한다. 재빌드/재압축·키/OAuth/서버/DB 변경·자료초기화/Issue종료는 없다. 최종게시·main/dev/태그 상태는 NEXT_WORK/DEV_LOG, 산출물 원장은 docs/releases/v2.1.0-artifacts.json, 장기 계약은 GITHUB_ANDROID_RELEASE_PIPELINE §8이다. 아직 최종Release 성공으로 표시하지 않는다.
 
 ## 개발·협업 기준
 
