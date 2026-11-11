@@ -176,13 +176,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tool/new_android_release_key
 
 키tool의 암호 입력은 사용자 터미널에서만 한다. 암호를 명령 인수·채팅에 쓰지 않는다. 생성 후 원본 파일을 생성PC와 독립된 안전한 저장소에 복사하고 store 암호·alias·key 암호를 별도 보관한다. 원본/사본 SHA-256 일치와 `keytool -list -v -keystore <백업사본> -alias lostparty-release`의 접근 확인을 수행한다. 공개 SHA-1/SHA-256만 공유할 수 있고 키파일·비밀번호·Base64 원문은 공유하지 않는다. 인증서 조회만으로 private key 암호 확인을 대신하지 않으며 서명 빌드로 key 접근도 확인한다.
 
-사용자 별도 사본 보관 보고와 사본의 store/key 접근 확인 전에는 B-1 기준 첫 게시 준비 완료로 처리하지 않는다. 새 공개 지문이 확정된 뒤 OAuth/azp와 Secrets4개·CI EXPECTED_CERT_SHA256을 함께 전환한다. 2026-11-11 18:41 KST 새키 사용자 별도백업 보고·사본동일/alias/store접근·private key 서명검증 통과와 GitHub Secrets4개 갱신을 확인했다. 새 공개 SHA-1은 0a415cda3660ca2f7935deec50e72e7cdc3b70a6, SHA-256은 8ef16c58cbb605e2c74c99c4d8e9f252b00c3dd90837594d5e5ca40f0caed030이며 CI 예상지문도 전환했다. 새Android OAuth client와 운영 Web 원본은 사용자 등록확인, 공개 식별값은 GOOGLE_LOGIN_CONTRACT에 기록했다. Backend azp 대조와 운영 실로그인은 대기다. 서명CI43003690946은 성공했고 내려받은 APK의 인증서/패키지/2.1.0+6·체크섬도 대조했다. 태그/게시·기기 설치는 실행하지 않았다.
+사용자 별도 사본 보관 보고와 사본의 store/key 접근 확인 전에는 B-1 기준 첫 게시 준비 완료로 처리하지 않는다. 새 공개 지문이 확정된 뒤 OAuth/azp와 Secrets4개·CI EXPECTED_CERT_SHA256을 함께 전환한다. 2026-11-11 18:41 KST 새키 사용자 별도백업 보고·사본동일/alias/store접근·private key 서명검증 통과와 GitHub Secrets4개 갱신을 확인했다. 새 공개 SHA-1은 0a415cda3660ca2f7935deec50e72e7cdc3b70a6, SHA-256은 8ef16c58cbb605e2c74c99c4d8e9f252b00c3dd90837594d5e5ca40f0caed030이며 CI 예상지문도 전환했다. 새Android OAuth client와 운영 Web 원본은 사용자 등록확인, 공개 식별값은 GOOGLE_LOGIN_CONTRACT에 기록했다. Backend azp3항목 반영·운영 새APK 로그인/기존자료 사용자 인수는6797454537/6798604314에서 확인됐다. 서명CI43003690946은 성공했고 내려받은 APK의 인증서/패키지/2.1.0+6·체크섬도 대조했다. 현재 태그/게시 완료·기기 사용자 인수의 근거는 아래 최종승격 절을 따른다.
 
 ### 게시·복귀
 
 Release 본문 원본은 `docs/releases/v2.1.0.md`다. workflow는 태그 소스의 동일 버전 안내문을 checkout해 `--notes-file`로 게시하며 누락 시 실패한다. 새 키 때문에 삭제·재설치·동일 Google 로그인 및 로컬 자료 손실 가능성을 반드시 포함한다. 웹과 APK는 같은 운영 회원/자료를 사용한다.
 
-서명 artifact/새키·OAuth 준비를 검증하고 안내문 사용자 확인 후 최종 게시 시점을 main/dev에 반영해 태그/게시한다. Backend·웹·APK의 최종 공개는 함께 진행하며 준비/적용의 기술 순서와 구분한다. 운영 인수 미확인을 성공으로 처리하지 않는다. 웹은 이전 정적 버전 또는 최초 미공개로 복귀, Backend는 새DB와 호환되는 복귀만 사용하며 새 쓰기를 잃는 dump 덮어쓰기를 하지 않는다. 공개 APK/태그 덮어쓰기·무단 반복배포 없음. Backend 키·정상 배포 SSH Secret은 재사용하고 11월7일 백업을 최신DB로 간주하지 않는다. 실제 운영변경·키 전환/최초 게시 시의 사용자 확인 조건을 현재 실행 게이트로 유지한다.
+서명 artifact/새키·OAuth 준비를 검증하고 안내문 사용자 확인 후 최종 게시 시점을 main/dev에 반영해 태그/게시한다. 초기 공동공개 조정 후 사용자가 점검제한 해제를 명시 지시해 일반 웹/API를 먼저 개방했고, 실제 새APK 인수 후 최종Native Release를 공개했다. 운영 인수 미확인을 성공으로 처리하지 않는다. 웹은 이전 정적 버전 또는 최초 미공개로 복귀, Backend는 새DB와 호환되는 복귀만 사용하며 새 쓰기를 잃는 dump 덮어쓰기를 하지 않는다. 공개 APK/태그 덮어쓰기·무단 반복배포 없음. Backend 키·정상 배포 SSH Secret은 재사용하고 11월7일 백업을 최신DB로 간주하지 않는다. 실제 운영변경·키 전환/최초 게시 시의 사용자 확인 조건은 유지한다.
 
 ### Issue49 W3 공동 인계 확정 (2026-11-11)
 
@@ -197,3 +197,5 @@ Backend6797454537의 운영2.1.1/DB0036·백업/키보존 확인 후 사용자�
 v2.1.0 태그는 기존 재빌드 job을 건너뛰고 promote job에서 docs/releases/v2.1.0-artifacts.json의 고정 수동run/artifactID/source/5파일 hash·승인안내문 hash를 소비한다. tag의 main 포함/버전·원앱소스 동일·run성공/미만료/정확한ID와 다운로드파일·APK checksum·웹manifest 검증 후 draft를 생성한다. hosted draft 재다운로드로 동일bytes를 확인한 뒤 공개하며 서명Secret/Flutter 빌드를 사용하지 않는다. tool/verify_prepared_release.ps1을 로컬/Actions/게시후 검증에 재사용한다. APK는 인수한 lostparty-2.1.0-6-android.apk와 checksum의 파일명을 유지한다. 웹 원3파일도 재압축/변형 없이 게시한다. 다른 버전 태그의 기존 빌드/게시와 수동준비 경로는 유지한다.
 
 서명키 백업/접근 검증과 같은APK의 서명/패키지/버전 검증을 재사용하며 고정 hash와 동일bytes가 아닌 APK는 거절한다. 만료/삭제/기존 Release 또는 asset 존재/불일치는 중단한다. 기존공개파일 덮어쓰기·태그이동·다른run으로 조용한 대체는 하지 않는다. 최종Release URL/asset ID/hash와 사용자 인수근거는 #49에 회신하며 Issue종료는 별도 지시다.
+
+실행 결과: v2.1.0 태그9019ee06·Actions43041814495·Release441825178 공개완료. 원5파일은 hosted draft 및 공개후 재다운로드/hash 검증을 통과했고 승인본문도 일치했다. 최종식별자는 v2.1.0-artifacts.json의 published_release, 운영/인수·백업 근거와 남은 후속은 NEXT_WORK/DEV_LOG 및 #49 6798998431을 따른다. 후행 기록커밋으로 공개태그를 이동하지 않는다.

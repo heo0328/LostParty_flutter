@@ -8384,3 +8384,13 @@ Backend6793947409의 웹실물 수령/독립검증에 이어6796938066의 고정
 사용자가 최종게시 진행을 지시했다. 기존 태그workflow가 재빌드하는 점을 합의된 동일bytes승격과 대조해 v2.1.0 전용 promote job을 추가했다. 고정원장 docs/releases/v2.1.0-artifacts.json의 run/artifactID/source/5파일hash·승인안내문 hash, tag/main 포함·버전·인수source 대비앱소스동일·미만료/성공run·APK체크섬·웹manifest를 검증한 뒤 draft 생성→hosted 재다운로드 검증→공개한다. Secret/Flutter빌드·재압축/파일변형 없이 원본5파일을 게시한다. 다른버전/tag 및 수동준비 경로는 유지한다.
 
 검증: 실제원본5파일/승인안내문·앱소스/웹manifest 로컬승격검증 PASS, 변조파일·추가파일 거절2경계 PASS, actionlint2workflow 무오류·diffcheck 통과. 최초거절시험의 WindowsPowerShell native stderr 처리로 harness가 먼저 멈췄고 기대실패 처리만 고쳐 양쪽거절과 정상재검증을 확인했다. 원본CI run/ID/미만료도 API 대조했다. app/플랫폼/의존성 변경이 없으므로 기존Flutter2919PASS/분석0·Chrome합성2PASS·CI서명/웹빌드·사용자인수 근거를 재사용한다. 최종 태그/Release 공개·hosted 재조회는 다음 실행 결과를 따른다. 키/DB·운영재배포·자료초기화·Issue종료 없음.
+
+## 2026-11-11 — v2.1.0 최종 GitHub Release 공개·원5파일 재검증 완료
+
+최종준비9019ee060afb109684786bff62c92dece9925810을 release/main/dev 동일시점으로 이력보존 fast-forward·atomic push/원격일치 후 annotated v2.1.0태그를 새로 게시했다. Actions43041814495 success, promote job만 실행하고 기존 APK빌드/태그게시 job은 skipped다. draft 생성/hosted 5파일 재다운로드검증 후 23:47:26KST에 Release441825178을 공개했다. https://github.com/heo0328/LostParty_flutter/releases/tag/v2.1.0, draft=false/prerelease=false. 태그 이동/기존파일 덮어쓰기·Flutter재빌드/재압축/서명Secret 사용 없음.
+
+- 새로 가능한 흐름: 누구나 웹 https://lostparty.duckdns.org/ 또는 공개Release의 새서명APK를 내려받아 운영 Backend2.1.1/DB0036에 접속한다. 최초서명전환 삭제/재설치·서버자료유지/로컬자료손실가능성·테스트자료초기화가능성 안내는 승인문구 그대로다. 안내문과 게시본문 일치 확인.
+- 원본동일: APK asset735857612/91,259,138bytes/hash19088554…a7d0, APK체크섬735857614/96bytes, 웹ZIP735857617/14,333,833bytes/hashf8de14ab…4abc, 웹체크섬735857613/91bytes, manifest735857611/6,033bytes. 전체64자리hash·원run/source/IDs·최종게시조합은 docs/releases/v2.1.0-artifacts.json의 원장을 따른다. 공개후 로컬재다운로드5파일의 hash/목록·APKchecksum·웹내외manifest/source/자산검증 PASS. 원 APK e9bfa96/웹89951f4b와 태그9019ee06의 앱소스는 diff0.
+- 보존 확인/인수: Backend6797454537의 실제image/DB/키·회원/전후백업 및6798604314의 웹시험/새APK Google로그인·기존자료 사용자직접보고를 연결했다. 일반공개는 사용자지시6798279634로 먼저 개방됐다. Native 읽기확인에서도 공개HTTPS health200/status ok/database ok·root index hash가 인수웹manifest와 일치한다. 서명/패키지/버전·기존자동시험은 같은원본의 기존성공근거를 재사용했다.
+- 미확인: 전수기능·희귀경계/누락자료 기기후속·구탭무중단/로컬미전송이전·전체복원/백업자동화는 통과로 확대하지 않는다. 정상화된 인증의 반복시험은 요구하지 않는다. 후속갱신/레드닷·디자인/통계·배포main기준 측정/최적화는 별도 착수다.
+- 인계: #49 최종회신6798998431 게시/재조회 확인, 실제 URL/tag/asset ID/전체hash/공개상태를 전달했다. Issue는 OPEN유지하며 종료/서버재배포·키/OAuth/자료초기화·브랜치삭제 없음. 최종증거 .dart_tool/release_v2.1.0_{publish.log,metadata.json}, 공개다운로드 build/release-verification/public-v2.1.0/는 Git제외다. 결과문서만 후행커밋하고 main/dev/release를 정렬하되 공개태그는9019ee06에 고정한다.

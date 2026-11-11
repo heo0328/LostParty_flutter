@@ -4,6 +4,20 @@
   "repository": "heo0328/LostParty_flutter",
   "notes_sha256": "d79760adc8591f3f17b125444dbd815f53010a5b2e837b0b57121814006bf9aa",
   "acceptance": "https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6798604314",
+  "published_release": {
+    "id": 441825178,
+    "url": "https://github.com/heo0328/LostParty_flutter/releases/tag/v2.1.0",
+    "tag_source": "9019ee060afb109684786bff62c92dece9925810",
+    "run_id": 43041814495,
+    "published_at": "2026-11-11T14:47:26Z",
+    "assets": {
+      "lostparty-2.1.0-6-android.apk": 735857612,
+      "lostparty-2.1.0-6-android.apk.sha256": 735857614,
+      "lostparty-v2.1.0-web.zip": 735857617,
+      "lostparty-v2.1.0-web.zip.sha256": 735857613,
+      "release-manifest.json": 735857611
+    }
+  },
   "backend": {
     "version": "2.1.1",
     "source": "d16734d86e694579cd4e4e043c2ca89cc81c1b64",

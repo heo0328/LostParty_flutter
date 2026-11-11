@@ -1,10 +1,10 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
-## 2.1.0 통합 릴리즈 최종 게시 (2026-11-11)
+## 2.1.0 통합 릴리즈 공개 완료 (2026-11-11)
 
-Backend2.1.1/DB0036/config lightsail-web-2.1.0과 고정 웹2.1.0+6는 실제 AWS 반영·백업/키보존 확인 후 일반공개됐다. 사용자가 점검제한 해제를 지시해 같은Wi-Fi/IP 조건은 해소됐다. 웹시험·새서명APK Google로그인/기존회원자료 정상 사용자보고를 Backend6798604314에서 확인했다. 실제전수시험/전체복원 성공으로 확대하지 않는다. 새키 독립백업/접근·Secrets 전환과 기존2919PASS/분석0·Chrome합성2PASS·서명/웹CI 근거를 재사용한다.
+웹 https://lostparty.duckdns.org/ 및 GitHub Release v2.1.0/앱2.1.0+6 공개완료. 태그소스9019ee060afb109684786bff62c92dece9925810의 main/dev/release 통합·원격일치 후 Actions43041814495에서 인수한 APK/웹 원본5파일을 재빌드/재압축 없이 승격했다. 공개후 전체파일 재다운로드/hash·승인본문·실제웹index hash/health200 검증완료, #49 6798998431로 인계했다. 후행 문서커밋은 태그를 이동하지 않는다. 원본run/source/asset ID/hash 원장은 docs/releases/v2.1.0-artifacts.json, 장기계약은 GITHUB_ANDROID_RELEASE_PIPELINE §8, 다음작업/미확인은 NEXT_WORK를 따른다.
 
-현재 승인 작업은 고정 APK/run43003690946와 웹/run43005927315의 동일bytes 최종Release 승격이다. 승인된 게시문은 유지하며 v2.1.0 전용 tag promote job에서 정확한 artifactID/source/hash·앱소스/본문·웹manifest를 확인하고 draft 재다운로드 후 공개한다. 재빌드/재압축·키/OAuth/서버/DB 변경·자료초기화/Issue종료는 없다. 최종게시·main/dev/태그 상태는 NEXT_WORK/DEV_LOG, 산출물 원장은 docs/releases/v2.1.0-artifacts.json, 장기 계약은 GITHUB_ANDROID_RELEASE_PIPELINE §8이다. 아직 최종Release 성공으로 표시하지 않는다.
+Backend2.1.1/DB0036/config lightsail-web-2.1.0 실제반영·백업/PC사본/기존자료·키보존은 Backend6797454537 근거다. 점검제한 해제 후 일반공개·같은Wi-Fi/IP 조건없음, 웹시험과 새APK Google로그인/기존회원자료 사용자직접보고를6798604314에서 확인했다. 과거APK실패의 정확한응답·미관찰조작/전수기능·전체복원을 통과로 확대하지 않는다. 새키 독립백업/접근·서명CI/2919PASS·분석0/Chrome합성2PASS 근거를 재사용했고 추가앱코드·DB/키/OAuth/자료 변경·운영재배포/Issue종료는 수행하지 않았다. 후속 갱신/레드닷·누락자료/기기·디자인/통계와 배포main기준 선택적측정/최적화는 별도 착수다.
 
 ## 개발·협업 기준
 
@@ -12,7 +12,7 @@ Backend2.1.1/DB0036/config lightsail-web-2.1.0과 고정 웹2.1.0+6는 실제 AW
 
 설계는 위 환경/방침과 이미 확정된 UX/제품 의도를 선행 조건으로 적용한다. 사용자의 기능 흐름 확인을 기술 조건 전체의 검수로 취급하지 않는다. 작업/문서 책임은 [AGENTS](../../AGENTS.md), 상세 [ai_rules](ai_rules.md), 현재 단일 실행 계획과 유효 후속은 [NEXT_WORK](NEXT_WORK.md)다. 브랜치는 대단원이며 작은 변경은 누적한다. 커밋/푸시는 사용자 지시 시점에 수행하고 특정 범위 지시가 없으면 추적 제외 파일 외 최신 변경 전체를 함께 담는다. 통합은 별도다. 같은 브랜치에서 지침·버그기록·UI 보완도 처리한다.
 
-## 현재 작업과 실제 코드 상태
+## 누적 개발·기능 연결 근거
 
 사용자 지시로 묶음 선택 완료·BUG-034/035·공통 복구 카드 및 문서/이슈 정리의 누적 변경26파일을 6cee5b54에 보관하고 로컬 dev에 통합했다. 최신 origin/dev f79443e2를 fetch해 충돌 없이 일반 병합했고 코드/시험/도구·의존성 동일성을 확인했다. 원격 dev/feature는 각각f79443e2/47a30dad로 남아 있으며 새 커밋·병합은 미push다. 작업 브랜치는 유지하고 main86e53e11·운영/APK·서버/DB는 변경하지 않는다. Git 최종 SHA/검증·차후 작업은 NEXT_WORK와 DEV_LOG를 따른다.
 
