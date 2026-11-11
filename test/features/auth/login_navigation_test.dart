@@ -11,8 +11,10 @@ void main() {
   testWidgets(
     'successful pushed login returns to original screen after router refresh',
     (tester) async {
+      final api = FakeApi();
       final auth = AuthSessionController(
-        api: FakeApi(),
+        api: api,
+        clock: () => api.now,
         google: FakeGoogle(),
         store: MemoryStore(),
         serverClientId: 'web',
@@ -56,8 +58,10 @@ void main() {
   );
 
   testWidgets('successful direct login opens account screen', (tester) async {
+    final api = FakeApi();
     final auth = AuthSessionController(
-      api: FakeApi(),
+      api: api,
+      clock: () => api.now,
       google: FakeGoogle(),
       store: MemoryStore(),
       serverClientId: 'web',

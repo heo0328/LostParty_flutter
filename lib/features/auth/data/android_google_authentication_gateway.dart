@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../domain/google_authentication_gateway.dart';
@@ -21,6 +22,13 @@ class AndroidGoogleAuthenticationGateway
       throw ArgumentError('Google client ID and server nonce are required.');
     }
     return _run(() async {
+      if (kDebugMode) {
+        debugPrint(
+          '[google-auth] gateway=AndroidGoogleAuthenticationGateway '
+          'web=$kIsWeb clientIdPresent=${serverClientId.trim().isNotEmpty} '
+          'noncePresent=${nonce.trim().isNotEmpty} target=MethodChannel',
+        );
+      }
       final token = await _channel.invokeMethod<String>('authenticate', {
         'serverClientId': serverClientId,
         'nonce': nonce,
@@ -48,6 +56,12 @@ class AndroidGoogleAuthenticationGateway
     try {
       return await operation();
     } on MissingPluginException {
+      if (kDebugMode) {
+        debugPrint(
+          '[google-auth] exception=MissingPluginException '
+          'code=missing_plugin mappedFailure=unavailable',
+        );
+      }
       throw const GoogleAuthenticationException(
         GoogleAuthenticationFailure.unavailable,
       );
@@ -59,6 +73,22 @@ class AndroidGoogleAuthenticationGateway
         'INVALID_RESPONSE' => GoogleAuthenticationFailure.invalidResponse,
         _ => GoogleAuthenticationFailure.failed,
       };
+      if (kDebugMode) {
+        // Only fixed, known codes are safe; arbitrary plugin details are not.
+        final safeCode =
+            const {
+              'CANCELLED',
+              'BUSY',
+              'UNAVAILABLE',
+              'INVALID_RESPONSE',
+            }.contains(error.code)
+            ? error.code
+            : 'OTHER';
+        debugPrint(
+          '[google-auth] exception=PlatformException code=$safeCode '
+          'mappedFailure=${failure.name}',
+        );
+      }
       // Native error messages/details may contain provider data. Do not forward.
       throw GoogleAuthenticationException(failure);
     } on TypeError {

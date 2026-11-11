@@ -1,5 +1,9 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
+## 2.1.0 통합 릴리즈 준비 (2026-11-11)
+
+feature/web-support에서 웹/GIS와 누적 변경을 2.1.0+6로 준비한다. 베타 전 사전테스트·기존주소/운영자료 유지·접속제한 없음이며 실제 적용은 Backend→웹→APK다. 로컬 웹 로그인/모집 생성은 사용자 확인, 전체2919PASS·Chrome합성2PASS·분석0·debug build 근거를 재사용한다. release웹/manifest·새 키/별도백업·운영 인수/게시 상태는 NEXT_WORK를 따른다. 장기 배포 계약은 GITHUB_ANDROID_RELEASE_PIPELINE §8, 사용자 게시문은 docs/releases/v2.1.0.md다. Backend Issue49의 실제 AWS 점검/설정·최신백업과 사용자 새키 사본/접근확인은 별도 담당 대기다. 현재 공개/초기화 완료로 보고하지 않는다.
+
 ## 개발·협업 기준
 
 1인 개발, Firebase 구현 제거·자체 Python Backend·단일 Google 로그인. dev 로컬 서버를 기본 개발·검증 대상으로 사용한다. debug 기본은 Android 에뮬레이터용 http://10.0.2.2:8000, release 기본은 AWS https://lostparty.duckdns.org이며 명시 URL override는 유지한다. 운영 반영은 개발자의 명시 지시가 있을 때만 진행하고 개발 연결의 선행 조건으로 요구하지 않는다. 베타 시작 전 개발자료를 비우며 베타 이후 자료는 보존한다. 실제 초기화 실행은 별도 대상/시점 지시가 필요하다. [정책09 D08](../backend-migration/09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정).

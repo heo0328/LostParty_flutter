@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+import '../../../../shared/storage/app_database_connection.dart';
 
 part 'account_database.g.dart';
 
@@ -204,7 +204,7 @@ class CharacterWeeklyRaidDisplays extends Table {
 )
 class AccountDatabase extends _$AccountDatabase {
   AccountDatabase([QueryExecutor? executor])
-    : super(executor ?? driftDatabase(name: 'lost_party'));
+    : super(executor ?? openAppDatabase('lost_party'));
 
   @override
   int get schemaVersion => 13;
