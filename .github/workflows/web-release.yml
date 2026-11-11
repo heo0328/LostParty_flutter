@@ -12,6 +12,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
+      # Flutter regenerates these tracked files with LF. Avoid a CRLF checkout
+      # appearing dirty after pub get on Windows even when content is unchanged.
+      - name: Preserve source line endings on the runner
+        shell: pwsh
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
