@@ -8329,3 +8329,5 @@ searchInvites는 local-only 선행 판별을 그대로 두고 미지 이름 GET�
 - 실행 검증: release웹 후보 build성공·35개 자산 SHA-256/zip내용 확인·dirty source 기본실행거절·PowerShell2스크립트문법·git diff --check 통과. 최초 기본 bootstrap의 서비스워커 등록을 확인해 새 bootstrap으로 수정했고 이후 build성공. 로그 .dart_tool/release210_web_candidate.log/release210_clean_guard.log. 후보 manifest의 source_dirty/candidate_only=true는 공개 가능한 최종본으로 해석하지 않는다. flutter analyze --no-pub 문제0.
 - 미확인/다음: Backend 실제 AWS 회신·직전 최신DB/설정 사본, Google 운영원본/새 Android OAuth/azp, 사용자 새키 원본/독립사본·store/key접근, 서명CI/운영 웹·APK 인수. 새키원본 예정 android/keystores/lostparty-release-2026.jks/alias lostparty-release이며 비밀번호를 채팅으로 받지 않는다. 현재 실제 키생성·Secret교체/키전환·서버반영·APK게시·자료초기화 없음.
 - Git: origin/dev801f218f 확인. 승인된 보관/로컬dev 통합/release분기 후 최종 SHA·청결 여부는 Git 종료 확인을 따른다. main/remote/태그·게시를 준비 완료의 조건으로 요구하거나 무단 실행하지 않는다.
+
+2.1.0 준비 보관: 최신32파일 전체를 b70a0bb7로 커밋하고 로컬dev30dde1c3에 일반병합·release/2.1.0 분기를 완료했다. clean source release웹 bundle(candidate_only=false)도 생성했다. 문서 체크포인트 이후 최종 소스 bundle을 다시 만들며 SHA/체크섬은 build/web-releases의 manifest/zip.sha256을 따른다. 새 키·서명CI·Backend 회신/운영 인수는 대기다. main/remote push/태그/배포 없음. 작업/release 브랜치는 유지한다.

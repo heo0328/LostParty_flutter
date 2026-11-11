@@ -12,10 +12,10 @@
 
 ## 현재 검증·담당 대기
 
-- 웹/GIS 코드: 전체2919PASS·인증36PASS 포함·별도Chrome합성2PASS·분석0·debug web/Android build 통과를 재사용한다. 이후 변경은 버전/웹 메타/패키징/배포문서이며 앱 lib는 동일하다. 2.1.0 release웹 후보 빌드·35개 파일hash/zip내용/미커밋게시거절/PS문법 검증을 통과했다. 신규 bootstrap은 서비스워커 등록을 제외한다. 최종 clean소스 bundle은 보관/분기 뒤 생성하며 별도 표시한다.
+- 웹/GIS 코드: 전체2919PASS·인증36PASS 포함·별도Chrome합성2PASS·분석0·debug web/Android build 통과를 재사용한다. 이후 변경은 버전/웹 메타/패키징/배포문서이며 앱 lib는 동일하다. 2.1.0 release웹 후보 빌드·35개 파일hash/zip내용/미커밋게시거절/PS문법 검증을 통과했다. 신규 bootstrap은 서비스워커 등록을 제외한다. 로컬 통합30dde1c3의 clean source release bundle도 생성·검증했다(candidate_only=false). 문서 체크포인트 후 최종 소스 대응 bundle을 재생성하며 식별값은 해당 release-manifest/zip.sha256을 따른다.
 - 사용자 로컬 웹 Google 로그인·모집 생성 통과 보고. 전체/운영 인수로 확대하지 않는다. 공개URL 로그인→모집생성/재조회→새로고침/remember/로그아웃, 새서명APK 운영 로그인/기존회원 연결은 별도 사용자 확인이다.
 - Android 새 키/별도백업·Secrets/CI지문 전환 전. 기존 키를 자동 회수/덮어쓰지 않는다. 기존 Backend 키/정상 SSH Secret은 유지하며 유실된 배포 개인키 재질문·새 키 전부 재발급 없음. 11월7일 백업을 최신DB로 취급하지 않는다.
-- Git 기준 origin/dev 801f218f 확인. 이번 승인 범위에서 최신변경 전체를 feature에 보관하고 로컬 dev 통합/release/2.1.0 분기한 뒤 clean bundle을 만든다. 실제 최종SHA/checkout·잔여상태는 종료 Git 확인을 따른다. remote push/main/태그는 아직 실행하지 않는다. 실제 운영 변경·태그/게시·DB삭제 없음. Backend 회신과 새 키 백업이 없으면 그 지점은 대기이며 준비 작업은 계속한다.
+- Git 기준 origin/dev 801f218f 확인. 최신변경32파일을 feature/web-support b70a0bb7에 보관했고 로컬dev30dde1c3 통합·release/2.1.0 분기를 완료했다. release의 문서 체크포인트를 별도 보관하며 최종 main/dev 정렬은 인수 후다. 실제 최종SHA/checkout·잔여상태는 종료 Git 확인을 따른다. remote push/main/태그는 아직 실행하지 않는다. 실제 운영 변경·태그/게시·DB삭제 없음. Backend 회신과 새 키 백업이 없으면 그 지점은 대기이며 준비 작업은 계속한다.
 
 ## 보존하는 후속
 
