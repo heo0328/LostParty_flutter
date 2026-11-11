@@ -56,9 +56,9 @@
 
 사용자는 포맷 전 release 키 원본/비밀번호 백업이 없음을 확인했고, 기존 GitHub Secret에서 키를 회수하는 대신 **새 release 키를 생성해 백업하고 이후 배포를 그 키로 통일**하기로 결정했다. 기존 APK 사용자는 서명 전환 버전에서 앱 삭제→새 APK 설치→동일 Google 계정 재로그인으로 진행하며, 서버의 기존 회원/자료를 유지한다. 기기의 로컬 전용 자료·미전송 작업은 삭제될 수 있음을 게시 안내에 포함한다. 같은 운영 Backend와 올바른 OAuth/허용 목록을 사용해야 한다. iOS·스토어 출시는 별도 준비 대상이다.
 
-**현재는 결정·백업 절차 기록만 완료**했다. 새 키 생성·백업·Secret 교체·CI의 승인 인증서 지문 변경·새 OAuth 등록·운영 반영·APK 게시를 실행하지 않았다. 현행 workflow는 기존 인증서 SHA-256을 계속 검사한다. 예시로 언급한2.0.1을 실제 게시 버전 승인으로 취급하지 않는다. 전환 전 공개 APK와 기존 운영 OAuth 등록/키를 임의 삭제하거나 변경하지 않는다.
+**2026-11-11 현재 새키 생성·사용자 독립백업·사본 동일성/store 및 private key 접근 검증·Secret4개와 CI 예상지문 전환을 완료**했다. 실제 공개 버전은 2.1.0+6로 확정했으며 새 OAuth 등록·서명 CI·운영 인수·게시 상태는 NEXT_WORK를 따른다. 전환 전 공개 APK와 기존 운영 OAuth 등록/키를 임의 삭제하거나 변경하지 않는다.
 
-**실행 시점은 추가 기능 개발과 개발 로컬 테스트를 모두 마친 뒤 운영 APK 게시를 준비할 때다.** 새 키 생성·백업, 관련 설정 전환, 게시 없는 수동 Actions 서명 빌드와 설치·로그인 검증을 그때 묶어 진행한다. 현재는 문서에 후속으로만 유지하며 개발 재개의 선행 조건으로 요구하거나 Actions 시험을 먼저 실행하지 않는다. 실제 APK 공개는 별도 명시 게시 지시에 따른다.
+**실행 시점은 추가 기능 개발과 개발 로컬 테스트를 모두 마친 뒤 운영 APK 게시를 준비할 때다.** 현재 승인된 2.1.0 릴리즈 준비에서 새키 전환과 게시 없는 수동 Actions 서명 빌드를 진행한다. OAuth·운영 인수와 실제 APK 공개는 구분하며 공개 게이트를 유지한다.
 
 #### 에이전트의 백업 안내 시점·완료 조건
 
@@ -156,13 +156,13 @@ workflow가 tag를 자동 생성하거나 브랜치를 병합하지 않는다. r
 
 ## 8. 2.1.0 통합 릴리즈 준비 — 웹·Backend·새 Android키 (2026-11-11)
 
-사용자 확정: 앱2.1.0+6/v2.1.0, 기존 AWS/https://lostparty.duckdns.org 루트 웹, 베타 전 사전 테스트·접속자 제한 없음·현재 운영자료 유지. 실제 순서는 Backend→웹→APK이며 현재 준비/미확인 상태는 NEXT_WORK, 공식 협업은 Backend Issue49다. 이 절은 기존 Android 전용 pipeline의 웹 배포 제외를 웹 별도 bundle 준비로 확장하며 기존 APK 태그/서명/게시 검증은 유지한다. 서버측 Caddy/동결Compose·migration·최신 운영백업은 Backend 소유다.
+사용자 확정: 앱2.1.0+6/v2.1.0, 기존 AWS/https://lostparty.duckdns.org 루트 웹, 베타 전 사전 테스트·접속자 제한 없음·현재 운영자료 유지. 최신 사용자 정정으로 APK/GitHub Release 준비는 먼저 진행할 수 있지만 최종 운영 공개는 Backend·웹·APK를 함께 진행한다. 공개 안내문은 docs/releases/v2.1.0.md를 사용자에게 먼저 제시해 확인받고, 승인된 문구로만 게시한다. 서버후반영·웹예정 안내는 공개문에 넣지 않고 실제 공개 시점과 일치시킨다. 현재 준비/미확인 상태는 NEXT_WORK, 공식 협업은 Backend Issue49다. 이 절은 기존 Android 전용 pipeline의 웹 배포 제외를 웹 별도 bundle 준비로 확장하며 기존 APK 태그/서명/게시 검증은 유지한다. 서버측 Caddy/동결Compose·migration·최신 운영백업은 Backend 소유다.
 
 ### 웹 산출물
 
 - `powershell -NoProfile -File tool/package_web_release.ps1`은 clean Git source만 게시용으로 빌드한다. 미커밋 단계의 `-AllowDirty`는 검토 후보(`candidate_only=true`)일 뿐 업로드/게시용이 아니다.
 - 운영 HTTPS origin·release·로컬 web resources·source-map 미포함으로 빌드한다. 서비스워커 등록 산출물은 거절하며 문서/map/symbols/worker 캐시파일을 배포 site에서 제외한다.
-- `build/web-releases/<version>-<code>-<release|candidate>-<UTC>/` 안에 `site/`와 `release-manifest.json`, 외부 zip와 `.zip.sha256`를 만든다. manifest schema1에 source_commit/source_dirty/candidate_only/version/backend_origin/build_mode와 site 상대 파일명·bytes·sha256을 기록한다. manifest는 정적 site 밖에 둔다.
+- `build/web-releases/<version>-<code>-<release|candidate>-<UTC>/` 안에 `site/`와 `release-manifest.json`, 출력 루트의 고정 `lostparty-v<version>-web.zip`·동명 `.sha256`·`release-manifest.json`을 만든다. 내부site/manifest는 bundle/에서 생성하며 전달artifact에는 루트3파일만 포함한다. manifest schema1에 source_commit/source_dirty/candidate_only/version/backend_origin/build_mode와 site 상대 파일명·bytes·sha256을 기록한다. manifest는 정적 site 밖에 둔다.
 - Backend 인계 시 clean source SHA·bundle hash/manifest를 대조하고 실제 파일 검증 뒤 활성화한다. 버전별 디렉터리는 보존하고 Caddy가 읽는 안정된 상위 디렉터리를 read-only mount한다. host의 current symlink만 bind mount하면 교체가 컨테이너에 안 보일 수 있으므로 parent mount와 내부 상대 symlink를 사용한다. 실제 경로·서버 도구 반영은 Backend가 정한다.
 - API/health 보존, 없는 자산404, SPA 화면 fallback, no-cache 재검증 및 WASM MIME을 분리한다. API 권한 오류·없는 JS/WASM을 index.html200으로 바꾸지 않는다. COOP/COEP 추가 없음.
 
@@ -176,10 +176,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tool/new_android_release_key
 
 키tool의 암호 입력은 사용자 터미널에서만 한다. 암호를 명령 인수·채팅에 쓰지 않는다. 생성 후 원본 파일을 생성PC와 독립된 안전한 저장소에 복사하고 store 암호·alias·key 암호를 별도 보관한다. 원본/사본 SHA-256 일치와 `keytool -list -v -keystore <백업사본> -alias lostparty-release`의 접근 확인을 수행한다. 공개 SHA-1/SHA-256만 공유할 수 있고 키파일·비밀번호·Base64 원문은 공유하지 않는다. 인증서 조회만으로 private key 암호 확인을 대신하지 않으며 서명 빌드로 key 접근도 확인한다.
 
-사용자 별도 사본 보관 보고와 사본의 store/key 접근 확인 전에는 B-1 기준 첫 게시 준비 완료로 처리하지 않는다. 새 공개 지문이 확정된 뒤 OAuth/azp와 Secrets4개·CI EXPECTED_CERT_SHA256을 함께 전환한다. 지금 workflow의 기존 예상지문은 의도적으로 그대로이며 새 키 준비 전 태그/Actions 게시를 실행하지 않는다.
+사용자 별도 사본 보관 보고와 사본의 store/key 접근 확인 전에는 B-1 기준 첫 게시 준비 완료로 처리하지 않는다. 새 공개 지문이 확정된 뒤 OAuth/azp와 Secrets4개·CI EXPECTED_CERT_SHA256을 함께 전환한다. 2026-11-11 18:41 KST 새키 사용자 별도백업 보고·사본동일/alias/store접근·private key 서명검증 통과와 GitHub Secrets4개 갱신을 확인했다. 새 공개 SHA-1은 0a415cda3660ca2f7935deec50e72e7cdc3b70a6, SHA-256은 8ef16c58cbb605e2c74c99c4d8e9f252b00c3dd90837594d5e5ca40f0caed030이며 CI 예상지문도 전환했다. 새Android OAuth/client ID 및 azp·서명CI/운영인수는 아직 대기이며 태그/게시를 실행하지 않았다.
 
 ### 게시·복귀
 
 Release 본문 원본은 `docs/releases/v2.1.0.md`다. workflow는 태그 소스의 동일 버전 안내문을 checkout해 `--notes-file`로 게시하며 누락 시 실패한다. 새 키 때문에 삭제·재설치·동일 Google 로그인 및 로컬 자료 손실 가능성을 반드시 포함한다. 웹과 APK는 같은 운영 회원/자료를 사용한다.
 
-서명 artifact 검증과 사용자 운영 인수 후 최종 release를 main/dev에 반영하고 태그/게시한다. 웹은 이전 정적 버전 또는 최초 미공개로 복귀, Backend는 새DB와 호환되는 복귀만 사용하며 새 쓰기를 잃는 dump 덮어쓰기를 하지 않는다. 공개 APK/태그 덮어쓰기·무단 반복배포 없음. Backend 키·정상 배포 SSH Secret은 재사용하고 11월7일 백업을 최신DB로 간주하지 않는다. 실제 운영변경·키 전환/최초 게시 시의 사용자 확인 조건을 현재 실행 게이트로 유지한다.
+서명 artifact/새키·OAuth 준비를 검증하고 안내문 사용자 확인 후 최종 게시 시점을 main/dev에 반영해 태그/게시한다. Backend·웹·APK의 최종 공개는 함께 진행하며 준비/적용의 기술 순서와 구분한다. 운영 인수 미확인을 성공으로 처리하지 않는다. 웹은 이전 정적 버전 또는 최초 미공개로 복귀, Backend는 새DB와 호환되는 복귀만 사용하며 새 쓰기를 잃는 dump 덮어쓰기를 하지 않는다. 공개 APK/태그 덮어쓰기·무단 반복배포 없음. Backend 키·정상 배포 SSH Secret은 재사용하고 11월7일 백업을 최신DB로 간주하지 않는다. 실제 운영변경·키 전환/최초 게시 시의 사용자 확인 조건을 현재 실행 게이트로 유지한다.
+
+### Issue49 W3 공동 인계 확정 (2026-11-11)
+
+Backend6792858978/6792885928 수용으로 manual-only Actions artifact(lostparty-web-2.1.0-6-<SHA12>,14일)→동일ZIP의 최종Release asset 승격을 확정했다. artifact 루트는 lostparty-v2.1.0-web.zip·동명.zip.sha256·release-manifest.json, 실제bundle 안은 site/와 동일manifest다. 외피ZIP과실ZIP hash를 구분하고 run/ID/name/expiry·source/hash/내부경로를 인계한다. ZIP entry와 manifest경로는 POSIX /이며 기존 Windows backslash ZIP은 제외한다. 만료/불일치는 새식별자로재인계하고 자동대체/덮어쓰기하지 않는다. Native 빌드/고정물 인계와 Backend 수령검증/inactive staging/활성화로 분담한다. 구APK+신서버는 upgrade거절/원ACK 등 조건부범위이며 Backend 고정후보회귀·최종표가 필요하다. 첫공개 새탭/재접속 기준, 구탭무중단/버전고정asset URL 미지원 한계를 수용했고 이번 URL고정 추가구현을 필수로 하지 않는다. 기술적 적용과 최종공동공개, 협의확정과 실제실물/운영인수는 구분한다.
+
+W3 구현: tool/web_bundle.ps1로 ZIP entry를 /로 직접 작성하고 목록/hash/manifest바이트/안전경로·대소문자중복·symlink를 검증한다. tool/test_web_bundle.ps1의12경계검사를 manual workflow에서도 실행한다. web-release.yml은 workflow_dispatch/workflow_call이고14일보관·contents:read만 사용한다. default등록 전 최초실행은 기존 android-apk-release.yml에 추가한 artifact_target=web의 reusable-call 경로를 사용한다. 이때 Android빌드/Secret/job은 건너뛰며 tag APK게시·기본android선택은 기존대로다. 코드준비와 실제Actions실행/업로드를 구분하고 run/artifactID/expiry는 실행후API로 확정한다.

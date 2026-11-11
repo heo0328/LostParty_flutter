@@ -2,7 +2,7 @@
 
 ## 2.1.0 통합 릴리즈 준비 (2026-11-11)
 
-feature/web-support에서 웹/GIS와 누적 변경을 2.1.0+6로 준비한다. 베타 전 사전테스트·기존주소/운영자료 유지·접속제한 없음이며 실제 적용은 Backend→웹→APK다. 로컬 웹 로그인/모집 생성은 사용자 확인, 전체2919PASS·Chrome합성2PASS·분석0·debug build 근거를 재사용한다. release웹/manifest·새 키/별도백업·운영 인수/게시 상태는 NEXT_WORK를 따른다. 장기 배포 계약은 GITHUB_ANDROID_RELEASE_PIPELINE §8, 사용자 게시문은 docs/releases/v2.1.0.md다. Backend Issue49의 실제 AWS 점검/설정·최신백업과 사용자 새키 사본/접근확인은 별도 담당 대기다. 현재 공개/초기화 완료로 보고하지 않는다.
+release/2.1.0에서 웹/GIS와 누적 변경을 2.1.0+6로 준비한다. 베타 전 사전테스트·기존주소/운영자료 유지·접속제한 없음이며 APK 준비를 먼저 하되 최종 운영 공개는 Backend·웹·APK를 함께 진행한다. 안내문은 사용자 확인 완료다. 로컬 웹 로그인/모집 생성은 사용자 확인, 전체2919PASS·Chrome합성2PASS·분석0·debug build 근거를 재사용한다. 새키 독립백업/접근·Secrets4개 전환을 확인했고 W3 웹 전달규격 협의·exporter/workflow 로컬검증을 완료했다. 다음은 준비소스 보관/push와 게시 없는 Actions 산출물 검증·실제 인계다. Android OAuth 등록/Client ID·Backend azp, 운영 웹 원본, Backend 서버준비/최신백업·양측 운영 인수는 별도 대기다. 현재 브라우저 도구 연결 불가로 Console 상태를 추정하지 않는다. 상세 상태는 NEXT_WORK, 장기 계약은 GITHUB_ANDROID_RELEASE_PIPELINE §8, 게시문은 docs/releases/v2.1.0.md를 따른다. 현재 공개/초기화 완료로 보고하지 않는다.
 
 ## 개발·협업 기준
 

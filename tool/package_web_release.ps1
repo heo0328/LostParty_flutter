@@ -4,6 +4,7 @@ param([switch]$AllowDirty)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $utf8 = New-Object System.Text.UTF8Encoding($false)
+. (Join-Path $PSScriptRoot 'web_bundle.ps1')
 Push-Location $projectRoot
 try {
     $versionLine = Get-Content -Encoding UTF8 pubspec.yaml | Where-Object { $_ -match '^version:' }
@@ -35,11 +36,12 @@ try {
     $id = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')
     $label = if ($dirty.Count) { 'candidate' } else { 'release' }
     $destination = Join-Path $projectRoot "build/web-releases/$version-$buildNumber-$label-$id"
-    $site = Join-Path $destination 'site'
+    $bundleRoot = Join-Path $destination 'bundle'
+    $site = Join-Path $bundleRoot 'site'
     New-Item -ItemType Directory -Path $site | Out-Null
     $webRoot = (Resolve-Path build/web).Path
     foreach ($file in Get-ChildItem -LiteralPath $webRoot -File -Recurse) {
-        if ($file.Name -match '\.(map|symbols|md)$' -or $file.Name -eq 'flutter_service_worker.js') { continue }
+        if ($file.Name -match '\.(map|symbols|md)$' -or $file.Name -in @('flutter_service_worker.js', '.last_build_id')) { continue }
         $relative = $file.FullName.Substring($webRoot.Length + 1)
         $target = Join-Path $site $relative
         New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null
@@ -70,10 +72,19 @@ try {
         files = $assets
     }
     [IO.File]::WriteAllText((Join-Path $destination 'release-manifest.json'), ($manifest | ConvertTo-Json -Depth 6) + "`n", $utf8)
-    $archive = "$destination.zip"
-    Compress-Archive -Path (Join-Path $destination '*') -DestinationPath $archive
+    Copy-Item -LiteralPath (Join-Path $destination 'release-manifest.json') -Destination (Join-Path $bundleRoot 'release-manifest.json')
+    $archive = Join-Path $destination "lostparty-v$version-web.zip"
+    New-WebBundleZip -Directory $bundleRoot -Archive $archive
     $archiveHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText("$archive.sha256", "$archiveHash  $([IO.Path]::GetFileName($archive))`n", $utf8)
+    $null = Test-WebBundle -Archive $archive -Manifest (Join-Path $destination 'release-manifest.json') -Checksum "$archive.sha256" -AllowCandidate:$AllowDirty
+    if ($env:GITHUB_OUTPUT) {
+        $artifactName = "lostparty-web-$version-$buildNumber-$($source.Substring(0,12))"
+        Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "artifact_name=$artifactName"
+        Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "bundle_directory=$destination"
+        Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "source_commit=$source"
+        Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "zip_sha256=$archiveHash"
+    }
     Write-Output "Bundle: $archive"
     Write-Output "SHA256: $archiveHash"
     Write-Output "Candidate only: $([bool]$dirty.Count)"

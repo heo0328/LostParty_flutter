@@ -2,6 +2,15 @@ name: Android APK release
 
 on:
   workflow_dispatch:
+    inputs:
+      artifact_target:
+        description: Prepare Android APK or the web handoff artifact (no publication)
+        type: choice
+        required: true
+        default: android
+        options:
+          - android
+          - web
   push:
     tags:
       - "v*"
@@ -11,7 +20,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  web:
+    name: Prepare web artifact only
+    if: github.event_name == 'workflow_dispatch' && inputs.artifact_target == 'web'
+    uses: ./.github/workflows/web-release.yml
+    permissions:
+      contents: read
+
   build:
+    if: github.event_name != 'workflow_dispatch' || inputs.artifact_target != 'web'
     name: Build and verify signed APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -117,7 +134,7 @@ jobs:
         shell: bash
         env:
           EXPECTED_PACKAGE: kr.co.heowork0921.lostparty
-          EXPECTED_CERT_SHA256: f9b9ee5a2ec4059ef329ae6b2e4b5392f729124c0a4f5f55248c9da8cd8bc5ea
+          EXPECTED_CERT_SHA256: 8ef16c58cbb605e2c74c99c4d8e9f252b00c3dd90837594d5e5ca40f0caed030
           VERSION_NAME: ${{ steps.metadata.outputs.version_name }}
           VERSION_CODE: ${{ steps.metadata.outputs.version_code }}
           ASSET_NAME: ${{ steps.metadata.outputs.asset_name }}

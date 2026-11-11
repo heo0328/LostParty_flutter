@@ -8331,3 +8331,37 @@ searchInvites는 local-only 선행 판별을 그대로 두고 미지 이름 GET�
 - Git: origin/dev801f218f 확인. 승인된 보관/로컬dev 통합/release분기 후 최종 SHA·청결 여부는 Git 종료 확인을 따른다. main/remote/태그·게시를 준비 완료의 조건으로 요구하거나 무단 실행하지 않는다.
 
 2.1.0 준비 보관: 최신32파일 전체를 b70a0bb7로 커밋하고 로컬dev30dde1c3에 일반병합·release/2.1.0 분기를 완료했다. clean source release웹 bundle(candidate_only=false)도 생성했다. 문서 체크포인트 이후 최종 소스 bundle을 다시 만들며 SHA/체크섬은 build/web-releases의 manifest/zip.sha256을 따른다. 새 키·서명CI·Backend 회신/운영 인수는 대기다. main/remote push/태그/배포 없음. 작업/release 브랜치는 유지한다.
+
+## 2026-11-11 — 새 release키 생성·사용자 별도백업 보고
+
+사용자가 생성·별도백업 완료를 보고했다. android/keystores/lostparty-release-2026.jks 원본 존재·JKS Git제외를 확인했다. 비밀번호/키 내용을 읽거나 기록하지 않았다. 사본의 hash일치·alias/store접근·실제 private-key 서명/검증을 수행하고 통과 후 GitHub서명Secrets4개를 갱신하는 interactive 도구를 준비했다. 실제 사본검증/Secret갱신 결과는 아직 미확인이며 운영/게시 없음. 공개지문 검증기록만 .dart_tool/release-key-verification.json에 저장하도록 했다.
+
+2026-11-11 18:41 KST interactive 검증 기록 확인: 사용자 별도백업 보고와 사본hash일치·alias/store접근·private key 서명/검증 통과. GitHub서명Secrets4개 갱신 true 확인. 새 공개 SHA-1 0a415cda3660ca2f7935deec50e72e7cdc3b70a6 / SHA-256 8ef16c58cbb605e2c74c99c4d8e9f252b00c3dd90837594d5e5ca40f0caed030. CI EXPECTED_CERT_SHA256을 같은 지문으로 전환했다. 키/비밀번호는 로그/문서로 옮기지 않았다. 새 Android OAuth/Backend azp·서명 CI/기기·운영 게시 인수는 별도 대기다.
+
+## 2026-11-11 — APK 선게시·안내문 사전 확인 사용자 지시
+
+Backend 준비와 병행해 GitHub APK Release를 먼저 게시할 수 있도록 사용자 지시가 변경됐다. Backend→웹→APK 고정 순서를 이번에 해제하고 운영 준비 전 부분기능 미동작 가능성과 웹 예정상태를 안내문에 명시했다. docs/releases/v2.1.0.md를 사용자 검토용으로 교체했으며 안내문은 사용자 확인 전 공개 게시하지 않는다. 서버 반영완료로 합성하거나 서명/별도백업·OAuth 검증을 생략하지 않는다. 실제 Release/태그·운영 변경은 아직 없음.
+
+2026-11-11 사용자 게시글 수정: 저장작업/로컬자료 사전보관 단계와 APK선공개·서버후반영 안내를 삭제했다. 최종 운영 공개는 함께 진행하며, 준비/적용의 기술 순서와 구분한다. 테스트 버전의 자료가 부득이하게 초기화될 수 있다는 안내로 변경했다. 이 문구는 실제 자료 삭제 승인이나 기존 데이터수명 정책의 변경이 아니다. 수정 게시글은 재확인 대기이며 공개하지 않았다.
+
+## 2026-11-11 — 게시문 승인·Issue49 W3 콜백 누락 복구
+
+사용자가 v2.1.0 수정 게시문을 확인했다. 반복 승인 대기를 해소하고 최종 공개는 Backend/웹/APK 함께로 고정했다. Backend W3 댓글6792688560의 전달매체·구신호환·기존탭/자산·실패/인수 항목별 회신이 빠져 있었음을 확인하고6792789511에 구체 회신했다. Actions 준비artifact→동일ZIP 최종Release asset 인계안, 신앱/웹+구DB0035 지원제외, 구APK+신서버 확인요청, 첫공개 새탭/재로드 기준과 구탭무중단 미보장, staging/웹만복귀/인수분담을 구분했다. 실제 artifact run/asset ID는 아직 없고 로컬ZIP을 전달완료로 보고하지 않았다. 공동계약 확정/서버반영 완료로 확대하지 않는다. NEXT_WORK에 담당·미해결·다음행동/완료조건을 갱신했다. 이번 수정은 문서/콜백뿐이며 diffcheck 검증, Git통합/게시·서버실행 없음.
+
+## 2026-11-11 — W3 인계 규격 구체화·ZIP 경로 결함 확인
+
+협의해소 우선 지시에 따라6792861296에 manual Actions채널/이름/14일만료·실제run/artifact식별자·ZIP/sha256/manifest3파일과 동일바이트Release승격 규격을 구체 제안했다. 구APK+신Backend 지원범위·첫공개 새탭/재접속 범위 수용은 Backend 회신 대기다. 댓글게시만으로 상호확정 처리하지 않는다. 기존 localZIP를 ZipArchive로 읽어38entry가 Windows backslash인 것을 추가 확인했다. 이전35자산내용hash검증을 Linux안전수령 검증으로 확대할 수 없고 기존1ba0b8d4 ZIP은 최종수령대상에서 제외했다. Native exporter에서 POSIX entry/manifest일치·안전/중복경로를 보완해 새source/hash로 인계할 필요를6792882178 회신을 통해 알렸다. Backend 검증완화/운영업로드는 하지 않았다. 문서diffcheck 통과, 코드/Git통합/운영실행 없음.
+
+Backend6792858978에서 전달원칙·공동공개·첫공개재접속/구탭한계·웹만복귀·조건부구APK호환을 수용했다. Native는 v2.0.0 모집helper CLIENT_UPGRADE_REQUIRED 전용표시/계정주간helper 일반실패 fallback을 원코드대조해 회신했다. 구APK실기기 인수로 합성하지 않았다. 남은 협의는 구체 A파일규격/14일/동일바이트승격과 ZIP POSIX 보완 소비기준 수용이며, Backend 고정소스 호환시험·양측 준비코드·실제산출물은 후속실행/검증으로 구분한다.
+
+W3 협의종료 확인: Backend6792885928이 A규격을 변경없이 수용하고 B2/게시상태를 확정해 A/B2대기를 해소했다. Native가 종료확인 댓글로 수신/반영·담당별 후속을 회신했다. 기존계약 §8과 NEXT_WORK를 합의완료/실행미완료로 최신화했다. 이번단계의 공동설계/소비규격 공백은 해소됐지만 exporter/workflow·실artifact·Backend회귀표/수령도구·운영인수는 미실행이다. 코드/서버/Git통합 변경 없이 문서diffcheck로 확인했다.
+
+## 2026-11-11 — W3 웹 POSIX ZIP·수동 artifact workflow 구현
+
+합의규격에 따라 Compress-Archive 대신 직접ZipArchive entry 생성으로 / 경로를 보장했다. 고정파일명/외부manifest/checksum·내외manifest바이트·전체파일목록/크기/hash와 링크/경로탈출/중복거절을 추가했다. .last_build_id 제외로 실제후보는34자산+manifest35entry, backslash0다. 생성후 자체검증하며 dirty후보는 배포검증에서 거절한다. 기본Git guard는 유지한다.
+
+새로 가능: manual web workflow에서 고정소스release웹을 생성·검증해 루트3파일을14일 보관하고 source/hash/run/artifactID를summary로 제공하는 준비경로. default미등록 최초dispatch용으로 기존APKworkflow에 web선택/reusable호출을 추가했고 웹선택은 서명Secret/Android/job·게시를 건너뛴다. 공개/운영 자동화는 추가하지 않았다.
+
+검증: PS구문, 경계12PASS(정상POSIX·탈출/backslash/절대경로/중복/대소문자충돌/미등재/링크/manifest상이/자산변조/candidate/체크섬), 실제release웹 후보패키징·34자산hash/35ZIPentry검증, 공식actionlint1.7.12의web/APK2workflow 무오류·diffcheck통과. 첫test의오류문구expect단수복수를 수정했고 다시12통과. 실제Actions/pwsh7 runner·업로드/수령/운영인수는 미실행이다. app lib/Backend/DB 불변이므로 전체2919/Chrome합성2PASS는 이전근거를 재사용했다.
+
+Git은release/2.1.0에서 기존누적변경과 함께 미커밋이며 이번단계commit/push/merge/태그·게시 없음. Next는고정소스보관/실행지시범위에따른Actions생성·실artifact ID 인계, 새AndroidOAuth/서명CI와Backend수령·검증이다.

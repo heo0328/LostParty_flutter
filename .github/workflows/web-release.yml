@@ -1,0 +1,62 @@
+name: Prepare web release artifact
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.6
+          cache: true
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Verify bundle boundaries
+        shell: pwsh
+        run: ./tool/test_web_bundle.ps1
+      - name: Build and verify fixed-source release bundle
+        id: bundle
+        shell: pwsh
+        run: ./tool/package_web_release.ps1
+      - name: Store handoff files without publishing
+        id: artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.bundle.outputs.artifact_name }}
+          path: |
+            ${{ steps.bundle.outputs.bundle_directory }}/lostparty-v*-web.zip
+            ${{ steps.bundle.outputs.bundle_directory }}/lostparty-v*-web.zip.sha256
+            ${{ steps.bundle.outputs.bundle_directory }}/release-manifest.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record handoff identifiers
+        shell: pwsh
+        env:
+          SOURCE_COMMIT: ${{ steps.bundle.outputs.source_commit }}
+          ZIP_SHA256: ${{ steps.bundle.outputs.zip_sha256 }}
+          ARTIFACT_NAME: ${{ steps.bundle.outputs.artifact_name }}
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          @"
+          ## Web handoff (not deployed)
+          - Run: https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
+          - Source: $env:SOURCE_COMMIT
+          - Artifact: $env:ARTIFACT_NAME / $env:ARTIFACT_ID
+          - Artifact URL: $env:ARTIFACT_URL
+          - ZIP SHA-256: $env:ZIP_SHA256
+          - Retention: 14 days; query the artifact API for actual expires_at before handoff.
+          - Files: lostparty-v<version>-web.zip, its .sha256, release-manifest.json
+          - Validate the inner deployment ZIP, not GitHub's outer artifact ZIP.
+          "@ >> $env:GITHUB_STEP_SUMMARY
