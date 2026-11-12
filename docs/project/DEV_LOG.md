@@ -8532,3 +8532,9 @@ Backend6793947409의 웹실물 수령/독립검증에 이어6796938066의 고정
 - 보존 확인/인수: Backend6797454537의 실제image/DB/키·회원/전후백업 및6798604314의 웹시험/새APK Google로그인·기존자료 사용자직접보고를 연결했다. 일반공개는 사용자지시6798279634로 먼저 개방됐다. Native 읽기확인에서도 공개HTTPS health200/status ok/database ok·root index hash가 인수웹manifest와 일치한다. 서명/패키지/버전·기존자동시험은 같은원본의 기존성공근거를 재사용했다.
 - 미확인: 전수기능·희귀경계/누락자료 기기후속·구탭무중단/로컬미전송이전·전체복원/백업자동화는 통과로 확대하지 않는다. 정상화된 인증의 반복시험은 요구하지 않는다. 후속갱신/레드닷·디자인/통계·배포main기준 측정/최적화는 별도 착수다.
 - 인계: #49 최종회신6798998431 게시/재조회 확인, 실제 URL/tag/asset ID/전체hash/공개상태를 전달했다. Issue는 OPEN유지하며 종료/서버재배포·키/OAuth/자료초기화·브랜치삭제 없음. 최종증거 .dart_tool/release_v2.1.0_{publish.log,metadata.json}, 공개다운로드 build/release-verification/public-v2.1.0/는 Git제외다. 결과문서만 후행커밋하고 main/dev/release를 정렬하되 공개태그는9019ee06에 고정한다.
+
+## 2026-11-13 — 2.2.0 운영 재시험 생략 승인·배포 산출물 인계
+
+사용자가 dev 확인본을 제한 접근 임시 운영 테스트 없이 그대로 게시하도록 승인했다. 버전·안내문·웹 제목을 포함한994db44a를 release/2.2.0에 보관·push하고 같은 source의 Android43257162413/웹43257168045 CI 성공을 확인했다. APK 실제 패키지/2.2.0+7·기존 release 서명·checksum과 웹 전체 파일/내외 manifest/clean source·LostParty-웹앱 제목 검증 PASS. 원장은 docs/releases/v2.2.0-artifacts.json이다.
+
+새로 가능한 흐름은 Backend가 검증된 웹 ZIP/checksum/manifest를 수령해 운영에 반영하는 단계다. Issue51에 사용자 승인6829149247·웹 인계6829349475·APK 검증6829379434를 게시했다. 기존 기능2927PASS/분석0·사용자 dev 확인을 재사용하며 기능 코드/권한/API/키/운영자료를 변경하지 않았다. 운영 설치·로그인 재시험은 이번 사용자 결정으로 생략한다. Backend 서버·웹 실제 운영 반영과 공개 Release는 아직 미완료이며 회신 후 이어간다.2.2.0 태그 생성·main/dev 최종 정렬은 아직 실행하지 않았다.

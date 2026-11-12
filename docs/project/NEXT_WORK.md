@@ -1,12 +1,13 @@
 # 현재 작업 — 2.2.0+7 운영 공개 진행 (2026-11-13)
 
 - 사용자 지시: 다음 페이지 작업 전에 필터 리마스터를 배포한다. 버전2.2.0+7을 확정했으며 공개 안내문은 [검수 초안](../releases/v2.2.0.md)으로 먼저 확인한다. 사용자가 dev 확인본을 별도 제한 접근 운영 테스트 없이 그대로 운영 게시하도록 승인했다. [운영 공개 지시 전달6829149247](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829149247)을 따른다.
-- Git: main을 dev83a550204dd442ec2ce54a01c79c2c485106b472로 fast-forward하고 origin/main·origin/dev 동일성을 확인했다. release/2.2.0을 분기해 버전·안내문·기존 협업 기록을 누적한다. 현재 준비 변경은 미커밋이다.
+- Git: main을 dev83a550204dd442ec2ce54a01c79c2c485106b472로 fast-forward하고 origin/main·origin/dev 동일성을 확인했다. release/2.2.0의 버전·안내문·웹 제목·기존 협업 기록을994db44acdc094b96b887f01a42b22caa9b28eff에 보관하고 origin에 푸시했다. 게시 없는 Android43257162413·웹43257168045 CI를 같은 source로 시작했다. 이후 배포 기록은 같은 브랜치에 누적한다.
 - Backend: Issue50의 [완료 회신6826988036](https://github.com/heo0328/lostparty-backend/issues/50#issuecomment-6826988036)에서 서버 dev0dc381ae 통합·push와 completed 종료를 확인했다. 운영 후보/main 정렬·migration/설정 유무·현재 자료 보존/백업·2.1.0 호환/복귀·웹 산출물 전달은 [배포 준비 Issue51](https://github.com/heo0328/lostparty-backend/issues/51)에서 담당 측에 확인 요청했다. 기존 기능 완료와 운영 준비를 구분한다.
 - 산출물 순서: 버전/안내문 검수 → 준비 소스 보관 → 게시 없는 동일 소스 Android 서명·웹 빌드 → run/manifest/해시·버전/서명 검증 → Backend 웹 수령/staging → 승인된 서버·웹·APK 공동 공개 → 실제 결과 회신. v2.1.0 전용 승격 원장을2.2.0에 재사용하지 않으며2.2.0 태그는 기존 APK 자동 공개 경로이므로 검수 중 생성하지 않는다.
 - 서명/검증:2.1.0과 같은 release 키를 사용하고 기존2026-11-11 독립 백업·키 접근 확인을 재사용한다. 새로운 키·OAuth 교체는 없다. 전체2927PASS/분석0의 기능 코드를 유지한다. 웹 bundle12경계 PASS와 운영 주소 release 웹 candidate 컴파일·ZIP/manifest 검증 성공을 확인했다(candidate_only=true). 게시용 산출물은 clean source로 별도 고정한다.
 - 웹 이름: 사용자 지시로 HTML title·앱 초기/정상 실행 title·manifest/iOS 웹 앱 이름을 LostParty-웹앱으로 통일했다. 이전 candidate 빌드는 이 수정 전 결과이며 최종 산출물 생성 시 반영한다.
-- 다음 행동: 최종 소스 보관과 APK/웹 고정 산출물 생성·Backend51 인계/운영 반영.2.1.0의 제한 접근·임시 운영 사용자 테스트는 반복하지 않는다. 배포 후 health/버전/정적 파일 확인과 서명/해시 검증은 수행한다. 내 계정 개선은 이번 배포 이후 별도 착수한다.
+- 산출물 검증 완료: clean source994db44a의 Android43257162413·웹43257168045 모두 성공했다. 실파일 APK 패키지/2.2.0+7/기존 서명/체크섬과 웹 전체 ZIP/manifest/hash·LostParty-웹앱 제목을 확인했다. 준비 원장은 [2.2.0 산출물](../releases/v2.2.0-artifacts.json)이며 공개 파일과 구분한다.
+- 다음 행동: [웹 인계6829349475](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829349475)·[APK 검증6829379434](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829379434)를 전달했다. Backend 담당의 서버·웹 운영 반영 결과 회신 대기이며 아직2.2.0 태그/공개 Release는 생성하지 않았다. 회신 후 release를 main/dev에 정렬하고 기존 태그 공개 파이프라인·게시 실파일 검증을 진행한다.2.1.0의 제한 접근·임시 운영 사용자 테스트는 반복하지 않는다. 내 계정 개선은 배포 이후 별도 착수한다.
 
 ## 이전 완료 — 모집 탐색 사용자 확인·Penpot02 통합 (2026-11-12)
 
