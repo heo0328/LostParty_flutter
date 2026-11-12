@@ -7,7 +7,7 @@
 - 서명/검증:2.1.0과 같은 release 키를 사용하고 기존2026-11-11 독립 백업·키 접근 확인을 재사용한다. 새로운 키·OAuth 교체는 없다. 전체2927PASS/분석0의 기능 코드를 유지한다. 웹 bundle12경계 PASS와 운영 주소 release 웹 candidate 컴파일·ZIP/manifest 검증 성공을 확인했다(candidate_only=true). 게시용 산출물은 clean source로 별도 고정한다.
 - 웹 이름: 사용자 지시로 HTML title·앱 초기/정상 실행 title·manifest/iOS 웹 앱 이름을 LostParty-웹앱으로 통일했다. 이전 candidate 빌드는 이 수정 전 결과이며 최종 산출물 생성 시 반영한다.
 - 산출물 검증 완료: clean source994db44a의 Android43257162413·웹43257168045 모두 성공했다. 실파일 APK 패키지/2.2.0+7/기존 서명/체크섬과 웹 전체 ZIP/manifest/hash·LostParty-웹앱 제목을 확인했다. 준비 원장은 [2.2.0 산출물](../releases/v2.2.0-artifacts.json)이며 공개 파일과 구분한다.
-- 다음 행동: [웹 인계6829349475](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829349475)·[APK 검증6829379434](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829379434)를 전달했다. Backend 담당의 서버·웹 운영 반영 결과 회신 대기이며 아직2.2.0 태그/공개 Release는 생성하지 않았다. 회신 후 release를 main/dev에 정렬하고 기존 태그 공개 파이프라인·게시 실파일 검증을 진행한다.2.1.0의 제한 접근·임시 운영 사용자 테스트는 반복하지 않는다. 내 계정 개선은 배포 이후 별도 착수한다.
+- 다음 행동: [웹 인계6829349475](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829349475)·[APK 검증6829379434](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829379434)를 전달했다. Backend의 [운영 공개 완료6831720284](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6831720284)를 확인했다. 서버2.2.0/source c31d90da·DB0036·118표 자료 동일, 웹 원ZIP/34자산 일치 보고이며 실제 HTTPS health200/DB ok·index 해시/제목도 대조했다. 이제 release를 main/dev에 정렬하고 v2.2.0 태그의 기존 APK 공개 파이프라인·게시 실파일 검증을 진행한다.2.1.0의 제한 접근·임시 운영 사용자 테스트는 반복하지 않는다. 내 계정 개선은 배포 이후 별도 착수한다.
 
 ## 이전 완료 — 모집 탐색 사용자 확인·Penpot02 통합 (2026-11-12)
 

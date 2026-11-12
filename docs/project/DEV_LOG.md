@@ -8538,3 +8538,7 @@ Backend6793947409의 웹실물 수령/독립검증에 이어6796938066의 고정
 사용자가 dev 확인본을 제한 접근 임시 운영 테스트 없이 그대로 게시하도록 승인했다. 버전·안내문·웹 제목을 포함한994db44a를 release/2.2.0에 보관·push하고 같은 source의 Android43257162413/웹43257168045 CI 성공을 확인했다. APK 실제 패키지/2.2.0+7·기존 release 서명·checksum과 웹 전체 파일/내외 manifest/clean source·LostParty-웹앱 제목 검증 PASS. 원장은 docs/releases/v2.2.0-artifacts.json이다.
 
 새로 가능한 흐름은 Backend가 검증된 웹 ZIP/checksum/manifest를 수령해 운영에 반영하는 단계다. Issue51에 사용자 승인6829149247·웹 인계6829349475·APK 검증6829379434를 게시했다. 기존 기능2927PASS/분석0·사용자 dev 확인을 재사용하며 기능 코드/권한/API/키/운영자료를 변경하지 않았다. 운영 설치·로그인 재시험은 이번 사용자 결정으로 생략한다. Backend 서버·웹 실제 운영 반영과 공개 Release는 아직 미완료이며 회신 후 이어간다.2.2.0 태그 생성·main/dev 최종 정렬은 아직 실행하지 않았다.
+
+## 2026-11-13 — Backend 2.2.0 API·웹 운영 공개 회신 확인
+
+Issue51의 Backend6831720284에서 API2.2.0/source c31d90da4fb5c1eaa9d731623f5648cedc8c00d2·image cc753718…406dae·Actions43274053529 성공 및 웹 원ZIP/source994db44a 활성화를 확인했다. DB0036/118표 COPY 행 전후 동일과 키/환경 보존·웹34자산 hash 일치는 Backend 검증 보고다. Native도 공개 HTTPS health200/status ok/database ok와 index 제목 LostParty-웹앱·hash7cd95f90…79039의 원manifest 일치를 직접 확인했다. 다음은 이미 승인된 Native2.2.0 태그/Release 공개와 게시실물 검증이다. 기능 코드/의존성은994db44a 이후 diff0으로 보존한다.
