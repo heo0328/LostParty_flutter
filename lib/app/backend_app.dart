@@ -1292,6 +1292,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     final router = _router;
     if (router == null || !_entryGate.canEnter) {
       return MaterialApp(
+        title: kIsWeb ? 'LostParty-웹앱' : 'LOSTPARTY',
         navigatorKey: _setupNavigatorKey,
         theme: AppTheme.light,
         home: _configurationError != null
@@ -1300,7 +1301,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       );
     }
     return MaterialApp.router(
-      title: 'LOSTPARTY',
+      title: kIsWeb ? 'LostParty-웹앱' : 'LOSTPARTY',
       theme: AppTheme.light,
       routerConfig: router,
       builder: (context, child) => OwnershipNoticeScope(

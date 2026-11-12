@@ -1,3 +1,23 @@
+## 2026-11-13 — 2.2.0 제한 접근 운영 테스트 생략·공개 승인
+
+사용자가 dev 앱/서버에서 확인한 필터 기능을 변경 없이 그대로 운영 게시하고2.1.0 당시의 제한 접근 임시 운영 테스트는 생략한다고 확정했다. [Backend51 전달6829149247](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829149247)에 실제 운영 진행 승인과 테스트 생략·기존 자료 유지·산출물 후속 전달을 기록했다. 서명·버전·해시/manifest 검증과 배포 후 실제 health/버전 확인은 유지한다. release/2.2.0의 준비 변경을 보관해 게시 없는 APK/웹 CI 산출물을 생성하고 Backend에 인계한 뒤 공동 공개한다.
+
+## 2026-11-13 — 웹 탭 제목 LostParty-웹앱으로 통일
+
+사용자가 브라우저 탭의 사전 테스트 표현을 제거하고 LostParty-웹앱으로 표시하도록 지시했다. web/index.html의 title·iOS 웹 앱 이름, manifest의 name/short_name과 BackendApp의 초기/정상 MaterialApp 웹 title을 같은 값으로 맞췄다. 네이티브 title은 기존값을 유지한다. 최종2.2.0 웹 빌드에 반영할 변경이며 직전 candidate 빌드의 검증 결과와 구분한다.
+
+## 2026-11-13 — main/dev 정렬·2.2.0 릴리즈 준비 착수
+
+사용자가 main을 dev와 같은 시점으로 정렬하고 필터 리마스터 운영 배포 준비와 공개 안내문 선검수를 지시했다. 버전은 사용자 선택2.2.0+7이다. 기존 협업 기록2파일을 목적이 확인된 stash로 잠시 보존해 main을 dev83a55020으로 fast-forward·origin/main push했고 원격 main/dev 동일성을 확인했다. 기존 기록을 그대로 복원한 뒤 release/2.2.0을 분기했다. 버전·docs/releases/v2.2.0.md 검수 초안을 작성했다.
+
+Backend50 최신 댓글에서 dev0dc381ae 통합·push와 completed 종료를 확인했다. 중간 댓글만 보고 통합 대기로 안내한 내용은 최신 회신으로 정정했다. [Issue51](https://github.com/heo0328/lostparty-backend/issues/51)을 생성해 운영 후보·main/릴리즈 통합·migration/설정·현재 자료/백업·구앱 호환/복귀와 웹 산출물 전달을 협의했고 본문 재조회를 확인했다. 운영 활성화는 안내문 검수와 별도 실행 지시 이후로 구분했다.
+
+기능 코드는 기존2927PASS·분석0을 재사용하고 웹 bundle12경계 PASS를 확인했다. 운영 주소의 release 웹 candidate 빌드가36.9초에 성공했고 ZIP/manifest를 검증했다. candidate_only=true이며 ZIP SHA256은e1d6fb496c222d7b9774c72a0588c548b902dea033f1711734a459cc42165050이다. 게시용 고정 clean-source 산출물은 후속 단계다. 기존 새release키의2026-11-11 백업·접근 확인을 재사용한다. 현재 새 릴리즈의 APK 서명/업데이트 설치·운영 API/웹·사용자 기기 인수는 아직이며 태그·공개/서버 활성화·DB/키 교체는 수행하지 않았다. 준비 변경은 release/2.2.0에 미커밋으로 누적한다.
+
+## 2026-11-12 — Backend50 최종 dev 기준 작업결과 게시
+
+사용자 지시로 Issue50 최신 댓글을 확인하고 최종 dev83a550204dd442ec2ce54a01c79c2c485106b472·구현04baa9be/병합3ccf1aa6·푸시/clean 상태, discovery-1/페이징·캐시·반응형 UI,2927PASS/분석0·사용자 확인·Penpot02 통합을 [최종 인계6826309269](https://github.com/heo0328/lostparty-backend/issues/50#issuecomment-6826309269)에 게시했다. 댓글 ID와 최종 SHA를 재조회했다. Backend가 해당 dev를 구현 기준으로 참조하고 확인 결과/남은 협업 항목을 같은 Issue에 회신하도록 요청했다. 추가 API 변경 요청이나 계약 충돌은 없으며 전수 기기/브라우저·성능 확인은 미실행으로 구분했다. 로컬 협업 기록만 갱신하며 별도 커밋·푸시는 하지 않는다.
+
 ## 2026-11-12 — 모집 탐색 리마스터 보관·dev 통합 지시
 
 사용자가 작업 문서 최신화와 커밋·dev 병합·푸시를 지시했다. 최신 origin/dev094a44d1을 fetch해 로컬 dev와 동일함을 확인했다. feature/recruitment-filter-design의 기획 커밋c28d8955 이후 누적 구현·시험·문서와 신규 Discovery DTO/fixture/검증·명세 추출 도구 전체를 함께 보관한다. 기존 전체2927PASS·분석0 로그를 재확인했으며 같은 코드의 시험은 반복하지 않는다. diffcheck·변경/신규 내용 검토와 병합 전후 lib/test/tool 동일성을 확인한다. 누적24파일을04baa9be에 커밋했다. dev094a44d1에 충돌 없이 no-ff 병합했고 lib/test/tool·의존성 diff0을 확인했다. 이 기록을 포함한 병합3ccf1aa63c8a50da82f9453adc381644ca72d5ce를 origin/dev에 푸시했고 ls-remote·HEAD/origin/dev 일치와 미커밋없음을 확인했다. 최종 완료 상태를 문서 보관 커밋으로 반영한다. 작업 브랜치는 보존하며 다음은 내 계정의 별도 착수다.

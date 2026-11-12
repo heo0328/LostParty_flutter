@@ -1,6 +1,6 @@
 {
-    "name": "LOSTPARTY 사전 테스트",
-    "short_name": "LOSTPARTY",
+    "name": "LostParty-웹앱",
+    "short_name": "LostParty-웹앱",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

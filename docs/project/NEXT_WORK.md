@@ -1,11 +1,21 @@
-# 현재 작업 — 모집 탐색 사용자 확인·Penpot02 통합 완료 (2026-11-12)
+# 현재 작업 — 2.2.0+7 운영 공개 진행 (2026-11-13)
+
+- 사용자 지시: 다음 페이지 작업 전에 필터 리마스터를 배포한다. 버전2.2.0+7을 확정했으며 공개 안내문은 [검수 초안](../releases/v2.2.0.md)으로 먼저 확인한다. 사용자가 dev 확인본을 별도 제한 접근 운영 테스트 없이 그대로 운영 게시하도록 승인했다. [운영 공개 지시 전달6829149247](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829149247)을 따른다.
+- Git: main을 dev83a550204dd442ec2ce54a01c79c2c485106b472로 fast-forward하고 origin/main·origin/dev 동일성을 확인했다. release/2.2.0을 분기해 버전·안내문·기존 협업 기록을 누적한다. 현재 준비 변경은 미커밋이다.
+- Backend: Issue50의 [완료 회신6826988036](https://github.com/heo0328/lostparty-backend/issues/50#issuecomment-6826988036)에서 서버 dev0dc381ae 통합·push와 completed 종료를 확인했다. 운영 후보/main 정렬·migration/설정 유무·현재 자료 보존/백업·2.1.0 호환/복귀·웹 산출물 전달은 [배포 준비 Issue51](https://github.com/heo0328/lostparty-backend/issues/51)에서 담당 측에 확인 요청했다. 기존 기능 완료와 운영 준비를 구분한다.
+- 산출물 순서: 버전/안내문 검수 → 준비 소스 보관 → 게시 없는 동일 소스 Android 서명·웹 빌드 → run/manifest/해시·버전/서명 검증 → Backend 웹 수령/staging → 승인된 서버·웹·APK 공동 공개 → 실제 결과 회신. v2.1.0 전용 승격 원장을2.2.0에 재사용하지 않으며2.2.0 태그는 기존 APK 자동 공개 경로이므로 검수 중 생성하지 않는다.
+- 서명/검증:2.1.0과 같은 release 키를 사용하고 기존2026-11-11 독립 백업·키 접근 확인을 재사용한다. 새로운 키·OAuth 교체는 없다. 전체2927PASS/분석0의 기능 코드를 유지한다. 웹 bundle12경계 PASS와 운영 주소 release 웹 candidate 컴파일·ZIP/manifest 검증 성공을 확인했다(candidate_only=true). 게시용 산출물은 clean source로 별도 고정한다.
+- 웹 이름: 사용자 지시로 HTML title·앱 초기/정상 실행 title·manifest/iOS 웹 앱 이름을 LostParty-웹앱으로 통일했다. 이전 candidate 빌드는 이 수정 전 결과이며 최종 산출물 생성 시 반영한다.
+- 다음 행동: 최종 소스 보관과 APK/웹 고정 산출물 생성·Backend51 인계/운영 반영.2.1.0의 제한 접근·임시 운영 사용자 테스트는 반복하지 않는다. 배포 후 health/버전/정적 파일 확인과 서명/해시 검증은 수행한다. 내 계정 개선은 이번 배포 이후 별도 착수한다.
+
+## 이전 완료 — 모집 탐색 사용자 확인·Penpot02 통합 (2026-11-12)
 
 - 사용자 확인: 필터 리마스터가 성공적이라고 보고하고03 현행화·02 내용별 통합을 승인했다. 기기/브라우저·모든 조작 조합의 전수 통과로 확대하지 않는다.
 - 완료: 미커밋 코드 기준으로03을 최신화하고 사용자가02에 붙여넣은 보드를 재사용해 기존04 모집에 통합했다. 구형 목록·필터8예시를 삭제하고 고유한 생성·권한별 상세·신청·복구·관리·일정은 보존했다. 최신 탐색13화면/5섹션을 포함해02의6개 메인·36개 섹션을 확인했고03 중복 원본은 정리했다. 복사로 변경된 ID와 통합 내역은 [화면 대응표](../design/PENPOT_IMPLEMENTED_SCREEN_MAP.md#2026-11-12-모집-탐색-리마스터-통합)에 기록했다.
 - 구현·검증: 외부 분류/정렬 즉시 검색·상세 초안 분리·외부 초기화, 내부 분류·그룹 버튼·구획/버튼, 폭600/1100과 낮은 높이 전체 필터/스크롤 행동을 연결했다. 최종 전체 flutter test2927PASS·flutter analyze0 로그를 확인했다. 이번 Penpot/문서 구간은 같은 코드를 보존해 Flutter 시험을 반복하지 않는다.
 - 계약: Backend558ee6da4299dea49729ebaca5825ce9a235a42e, OpenAPI SHA256 3fdc06616d64e19aa7abf35b548cf1156fa7fbee6bcfb02c1dccf4ce9a9d7052의 discovery-1.50개/첫 수신60초/LRU5·회원/환경/주차·권한/후보/복구를 유지한다. [구현 계약](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-explorer-remaster), [이전 구현 회신](https://github.com/heo0328/lostparty-backend/issues/50#issuecomment-6822241688)을 따른다.
 - 검수: 변경 섹션·모집 전체 PNG와 신규 탐색 텍스트/섹션 경계 이탈0, 나머지5개 메인 내용 동일·01/04 페이지 동일을 확인했다. 설정·그룹은 x=8536/10536으로 위치만 조정했다. 기존 긴 화면의 viewport 밖 스크롤 내용은 유지한다. 실제 공유 링크 열람·기기 픽셀 전수 대조·클릭 프로토타입 검증은 별도다.
-- 협업: 사용자 필터 확인과 최종2927PASS/분석0·미커밋/미push 상태를 [Issue50 결과](https://github.com/heo0328/lostparty-backend/issues/50#issuecomment-6824178730)에 회신하고 재조회했다. 추가 Backend 변경 요청은 없다.
+- 협업: 최종 dev83a55020·구현/검증·사용자 확인·Penpot02 통합 결과를 [Issue50 최종 인계](https://github.com/heo0328/lostparty-backend/issues/50#issuecomment-6826309269)에 게시하고 재조회했다. Backend에 해당 커밋을 구현 기준으로 전달하고 남은 협업 항목 회신을 요청했다. 추가 API 변경 요청·계약 충돌은 없다.
 - Git: 최신 누적24파일을04baa9be에 커밋하고 최신 origin/dev094a44d1 기반 dev에 충돌 없이 일반 병합했다. lib/test/tool·의존성은 작업 커밋과 동일하다. 병합3ccf1aa6을 origin/dev에 푸시하고 ls-remote·HEAD/origin/dev 일치를 확인했다. 후행 문서 보관 커밋도 dev에 반영한다. 작업 브랜치는 로컬에 보존한다. 다음 페이지는 내 계정이며 별도 착수 지시를 기다린다.
 
 
