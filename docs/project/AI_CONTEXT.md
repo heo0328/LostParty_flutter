@@ -6,10 +6,9 @@
 
 Backend2.1.1/DB0036/config lightsail-web-2.1.0 실제반영·백업/PC사본/기존자료·키보존은 Backend6797454537 근거다. 점검제한 해제 후 일반공개·같은Wi-Fi/IP 조건없음, 웹시험과 새APK Google로그인/기존회원자료 사용자직접보고를6798604314에서 확인했다. 과거APK실패의 정확한응답·미관찰조작/전수기능·전체복원을 통과로 확대하지 않는다. 새키 독립백업/접근·서명CI/2919PASS·분석0/Chrome합성2PASS 근거를 재사용했고 추가앱코드·DB/키/OAuth/자료 변경·운영재배포/Issue종료는 수행하지 않았다. 후속 갱신/레드닷·누락자료/기기·디자인/통계와 배포main기준 선택적측정/최적화는 별도 착수다.
 
-## 2.2.0 운영 게시 진행 (2026-11-13)
+## 2.2.0 운영 공개 완료 (2026-11-13)
 
-사용자가2.2.0+7 운영 게시를 승인했으며 dev 확인본의 제한 접근 운영 재시험은 생략한다. main/dev83a55020에서 release/2.2.0을 준비해994db44a를 push했다. 같은 source의 APK·웹 CI 성공 및 실제 서명/버전/체크섬·웹 전체 manifest 검증을 마쳤다. 웹 이름은 LostParty-웹앱이다. [산출물 원장](../releases/v2.2.0-artifacts.json)과 [Issue51](https://github.com/heo0328/lostparty-backend/issues/51)에 인계했으며 Backend 서버·웹 운영 반영 회신 대기다.2.2.0 태그/공개 Release는 아직 생성하지 않았다. 현재 단계·후속 공개는 NEXT_WORK를 따른다.
-
+웹 https://lostparty.duckdns.org/ 및 Android2.2.0+7 Release443337477 공개완료. 사용자 확정으로 dev 확인본의 제한 접근 운영 재시험을 생략했다. Backend API2.2.0/source c31d90da·DB0036·자료보존과 웹994db44a 원본 활성화는 Issue51/6831720284 보고를 확인했고 Native도 health/index hash·LostParty-웹앱 제목을 대조했다. 태그8cb1eefb·Actions43276593295의 공개5파일 재다운로드/서명/버전/해시·승인본문 검증 PASS. 원본 준비APK와 태그 재빌드 공개APK를 구분한 식별자는 [산출물 원장](../releases/v2.2.0-artifacts.json), 후속은 NEXT_WORK를 따른다. 공개 태그를 이동하지 않고 결과 문서를 main/dev/release에 반영한다.
 ## 개발·협업 기준
 
 1인 개발, Firebase 구현 제거·자체 Python Backend·단일 Google 로그인. dev 로컬 서버를 기본 개발·검증 대상으로 사용한다. debug 기본은 Android 에뮬레이터용 http://10.0.2.2:8000, release 기본은 AWS https://lostparty.duckdns.org이며 명시 URL override는 유지한다. 운영 반영은 개발자의 명시 지시가 있을 때만 진행하고 개발 연결의 선행 조건으로 요구하지 않는다. 베타 시작 전 개발자료를 비우며 베타 이후 자료는 보존한다. 실제 초기화 실행은 별도 대상/시점 지시가 필요하다. [정책09 D08](../backend-migration/09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정).

@@ -8542,3 +8542,11 @@ Backend6793947409의 웹실물 수령/독립검증에 이어6796938066의 고정
 ## 2026-11-13 — Backend 2.2.0 API·웹 운영 공개 회신 확인
 
 Issue51의 Backend6831720284에서 API2.2.0/source c31d90da4fb5c1eaa9d731623f5648cedc8c00d2·image cc753718…406dae·Actions43274053529 성공 및 웹 원ZIP/source994db44a 활성화를 확인했다. DB0036/118표 COPY 행 전후 동일과 키/환경 보존·웹34자산 hash 일치는 Backend 검증 보고다. Native도 공개 HTTPS health200/status ok/database ok와 index 제목 LostParty-웹앱·hash7cd95f90…79039의 원manifest 일치를 직접 확인했다. 다음은 이미 승인된 Native2.2.0 태그/Release 공개와 게시실물 검증이다. 기능 코드/의존성은994db44a 이후 diff0으로 보존한다.
+
+## 2026-11-13 — 2.2.0 Android Release 공개·실파일 검증 완료
+
+Backend 운영완료 확인 후 release/main/dev를8cb1eefb에 fast-forward·atomic push하고 annotated v2.2.0을 게시했다. 기존 태그 파이프라인43276593295에서 APK 재빌드/서명검증·공개가 성공했다. Release443337477은2026-11-12T18:13:33Z 공개됐고 웹 원3파일도 추가해5파일을 보관했다. 새로 가능한 흐름은 공개APK2.2.0+7 설치 업데이트 및 운영 웹/API2.2.0 사용이다.
+
+공개5파일 재다운로드로 APK package/버전/기존서명·checksum과 웹전체manifest/hash·승인본문을 확인했다. APK asset740554673/hash47dc4f70…4059c는 준비용APK8911b300…와 구분한다. 웹은 Backend 인계 원본994db44a/hash517166ca…39ec6와 동일하다. 원장 docs/releases/v2.2.0-artifacts.json에 실제 ID/전체hash/Backend source·image·DB/health를 기록했다. metadata 읽기 명령의 미지원 --output 옵션은 PowerShell 파일 저장으로 수정해 확인했다.
+
+보존 확인은 기존2927PASS/분석0·사용자dev확인과 앱/플랫폼/의존성/도구 source994db44a→태그diff0, 동일release서명 및 Backend118표자료동일 보고다. 운영 기기 기능 재시험은 사용자 결정으로 생략했다. Native최종6832046386을 Issue51에 게시하고 원격댓글을 재조회했다. 결과문서를 같은 release/main/dev에 반영하며 태그8cb1eefb는 고정한다. release브랜치는 보존한다.
