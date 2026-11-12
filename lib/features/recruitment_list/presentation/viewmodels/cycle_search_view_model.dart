@@ -19,7 +19,9 @@ class CycleSearchViewModel extends ChangeNotifier {
     this.mutations,
     this.searchEnabled = true,
     this.groupChanges,
+    DateTime Function()? clock,
   }) {
+    _clock = clock ?? DateTime.now;
     _binding = scopeKey();
     session.addListener(_access);
     changes.addListener(_access);
@@ -29,6 +31,14 @@ class CycleSearchViewModel extends ChangeNotifier {
   final CycleInteractionGateway gateway;
   final bool searchEnabled;
   final Listenable? groupChanges;
+  late final DateTime Function() _clock;
+  int? totalCount;
+  String? resultRevision;
+  String? displayedSignature;
+  bool loadingMore = false;
+  int resultVersion = 0;
+  int resetVersion = 0;
+  final scrollOffsets = <(String, String), double>{};
   final AccountReadSession session;
   final Listenable changes;
   final String Function() scopeKey;
@@ -57,6 +67,9 @@ class CycleSearchViewModel extends ChangeNotifier {
   }
 
   void selectMember(String ref, bool selected) {
+    if (candidateFailure == 'GROUP_CHARACTER_CANDIDATES_STALE') {
+      candidateFailure = null;
+    }
     final members = Map<String, Set<String>>.of(filter.members);
     if (selected) {
       members[ref] = {};
@@ -68,6 +81,9 @@ class CycleSearchViewModel extends ChangeNotifier {
   }
 
   void selectCharacter(String ref, String id) {
+    if (candidateFailure == 'GROUP_CHARACTER_CANDIDATES_STALE') {
+      candidateFailure = null;
+    }
     final members = Map<String, Set<String>>.of(filter.members);
     final ids = {...?members[ref]};
     if (!ids.add(id)) ids.remove(id);
@@ -166,10 +182,22 @@ class CycleSearchViewModel extends ChangeNotifier {
 
   String? target, failure, cursor, groupFailure;
   String? _digest;
-  List<CycleRoomCard> rows = [];
+  List<RecruitmentSearchCard> rows = [];
   CycleSearchFilter filter = CycleSearchFilter();
   final _filters = <String, CycleSearchFilter>{};
-  final _pages = <(String, String), (List<CycleRoomCard>, String?, String?)>{};
+  final _pages =
+      <
+        (String, String),
+        (List<RecruitmentSearchCard>, String?, String?, DateTime, int?, String?)
+      >{};
+  bool get showingPrevious =>
+      displayedSignature != null && displayedSignature != filter.signature;
+  bool get cacheFresh {
+    final page = _pages[(target, filter.signature)];
+    return page != null &&
+        _clock().difference(page.$4) < const Duration(seconds: 60);
+  }
+
   final _cursors = <String>{};
   bool _valid(int e) =>
       !_disposed &&
@@ -190,6 +218,9 @@ class CycleSearchViewModel extends ChangeNotifier {
     _candidateCache.clear();
     _pages.clear();
     _cursors.clear();
+    scrollOffsets.clear();
+    totalCount = null;
+    resultRevision = displayedSignature = null;
     cycles = null;
     groupContext = null;
     target = null;
@@ -228,12 +259,19 @@ class CycleSearchViewModel extends ChangeNotifier {
     }
     final allowed = groups.map((g) => g.id).toSet();
     final selected = filter.groupIds.intersection(allowed);
+    if (selected.length != filter.groupIds.length) {
+      groupFailure = 'GROUP_NOT_FOUND';
+      totalCount = null;
+      resultRevision = displayedSignature = null;
+      _emit();
+      return;
+    }
     final group = selected.length == 1 ? selected.single : null;
     if (group != null) {
       if (filter.groupId != group) {
         filter = filter.copy(clearGroup: true, groupIds: selected);
       }
-      await selectGroup(group, preserve: true, pruneInvalid: true);
+      await selectGroup(group, preserve: true);
     } else {
       groupContext = null;
       filter = filter.copy(clearGroup: true, groupIds: selected);
@@ -246,8 +284,8 @@ class CycleSearchViewModel extends ChangeNotifier {
     if (m.mutationVersion == _mutationVersion) return;
     _mutationVersion = m.mutationVersion;
     final t = m.lastTarget;
-    _pages.removeWhere((k, _) => k.$1 == t);
-    if (target == t) {
+    _pages.removeWhere((k, _) => t == null || k.$1 == t);
+    if (t == null || target == t) {
       _epoch++;
       loading = false;
       unawaited(refresh());
@@ -338,6 +376,49 @@ class CycleSearchViewModel extends ChangeNotifier {
     _select();
   }
 
+  /// Quick controls use applied conditions, never the pending detail draft.
+  bool updateQuick({
+    String? category,
+    bool? descending,
+    CycleSearchViewModel? draft,
+  }) {
+    final clearGroup = category != null && category != 'group_linked';
+    final next = filter.copy(
+      category: category,
+      descending: descending,
+      clearGroup: clearGroup,
+      clearScope: clearGroup,
+    );
+    if (draft != null) {
+      draft.update(
+        draft.filter.copy(
+          category: category,
+          descending: descending,
+          clearGroup: clearGroup,
+          clearScope: clearGroup,
+        ),
+      );
+    }
+    if (target == null || next.signature == filter.signature) return false;
+    update(next);
+    return true;
+  }
+
+  bool resetDetails() {
+    final next = CycleSearchFilter(
+      category: filter.category,
+      descending: filter.descending,
+    );
+    if (target == null || next.signature == filter.signature) return false;
+    _groupEpoch++;
+    groupContext = null;
+    groupFailure = null;
+    groupLoading = false;
+    _clearCandidates();
+    update(next);
+    return true;
+  }
+
   void selectGroups(Set<String> ids) {
     if (ids.length <= 1) {
       unawaited(selectGroup(ids.firstOrNull));
@@ -364,12 +445,22 @@ class CycleSearchViewModel extends ChangeNotifier {
     loading = false;
     failure = null;
     _cursors.clear();
-    final page = _pages[(target!, filter.signature)];
-    rows = page?.$1 ?? [];
-    cursor = page?.$2;
-    _digest = page?.$3;
+    final key = (target!, filter.signature);
+    final page = _pages.remove(key);
+    if (page != null) {
+      _pages[key] = page;
+      rows = page.$1;
+      cursor = page.$2;
+      _digest = page.$3;
+      totalCount = page.$5;
+      resultRevision = page.$6;
+      displayedSignature = filter.signature;
+      resultVersion++;
+    } else {
+      cursor = null;
+    }
     _emit();
-    if (page == null) unawaited(search());
+    if (page == null || !cacheFresh) unawaited(search());
   }
 
   CycleSearchViewModel draft() {
@@ -379,6 +470,7 @@ class CycleSearchViewModel extends ChangeNotifier {
       changes: changes,
       scopeKey: scopeKey,
       searchEnabled: false,
+      clock: _clock,
     );
     d.cycles = cycles;
     d.catalog = catalog;
@@ -389,6 +481,8 @@ class CycleSearchViewModel extends ChangeNotifier {
     d.candidateMembers = List.of(candidateMembers);
     d.candidateCursor = candidateCursor;
     d.selectionPending = selectionPending;
+    d.groupFailure = groupFailure;
+    d.candidateFailure = candidateFailure;
     d._filters.addAll(_filters);
     d._candidateCache.addAll(_candidateCache);
     d._candidateCursors.addAll(_candidateCursors);
@@ -441,6 +535,8 @@ class CycleSearchViewModel extends ChangeNotifier {
     rows = [];
     cursor = null;
     _digest = null;
+    totalCount = null;
+    resultRevision = displayedSignature = null;
     _cursors.clear();
     _pages.remove((t, f.signature));
   }
@@ -506,6 +602,23 @@ class CycleSearchViewModel extends ChangeNotifier {
       await loadCandidates();
       if (_disposed || e != _groupEpoch || binding != scopeKey()) return;
       if (candidateFailure != null) return;
+      for (final entry in filter.members.entries) {
+        final candidate = candidateMembers
+            .where((m) => m.ref == entry.key)
+            .firstOrNull;
+        if (candidateCursor == null &&
+            candidate != null &&
+            entry.value.isNotEmpty &&
+            !candidate.characters
+                .map((c) => c.id)
+                .toSet()
+                .containsAll(entry.value)) {
+          selectionPending = true;
+          candidateFailure = 'GROUP_CHARACTER_CANDIDATES_STALE';
+          _emit();
+          return;
+        }
+      }
       if (pruneInvalid) {
         while (candidateCursor != null && candidateFailure == null) {
           await loadCandidates(more: true);
@@ -590,16 +703,40 @@ class CycleSearchViewModel extends ChangeNotifier {
         f = filter,
         previous = more ? cursor : null;
     loading = true;
+    loadingMore = more;
     failure = null;
     _emit();
     var cursorRecovered = false;
     try {
-      var append = more;
+      var append = more && cacheFresh;
       CycleSearchPage page;
       while (true) {
         if (!_valid(e)) return;
         try {
           page = await gateway.search(t, f, cursor: append ? previous : null);
+          if (!_valid(e)) return;
+          final duplicate =
+              append &&
+              [...rows, ...page.rows].map((r) => r.id).toSet().length !=
+                  rows.length + page.rows.length;
+          final invalidPage =
+              append &&
+              (duplicate ||
+                  page.digest != _digest ||
+                  page.resultRevision != resultRevision ||
+                  page.totalCount != totalCount ||
+                  page.cursor != null &&
+                      (page.cursor == previous ||
+                          _cursors.contains(page.cursor)));
+          if (invalidPage) {
+            if (cursorRecovered || recovered) {
+              throw const AccountReadException('INVALID_RESPONSE');
+            }
+            cursorRecovered = true;
+            append = false;
+            _pages.remove((t, f.signature));
+            continue;
+          }
           break;
         } on AccountReadException catch (error) {
           if (!_valid(e)) return;
@@ -621,6 +758,8 @@ class CycleSearchViewModel extends ChangeNotifier {
       if (!_valid(e)) return;
       if (append &&
           (page.digest != _digest ||
+              page.resultRevision != resultRevision ||
+              page.totalCount != totalCount ||
               (page.cursor != null &&
                   (page.cursor == previous ||
                       _cursors.contains(page.cursor))))) {
@@ -630,11 +769,31 @@ class CycleSearchViewModel extends ChangeNotifier {
       roleCheck(combined.map((r) => r.id).toSet().length == combined.length);
       selectionPending = false;
       rows = List.unmodifiable(combined);
+      totalCount = page.totalCount;
+      resultRevision = page.resultRevision;
+      displayedSignature = f.signature;
+      resultVersion++;
+      if (!append) resetVersion++;
       cursor = page.cursor;
       _digest = page.digest;
       if (!append) _cursors.clear();
       if (cursor != null) _cursors.add(cursor!);
-      _pages[(t, f.signature)] = (rows, cursor, _digest);
+      final key = (t, f.signature);
+      final receivedAt = append ? _pages[key]!.$4 : _clock();
+      _pages.remove(key);
+      _pages[key] = (
+        rows,
+        cursor,
+        _digest,
+        receivedAt,
+        totalCount,
+        resultRevision,
+      );
+      while (_pages.length > 5) {
+        final removed = _pages.keys.first;
+        _pages.remove(removed);
+        scrollOffsets.remove(removed);
+      }
     } on AccountReadException catch (error) {
       if (_valid(e)) {
         if (f.candidateToken != null &&
@@ -675,6 +834,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     } finally {
       if (_valid(e)) {
         loading = false;
+        loadingMore = false;
         _emit();
       }
     }

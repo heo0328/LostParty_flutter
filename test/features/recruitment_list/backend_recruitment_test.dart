@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'discovery_fixtures.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
@@ -293,7 +294,12 @@ class Api implements BackendRegistrationApi {
       'key': idempotencyKey,
       'status': expectedStatus,
     });
-    if (respond != null) return respond!(path, query);
+    if (respond != null) {
+      final response = await respond!(path, query);
+      return query?['response_profile'] == 'discovery-1'
+          ? discoveryWire(response)
+          : response;
+    }
     if (method == 'POST') return ackJson(idempotencyKey!);
     return contextJson(draft());
   }

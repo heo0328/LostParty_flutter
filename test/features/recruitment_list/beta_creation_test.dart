@@ -731,12 +731,22 @@ void main() {
         ).search(f.c, CycleSearchFilter());
         expect(api.requests, hasLength(1));
         expect(api.requests.single['method'], 'POST');
-        expect(page.rows.single.starts, isEmpty);
         expect(
-          betaDepartureText(page.rows.single.betaData!),
+          page.rows.single.starts.single,
+          DateTime.parse('2026-10-23T09:00:00Z'),
+        );
+        expect(
+          betaDepartureText({
+            'beta_schedule': page.rows.single.wire['schedule'],
+          }),
           contains('10-23 18:00'),
         );
-        expect(betaScheduleLabel(page.rows.single.betaData!), '자동 조율로 확정');
+        expect(
+          betaScheduleLabel({
+            'beta_schedule': page.rows.single.wire['schedule'],
+          }),
+          '자동 조율로 확정',
+        );
       },
     );
     test(
