@@ -1,6 +1,6 @@
 ## 2026-11-12 — 모집 탐색 리마스터 보관·dev 통합 지시
 
-사용자가 작업 문서 최신화와 커밋·dev 병합·푸시를 지시했다. 최신 origin/dev094a44d1을 fetch해 로컬 dev와 동일함을 확인했다. feature/recruitment-filter-design의 기획 커밋c28d8955 이후 누적 구현·시험·문서와 신규 Discovery DTO/fixture/검증·명세 추출 도구 전체를 함께 보관한다. 기존 전체2927PASS·분석0 로그를 재확인했으며 같은 코드의 시험은 반복하지 않는다. diffcheck·변경/신규 내용 검토와 병합 전후 lib/test/tool 동일성을 확인한다. 누적24파일을04baa9be에 커밋했다. dev094a44d1에 충돌 없이 no-ff 병합했고 lib/test/tool·의존성 diff0을 확인했다. 이 기록을 병합 커밋에 포함해 dev를 푸시한다. 최종 merge SHA와 원격 동일성은 Git 결과로 확인한다. 작업 브랜치는 보존하며 다음은 내 계정의 별도 착수다.
+사용자가 작업 문서 최신화와 커밋·dev 병합·푸시를 지시했다. 최신 origin/dev094a44d1을 fetch해 로컬 dev와 동일함을 확인했다. feature/recruitment-filter-design의 기획 커밋c28d8955 이후 누적 구현·시험·문서와 신규 Discovery DTO/fixture/검증·명세 추출 도구 전체를 함께 보관한다. 기존 전체2927PASS·분석0 로그를 재확인했으며 같은 코드의 시험은 반복하지 않는다. diffcheck·변경/신규 내용 검토와 병합 전후 lib/test/tool 동일성을 확인한다. 누적24파일을04baa9be에 커밋했다. dev094a44d1에 충돌 없이 no-ff 병합했고 lib/test/tool·의존성 diff0을 확인했다. 이 기록을 포함한 병합3ccf1aa63c8a50da82f9453adc381644ca72d5ce를 origin/dev에 푸시했고 ls-remote·HEAD/origin/dev 일치와 미커밋없음을 확인했다. 최종 완료 상태를 문서 보관 커밋으로 반영한다. 작업 브랜치는 보존하며 다음은 내 계정의 별도 착수다.
 
 ## 2026-11-12 — 모집 필터 피드백 구현·사용자 확인 후 Penpot02 통합
 

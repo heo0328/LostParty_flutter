@@ -6,7 +6,7 @@
 - 계약: Backend558ee6da4299dea49729ebaca5825ce9a235a42e, OpenAPI SHA256 3fdc06616d64e19aa7abf35b548cf1156fa7fbee6bcfb02c1dccf4ce9a9d7052의 discovery-1.50개/첫 수신60초/LRU5·회원/환경/주차·권한/후보/복구를 유지한다. [구현 계약](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-explorer-remaster), [이전 구현 회신](https://github.com/heo0328/lostparty-backend/issues/50#issuecomment-6822241688)을 따른다.
 - 검수: 변경 섹션·모집 전체 PNG와 신규 탐색 텍스트/섹션 경계 이탈0, 나머지5개 메인 내용 동일·01/04 페이지 동일을 확인했다. 설정·그룹은 x=8536/10536으로 위치만 조정했다. 기존 긴 화면의 viewport 밖 스크롤 내용은 유지한다. 실제 공유 링크 열람·기기 픽셀 전수 대조·클릭 프로토타입 검증은 별도다.
 - 협업: 사용자 필터 확인과 최종2927PASS/분석0·미커밋/미push 상태를 [Issue50 결과](https://github.com/heo0328/lostparty-backend/issues/50#issuecomment-6824178730)에 회신하고 재조회했다. 추가 Backend 변경 요청은 없다.
-- Git: 최신 누적24파일을04baa9be에 커밋하고 최신 origin/dev094a44d1 기반 dev에 충돌 없이 일반 병합했다. lib/test/tool·의존성은 작업 커밋과 동일하다. 이 통합 기록을 병합 커밋에 포함해 dev를 푸시하며 최종 원격 동일성은 Git 결과로 확인한다. 작업 브랜치는 로컬에 보존한다. 다음 페이지는 내 계정이며 별도 착수 지시를 기다린다.
+- Git: 최신 누적24파일을04baa9be에 커밋하고 최신 origin/dev094a44d1 기반 dev에 충돌 없이 일반 병합했다. lib/test/tool·의존성은 작업 커밋과 동일하다. 병합3ccf1aa6을 origin/dev에 푸시하고 ls-remote·HEAD/origin/dev 일치를 확인했다. 후행 문서 보관 커밋도 dev에 반영한다. 작업 브랜치는 로컬에 보존한다. 다음 페이지는 내 계정이며 별도 착수 지시를 기다린다.
 
 
 ## 이전 완료 — Penpot02 코드 디자인 갱신·사용자 확인 (2026-11-12)
