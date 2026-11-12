@@ -388,12 +388,7 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(find.byKey(const ValueKey('departure-day-6')));
           await tester.pump();
-          await tester.scrollUntilVisible(
-            find.text('조건 적용'),
-            200,
-            scrollable: find.byType(Scrollable).first,
-          );
-          await tester.tap(find.text('조건 적용'));
+          await tester.tap(find.text('적용'));
           await tester.pumpAndSettle();
           expect(m.filter.departure.weekday, 6);
           expect(api.requests, hasLength(1));

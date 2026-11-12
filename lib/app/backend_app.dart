@@ -952,17 +952,33 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
             ),
             StatefulShellBranch(
               routes: [
-                GoRoute(
-                  path: '/recruitments',
-                  builder: (context, _) => readSession.isAuthenticated
+                ShellRoute(
+                  builder: (context, state, child) =>
+                      readSession.isAuthenticated
                       ? CycleRecruitmentListPage(
+                          key: const ValueKey('recruitmentExplorer'),
+                          selectedRoom: state.pathParameters['recruitmentId'],
+                          selectedTarget:
+                              state.uri.queryParameters['target_cycle_key'],
+                          fullScreenChild:
+                              state.uri.path == '/recruitments/create' ||
+                              state.uri.queryParameters.containsKey(
+                                'reader_profile',
+                              ) ||
+                              state.uri.queryParameters.containsKey(
+                                'membership_id',
+                              ),
+                          detail: state.uri.path == '/recruitments'
+                              ? null
+                              : child,
+                          onClearSelection: () => context.go('/recruitments'),
                           groupChanges: _groupChanges,
                           gateway: cycleInteractions,
                           session: readSession,
                           changes: _memberAccount?.model ?? auth,
                           scopeKey: cycleScopeKey,
                           mutations: participation,
-                          onRoom: (id, t) => context.push(
+                          onRoom: (id, t) => context.go(
                             '/recruitments/$id?target_cycle_key=$t',
                           ),
                           onCreate: (t) => context.push(
@@ -970,6 +986,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                           ),
                           onLogin: () => showLoginRequired(context, auth),
                         )
+                      : state.uri.path != '/recruitments'
+                      ? child
                       : RecruitmentListPage(
                           partyReadRepository:
                               PendingBackendPartyReadRepository(),
@@ -981,90 +999,106 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                         ),
                   routes: [
                     GoRoute(
-                      path: 'create',
-                      builder: (context, state) => BackendRecruitmentCreatePage(
-                        model: recruitmentCreate,
-                        onCreated: (id, t) =>
-                            unawaited(participation.changed(id, t)),
-                        initialTarget:
-                            state.uri.queryParameters['target_cycle_key'],
-                        onLogin: () => showLoginRequired(context, auth),
-                      ),
-                    ),
-                    GoRoute(
-                      path: ':recruitmentId',
-                      builder: (context, state) {
-                        MembershipRecordAnchor? anchor;
-                        try {
-                          anchor = MembershipRecordAnchor.fromQuery(state.uri);
-                        } on FormatException {
-                          return const Scaffold(
-                            body: Center(child: Text('기록 링크를 확인해 주세요.')),
-                          );
-                        }
-                        final memberReader =
-                            anchor != null ||
-                            state.uri.queryParameters['reader_profile'] ==
-                                membershipReaderProfile;
-                        return BackendRecruitmentDetailPage(
-                          key: ValueKey((
-                            state.pathParameters['recruitmentId'],
-                            state.uri.queryParameters['target_cycle_key'],
-                            anchor?.membership,
-                            anchor?.cycleMember,
-                            memberReader,
-                          )),
-                          target: state.uri.queryParameters['target_cycle_key'],
-                          accessChanges: _memberAccount?.model ?? auth,
-                          scopeKey: cycleScopeKey,
-                          reader: memberReader ? membershipReads : null,
-                          recordAnchor: anchor,
-                          gateway: recruitmentGateway,
-                          participation: participation,
-                          session: readSession,
-                          rosterIssues: rosterIssues,
-                          onRefreshRoster: refreshIssueRoster,
-                          onManageCharacters: (registration) async {
-                            final binding = cycleScopeKey();
-                            var id = registration;
-                            if (id == null) {
-                              final regs =
-                                  _memberAccount?.model.sections
-                                      .where(
-                                        (s) =>
-                                            s.registration.ownershipStatus ==
-                                            'owned',
-                                      )
-                                      .toList() ??
-                                  [];
-                              id = await showDialog<String>(
-                                context: context,
-                                builder: (dialogContext) => SimpleDialog(
-                                  title: const Text('활동 캐릭터를 선택할 원정대'),
-                                  children: [
-                                    for (final s in regs)
-                                      SimpleDialogOption(
-                                        onPressed: () => Navigator.pop(
-                                          dialogContext,
-                                          s.registration.registrationId,
-                                        ),
-                                        child: Text(s.registration.label),
-                                      ),
-                                  ],
-                                ),
+                      path: '/recruitments',
+                      builder: (context, state) => const SizedBox.shrink(),
+                      routes: [
+                        GoRoute(
+                          path: 'create',
+                          builder: (context, state) =>
+                              BackendRecruitmentCreatePage(
+                                model: recruitmentCreate,
+                                onCreated: (id, t) =>
+                                    unawaited(participation.changed(id, t)),
+                                initialTarget: state
+                                    .uri
+                                    .queryParameters['target_cycle_key'],
+                                onLogin: () => showLoginRequired(context, auth),
+                              ),
+                        ),
+                        GoRoute(
+                          path: ':recruitmentId',
+                          builder: (context, state) {
+                            MembershipRecordAnchor? anchor;
+                            try {
+                              anchor = MembershipRecordAnchor.fromQuery(
+                                state.uri,
+                              );
+                            } on FormatException {
+                              return const Scaffold(
+                                body: Center(child: Text('기록 링크를 확인해 주세요.')),
                               );
                             }
-                            if (id != null &&
-                                context.mounted &&
-                                binding == cycleScopeKey()) {
-                              await openCharacters(context, id);
-                            }
+                            final memberReader =
+                                anchor != null ||
+                                state.uri.queryParameters['reader_profile'] ==
+                                    membershipReaderProfile;
+                            return BackendRecruitmentDetailPage(
+                              key: ValueKey((
+                                state.pathParameters['recruitmentId'],
+                                state.uri.queryParameters['target_cycle_key'],
+                                anchor?.membership,
+                                anchor?.cycleMember,
+                                memberReader,
+                              )),
+                              target:
+                                  state.uri.queryParameters['target_cycle_key'],
+                              accessChanges: _memberAccount?.model ?? auth,
+                              scopeKey: cycleScopeKey,
+                              reader: memberReader ? membershipReads : null,
+                              recordAnchor: anchor,
+                              gateway: recruitmentGateway,
+                              participation: participation,
+                              session: readSession,
+                              rosterIssues: rosterIssues,
+                              onRefreshRoster: refreshIssueRoster,
+                              onManageCharacters: (registration) async {
+                                final binding = cycleScopeKey();
+                                var id = registration;
+                                if (id == null) {
+                                  final regs =
+                                      _memberAccount?.model.sections
+                                          .where(
+                                            (s) =>
+                                                s
+                                                    .registration
+                                                    .ownershipStatus ==
+                                                'owned',
+                                          )
+                                          .toList() ??
+                                      [];
+                                  id = await showDialog<String>(
+                                    context: context,
+                                    builder: (dialogContext) => SimpleDialog(
+                                      title: const Text('활동 캐릭터를 선택할 원정대'),
+                                      children: [
+                                        for (final s in regs)
+                                          SimpleDialogOption(
+                                            onPressed: () => Navigator.pop(
+                                              dialogContext,
+                                              s.registration.registrationId,
+                                            ),
+                                            child: Text(s.registration.label),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                if (id != null &&
+                                    context.mounted &&
+                                    binding == cycleScopeKey()) {
+                                  await openCharacters(context, id);
+                                }
+                              },
+                              roomId: state.pathParameters['recruitmentId']!,
+                              onExitExplorer: memberReader
+                                  ? null
+                                  : () => context.go('/recruitments'),
+                              onLogin: () => showLoginRequired(context, auth),
+                              onCreateAnother: recruitmentCreate.startAnother,
+                            );
                           },
-                          roomId: state.pathParameters['recruitmentId']!,
-                          onLogin: () => showLoginRequired(context, auth),
-                          onCreateAnother: recruitmentCreate.startAnother,
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   ],
                 ),

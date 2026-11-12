@@ -47,6 +47,7 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
     this.rosterIssues,
     this.onRefreshRoster,
     this.onManageCharacters,
+    this.onExitExplorer,
     super.key,
   });
   final RecruitmentGateway gateway;
@@ -62,6 +63,7 @@ class BackendRecruitmentDetailPage extends StatefulWidget {
   final Listenable? accessChanges;
   final String Function()? scopeKey;
   final VoidCallback onLogin, onCreateAnother;
+  final VoidCallback? onExitExplorer;
   @override
   State<BackendRecruitmentDetailPage> createState() =>
       _BackendRecruitmentDetailPageState();
@@ -235,6 +237,10 @@ class _BackendRecruitmentDetailPageState
         return;
       }
       closeCycleActionDialogs(context, widget.roomId, target);
+      if (widget.onExitExplorer != null) {
+        widget.onExitExplorer!();
+        return;
+      }
       router.go(
         Uri(
           path: '/raid-status',
@@ -266,6 +272,9 @@ class _BackendRecruitmentDetailPageState
     listenable: m,
     builder: (context, _) => Scaffold(
       appBar: AppBar(
+        leading: widget.onExitExplorer == null
+            ? null
+            : BackButton(onPressed: widget.onExitExplorer),
         title: const OwnershipNoticeTitle(child: Text('모집 상세')),
         actions: [
           IconButton(
@@ -277,7 +286,8 @@ class _BackendRecruitmentDetailPageState
       ),
       body: Column(
         children: [
-          if (!m.readOnly &&
+          if (widget.onExitExplorer == null &&
+              !m.readOnly &&
               m.cycles != null &&
               m.target != null &&
               widget.session.isAuthenticated)

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'discovery_search.dart';
 import 'batch_completion.dart';
 import 'roster_participation.dart';
 import '../domain/departure_search_selection.dart';
@@ -160,7 +161,7 @@ class CycleSearchFilter {
         'direction': descending ? 'descending' : 'ascending',
       },
       'remaining_slot_counts': remaining.toList()..sort(),
-      'limit': 20,
+      'limit': 50,
       'cursor': cursor,
     };
   }
@@ -169,6 +170,39 @@ class CycleSearchFilter {
 }
 
 class CycleSearchPage {
+  CycleSearchPage.discovery(
+    Map<String, dynamic> j,
+    String target, {
+    required bool groups,
+  }) {
+    BetaContract.definition(groups ? 'DiscoveryGroupPage' : 'DiscoveryPage', j);
+    CycleReadScope(roleMap(j['scope']), target);
+    final d = roleMap(j['data']);
+    final policies = groups ? groupListStates(j) : null;
+    rows = (d['items'] as List)
+        .map((raw) {
+          final item = roleMap(raw);
+          final metadata = policies == null
+              ? null
+              : listDisplayData(
+                  {'room_group_states': policies},
+                  item,
+                  item['room_id'] as String,
+                );
+          return DiscoveryCard(item, target, metadata);
+        })
+        .toList(growable: false);
+    totalCount = d['total_count'] as int;
+    resultRevision = d['result_revision'] as String;
+    cursor = d['next_cursor'] as String?;
+    digest = d['filter_scope_digest'] as String?;
+    roleCheck(
+      rows.length <= 50 &&
+          rows.length <= totalCount! &&
+          rows.map((r) => r.id).toSet().length == rows.length &&
+          (cursor == null || rows.isNotEmpty),
+    );
+  }
   CycleSearchPage(Map<String, dynamic> j, String target) {
     roleShape(j, 'scope data');
     CycleReadScope(roleMap(j['scope']), target);
@@ -192,7 +226,9 @@ class CycleSearchPage {
           (cursor!.isNotEmpty && cursor!.length <= 2048 && rows.isNotEmpty),
     );
   }
-  late final List<CycleRoomCard> rows;
+  int? totalCount;
+  String? resultRevision;
+  late final List<RecruitmentSearchCard> rows;
   late final String? cursor, digest;
 }
 
@@ -916,26 +952,22 @@ class CycleInteractionRepository
     CycleSearchFilter filter, {
     String? cursor,
   }) => _decode(() async {
-    final result = await readRecruitment(
-      api: api,
-      mode: contractMode,
-      path: '/v2/raid-rooms/search',
-      includeGroupList: includeGroupList,
-      method: 'POST',
-      body: filter.body(target, cursor: cursor),
-      parse: (j) => CycleSearchPage(j, target),
-    );
-    if (result.metadata != null) {
-      final items = result.metadata!['items'] as List;
-      for (var i = 0; i < result.value.rows.length; i++) {
-        result.value.rows[i].betaData = listDisplayData(
-          result.metadata,
-          roleMap(items[i]),
-          result.value.rows[i].id,
-        );
-      }
+    final contract = BetaContract(mode: contractMode);
+    final query = contract.query('POST', '/v2/raid-rooms/search', {
+      'response_profile': 'discovery-1',
+      if (includeGroupList) 'include_group_state': 'true',
+    });
+    final body = filter.body(target, cursor: cursor);
+    if (contractMode == RecruitmentContractMode.betaWire2) {
+      contract.validateRequest('POST', '/v2/raid-rooms/search', query, body);
     }
-    return result.value;
+    final raw = (await api.request(
+      '/v2/raid-rooms/search',
+      method: 'POST',
+      query: query,
+      body: body,
+    ))!;
+    return CycleSearchPage.discovery(raw, target, groups: includeGroupList);
   });
   @override
   Future<CycleAdmissionPreview> admission(

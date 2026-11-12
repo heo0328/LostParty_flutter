@@ -909,18 +909,21 @@ void main() {
       expect(model.failure, 'CURSOR_STALE');
     });
 
-    test('local digest mismatch is rejected without recovery', () async {
-      await seedCursor();
-      var calls = 0;
-      gateway.onSearch = (t, f, cursor) async {
-        calls++;
-        return CycleSearchPage(searchWire(t, id: app, digest: 'changed'), t);
-      };
-      await model.search(more: true);
-      expect(calls, 1);
-      expect(model.failure, 'CURSOR_STALE');
-      expect(model.rows, isEmpty);
-    });
+    test(
+      'local digest mismatch replaces the page with one bounded recovery',
+      () async {
+        await seedCursor();
+        var calls = 0;
+        gateway.onSearch = (t, f, cursor) async {
+          calls++;
+          return CycleSearchPage(searchWire(t, id: app, digest: 'changed'), t);
+        };
+        await model.search(more: true);
+        expect(calls, 2);
+        expect(model.failure, isNull);
+        expect(model.rows.single.id, app);
+      },
+    );
 
     test(
       'mutation discards every filter of affected target, preserves opposite cache',
@@ -1089,9 +1092,9 @@ void main() {
         );
         await model.load();
         await model.search(more: true);
-        expect(model.failure, 'CURSOR_STALE');
-        expect(model.rows, isEmpty);
-        expect(model.cursor, null);
+        expect(model.failure, isNull);
+        expect(model.rows.single.id, room);
+        expect(model.cursor, 'loop');
       },
     );
     test(

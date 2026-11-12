@@ -80,7 +80,8 @@ void main() {
       expect(model.target, target);
       expect(model.filter.category, category);
       expect(model.filter.groupId, old.groupId);
-      expect(model.filter.members, isEmpty);
+      expect(model.filter.members, isNotEmpty);
+      expect(model.selectionPending, isTrue);
       expect(model.candidateMembers.single.ref, currentRef);
       expect(
         model.candidateMembers.single.characters.single.id,
@@ -89,7 +90,9 @@ void main() {
       source.choices = [];
       groups.applied();
       await clock.settled(() => !model.loading && model.groups.isEmpty);
-      expect(model.filter.groupIds, isEmpty);
+      expect(model.filter.groupIds, {old.groupId});
+      expect(model.groupFailure, 'GROUP_NOT_FOUND');
+      expect(model.rows, isEmpty);
       expect(model.target, target);
     },
   );

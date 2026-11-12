@@ -41,7 +41,20 @@ class CycleReadScope {
   }
 }
 
-class CycleRoomCard {
+abstract interface class RecruitmentSearchCard {
+  String get id;
+  String get title;
+  int get capacity;
+  int get count;
+  bool get canView;
+  Map<String, dynamic> get wire;
+  List<Map<String, dynamic>> get items;
+  List<DateTime> get starts;
+  Map<String, dynamic>? get betaData;
+}
+
+class CycleRoomCard implements RecruitmentSearchCard {
+  @override
   Map<String, dynamic>? betaData;
   CycleRoomCard(Map<String, dynamic> j, String target)
     : wire = Map.unmodifiable(j) {
@@ -102,11 +115,17 @@ class CycleRoomCard {
       schedule['confirmed_starts_at'],
     ).map(roleUtc).toList(growable: false);
   }
+  @override
   final Map<String, dynamic> wire;
+  @override
   late final String id, title;
+  @override
   late final int capacity, count;
+  @override
   late final bool canView;
+  @override
   late final List<Map<String, dynamic>> items;
+  @override
   late final List<DateTime> starts;
 }
 
