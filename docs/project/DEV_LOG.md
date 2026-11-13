@@ -1,3 +1,7 @@
+## 2026-11-13 — 내 계정 리메이크 준비 게시·Backend53 인계
+
+문서6파일을70dcc107에 한커밋으로 보관하고 origin/feature/my-account-ui-remake에 push했다. [Backend53](https://github.com/heo0328/lostparty-backend/issues/53)을 생성해 고정문서·실제코드근거·표시계약/개인전체예약조회2개질의·담당/완료조건을 전달하고 재조회했다. #8보관종료와 열린 타주제의 범위를 확인해 새준비협의를 분리했으며 서버구현/배포는 요청하지 않았다. 이번후행변경은 인계링크/답변대기 결과문서만 같은브랜치에 보관한다. 코드/테스트/환경·Penpot 불변, 새기능/실기기통과 없음·dev/main미통합·배포 없음이며 사용자 재검토 후 Penpot부터 이어간다.
+
 ## 2026-11-13 — 내 계정 리메이크 준비 문서·협의 범위 정리
 
 사용자 제안/후속선택을 대조해 사용전원표시·순서유지, 레이드 개수제거/종류선택·일괄덮어쓰기/신규추천3개, 가능시간+예약 그래프·웹같은탭 최초런치·곡선/영역/연보라도구버튼을 미적용 제품계획으로 기록했다. 일반DI의 MemberAccountSection/관리gateway/personal-preferences/presentation-settings, 주간 로컬display와원pending, play-availability·schedule-overlaps/anonymous_busy, StartupEntryGate를 대조했다. 카탈로그2026.08.20의 활성난이도에서 높은입장레벨의 골드합계가 감소하는 사례는 발견하지 못해 기존 후보계산 재사용으로 정리했다.

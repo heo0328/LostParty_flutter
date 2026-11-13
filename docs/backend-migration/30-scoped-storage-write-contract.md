@@ -10,6 +10,8 @@
 
 이 절은 아래 기존 표시수/숨김 UX를 대체할 **차후 구현 기준**이다. 현재 코드는 아직 기존 동작이며 이번 승인 범위는 조사·문서 보관/push·Backend 협의까지다. 제품 원본은 [DETAIL_IMPROVEMENTS](../product/DETAIL_IMPROVEMENTS.md#my-account-ui-remake), 시각/치수 확정은 디자인 기준의 다음 Penpot 단계다. 개발 기본은 dev 로컬, 현재 자료/기존 권한을 유지하며 베타 전 초기화나 운영배포를 선행조건으로 만들지 않는다.
 
+협의는 [Backend Issue53](https://github.com/heo0328/lostparty-backend/issues/53)에 준비문서70dcc107을 고정해 전달했다. 다음 담당은 Backend의 기존표시설정 계약/회원전체예약조회 재사용·최소추가필요 여부 답변이며, 신규wire/API/DB는 아직 미확정이다. 답변 없이 새로운 DTO/endpoint를 가정해 구현하지 않는다.
+
 ### 실제 경로와 책임·보존할 흐름
 
 | 영역 | 현재 근거/소유 | 차후 변경/주의 |
