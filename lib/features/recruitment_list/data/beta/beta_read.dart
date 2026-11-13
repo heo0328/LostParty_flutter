@@ -71,7 +71,16 @@ Future<BetaDecoded<T>> readRecruitment<T>({
   if (includeGroupList && mode == RecruitmentContractMode.betaWire2) {
     contract.validateResponse(method, path, 200, raw);
   }
-  final roomGroups = includeGroupList ? groupListStates(raw) : null;
+  final roomGroups = includeGroupList
+      ? groupListStates(
+          raw,
+          allowMissingMembershipCycle:
+              mode == RecruitmentContractMode.betaWire2 &&
+              method == 'GET' &&
+              path == '/v2/me/raid-room-memberships' &&
+              q['reader_profile'] == 'membership-actions-1',
+        )
+      : null;
   if (includeGroupList) {
     raw.remove('group_states');
     raw.remove('cycle_groups');
@@ -191,7 +200,10 @@ String? retainedGroupLabel(Map<String, dynamic>? data) {
 }
 
 /// Page-scoped policies use room, actual cycle and generation together.
-Map<String, dynamic> groupListStates(Map<String, dynamic> raw) {
+Map<String, dynamic> groupListStates(
+  Map<String, dynamic> raw, {
+  bool allowMissingMembershipCycle = false,
+}) {
   final states = <String, dynamic>{};
   roleCheck(raw['group_states'] is List && raw['cycle_groups'] is List);
   for (final value in raw['group_states'] as List) {
@@ -216,6 +228,7 @@ Map<String, dynamic> groupListStates(Map<String, dynamic> raw) {
   for (final value in roleMap(raw['data'])['items'] as List) {
     final row = roleMap(value);
     final target = _policyTarget(row);
+    if (allowMissingMembershipCycle && _membershipWithoutCycle(row)) continue;
     final matches = policies.entries
         .where((e) => _matchesPolicy(roleMap(e.value)['group_policy'], target))
         .toList();
@@ -242,6 +255,15 @@ Map<String, dynamic> _policyTarget(Map<String, dynamic> row) {
   return roleMap(t);
 }
 
+// Only a validated membership target can explicitly have no selected cycle.
+// A missing key or a card from another list must still require its policy.
+bool _membershipWithoutCycle(Map<String, dynamic> row) {
+  final target = row['target'];
+  return target is Map &&
+      target.containsKey('room_cycle_id') &&
+      target['room_cycle_id'] == null;
+}
+
 bool _matchesPolicy(Map<String, dynamic> policy, Map<String, dynamic> target) =>
     policy['room_id'] == target['room_id'] &&
     policy['target_cycle_key'] == target['target_cycle_key'] &&
@@ -251,13 +273,17 @@ bool _matchesPolicy(Map<String, dynamic> policy, Map<String, dynamic> target) =>
 Map<String, dynamic>? listDisplayData(
   Map<String, dynamic>? metadata,
   Map<String, dynamic> item,
-  String room,
-) {
+  String room, {
+  bool allowMissingMembershipCycle = false,
+}) {
   final directory = metadata?['room_group_states'];
   Map<String, dynamic>? policy;
   if (directory is Map) {
     final target = _policyTarget(item);
     roleCheck(target['room_id'] == room);
+    if (allowMissingMembershipCycle && _membershipWithoutCycle(item)) {
+      return betaDisplayData(item);
+    }
     final matches = directory.values
         .where((v) => _matchesPolicy(roleMap(v)['group_policy'], target))
         .toList();

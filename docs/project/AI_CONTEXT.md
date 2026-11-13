@@ -1,5 +1,9 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
+## Issue52 기록 소비 수정 개발 완료·이슈 종료 (2026-11-13)
+
+기록 조회 실패에 대응해 기존 공용 reader 계약을 유지하며 기록 탭 표시·명시null 주차 정책 부재·연속 페이징을 일반 앱 경로에 연결했다. 사용자가 안내 범위 정상 표시를 보고했으나 더 보기는 자료 부족으로 수동 미확인이라고 정정했다. [설계37 §37.90](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#history-response-consumption)에 현재 소비/검증 근거를 둔다. 사용자 명시 지시로 Issue52 completed 종료와 커밋/dev 통합·push를 진행하며 식별자는 Git 이력을 따른다. 배포는 추가 개발 이후 별도 지시로 진행한다. 운영 동일 원인/당시403은 미확정이며 미배포·보관/인계 범위는 NEXT_WORK를 따른다.
+
 ## 2.1.0 통합 릴리즈 공개 완료 (2026-11-11)
 
 웹 https://lostparty.duckdns.org/ 및 GitHub Release v2.1.0/앱2.1.0+6 공개완료. 태그소스9019ee060afb109684786bff62c92dece9925810의 main/dev/release 통합·원격일치 후 Actions43041814495에서 인수한 APK/웹 원본5파일을 재빌드/재압축 없이 승격했다. 공개후 전체파일 재다운로드/hash·승인본문·실제웹index hash/health200 검증완료, #49 6798998431로 인계했다. 후행 문서커밋은 태그를 이동하지 않는다. 원본run/source/asset ID/hash 원장은 docs/releases/v2.1.0-artifacts.json, 장기계약은 GITHUB_ANDROID_RELEASE_PIPELINE §8, 다음작업/미확인은 NEXT_WORK를 따른다.

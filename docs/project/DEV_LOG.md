@@ -1,3 +1,36 @@
+## 2026-11-13 — Issue52 종료·누적 변경 보관/dev 통합 지시
+
+최신 Backend6847918619를 확인해 추가 변경/대기가 없음을 대조했다. 사용자 지시로 [종료6848119538](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6848119538)에 개발 완료·더 보기 수동 미확인·운영미반영/당시403 미확정의 이관 범위를 남기고 본문을 현행화해 completed 종료를 확인했다. 배포는 추가 개발 이후라는 사용자 방침을 NEXT_WORK에 기록했다. 기능은 변경하지 않아 기존266PASS/변경4파일 분석0·사용자 정상 보고를 재사용하고 diffcheck/내용 검토를 수행했다.
+
+Git은 fix/recruitment-history-response의 추적 제외 외 누적8파일을 한 커밋으로 보관하고 fetch로 확인한 origin/dev ad6f2337 기반 dev에 일반 병합·push하는 지시 범위다. 실제 완료 식별자는 Git 이력과 Issue52 최종 인계에 남긴다. 작업 브랜치는 보존하고 완전 병합 후 삭제 후보로만 분류한다. main/release/태그·운영/DB/자료·웹/APK 게시·기기 설치/시험은 변경하지 않는다. 새로 가능한 흐름/보존 확인·자동 검증은 아래 구현 기록과 동일하며 남은 수동 더 보기/운영 해소는 별도다.
+
+## 2026-11-13 — Issue52 사용자 정상 표시 보고·더 보기 수동 미확인
+
+사용자가 안내 항목이 모두 정상 표시된다고 보고한 뒤 더 보기는 자료 부족으로 확인하지 못했다고 정정했다. 새로 연결한 기록 소비의 목록 표시·새로고침·상세·주차/탭 왕복은 사용자 보고 범위에서 정상으로 기록하고 모든 자료/기기 조합 전수 통과로 확대하지 않는다. 더 보기/다중페이지는 기존 자동검증 통과와 사용자 수동 미확인을 구분한다. 기존 흐름의 자동266PASS/변경4파일 분석0을 재사용하며 기능 코드 변경/시험 반복·자료 생성/삭제/반복재현 요청은 없다. [사용자 결과6847809202](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6847809202)에 이 범위를 회신했다. 운영 오류 해소/당시403·운영 반영은 미확인이며 fix/recruitment-history-response 유지·누적 미커밋/미push·dev/main 미반영·배포/Issue종료 없음.
+
+## 2026-11-13 — Issue52 Native 기록 소비 수정 연결·자동 검증 완료
+
+- 착수: 최신 [Backend6846879058](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6846879058)에 설계 변경이 없음을 확인하고 사용자 지시로 구현했다. 같은 fix/recruitment-history-response·기준 dev ad6f2337에서 기존 누적 변경을 유지했다.
+- 새로 가능해진 흐름: 일반 앱 DI의 기존 cycleReads→목록VM→기록 탭에서 선택T RoomCycle 없는 관계의 정책 부재를 수용하고 해당 행만 표시 제외한다. 숨김페이지 뒤의 실제 기록/최종 빈상태까지 같은조건으로 순차조회한다. 원행/최종cursor/방문집합을 성공 구간 단위로 반영하고 cache왕복·부분실패/재시도/stale·늦은응답을 처리한다. 적용 계약은 설계37 §37.90이며 API/DI/Router·UI 재설계는 없다.
+- 보존 확인: 실제cycle relation_only·실제정책1개·schema/roster/필드누락·중복/미사용정책 거절, 공용원행·C/N·옛anchor/재참가·검색/신청·생성/ACK를 표적으로 검증했다. 최종10파일266PASS(이번 기록27개 포함)·변경Dart4파일 분석0·포맷4파일0변경·diffcheck/리뷰. 최초 수명시험2건은 이전응답을 새scope요청과 공유한 fixture문제로 요청별응답을 분리해 최종통과, 중괄호style1건은 정정후분석0이다. 전체 Flutter 시험/분석은 직접영향 소비를 표적으로 보호해 확대하지 않았다.
+- 미확인/다음: dev 실제 기록목록/정상빈상태·실제기록 상세/주차전환 사용자 확인 대기. 운영실응답 동일원인/기록오류해소·당시403은 미확정이며 운영/DB/자료/키·쓰기재현/설치/기기조작·배포는 하지 않았다. 생성403/ACK·권한은 변경하지 않았다.
+- 협업/Git: [Native 구현6847142336](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6847142336)에 연결·검증·dev/운영미확인·미커밋/미push를 회신했다. Backend 추가변경/재검증을 선행조건으로 요구하지 않는다. 현브랜치 유지·누적변경 미커밋/미push·dev/main 미반영·Issue종료 없음.
+
+## 2026-11-13 — Issue52 Native 소비 수정 설계 완료 (미구현)
+
+사용자 지시로 기획·설계만 수행했다. [Backend6846147217](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6846147217)과 고정0911383e 계약 §3·4를 확인해 공용 reader의 선택T 없는 종료 관계 반환이 정상임을 수용했다. 이전 서버 계약 확인 대기는 해소했고 설계37 §37.90에 기록 탭 한정 표시 제외·명시null 주차의 정책0개 예외·숨김페이지 순차조회·원행/방문cursor cache·부분실패/늦은응답·검증 범위를 정의했다. 실제cycle relation_only·옛anchor/재참가·현재/다음 주차·검색/신청/복구를 보호하고 생성403·ACK/권한 변경은 제외한다.
+
+새로 가능해진 앱 흐름은 없으며 구현은 대기다. 보존 확인은 코드/기존 계약 정적 대조이며 이전 조사2/회귀110PASS를 새 수정 검증으로 확대하지 않는다. 기능 코드·기존 미커밋 조사 테스트를 변경하지 않았으므로 Flutter 시험/분석을 반복하지 않고 문서 내용/diffcheck를 검토했다. 실제 사용자 기록 복구·운영 응답 동일 원인·당시403·기기/배포는 미확인이다. [Native 설계 수용6846576987](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6846576987)에 미구현 상태와 다음 담당 Native를 회신했다. 현재 fix/recruitment-history-response 유지·누적 변경 미커밋/미push·dev/main 미반영이며 배포/Issue 종료는 하지 않았다.
+
+## 2026-11-13 — Issue52 기록 응답 계약 조사·Backend 인계
+
+- 사용자 최신 상태: 모집 생성 정상, 이번 주 기록 탭 조회 실패 지속. 실제 API는 GET /v2/me/raid-room-memberships(state=ended), 일반 DI의 그룹/캐릭터 경고·participation profile을 포함한다. summary POST200과 구분한다.
+- 조사: 운영 보고 Backend c31d90da memberships outer join/종료 조건은 선택T RoomCycle 없는 과거 관계도 포함할 수 있다. 해당 projection의 nullable target·relation_only는 기본 DTO/스키마에 허용되나 group_list_display.attach는 그 행의 정책을 만들지 않고 Native groupListStates는 행마다 정확히1개 정책을 요구한다. 이 조합의 FormatException→INVALID_RESPONSE를 비식별 합성으로 재현했다. 실응답 HTTP/요청ID/필드는 확보하지 않아 운영 원인 확정으로 확대하지 않는다.
+- 생성403: 초기 create activate의 context/후보 읽기와 성공 ACK/보관 acknowledged 명령 복구 후 상세 이동을 구분했다. 완료 ACK 소비·새 생성 진입 초기화가 존재하며 과거 성공 재이동이 실제 원인이었는지는 미확정이다. 권한·원ACK·기록을 변경하지 않았다.
+- 새로 가능해진 흐름: 기능 추가/수정 없음. 선택T 있는 종료 기록과 선택T 없는 종료 관계의 그룹 metadata 대조 실패를 구분하는 조사 테스트를 추가했다. 보존 확인: 기존 기록 anchor/중복 거절·그룹 metadata·생성 ACK 소비/재진입/단일 이동 등 직접110PASS. 조사2PASS·추가 테스트 분석0·Dart 포맷/diffcheck. 전체 Flutter 시험/분석은 앱 코드 불변이므로 반복하지 않았다.
+- 미확인 실기기/운영: 실제 사용자 응답과 합성 조건 동일 여부, 해당 GET 상태/요청ID, 당시403 정확한 대상/세션. 운영/DB/키·자료/쓰기 시험·배포는 미수행이다. 사용자 재현을 반복 요구하지 않고 Backend가 소스/합성으로 계약을 먼저 확인한다.
+- 협업: [Issue52 Native 회신6845321873](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6845321873)에 근거·검증·미커밋/미push·계약 확인 요청을 게시했다. Backend의 선택T 없는 관계 포함 여부/그룹 정책 계약 회신 후 최소 수정 주체/범위를 확정한다. fix/recruitment-history-response 유지, dev/main 미반영·커밋/푸시/종료 없음.
+
 ## 2026-11-13 — 2.2.0 제한 접근 운영 테스트 생략·공개 승인
 
 사용자가 dev 앱/서버에서 확인한 필터 기능을 변경 없이 그대로 운영 게시하고2.1.0 당시의 제한 접근 임시 운영 테스트는 생략한다고 확정했다. [Backend51 전달6829149247](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6829149247)에 실제 운영 진행 승인과 테스트 생략·기존 자료 유지·산출물 후속 전달을 기록했다. 서명·버전·해시/manifest 검증과 배포 후 실제 health/버전 확인은 유지한다. release/2.2.0의 준비 변경을 보관해 게시 없는 APK/웹 CI 산출물을 생성하고 Backend에 인계한 뒤 공동 공개한다.
