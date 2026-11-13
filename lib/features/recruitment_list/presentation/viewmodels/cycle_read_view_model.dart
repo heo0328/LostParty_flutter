@@ -29,11 +29,12 @@ class CycleReadViewModel extends ChangeNotifier {
   List<CycleOwnRow> get visibleRows => tab == 0
       ? rows.where((row) => row.isActiveParticipation).toList(growable: false)
       : tab == 2
-      ? rows.where((row) => row.isEndedParticipation).toList(growable: false)
+      ? rows.where((row) => row.isSelectedCycleHistory).toList(growable: false)
       : rows;
   CycleRoomCard? card;
   String? cursor;
-  final _pages = <(String, int, bool), (List<CycleOwnRow>, String?)>{};
+  final _pages =
+      <(String, int, bool), (List<CycleOwnRow>, String?, Set<String>)>{};
   final _cursors = <String>{};
   bool get signedIn => repository.api.session.isAuthenticated;
   bool _valid(int e) =>
@@ -78,6 +79,7 @@ class CycleReadViewModel extends ChangeNotifier {
     final cached = _pages[(t, section, repository.membershipProfile)];
     rows = cached?.$1 ?? const [];
     cursor = cached?.$2;
+    if (cached != null) _cursors.addAll(cached.$3);
     notifyListeners();
     if (cached == null || roomId != null) unawaited(load());
   }
@@ -90,7 +92,7 @@ class CycleReadViewModel extends ChangeNotifier {
         (more && cursor == null)) {
       return;
     }
-    final e = ++_epoch, t = target!, section = tab, next = more ? cursor : null;
+    final e = ++_epoch, t = target!, section = tab;
     loading = true;
     failure = null;
     failureDetails = null;
@@ -101,27 +103,47 @@ class CycleReadViewModel extends ChangeNotifier {
         if (!_valid(e)) return;
         card = value;
       } else {
-        final value = await repository.own(
-          t,
-          applications: section == 1,
-          history: section == 2,
-          cursor: next,
-        );
-        if (!_valid(e)) return;
-        if (more &&
-            value.cursor != null &&
-            (value.cursor == next || _cursors.contains(value.cursor))) {
-          throw const AccountReadException('INVALID_RESPONSE');
+        // Commit the whole visible-page search together. A hidden-only page
+        // must neither look empty nor advance the retry cursor on failure.
+        final items = more ? [...rows] : <CycleOwnRow>[];
+        final visited = more ? {..._cursors} : <String>{};
+        final identities = items.map((r) => r.identity).toSet();
+        var next = more ? cursor : null;
+        while (true) {
+          final value = await repository.own(
+            t,
+            applications: section == 1,
+            history: section == 2,
+            cursor: next,
+          );
+          if (!_valid(e)) return;
+          if (value.cursor != null &&
+              (value.cursor == next || !visited.add(value.cursor!))) {
+            throw const AccountReadException('INVALID_RESPONSE');
+          }
+          for (final row in value.rows) {
+            if (!identities.add(row.identity)) {
+              throw const AccountReadException('INVALID_RESPONSE');
+            }
+            items.add(row);
+          }
+          next = value.cursor;
+          if (section != 2 ||
+              next == null ||
+              value.rows.any((r) => r.isSelectedCycleHistory)) {
+            break;
+          }
         }
-        final items = more ? [...rows, ...value.rows] : value.rows;
-        if (items.map((r) => r.identity).toSet().length != items.length) {
-          throw const AccountReadException('INVALID_RESPONSE');
-        }
-        if (!more) _cursors.clear();
-        if (value.cursor != null) _cursors.add(value.cursor!);
         rows = List.unmodifiable(items);
-        cursor = value.cursor;
-        _pages[(t, section, repository.membershipProfile)] = (rows, cursor);
+        cursor = next;
+        _cursors
+          ..clear()
+          ..addAll(visited);
+        _pages[(t, section, repository.membershipProfile)] = (
+          rows,
+          cursor,
+          Set.unmodifiable(visited),
+        );
       }
     } on AccountReadException catch (e2) {
       if (_valid(e)) {

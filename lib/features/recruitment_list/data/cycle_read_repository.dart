@@ -287,6 +287,12 @@ class CycleOwnRow {
         'cancelled',
         'removed',
       }.contains(participationState);
+
+  /// History is a selected-cycle view; the shared reader also returns relations
+  /// with no cycle, which remain available to other recovery consumers.
+  bool get isSelectedCycleHistory =>
+      isEndedParticipation &&
+      (profile == null || profile!.target['room_cycle_id'] != null);
 }
 
 class CycleOwnPage {
@@ -389,6 +395,9 @@ class CycleReadRepository {
           result.metadata,
           roleMap(items[i]),
           row.roomId,
+          allowMissingMembershipCycle:
+              membershipProfile &&
+              contractMode == RecruitmentContractMode.betaWire2,
         );
         row.card?.betaData = row.betaData;
         if (result.metadata?['character_issues'] != null) {

@@ -1,4 +1,14 @@
-# 현재 상태 — 2.2.0+7 운영 공개 완료 (2026-11-13)
+# 현재 상태 — Issue52 개발 완료·종료 / 배포는 추가 개발 이후 (2026-11-13)
+
+- 완료: 기록 소비 수정·자동검증·안내 범위 dev 사용자 확인을 마쳤다. [Backend 수신6847918619](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6847918619)에 추가 변경/대기가 없음을 확인하고 사용자 명시 지시로 [종료 회신6848119538](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6848119538)·본문 현행화 후 Issue52 completed 종료를 확인했다.
+- 근거/담당: [Backend6846147217](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6846147217)이 선택T 없는 종료 관계 반환을 기존 공용 reader 계약으로 확인하고 Native 소비 수정을 요청했다. Backend 미게시 변경/추가 배포를 기다릴 필요는 없다. 운영 실응답 동일 원인과 당시 생성403은 아직 미확정이다.
+- 현재 계약: [설계37 §37.90](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#history-response-consumption). 일반 DI의 기존 Repository/VM/화면에 기록 탭 한정 null주차 표시 제외, 명시 membership 목록의 directory+행 metadata 예외, 숨김페이지 순차 조회를 연결했다. 공용 원행·실제cycle relation_only·실제정책 정확히1개·닫힌 schema/roster·기록 anchor는 보존한다.
+- 구현/검증: 최종 직접10파일266PASS(기록 시험27포함)·변경 Dart4파일 분석0·포맷4파일0변경·diffcheck/리뷰. 없음/있음·혼합/빈결과/추가페이지·C/N·실제정책 누락/중복·원행 중복/반복cursor·중간실패/재시도/stale·늦은응답·cache왕복·옛anchor·검색/신청/roster·생성/원ACK를 표적 검증했다. 영향 범위를 해당 소비에 한정해 전체시험/분석은 확대하지 않았다.
+- 사용자 확인/이관: 기록 표시·새로고침·상세/주차·탭 왕복은 사용자 보고 범위에서 정상, 더 보기/다중페이지는 자료 부족으로 수동 미확인·자동검증 통과다. 자료 추가/삭제·반복재현을 요구하지 않는다. 최초403 과거 원인과 운영 실응답 동일 원인은 미확정으로 보존하고 자동 예방수정하지 않는다. 배포 대상에 이번 수정이 포함될 때 Native/Backend가 별도 릴리즈 계획에서 운영 반영/해소 확인 범위를 정한다. 사용자가 배포는 추가 개발 이후로 명시해 지금 실행하지 않는다.
+- 보관/통합: 사용자 지시로 추적 제외 외 누적8파일 전체를 한 커밋으로 보관하고 최신 origin/dev(ad6f2337) 기반 dev에 일반 병합·push한다. 실제 커밋/통합 식별자와 원격 동기화는 Git 이력 및 Issue52 최종 인계를 따른다. fix/recruitment-history-response는 보존하며 완전 병합 후 삭제 후보로만 분류한다. main/release/태그·운영 웹/APK는 변경하지 않는다.
+- 협업: [사용자 결과6847809202](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6847809202)에 정상 범위와 더 보기 수동 미확인을 구분해 회신했다. 기존 구현266PASS/분석0을 재사용하며 코드 변경/시험 반복은 없다. 추가 Backend 변경·재검증을 보관의 선행 조건으로 요구하지 않는다.
+
+## 이전 완료 — 2.2.0+7 운영 공개 완료 (2026-11-13)
 
 - 웹 https://lostparty.duckdns.org/ 및 [Android Release v2.2.0](https://github.com/heo0328/LostParty_flutter/releases/tag/v2.2.0)가 공개됐다. 사용자 확정에 따라 dev 확인본의 제한 접근 운영 재시험을 생략했다.
 - Backend [운영 완료6831720284](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6831720284)에서 API2.2.0/source c31d90da·DB0036·118표 자료 동일과 웹34자산 hash 일치를 보고했다. Native도 HTTPS health200/DB ok·index hash/제목 일치를 확인했다.

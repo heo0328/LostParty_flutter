@@ -2962,3 +2962,36 @@ Backend172/source1800160d·개발반영e4137073(6414001866), join690f36f를 대�
 - 베타 이후 개선(현재 수정 제외): 다음주 함께하기 개방 알럿에서도 setState 로그가 다수 출력된다는 사용자 보고를 보관한다. 재현/원인조사는 미실행이며 해산 때와 같은 원인이라고 추정해 수정하지 않는다. 베타 출시를 우선하고 차후 알럿/조회·알림 수명에 대한 직접 조사로 착수한다.
 - 일정 제안 발견성: 현재 공대원 일정 전체확인으로 진입해야 제안 확인/수락이 가능해 불편하다. 기능 정상은 통과로 유지한다. 소켓 알림으로 미응답 제안 표시, 상세의 선택 주차 진행 일정에 확인/수락 진입 노출 등을 대안으로 기록하되 어느 하나로 확정하지 않는다. 개선 착수 시 더 나은 방식을 찾는 비교/UX 협의부터 진행하며 사용자 동의 없이 현재 배치를 바꾸지 않는다.
 - 기존 실제 BetaSchedule.session_id 판정 보완은 별도 경계 후속이다. 정상 비5분 제안의 기기 통과를 그 경계 수정 완료로 확대하지 않는다. 서버/DB·자료/배포·dev/main·소켓 구현은 이번 범위 밖이다.
+
+<a id="history-response-consumption"></a>
+### 37.90 Issue52 기록 목록의 선택 주차 소비 (2026-11-13, 앱 연결·자동 검증 완료)
+
+**목표/근거:** 기록 탭은 선택한 이번 주/다음 주의 실제 주차 자료가 있는 종료 행을 보여 준다. 공용 membership reader는 관계 복구도 담당하므로 선택T 자료 없는 종료 관계를 반환하는 기존 SQL/DTO를 유지한다. [Backend6846147217](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6846147217)과 [고정 계약 §3·4](https://github.com/heo0328/lostparty-backend/blob/0911383e632167fb81ca471127ac7b0157e1bda8/docs/archive/work-records/features/recruitment/contracts/ISSUE_25_CONTRACT_REVIEW_V2.md#3-reader-호환--명시-opt-in-프로필)를 따른다. 선택T 없는 행을 받은 뒤 Native의 그룹 정책 필수 대조가 실패하는 조건은 양측 합성으로 확인했으며 운영 실응답 동일 원인은 미확정이다. [Backend 설계 수용6846879058](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6846879058) 후 사용자 진행 지시로 아래 소비를 일반 앱 경로에 연결했다. 사용자가 안내 범위 정상 표시를 보고했으며 더 보기는 자료 부족으로 수동 미확인이다. 운영 반영은 미수행이다.
+
+**제품 동작/범위:** 기존 카드·주차/탭·더 보기·새로고침·빈 상태·오류 안내를 재사용한다. 숨길 행은 기록 탭의 `target.room_cycle_id == null`인 profile 행뿐이다. `relation_only` 전체를 숨기지 않으며 실제 RoomCycle이 있는 relation_only/recovery/기존 종료 행은 기존 표시·권한 조건을 유지한다. 공용 reader의 원목록, 참가/복구 소비, 서버 저장 기록을 삭제하거나 전역 필터하지 않는다. 생성403·생성/ACK 처리·권한·디자인 개편은 이번 수정 대상이 아니다.
+
+**조회와 검증 책임**
+
+- 일반 경로는 BackendApp → CycleOwnRoomsPage → CycleReadViewModel → CycleReadRepository.own이다. 기존 GET `/v2/me/raid-room-memberships`의 선택T/state=ended/limit=20/cursor 및 모든 profile/include query를 그대로 사용한다. 새 endpoint·DTO·OpenAPI·저장 스키마·DI/Router 변경은 필요 없다. 개발·검증 기본은 dev 로컬이며 운영 반영/자료 초기화는 별도 지시다.
+- `beta_read.dart`의 그룹 directory 대조와 행별 `listDisplayData`를 함께 고친다. 예외 적용 범위는 명시 membership reader 목록의 target wrapper에 **필드가 존재하고 값이 null인 room_cycle_id**뿐이다. 요청 method/path+reader_profile을 readRecruitment에서 판별해 기본 false인 내부 옵션으로 전달하며, CycleReadRepository의 같은 profile 행 metadata 대조에도 동일 조건을 쓴다. 검색/신청·다른 endpoint의 기본 정책 대조는 엄격하게 유지한다.
+- 전체 wire/schema·target/viewer·권한·roster 검증은 숨기기 전에 수행한다. 누락 필드를 null로 대체하거나 모르는 enum/잘못된 타입을 수용하지 않는다. 실제 RoomCycle 없는 행은 대응 정책0개가 정상이며 가짜 정책·그룹명을 만들지 않는다. 실제 RoomCycle이 있는 행은 정확히1개 정책과 room/T/cycle/generation/그룹 일치 검사를 유지한다. 정책 자체의 schema·중복·미사용 정책 거절도 유지한다.
+- CycleOwnPage/Repository는 검증된 행 전체와 서버 cursor를 보존한다. 주차 없는지의 표시 판정은 기존 isEndedParticipation과 별도로 두고 VM의 기록 visibleRows와 아래 자동 연속 조회가 같은 판정을 재사용한다. legacy 경로·다른 탭의 기존 표시 조건을 새 profile 전용 조건으로 축소하지 않는다.
+
+**페이징·수명·실패 처리**
+
+- `CycleReadViewModel.load`에서 기록 탭의 첫 조회와 더 보기를 한 논리적 로딩 구간으로 처리한다. 매 응답을 검증하고, 그 페이지의 표시 가능한 행이0개이고 next_cursor가 있으면 같은 조건으로 **순차** 다음 GET을 수행한다. 표시 행이1개 이상 나오거나 cursor=null이면 멈춘다. 표시20개를 채우려 추가 요청하거나 이미 보이는 기록 뒤를 선제 전체 조회하지 않는다. 임의 페이지 상한으로 빈 결과를 확정하지 않는다.
+- 로딩 중에는 기존 progress/버튼 비활성·중복 load 무시를 유지한다. 중간 빈 페이지에서 ‘표시할 내역 없음’을 확정하거나 사용자의 더 보기 클릭을 요구하지 않는다. 끝까지 표시0개·cursor=null일 때만 기존 빈 안내를 보여 준다. 표시 행과 cursor가 함께 남으면 기존 더 보기를 사용한다.
+- 새 페이지 연속 구간의 원행·최종 cursor·방문 cursor 집합은 로컬 임시 상태에 누적하고 성공 종료 시 rows/cache에 한 번 반영한다. 숨긴 행도 원행 identity 중복 검사에 포함한다. 새로고침은 첫 페이지부터 새 집합으로, 더 보기는 성공 보관된 원행·cursor 집합에서 시작한다. 각 단계에 출력 cursor가 현재 입력/기방문 cursor와 같으면 INVALID_RESPONSE로 거절한다.
+- 탭/주차별 메모리 cache는 기존 key(T,section,membershipProfile)와 회원/환경 scope를 유지한다. 기존 rows/cursor에 해당 조회의 방문 cursor 집합도 함께 보관·복원해 캐시 왕복 후 반복 cursor를 놓치지 않는다. 별도 영속 저장소·두번째 원장은 만들지 않는다.
+- 각 await 뒤 기존 epoch/signedIn/scope를 확인한 후 다음 요청/반영을 한다. 주차·탭·회원·환경/소유 범위 변경·대상 무효화·dispose 후에는 연속 조회를 멈추고 늦은 응답을 폐기한다. 진행 중 요청을 다른 화면의 자료로 재사용하지 않는다.
+- 연속 구간 중 통신/형식 오류는 마지막 성공 보관 상태를 유지하고 기존 오류 안내를 표시한다. 부분 구간은 캐시에 성공으로 저장하지 않는다. 더 보기 재시도는 마지막 성공 cursor에서 다시 시작할 수 있으며 기존 새로고침 동작은 첫 페이지부터 재조회한다. CURSOR_STALE/FILTER_CONTEXT_STALE/CYCLE_CHANGED는 기존처럼 해당 key의 행/cursor/방문집합 cache를 비우고 새로고침으로 첫 페이지부터 다시 시작한다. 자동 무한 재시도·기본 profile fallback은 추가하지 않는다.
+
+**기록 진입·회귀 보호:** 실제 기록은 기존 locator의 옛 membership_id+cycle_member_id와 실제T를 사용한다. 같은 방의 재참가 새CM·새Member로 대체하지 않는다. locator 없는 행에는 기록 링크를 만들지 않고 기존 허용된 관계 상세/복구 동작만 유지한다. 완료 기록·원ACK·반대 주차·가입 전 기본 상세·IF-001 비활성은 보존한다.
+
+**구현·검증/남은 확인**
+
+1. 기존 조사 테스트를 계약 수용/거절 시험으로 바꾸고, profile 목록에만 그룹 정책0개 예외와 행별 metadata 처리를 연결했다. 원행은 Repository에 보존하고 VM이 기록 표시와 연속조회 종료에 동일 isSelectedCycleHistory 판정을 사용한다. 기존 DI/Router/화면 바인딩을 재사용했다.
+2. 기록 로딩의 원행/최종cursor/방문집합을 일괄 반영하고 탭cache 왕복 시 복원한다. 정상 주차 정책 누락/중복·미사용 정책·필드 누락/타입 오류·기본 consumer 예외 오적용을 거절한다.
+3. 최종 직접10파일266PASS(이번 기록 시험27개 포함), 변경 Dart4파일 분석0·포맷/diffcheck·diff 검토. 숨김 다중페이지/완전빈값/혼합/더보기, C/N, 실제cycle relation_only, 원행 중복/반복cursor·cache왕복, 중간실패/재시도·stale3종, 주차/탭/회원/환경/dispose의 늦은응답, 기존 기록anchor/재참가·검색/신청/roster·생성/원ACK를 포함한다. Backend의 limit1 사례는 합성 서버 근거이며 앱은 기존limit20 요청에서1행페이지를 사용해 검증했다. 공용 helper 소비를 표적 범위에서 보호해 전체 Flutter 시험/분석은 확대하지 않았다. 초기 수명 시험2건의 새 요청 응답 공유 오류와 테스트 중괄호 스타일 안내를 정정한 최종 결과다.
+4. 사용자 dev 확인: 안내한 기록 표시·새로고침·상세·주차/탭 왕복은 정상 보고를 받았다. 더 보기/다중페이지는 자료 부족으로 수동 미확인이고 자동 검증과 구분한다. 추가 자료 생성/삭제·반복재현을 요구하지 않으며 운영 반영/해소는 별도다.
+5. Issue52에 설계 수용과 이후 실제 구현/검증·미확인/커밋·push 여부를 구분해 회신한다. 앱 연결·자동 검증·사용자 인수·운영 반영을 구분하며 커밋/푸시·통합·배포·Issue 종료는 이번 설계의 완료 조건이 아니다.
