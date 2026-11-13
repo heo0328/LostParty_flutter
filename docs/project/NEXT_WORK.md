@@ -1,4 +1,15 @@
-# 현재 상태 — Issue52 개발 완료·종료 / 배포는 추가 개발 이후 (2026-11-13)
+# 현재 작업 — 내 계정 UI 리메이크 준비 문서·Backend 협의 (2026-11-13)
+
+- 사용자 승인 범위: 기존코드/계약 조사→준비 문서 최신화→feature/my-account-ui-remake 문서 commit/push→필요한 Backend 협의까지만 한다. 앱/서버/DB·Penpot 변경·dev/main 통합·배포는 제외한다. 이후 사용자 재검토 뒤 Penpot부터 시작한다.
+- 제품 원본: [내 계정 리메이크](../product/DETAIL_IMPROVEMENTS.md#my-account-ui-remake). 현재라벤더/C곡선·영역구분/가변열·사용캐릭터전원/순서유지·레이드 ID체크/일괄덮어쓰기/미설정3개·가능시간+예약7행그래프·계정도구 연보라버튼·웹 같은탭 최초런치를 확정했다.
+- 기술 원본: [계약30 준비설계](../backend-migration/30-scoped-storage-write-contract.md#my-account-remake-preparation). 실제 일반DI의 표시/관리/write outbox·주간display와pending동거·난이도/골드·가능시간/예약·웹4초gate를 대조했다. 현재코드에 미적용이며 기존 계약의 실행기록과 차후 제품변경을 구분한다.
+- 협의 대상: 기존 visible/visible_count 필드/role·rank·원pending 계약 처리 방향과 본인전체예약 조회 재사용/완전성·주차/페이지/권한 경계. #8은 보관종료, 열린 #15/17/18/19는 다른주제로 확인해 이번 준비는 별도 협의Issue로 묶는다. 서버구현/재배포·자료초기화 요청이 아니라 조사/계약 답변 요청이다. 레이드표시·스타일·웹런치는 Native 담당이다.
+- 순서/완료조건: 문서 정책/링크·코드근거·diffcheck 검토→문서만 한커밋/작업브랜치 push/원격동일 확인→고정 문서커밋 링크로 Backend에 전달/재조회→협의Issue·담당/답변대기를 기록. 순수문서이므로 Flutter 시험/분석 반복 없음. 현재 준비구간 완료와 이후 API답변·Penpot/구현완료를 구분한다.
+- 이후 gate: Backend 필요한답변/문서 재검토 후 사용자 지시로 Penpot03 기존내계정 메인을 실조회해 시안 발전. 배치치수/분할/시간창6~24시간·큰글자/상태 비교 후 협의하며 구현/02이관은 별도다. 수동/진입갱신·레드닷·#17자료·#18활동자동추가 등 별도작업은 확대하지 않는다.
+
+## 이전 완료 — Issue52 개발 완료·종료 / 미배포
+
+- 실제보관/통합: 구현1a9c5304를 dev a7d822ad로 병합·origin/dev push/clean 일치, [최종 인계6848167504](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6848167504)를 확인했다. 이번 준비 브랜치는 그 dev에서 분기했다. 아래 당시 미래형 보관 기록은 이 결과로 해소됐다. 운영배포는 추가 개발 이후다.
 
 - 완료: 기록 소비 수정·자동검증·안내 범위 dev 사용자 확인을 마쳤다. [Backend 수신6847918619](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6847918619)에 추가 변경/대기가 없음을 확인하고 사용자 명시 지시로 [종료 회신6848119538](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6848119538)·본문 현행화 후 Issue52 completed 종료를 확인했다.
 - 근거/담당: [Backend6846147217](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6846147217)이 선택T 없는 종료 관계 반환을 기존 공용 reader 계약으로 확인하고 Native 소비 수정을 요청했다. Backend 미게시 변경/추가 배포를 기다릴 필요는 없다. 운영 실응답 동일 원인과 당시 생성403은 아직 미확정이다.

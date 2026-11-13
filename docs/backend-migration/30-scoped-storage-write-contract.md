@@ -5,6 +5,58 @@
 > 2026-10-16 정책 정정: 현재는 베타 이전 개발 단계다. 개발 자료는 베타 전 전체 초기화하며 구 Firebase/테스트 자료 승계·보존형 전환은 요구하지 않는다. 아래 구 기기자료 경로/schema13·정수ID 호환 보존은 당시 C 구현 기록이며 신규 기능의 필수조건에서 제외한다. 새 회원 scoped 저장/자동실행·영속대기·재로그인/기기 간 복원은 유지하고 구 실행 의존 정리는 별도 D로 진행한다. [정책09 D08](09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정-2026-10-16)/[NEXT_WORK](../project/NEXT_WORK.md). 실제 자료 삭제나 코드 제거는 아직 실행하지 않았다.
 
 
+<a id="my-account-remake-preparation"></a>
+## 내 계정 리메이크 준비 설계 (2026-11-13, 제품 확정·구현 미적용)
+
+이 절은 아래 기존 표시수/숨김 UX를 대체할 **차후 구현 기준**이다. 현재 코드는 아직 기존 동작이며 이번 승인 범위는 조사·문서 보관/push·Backend 협의까지다. 제품 원본은 [DETAIL_IMPROVEMENTS](../product/DETAIL_IMPROVEMENTS.md#my-account-ui-remake), 시각/치수 확정은 디자인 기준의 다음 Penpot 단계다. 개발 기본은 dev 로컬, 현재 자료/기존 권한을 유지하며 베타 전 초기화나 운영배포를 선행조건으로 만들지 않는다.
+
+### 실제 경로와 책임·보존할 흐름
+
+| 영역 | 현재 근거/소유 | 차후 변경/주의 |
+|---|---|---|
+| 일반 계정 | BackendApp DI→MemberAccountPage/MemberAccountViewModel→runtime→회원·환경 cache/Backend | legacy MyAccountPage만 고쳐 일반경로 연결로 보고하지 않음 |
+| 카드 표시 | MemberAccountSection.visible/presentVisible·ScopedAccountPresentation, 관리 gateway | activityIds·현재 소유/수명·누락 표시 경계를 유지하고 visible/visibleCount에 의한 숨김만 제거 |
+| 개인 설정 저장 | PersonalSettingsClient: character personal-preferences PUT의 preferred_role/visible/display_order, account presentation-settings GET/PUT의 visible_count, scoped outbox/CAS | 개수/숨김 입력 제거와 role/rank 원자본문 계약을 분리. 기존 미전송 키/본문·ACK는 변환/삭제하지 않음 |
+| 주간 표시 | MemberWeeklyViewModel._display→회원/환경 store의 display(count,raids) | 서버 표시 설정으로 착각하지 않음. 같은 JSON의 pending/schema1~4 완료명령과 분리해 설계 |
+| 개인 가능시간 | PlayAvailabilityViewModel→/v1/me/play-availability GET/PUT | ISO weekday·KST·5분/자정넘김·기존 저장/취소·원요청 수명 유지 |
+| 비교 그래프 | ScheduleComparisonPage/도메인 TimeSpan, cycle_schedule의 anonymous_busy | 렌더링·구간계산 재사용 후보. 방 권한/선택주차 자료를 회원 전체 예약으로 확대하지 않음 |
+| 웹 시작 | BackendApp의 StartupEntryGate(기본4초)와 router 준비 gate→LostPartyEntryScreen | 브랜드 표시·실제준비를 분리. Native gate·기존 URL/deep link·로그인 redirect 유지 |
+
+회귀 보호: 메인/부원정대·등록/인증/키관리·사용선택/대표/드래그순서·역할설정·수동완료/정정·주차별 참가/기록·누락 경고/복구·일괄갱신·사용자 입력/취소·원pending/ACK·회원/환경/관찰세대/소유 전환을 보존한다. 새 UI를 위해 현재 권한을 완화하거나 기존 정상 기능을 전면 재작성하지 않는다. 수동/진입 갱신·레드닷의 별도 예약 작업을 이번 준비에 포함하지 않는다.
+
+### 캐릭터 사용=표시·저장 경계
+
+- 표시 후보는 현재 원정대 activityIds를 기준으로 한다. 과거 preferences.visible=false나 presentation.visibleCount를 적용하지 않고 기존 대표우선·명시displayOrder·레벨/이름 순서를 유지한다. presentVisible의 누락/수명 경계를 분석해 누락캐릭터 경고·원자료를 보존하며 소유불가 캐릭터를 정상카드로 다시 노출하지 않는다.
+- UI에서 별도 표시설정 진입과 개수 조작을 제거하되 수동순서 편집 진입/역할설정은 보존한다. 계정관리의 순서저장 후 _pendingCount 저장 경로도 제거 대상이다. 순서를 바꾸지 않은 저장에 불필요한 쓰기를 추가하지 않는다.
+- 신규 UI가 count를 큰값으로 매번 저장하거나 active 변경마다 복수 보정쓰기를 보내는 우회는 채택하지 않는다. Backend에는 기존 필드의 계속 필수 여부·타소비자 영향·최소 계약 처리 방향을 질의한다. 신규명령 계약은 답변 후 확정하며 원pending은 원계약으로 재전송/복구한다. 도입 중 개인 role/rank·주간완료를 막는 새 전역대기를 만들지 않는다.
+
+### 레이드 선택·로컬 자료 수명
+
+- WeeklyRaidDisplayProjector.eligibleCandidates의 현재 난이도선택은 입장가능 difficulty 중 clearGold+boundGold 최대, 동률 displayOrder다. 자산catalog2026.08.20의 활성 난이도를 대조한 결과 더 높은 minItemLevel에서 골드가 감소하는 사례는 없었다. 따라서 현재자료에서는 사용자 최고입장난이도 예시와 충돌을 확인하지 못했으며 기존 후보/골드 함수를 재사용한다. 차후 catalog에서 역전이 생기면 새 정책을 조용히 넣지 않고 제품의도와 대조한다.
+- 표시설정의 권위값은 선택 raid ID 집합으로 한다. 기존 count는 사용자 입력/상한/선택수 일치 제약에서 제거하고 필요한 내부 개수는 ID 수로 계산한다. 미설정은 기존 추천3개, 명시빈집합은 표시없음으로 구분한다. 저장된 기존 raid ID 선택은 보존하며 미설정을 빈선택으로 변환하지 않는다.
+- 일괄창은 활성 레이드 종류를 이름으로 선택한다. 기존 saveRosterDisplay의 적용대상(section.characters 중 usable=true)을 유지해 현재 미활동이지만 사용가능한 캐릭터에도 선택종류를 저장한다. 각 캐릭터에 입장가능 subset만 저장해 선택의도를 유실시키지 않고, 표시/개별창 후보 투영 때 입장가능 여부와 해당 골드를 적용한다. 적용 뒤의 개별변경은 해당캐릭터만 바꾼다. 미래 신규캐릭터에는 자동상속하지 않고 추천3개를 사용한다.
+- 비활성/없어진 raid ID는 표시에서 제외하되 자동으로 다른레이드를 채우지 않는다. 카탈로그에서 종류가 추가돼도 저장된 선택집합을 자동확대하지 않는다. 입장불가 ID는 선택의도로 보존해 레벨상승 시 같은종류가 표시될 수 있게 한다. 개별창에서 보이지 않는 저장ID를 사용자 모르게 삭제하지 않도록 편집초안/확정 규칙을 구현 전에 검토한다.
+- 같은 store의 pending 완료/정정 명령은 display 편집과 분리한다. 표시구조 버전 변경이 필요하면 기존 schema1~4 reader/원명령 원문을 보존하는 최소 parser/writer 변경으로 한정한다. DB 일괄초기화·기록삭제·구자료 migration 리허설을 요구하지 않는다. 실제 앱 연결·자동검증 전에는 완료로 보지 않는다.
+
+### 개인 주간 시간표·조회 계약 협의
+
+- 가능시간은 기존 편집초안으로 즉시 preview하되 미저장 표시를 구분하고 취소하면 저장값으로 복귀한다. 예약은 서버의 현재 조회결과이며 그래프 조작으로 예약/가능시간을 자동저장하지 않는다. 최초 전환계약은 기존 C/N 주차를 후보로 하고 서버 현재주차·회원 범위·완료/해제/부분예약 포함규칙을 Backend와 확인한다. 자기 전체캐릭터/원정대 예약을 하나의 회원시간표에 합쳐 그리되 타회원 자료는 요구하지 않는다.
+- 기존 /v2/me/raid-schedule-overlaps는 pair_count·충돌쌍 left/right를 반환한다. 충돌하지 않는 예약까지 포함한 전체예약 원본으로 사용할 수 있다고 판단하지 않는다. anonymous_busy는 방별 비교 reader의 권한 범위다. Backend에 기존 본인전체 예약조회 재사용 가능성/완전성·페이지·revision·시각/주차·권한 계약을 먼저 요청하고 새 endpoint를 임의 확정하지 않는다.
+- 수~화의 날짜축과 KST 자정/수요일06시 게임주차 경계는 다르다. 7행의 날짜/클리핑·다음날/다음주 걸침을 정확하게 정의할 서버범위 답변을 받고 기존 TimeSpan의 merge/intersect/subtract와 표시용 익명구간을 재사용한다. 예약 조회실패는 ‘예약없음’이 아니며 가능시간 편집을 통째로 막지 않는다. 범례·예약누락/실패·미설정·확인시점은 구분한다.
+- graph 표시폭은 시안에서 정할 최소시간셀폭을 기준으로6시간 기본·확장·24시간 전체로 전환한다. 같은 의미의 상단 전체탐색/좌우이동을 유지하고24시간이 다보이면 구간이동은 불필요하게 남기지 않는다. 확대/축소로 선택한 시간·요일·초안·스크롤 맥락을 초기화하거나 네트워크 요청을 재실행하지 않는다. polling·웹소켓·전방상세 N+1조회를 추가하지 않는다.
+
+### 웹 런치·수명
+
+- Web 전용 탭 sessionStorage에 브랜드표시 여부만 기록한다. localStorage/회원설정으로 첫방문을 영구차단하지 않는다. 런치가 처음 실제 표시될 때 표식을 남기며 같은탭 reload에서는4초 브랜드대기를 반복하지 않는다. 저장소 접근불가 때는 시작이 막히지 않게 현재실행 메모리로만 판단한다.
+- 새탭은 첫진입으로 취급한다. opener/탭복제로 sessionStorage가 복제되는 경계는 웹 bootstrap 기술조사에서 함께 검증해 단순 복제값만으로 최초진입 여부를 확정하지 않는다. 인증복귀/외부 deep link·현재URL과 명령복구를 초기화하지 않는다.
+- router/auth/cache 등 실제 준비가 끝나지 않으면 기존 준비/실패/재시도 기능을 유지하되 매번 브랜드 런치를 재사용하지 않는다. 대기표식은 인증/초기화 성공이나 자료유효성의 근거가 아니다. Native의 기존 첫시작 gate는 그대로 둔다.
+
+### 다음 단계와 검증 계획 (미실행)
+
+1. 준비 문서/Backend 답변을 사용자와 재검토하고 Penpot03 동일메인에서 실제 정보량의 바형/폴드/웹·관리·개별/일괄선택·시간표/도구를 시안화한다. min/max폭·전환/스플릿·큰글자·긴이름·0/다수항목·loading/실패·스크롤은 그때 확정한다. 자동02 이관 없음.
+2. 시안/계약 승인 뒤 일반 DI에 최소 구현한다. 표시정책/로컬선택→반응형/도구·그래프→Web런치 순서로 연결하되 원명령/소유 수명을 함께 보호한다. Backend 준비 전 가짜 예약/기본0을 넣어 기능완료로 표시하지 않는다.
+3. 자동 경계: 활동선택 전원·과거숨김/count무시·순서/대표·누락/소유변경, 개별/일괄0/전체/입장불가/레벨변화·미설정3개·기존 pending동시보존/저장실패, 예약 partial/페이지/실패·자정/주차경계, 첫탭/새로고침/새탭·저장소불가·deep link, 크기변환/늦은응답·중복명령을 검증한다. 공용model/DI/저장 영향이 넓으므로 최종 연결 상태에서 전체 flutter test/analyze를 실행한다. 정상 시각/조작은 사용자 바형·폴드·웹 확인과 구분한다.
+
 ## 최신 정정 — 수동 선택 레벨·관리 통신 (2026-10-17)
 
 ### 회원 화면 복구·활동 우선 복원 (2026-10-17)

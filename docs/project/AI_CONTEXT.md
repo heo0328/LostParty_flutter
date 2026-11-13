@@ -1,5 +1,9 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
+## 내 계정 UI 리메이크 준비 (2026-11-13, 미구현)
+
+feature/my-account-ui-remake는 dev a7d822ad에서 분기했다. 현재 승인 범위는 기획/기술 준비문서·commit/push·Backend 필요협의이며 Penpot/앱/서버는 수정하지 않는다. 확정 제품방향은 [차후수정안](../product/DETAIL_IMPROVEMENTS.md#my-account-ui-remake), 실제 코드영향/저장/조회/검증 설계는 [계약30](../backend-migration/30-scoped-storage-write-contract.md#my-account-remake-preparation), 진행·회신대기는 NEXT_WORK를 따른다. 준비내용을 사용자가 재검토한 뒤 기존03 C방향 샘플을 발전시키는 단계로 이어가며 지금 구현/배포하지 않는다.
+
 ## Issue52 기록 소비 수정 개발 완료·이슈 종료 (2026-11-13)
 
 기록 조회 실패에 대응해 기존 공용 reader 계약을 유지하며 기록 탭 표시·명시null 주차 정책 부재·연속 페이징을 일반 앱 경로에 연결했다. 사용자가 안내 범위 정상 표시를 보고했으나 더 보기는 자료 부족으로 수동 미확인이라고 정정했다. [설계37 §37.90](../backend-migration/37-raid-scheduling-and-multi-raid-planning.md#history-response-consumption)에 현재 소비/검증 근거를 둔다. 사용자 명시 지시로 Issue52 completed 종료와 커밋/dev 통합·push를 진행하며 식별자는 Git 이력을 따른다. 배포는 추가 개발 이후 별도 지시로 진행한다. 운영 동일 원인/당시403은 미확정이며 미배포·보관/인계 범위는 NEXT_WORK를 따른다.

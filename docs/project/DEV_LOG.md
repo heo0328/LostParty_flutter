@@ -1,3 +1,9 @@
+## 2026-11-13 — 내 계정 리메이크 준비 문서·협의 범위 정리
+
+사용자 제안/후속선택을 대조해 사용전원표시·순서유지, 레이드 개수제거/종류선택·일괄덮어쓰기/신규추천3개, 가능시간+예약 그래프·웹같은탭 최초런치·곡선/영역/연보라도구버튼을 미적용 제품계획으로 기록했다. 일반DI의 MemberAccountSection/관리gateway/personal-preferences/presentation-settings, 주간 로컬display와원pending, play-availability·schedule-overlaps/anonymous_busy, StartupEntryGate를 대조했다. 카탈로그2026.08.20의 활성난이도에서 높은입장레벨의 골드합계가 감소하는 사례는 발견하지 못해 기존 후보계산 재사용으로 정리했다.
+
+새로 가능한 앱흐름은 없고 기능/기존자료·Penpot은 변경하지 않았다. 보존기준/검증계획을 계약30에 두고 현재동작과 분리했다. #8보관종료·열린15/17/18/19 타주제를 확인해 표시설정계약/개인전체예약조회만 별도 Backend 협의로 전달한다. 문서내용·상대링크·diffcheck를 검토하고 Flutter시험/실기기/운영검증은 반복하지 않는다. feature/my-account-ui-remake에서 문서commit/push를 수행하며 dev/main통합·배포·Penpot시안은 이번승인범위 밖이다. Backend 답변과 사용자 재검토 후 Penpot부터 진행한다.
+
 ## 2026-11-13 — Issue52 종료·누적 변경 보관/dev 통합 지시
 
 최신 Backend6847918619를 확인해 추가 변경/대기가 없음을 대조했다. 사용자 지시로 [종료6848119538](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6848119538)에 개발 완료·더 보기 수동 미확인·운영미반영/당시403 미확정의 이관 범위를 남기고 본문을 현행화해 completed 종료를 확인했다. 배포는 추가 개발 이후라는 사용자 방침을 NEXT_WORK에 기록했다. 기능은 변경하지 않아 기존266PASS/변경4파일 분석0·사용자 정상 보고를 재사용하고 diffcheck/내용 검토를 수행했다.
