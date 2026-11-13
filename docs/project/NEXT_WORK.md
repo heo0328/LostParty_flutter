@@ -4,7 +4,7 @@
 - Backend [운영 완료6831720284](https://github.com/heo0328/lostparty-backend/issues/51#issuecomment-6831720284)에서 API2.2.0/source c31d90da·DB0036·118표 자료 동일과 웹34자산 hash 일치를 보고했다. Native도 HTTPS health200/DB ok·index hash/제목 일치를 확인했다.
 - Native 태그8cb1eefb·Actions43276593295 성공, Release443337477의 공개5파일을 다시 내려받아 APK 패키지/2.2.0+7/기존서명/체크섬·웹전체manifest·승인본문 일치를 검증했다. 태그 파이프라인이 재빌드한 공개APK의 SHA256은47dc4f70…4059c이며 준비APK와 구분해 [산출물 원장](../releases/v2.2.0-artifacts.json)에 기록했다. 웹3파일은 Backend에 전달한994db44a 원본과 동일하다.
 - 기존 기능2927PASS/분석0·사용자 dev 확인을 재사용했다. 운영 기기 기능 조작은 사용자 결정에 따라 생략했으며 운영 게시·실파일 검증은 완료했다. 같은 release키의2026-11-11 백업/접근 확인을 재사용했다.
-- Git은 release/2.2.0의 결과 문서를 main/dev에 함께 반영하고 원격 동기화한다. 공개 태그는8cb1eefb에 고정한다. release 브랜치는 버전 이력으로 보존한다.
+- Git은 결과문서68f9431e를 main/dev/release에 반영하고 원격 동기화를 완료했다. 공개 태그는8cb1eefb이며 release 브랜치는 버전 이력으로 보존한다. 사용자 지시로 [배포 Issue51](https://github.com/heo0328/lostparty-backend/issues/51) 본문을 현행화하고 completed 종료를 확인했다.
 - 다음 작업은 아래 사용자 착수 지시 대기 항목을 따른다. 내 계정 반응형 개선을 포함한 후속은 별도 착수한다.
 ## 이전 완료 — 모집 탐색 사용자 확인·Penpot02 통합 (2026-11-12)
 
