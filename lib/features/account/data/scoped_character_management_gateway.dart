@@ -45,7 +45,6 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
           _confirmedGeneration == runtime.readGeneration
       ? _confirmedRoster
       : null;
-  int? _pendingCount;
   List<int>? _pendingOrder;
   @override
   bool get busy => _busy;
@@ -70,7 +69,6 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
       _body = null;
       _key = null;
       _pendingOrder = null;
-      _pendingCount = null;
       _acknowledged = false;
       _retryAt = null;
       if (!_disposed) notifyListeners();
@@ -256,13 +254,15 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
   @override
   Future<CharacterManagementSnapshot> save({
     required List<int> selectedIds,
-    required int representativeId,
+    required int? representativeId,
     required int displayLimit,
     bool initializeSelection = false,
     bool saveDisplayOrder = true,
   }) async {
     if (!current) throw const AccountReadException('STALE_READ');
-    if (_busy || otherWorkPending()) {
+    if (_busy ||
+        otherWorkPending() ||
+        runtime.managementCommandPending(registrationId)) {
       throw const AccountReadException('REQUEST_IN_PROGRESS');
     }
     final ticket = _ticket, member = _session!, scope = _scope!;
@@ -281,7 +281,8 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
             _registration!.settings.state != 'unconfigured') {
           throw const AccountReadException('REVISION_CONFLICT');
         }
-        if (selectedIds.isEmpty ||
+        if (representativeId == null ||
+            selectedIds.isEmpty ||
             selectedIds.length != selectedIds.toSet().length ||
             !selectedIds.contains(representativeId) ||
             !selectedIds.every(
@@ -321,7 +322,6 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
         _pendingOrder = initializeSelection || !saveDisplayOrder
             ? []
             : List.of(selectedIds);
-        _pendingCount = displayLimit;
         _key = newScopedCommandKey();
       }
       guard();
@@ -418,14 +418,8 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
       }
       final plan = await runtime.preparePersonalSettings(ref, guard: guard);
       final old = await runtime.readPersonalSettings(plan, guard: guard);
-      if (old.visibleCount != _pendingCount) {
-        await runtime.saveAccountPresentation(
-          plan,
-          _pendingCount!,
-          guard: guard,
-        );
-      }
-      if (old.visibleCount != _pendingCount || old.hasPending) {
+      // Retire new count writes; keep recovery of existing durable requests.
+      if (old.hasPending) {
         final synced = await runtime.syncPersonalSettings(ref, guard: guard);
         if (synced.failure != null) {
           throw AccountReadException(synced.failure!.code);
@@ -471,7 +465,6 @@ class ScopedCharacterManagementGateway extends ChangeNotifier
     _body = null;
     _key = null;
     _pendingOrder = null;
-    _pendingCount = null;
     _retryAt = null;
     _acknowledged = false;
   }

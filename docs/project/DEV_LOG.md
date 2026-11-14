@@ -1,3 +1,387 @@
+## 2026-11-15 — 내 계정 누적 완료분 보관·dev 통합
+
+사용자 지시로 b8381ef8 이후 모든 추적/신규 변경을 함께 보관한다. 시간표·가독성·인증/ID복사·스위치/공통그림자·모집생성 위치·타탭 상세 라우팅·BUG-037 구독복구를 포함한다. NEXT_WORK를 현재 완료/통합 상태로 교체하고 제품/계약/문서지도·디자인 원칙/BUG기록을 최신화했다. 과거 단계별 미커밋/dev미반영은 당시 이력으로 보존한다.
+
+검증: 마지막 코드 기준 전체3027PASS·전체analyze0를 재사용했다. 이후 기능코드 변경은 없고 문서/diff·누적 신규파일/변경 검토를 수행했다. 사용자의 정상/디자인 확인과 모든 웹/Android 기기·경계 전수인수를 구분한다. 내 계정 자체 새로고침 별도장애는 미확정이다. origin/dev a7d822ad를 fetch로 확인했고 이후 추가 원격변경은 없다. 실제 통합/게시 결과는 후행 보관 기록/Git에서 확정한다. 운영배포/APK·main변경·DB초기화·Penpot이관·Issue종료는 하지 않는다.
+
+## 2026-11-15 — BUG-037 모집 인증 선택 직접 구독
+
+새로 가능한 흐름: BackendApp 모집 ShellRoute에서 일회성 isAuthenticated 분기를 기존 AccountSessionView로 대체해 로그인 지연복원/로그아웃을 동일 URL에서도 즉시 반영한다. 화면 선택에서 인증 복원/API를 호출하지 않고 기존 회원 탐색/비회원 목록·상세/생성 경로를 그대로 재사용한다. 보존 확인: 인증이 같은 반복알림에서 위젯/초안 유지, 실제 로그아웃 뒤 이전회원 위젯 폐기·다른회원 전환, 비회원 자식 URL·주차/복귀 쿼리, 기존 상세/탭/생성과 API/저장 흐름. 공개 모집 준비 repository는 실제API로 바꾸지 않았다.
+
+검증: 정식 신규 ShellRoute/StatefulShellRoute 시험에서 라우트 builder 호출수 불변·직접구독 전환·숨은탭·반복알림 mount1·초안 유지·다른회원/자식경로·뷰인증요청0을 확인했다. 기존 AccountSessionView3/탐색1 포함 직접5PASS·최종전체 flutter test3027PASS·전체analyze0·포맷/diffcheck. 미확인: 사용자 웹F5/Android재실행·실회원 지연복원/조회·로그인 전후 탭/상세/생성. 내계정 자체 새로고침의 별도 문제는 아직 확정하지 않는다. feature/my-account-ui-remake 유지·누적 미커밋/미push·dev/main미반영·배포없음.
+
+## 2026-11-15 — 레이드현황 등 타탭 모집 상세 진입 공통 수정
+
+사용자가 현황→상세→모집탭→생성에서도 동일 오류를 보고했다. 앞선 예약 진입만의 수정 범위가 부족했다. 현황 참가/신청/기록과 계정 캐릭터카드/예약의 타탭 진입을 recruitmentFromTab+context.go로 통일했다. 모집 내부 생성 push는 유지하며 검색/편집 흐름·API/권한은 변경하지 않는다. 공통 헬퍼는 허용 출처(account/raid-status)와 기존 reader/기록anchor/target 쿼리를 보존한다. 상세 종료는 출처별 복귀를 사용하고 현황의 선택주차를 전달한다. 원래 예약의 개별 query 조합도 공통 helper로 대체했다.
+
+검증: 계정/현황2출처×390/1440폭에서 상세→탭 재선택→생성·기존 초안/화면폭 전환 회귀 통과. URL/주차·reader·anchor 보존/알 수 없는 복귀값 거절, 예약 알럿/신청 상세 포함 직접11PASS·전체analyze0·포맷/diffcheck. 사용자 웹/Android 동일경로 재확인과 상단 뒤로가기의 출처/주차 복귀는 대기다. feature/my-account-ui-remake 유지·누적 미커밋/미push·dev미반영·배포없음.
+
+## 2026-11-15 — 예약 방 이동 후 모집 생성 라우팅 회귀
+
+사용자 경로를 StatefulShellRoute+타탭 상세 push→모집탭 initialLocation→생성으로 재현해 제보와 동일 RenderLayoutBuilder mutation을 확인했다. 단순 Builder/호스트/전환 수정은 중복 GlobalKey를 해결하지 못해 모두 제거했다. 원인은 모집 Shell Navigator를 다른 브랜치에 push로 쌓은 채 재선택/생성에서 공유하는 구조다. 예약 방 이동은 정식 브랜치 go+return_to=account로 전환하고 기존 상세 종료 콜백에 계정 복귀를 통합했다. 탐색 내 생성 push/기존 목록·분할·초안/주차·생성 API/권한은 유지한다. 예약 알럿 닫기/이동·로그인세대 차단도 유지한다.
+
+검증: 동일 실패 경로390/1440폭 red→green·기존 검색초안/폭 전환, 예약 알럿6·신청상세3 포함 직접10PASS·전체 analyze0·포맷/diffcheck. 실기기에서는 내계정→예약→이동→모집탭→생성과 예약 상세 뒤로가기 계정 복귀를 재확인한다. 다른 화면의 cross-branch push는 이번 일괄 변경하지 않았으며 같은 유형의 재현은 해당 경로별 후속 대조가 필요하다. 현재 feature/my-account-ui-remake 유지·누적 미커밋/미push·dev미반영·배포없음.
+
+## 2026-11-15 — 모집 만들기 하단 배치
+
+공통 버튼2/15% 디자인에 사용자 만족 확인. 모집 탐색의 웹 상단/폰 하단 전체폭 생성 버튼을 그룹 홈과 같은 우측하단 floating 위치로 통일했다. 생성 버튼은 글자14→16·최소높이56·수직패딩16/가로20이며 큰 글자는 자연 높이/화면폭 안 줄바꿈을 허용한다. 목록 하단은 버튼과 글자 배율을 고려한 여백을 확보한다. 좁은 전체상세/기존 split 조건·onCreate(target)·권한/생성 API·검색 초안/상태는 유지한다. 탐색 내비게이션 회귀1PASS·변경파일 분석0·포맷/diffcheck. 웹/Android 실제위치·큰글자·생성진입은 사용자확인대기. 현브랜치 미커밋/미push·dev미반영.
+
+## 2026-11-15 — 공통 버튼·칩의 약한 그림자
+
+사용자 요청으로 Filled/Elevated/OutlinedButton 공통 테마와 ChipTheme에 elevation2·shadow #26000000(약15%)을 적용했다. 칩은 선택/비선택 shadow와 pressElevation2를 함께 지정하고 surfaceTint는 투명으로 두었다. OutlinedButton은 그림자가 보이도록 흰 surface 배경을 사용한다. 카드3/20%·버튼 색/테두리/선택·명령/저장은 유지하며 별도 스타일 override는 그대로 우선한다. 테마/시간표9PASS·변경파일 분석0·포맷/diffcheck. 웹/Android 시각 비교 대기·미커밋/미push·dev미반영.
+
+## 2026-11-15 — 공통 카드 그림자 비교안
+
+사용자가 예약 알럿/방 이동 정상 작동을 보고했다. 플랫폼별 전수 인수로 확대하지 않는다. 새 비교 요청으로 공통 CardTheme의 elevation0→2·shadowColor #26000000을 적용했다. 기존 흰 배경·테두리·곡률16·크기/배치·데이터 흐름을 유지한다. Material 기본 물리 그림자이며 정확한 우하단 offset 지정은 아니다. 별도 Container/BoxDecoration 모집 영역과 AlertDialog에는 적용되지 않는다. 테마3PASS·변경파일 분석0·포맷/diffcheck. 웹/Android 시각 비교 대기·미커밋/미push·dev미반영.
+
+## 2026-11-15 — 예약 상세 알럿·방 이동
+
+하단 예약 상세 카드를 제거하고 예약 클릭/터치 시 중앙 AlertDialog로 대체했다. 레이드명/캐릭터/축약 시간·닫기(좌)/이동(우)을 표시한다. 이동은 알럿 종료 후 기존 membershipDetailLocation(roomId, 실제 cycleKey)→context.push로 연결해 달력 키와 게임 주차를 혼동하지 않는다. 웹은 같은 탭의 기존 라우터를 사용한다. 마우스 tooltip·기존 권한 reader/뒤로가기·시간 저장은 유지한다. 중복 알럿을 막고 회원/인증세대가 바뀌면 내용을 숨기고 이동을 차단하며 상세 복귀 후 예약을 갱신한다. 직접 레이아웃6PASS(알럿 열기/닫기·하단 카드 미표시 포함), 변경파일 분석0·포맷/diffcheck. 실제 웹/Android 방 이동·권한 변경 안내는 사용자 확인 대기. 현재 브랜치 유지·미커밋/미push·dev미반영.
+
+## 2026-11-15 — 요일 그래프 외곽 곡률
+
+요일별 그래프 외곽을 ClipRRect 반경6으로 처리해 배경/막대/세로선을 함께 클립한다. 간격/입력/데이터 흐름 유지. 포맷·분석0·diffcheck, 시각 확인은 사용자 대기. 미커밋/미push·dev미반영.
+
+## 2026-11-15 — 시간표 음영 제거·상단 세로선
+
+사용자 지시로 시간 칸 교대 음영을 제거하고 단색 배경에1시간마다1px/14% 세로선을 가능시간·예약 막대 위에 그린다. IgnorePointer로 예약 선택 입력은 보존한다. 요일 간격/막대 높이·시간/조회/저장은 유지한다. 레이아웃6PASS·변경파일 분석0·포맷/diffcheck. 실화면 사용자 확인 대기·미커밋/미push·dev미반영.
+
+## 2026-11-15 — 가능시간 막대 높이 정렬
+
+시간 칸 교대 음영과 가능시간 막대의 상하4px 여백이 어긋나 보인다는 사용자 피드백으로 가능시간 막대를 요일 그래프 전체 높이에 맞췄다. 요일 사이8 간격·예약 터치/상세·데이터/시간 계산은 유지했다. 레이아웃6PASS·변경파일 분석0·포맷/diffcheck. 웹/Android 시각 확인 대기·현재 브랜치 미커밋/미push·dev미반영.
+
+## 2026-11-15 — 시간표 예약 문구·요일 구획 보완
+
+예약 선택 상세와 tooltip은 시작 날짜만 YY-MM-DD HH:mm ~ HH:mm로 표시한다. 다음날 종료도 종료 시간만 보이고 초는 생략한다. 저장/비교용 원시각 정밀도는 유지한다. 상세 카드는 좌측 정렬/내용폭으로 수축하고 화면 최대폭 제약·큰 글자 줄바꿈을 유지한다. 요일별 렌더 행 사이8 간격과 시간 칸 교대 음영을 추가하며 공용 시간축/스크롤·예약/가능시간 조회/권한/저장을 보존한다. 직접 레이아웃6PASS·변경2파일 analyze0·포맷/diffcheck. 웹/Android 실제 모양은 사용자 확인 대기. 미커밋/미push·dev미반영.
+
+## 2026-11-15 — 내 계정 개인 주간 시간표 구현 연결
+
+새로 가능한 흐름: 일반 회원 BackendMemberAccount→예약 repository/조회모델→MemberAccountPage 시간표를 연결했다. 수~화7일/이번·다음 달력주, 가능시간 초안과 미해제 본인 예약·선택 상세를 표시한다. 가능시간 편집자격과 회원 예약권한을 분리했다. 본문16/보조14·시스템 글자 확대, 내용 측정 기반 최대폭/중앙·세로/가로·6/12/18/24시간·좁은 시간축 스크롤을 적용했다. 짧은 예약도48터치·겹침 별도레인·비겹침 레인 재사용을 제공한다.
+
+보존 확인: 기존 v1 가능시간 저장/취소·원pending/멱등키/ACK·실패 복구, 게임06시 주차와 다른 화면 권한/조회는 유지한다. 예약은 Backend fe5e0824 게시 설계·합성200 및 Issue53 구현 인계를 대조한 기존 v2 reader를 사용한다. 원시각/식별자를 유지한 자정분할·배타적 경계, 초/소수초 보존, 전체 페이지 원자반영·세대/중복/cursor 검증·stale/clock 각1회·Retry-After·회원전환 늦은 응답 폐기를 적용한다. 폭 변경/build API 호출·방별 상세순회·새 저장/예약 API는 추가하지 않았다. 내 계정 탭 선택/앱 복귀·관련 명령 후 예약을 갱신한다.
+
+검증: 신규 예약경계8건+기존 가능시간10건+레이아웃6건. 최종 전체 flutter test **3025PASS**, 전체 flutter analyze **0**·포맷/diffcheck. 첫 전체 시험에서 이전 스위치 색상 계약을 기대하던 기존 테마 시험1건을 발견해 사용자 확정된 선명한 ON/OFF 디자인으로 갱신했다. SDK nullable WidgetStateBorderSide의 실제 resolve 방식도 바로잡은 후 최종 전체를 재검증했다. 이전 실패 실행은 최종 통과 수에 합산하지 않는다.
+
+미확인: 실회원 dev 예약 응답과 웹/Android 폰·접힘/펼침 폴드의 시각·조작 확인은 사용자 대기다. 영역 펼침/주간 선택·가능시간 저장/취소/초안 표시·예약 선택 상세·큰 글자·웹 폭 조절을 확인한다. 운영서버/실기기를 대신 조작하지 않았다. feature/my-account-ui-remake 유지·누적 미커밋/미push·dev/main 미반영·배포/Issue종료/Penpot이관 없음.
+
+## 2026-11-15 — 공통 스위치 OFF 발견성 개선
+
+새로 가능: OFF 회색 트랙 #B8B5BF·ON 시그니처 보라색·양쪽 동일 크기 흰색 손잡이. 공통 SwitchThemeData와 색상 토큰에 적용했다. Material3 기본 OFF 손잡이 축소는 투명 thumbIcon으로 방지했다. 보존: 기존 명령/저장·입력 차단·비활성 색상 유지. 검증: 직접1PASS·변경2파일 analyze0·포맷/diffcheck. 미확인: 웹/Android 나이스단/모집 생성 실제 시각 확인. 현재 브랜치 유지·미커밋/미push·dev 미반영.
+
+## 2026-11-15 — 상단 인증 안내 두 줄·오른쪽 초기 스크롤
+
+사용자가 기존 가로 스크롤 정상 동작을 확인했다. 새로 가능: Google 로그인 중/오류 문의 안내를 두 줄로 묶어 가로 길이를 줄이고 복사·로그아웃은 옆에 유지한다. 가로 스크롤은 reverse로 오른쪽에서 시작하며 사용자 이동을 재빌드마다 강제로 초기화하지 않는다. 두 줄의 글자 배율에 맞춰 툴바 높이를 확보했다. 보존: 인증·복사·로그아웃 명령/잠금과 ID 미노출. 검증: 360/720폭×100/150/200% 직접6PASS(오버플로 없음·로그아웃 초기 가시성), 변경2파일 analyze0·포맷/diffcheck. 최신 웹/Android 실제 배치는 사용자 확인 대기. 기존 작업 브랜치 유지·미커밋/미push·dev 미반영.
+
+## 2026-11-15 — 전체 선택 컨트롤 비활성 색상·인증 한 줄 배치
+
+새로가능: 나이스단자동갱신/메인계정포함공용스위치·체크박스·라디오는비활성에도활성과같은선택/비선택색상을표시한다. 실제블러가아닌disabled색상차등을제거했다. 인증상단은상태·문의안내·복사·배경형로그아웃을한줄세로중앙으로배치하고좁으면가로스크롤한다. 사용자ID문자열은미노출이다.
+
+보존: onChanged차단/접근성비활성·인증세대/중복조작잠금·로그인/로그아웃경로. 검증: 직접7PASS(360/720폭·글자100/150/200%),전체analyze0·포맷/diffcheck. 미확인: 실제웹/Android폰·폴드가독성/가로스크롤. 현재브랜치유지·미커밋/미push·dev미반영/배포없음.
+
+## 2026-11-15 — 비활성 라디오 가독성 유지
+
+사용자확정에따라공용radioTheme의disabled일괄회색처리를제거했다. 선택은시그니처primary/비선택은onSurfaceVariant로활성/비활성색상을동일하게유지한다. 실제블러필터는없었으며색상차등으로선택표시가희미해지는처리를정정했다. 조작차단/onChanged·접근성비활성상태는유지하고체크박스/스위치는이번수정에포함하지않았다. AGENTS에새라디오가독성규칙을기록했다.
+
+색상분기직접1PASS·변경2파일분석0/포맷/diffcheck,실제웹/앱시각확인은사용자대기. 미커밋/미push·dev미반영·배포없음.
+
+## 2026-11-15 — 인증 버튼 배경형 정정·텍스트 버튼 금지 기준
+
+사용자가텍스트전용버튼을사용하지않도록확정했다. 계정상단로그아웃이TextButton으로남아있던누락을수정해FilledButton으로변경하고같은위젯의취소버튼도배경형으로정리했다. 로그인FilledButton/기존시그니처배경·흰글자테마와로그아웃확인/세대검사/중복잠금은유지한다. AGENTS/ai_rules에향후추가/수정중발견한TextButton은배경/테두리형으로교체하는기준을기록했다. 무관한전체화면일괄변경은하지않았다.
+
+인증상단/세션직접9PASS·변경파일분석0/포맷/diffcheck,사용자웹/앱시각재확인대기. 현브랜치미커밋/미push·dev미반영·배포없음.
+
+## 2026-11-15 — 내 계정 전체 글자 확대·계정 도구 내용 기반 폭
+
+사용자는현재카드크기를유지하고내계정에한해글자위주확대/간격유지·내용에맞는버튼/영역크기를요청했다. 회원/비로그인일반DI를AccountPageTypography로감싸본문16/보조14/제목18/버튼16을적용하고전역ThemeData는유지했다. 카드readable옵션/현재190최소폭/대표/완료/저장·설정페이지·다른화면은보존한다.
+
+계정도구전체/그리드의고정최대537폭과미사용상수를제거하고최장버튼글자의실제style/textScaler측정+수평padding16·버튼간격16/외곽32로자연폭을계산한다. 충분한공간은2×2/부족하면1열·줄바꿈하며높이minimum48/verticalpadding12/행간20·외곽padding12는유지한다. 화면제약은유지해내용이뷰포트밖으로무한팽창하지않는다. 계정카드상태문구의2줄말줄임을제거하고인증상단height계산은확대한버튼16에맞췄다. IntrinsicHeight·기능API/저장원장복제는추가하지않았다.
+
+검증: 직접71PASS·최종전체3010PASS(68초)·전체analyze0(5.5초)·포맷/diffcheck. 320/720/1400폭×글자100/150/200%의도구버튼오버플로없음/2열간격16/높이최소48·국소타이포그래피를검증하고인증상단/계정/가능시간기존흐름을회귀했다. 첫분석의추가테스트for중괄호지적을수정해최종0을확인했다. 사용자웹/앱시각/입력·큰글자확인은대기이며전체글로벌디자인확정으로확대하지않는다.
+
+현재브랜치feature/my-account-ui-remake 미커밋/미push·dev미반영·배포/DB변경없음. 개인주간가능시간/예약그래프잔여1구간은유지한다.
+
+## 2026-11-15 — 인증 상단 bottom overflow 복구
+
+사용자스크린샷에서Google상태+복사/로그아웃두줄이기본AppBar56높이를5초과하는오버플로를확인했다. 회원/비회원내계정모두인증위젯이있을때공통toolbarHeight로실제글자배율의줄높이+최소조작높이를확보한다. 글자축소/스크롤숨김대신공간을확보하고기존설정아이콘/로그인/복사/로그아웃을유지한다. 360/720폭×글자100/150/200%와기존세션시험을검증했다. 변경4파일분석0·포맷/diffcheck. 사용자실기기재확인대기이며카드가거대해보이는체감피드백은기록만하고이번오류수정에카드크기를변경하지않았다. 미커밋/미push·dev미반영·배포없음.
+
+## 2026-11-15 — 펼친 폴드 카드 여백·2열 고정 체감 조정
+
+사용자가펼친폴드에서도2열/큰빈여백을보고해회원카드최소폭220→190으로낮추고선호244폭반올림계산을제거했다. 가용폭에최소폭카드가들어가는최대열수를사용하며최대280/간격12와기존글자크기·배율확대시열감소는유지한다. 기본배율가용폭594부터3열/600폭3열,360폭1열이다. 실제기기폭·시스템글자배율은미관측이므로모든폴드에서3열을강제하지않는다.
+
+폭/큰글자·공용카드직접검증통과·변경2파일분석0/포맷. 사용자폴드/웹시각재확인대기이며현재미커밋/미push·병합/배포없음.
+
+## 2026-11-15 — 회원 캐릭터 카드 가독성 비교안 연결
+
+사용자가가독성우선/좁은폰1열허용을선택하고구현을승인했다. 일반회원카드에공용AccountCharacterCard.readable opt-in을연결해이름18볼드·직업14·레벨/전투력/레이드16·보조/상태14·내부여백12를적용했다. 이름자동축소/고정두줄예약을이경로만제거하고자연줄바꿈/내용높이를사용한다. AccountResponsiveLayout의최소220/선호244/최대280/간격12·가용폭/글자배율에따른열계산을적용했다. 360폭1열/720폭3열/1200폭5열을확인했다.
+
+보존: 비회원/다른공용카드의기본스타일·전역테마·인증상단미커밋변경·계정도구/탭폭·대표/순서/체크/상세·조회/저장API는유지했다. 직접3파일58PASS·변경/시험5파일분석0·포맷/diffcheck. 220폭/100·150·200%글자/긴이름·큰수치·참가보조정보에서오버플로없음/이름18유지를검증했다. 좁은표현변경과회원경로회귀에한정해전체시험반복은하지않았다.
+
+미확인: 사용자웹창리사이즈·폰/폴드크기/밀도체감. 앱전체타이포그래피확정은아니며추후사용자피드백으로조정한다. 개인주간시간표잔여1구간은유지한다. feature/my-account-ui-remake 미커밋/미push·dev미반영·배포/DB/API변경없음.
+
+## 2026-11-15 — 내 계정 상단 Google 인증 바로가기
+
+사용자요청으로설정왼쪽에로그인상태·회원ID복사·로그아웃을공통위젯으로연결했다. 비로그인은로그인버튼,로그인시Google로그인중과ID를노출하지않는복사아이콘·로그아웃버튼이다. 상태/조작두줄로좁은앱영역을고려했다. 기존설정내부인증기능·로그인화면/원주소복귀·AuthSessionController.logout을유지하고비동기세대검사·중복조작잠금/취소확인창을적용했다. 새인증API/원장없음.
+
+직접account_session/member_account49PASS·변경4파일분석0·포맷/diffcheck. 사용자웹/앱의상단시각/로그인·복사·취소/로그아웃확인은대기이며기기대행없음. 기존미커밋로그인버튼FilledButton변경을보존했다. 현재브랜치미커밋/미push·dev미반영·배포없음.
+
+## 2026-11-15 — 비로그인 원정대 패널 로그인 버튼 스타일 변경
+
+사용자 요청으로 비로그인 내계정 등록원정대 패널의 TextButton을 FilledButton으로 변경했다. 일반 scoped 경로와 기존 fallback 패널에 동일 적용했고 공용테마의시그니처배경/흰글자를재사용한다. 로그인callback·인증/원주소복귀·안내문구/배치는유지한다. 변경2파일analyze0·포맷/diffcheck, 단순스타일수정으로자동UI시험을추가하지않았다. 사용자웹/앱시각확인은미확인이다. 현브랜치미커밋/미push·dev미반영·배포없음.
+
+## 2026-11-15 — 완료분 문서 통합·웹/Android 공동개발 규칙·브랜치 보관
+
+사용자는 내계정 리메이크에서 개인 주간 가능시간/예약그래프 한 구간만 남았으며 그 이전 작업은 완료라고 확정했다. NEXT_WORK/AI_CONTEXT의 카드·별칭·뒤로가기·최소상세버튼/여백 확인대기를 제거하고 남은 구간만 현재계획으로 정리했다. 사용자콘텐츠/일일·주간기록/별칭편집은 별도후속으로 제품대장에 기록했다. BUG-036은Backend9a61d0ea/dev4be81dc2 게시와 로컬add28707/사용자정상표시확인을 반영했으며 운영반영과 분리했다.
+
+AGENTS/ai_rules·README/문서지도·MVP·디자인/개발품질·Google로그인 계약에서 웹과Android를현재공동개발대상으로명시했다. Android만의UI검증표현을웹/앱영향검토로수정하고개발호스트Windows/Mac과지원플랫폼을구분했다. 네이티브4초런치/웹무대기와debug코드기본10.0.2.2/웹로컬BACKEND_BASE_URL명시를분리해기존설명충돌을정리했다. 기존확정정책·공유API/Domain/저장·플랫폼adapter재사용과사용자대행/배포승인경계를유지한다. 과거릴리즈/역사기록은당시사실로보존한다.
+
+새로가능한흐름/보존확인/사용자보고는이전구현이력을재사용했다. 전체2989PASS/전체분석0, 최종문구28PASS·별칭정정41PASS·상세55+4/최소UI91PASS·분석0을순서별근거로보존하며합산하지않는다. 이번은문서/보관만진행해Flutter시험을반복하지않고diffcheck·누적코드/시험/자산/문서리뷰를수행했다. 남은개인예약그래프는미구현/미검증이며전체리메이크완료로확대하지않는다.
+
+사용자지시로062bc467이후의누적전체를feature/my-account-ui-remake에한커밋으로보관·push한다. 실제SHA/원격동기화와Issue53인계는Git/댓글결과를따른다. dev/main병합·운영배포·DB초기화·Penpot02이관·Issue종료는하지않으며브랜치는잔여1구간을위해유지한다.
+
+## 2026-11-14 — BUG-036 Backend 로컬 수정 후 사용자 정상 표시 확인
+
+Backend6875007986이미개방N의group_state조회가없는RoomCycle.room_id를참조해500을발생시킴을재현했다. 권한검사후group_state=null/기존relation_only응답으로수정하고격리5PASS·로컬add28707이미지/health200을확인했다. 안내후사용자가정상표시를확인했다. 새NativeDTO/오류치환·조회/저장변경없이기존응답소비가정상화됐다.
+
+BUG_REPORTS/NEXT_WORK/AI_CONTEXT의조사대기를교체했다. 정상표시확인을별도생성창빨간안내/모든조작전수확인으로확대하지않는다. 기능코드변경없어기존자동검증재사용·문서diffcheck만수행한다. Backend게시/운영반영은회신시점미완료·별도지시이며현Flutter브랜치미커밋/미push·dev미반영·배포/Issue종료없음.
+
+## 2026-11-14 — 카드·뒤로가기 사용자 인수 / 상세 최소UI정리·BUG-036 조사
+
+사용자가수정한뒤로가기와캐릭터카드를확인했다. 해당디자인/선택·별칭·터치·복귀는보고범위정상인수로기록하고자동경계전수확인과구분한다. 개인예약시간표는여전히후속이다. 새제보는C만있는방의N탭INVALID_RESPONSE/HTTP500과N함께하기날짜시간선택시빨간안내/실제생성성공이며별도BUG-036으로분리했다. Backend요청6874697856에상세/context/opening실패구간·정상미개방응답/서버예외·실행수정확인을요청했다. 회원식별자는외부댓글/문서에복제하지않았다. 빨간안내잔류는확정원인이아니며원pending/오류를임의로지우지않는다.
+
+UI최소수정: 실제common수정창은제목TextField만노출하므로모집명변경으로라벨을바꾸고RecruitmentSection.trailing으로제목우측에이동했다. legacy common명령의부가필드/CAS/권한·context/common-settings경로는변경하지않는다. 모집조건과위임이연속Wrap으로세로여백없이놓인것을확인해사이8/Wrap줄간격8을추가했다. 상세전체리디자인은확장하지않았다.
+
+관련관리/상세/reader/탐색4파일91PASS·변경2파일analyze0·포맷/diffcheck. 기존common no-op/권한/그룹필드보존·정정/완료/일정/복귀를직접회귀로확인했다. 새버튼배치의웹/앱사용자확인과BUG-036해소는미확인이다. 이전전체2989PASS는범위외회귀이력으로보존하고이번좁은UI수정으로전체시험을반복하지않았다. 현브랜치미커밋/미push·dev/main미반영·운영배포/DB초기화없음. 내계정완료후운영배포예정이라는사용자의향을기록하되이번배포실행지시로해석하지않는다.
+
+## 2026-11-14 — 디자인 사용자 통과·Android 참가중상세 뒤로가기 복구
+
+사용자가변경디자인을통과로확인했고Android 레이드현황참가중목록→상세의뒤로가기누락을보고했다. 실제일반진입은membershipDetailLocation을context.push하며membership reader는onExitExplorer=null이었다. 중첩Navigator 첫화면의canPop=false가Flutter AppBar의자동leading생성을막는조건을테스트로재현했다. 상세의leading을명시BackButton으로수정해기존탐색콜백/라우터pop/기존Navigator pop/직접진입동일주차raid-status순으로복귀한다. API/저장/권한·완료/정정과기존탐색복귀를보존했다.
+
+검증은상세/탐색/신청진입/membership reader 4파일55PASS, 추가중첩스택/직접URL경계포함상세4PASS·변경2파일분석/포맷/diffcheck다. 직접원인화면/복귀에한정된수정으로전체시험은반복하지않았다. 디자인통과와Android수정실기기재확인은구분하며실기기재확인은사용자대기다. [회신6874528274](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6874528274)에디자인통과/복구/미확인을전달했다. feature/my-account-ui-remake 유지·미커밋/미push·dev미반영·배포/DB변경없음.
+
+## 2026-11-14 — 사용자 지시 정정: 지평의 성당 표시명 유지·레이드 별칭 변경
+
+사용자가 이전표시명변경지시를정정했다. displayName은기존지평의성당으로복원하고horizon_cathedral의aliases만성당→지평으로수정했다. 자산과서버카탈로그소비모델에동일별칭을적용하며원식별자/officialName/난이도원명·모집결합별칭과나메/n단단독표시는유지한다. 이전기록의표시명지평은당시이력이며현재계약은이정정이다.
+
+직접카탈로그/표시계산/주간41PASS·변경모델/시험분석0·포맷/diffcheck. 좁은표시명정정이므로이전전체2989PASS는이력으로보존하고전체시험을반복하지않았다. 실기기표시는사용자확인대기다. [정정회신6874424421](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6874424421)에이전협업내용을정정했다. 현재브랜치미커밋/미push·병합/배포/서버업무기록변경없음.
+
+## 2026-11-14 — 난이도 단독 별칭·지평 표시명 정정
+
+사용자가 난이도만 표기하고 나이트메어는나메, 성당표시명은지평으로확정했다. 기존참가문구에모집용결합displayAlias를사용했던오류를수정했다. 공용 RaidDifficultyDefinition.displayName을추가해나메/n단/원본난이도명으로표시하고내계정참가·개별설정창에연결했다. RaidDefinition.displayName은horizon_cathedral일때클라이언트지평으로통일하며서버/자산원본·officialName/raidId/difficultyId/name/displayAlias는보존한다. 문구는일반난이도참가중/단계형참여중이다. 사용자별별칭편집/추가콘텐츠는후속으로제외했다.
+
+검증: 전체2989PASS·전체analyze0(89.5초), 최종참가중/참여중문구보정후직접28PASS·변경3파일analyze0·포맷/diffcheck. ID/원본난이도/결합별칭보존과지평/n단/나메변환을확인했다. 이전전체결과와최종문구직접결과를구분한다. 실기기표시확인은사용자대기다. [추가인계6874404761](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6874404761)에기록했다. feature/my-account-ui-remake 유지·미커밋/미push·dev미반영·배포/DB/API변경없음.
+
+## 2026-11-14 — 주간 레이드 종류선택·회원 카드 개선 구현
+
+사용자 승인계획을 일반 회원경로 MemberWeeklyViewModel/기존로컬store·공용설정모델/projector·개별/일괄창·AccountCharacterCard에 연결했다. 표시개수입력/최대5검증을제거하고선택ID집합을사용한다. 미설정추천3/명시빈집합을구분하고입장불가/비활성선택ID를보존한다. 일괄창은공통/혼합/해제초기값·체크된종류만기존usable전체에덮어쓰기이며미래캐릭터상속없음이다. 관측토큰으로열린동안자료변경을검사하고next map을한번저장후반영해실패시이전값을유지한다.
+
+새로가능: 5개초과선택/일괄종류선택·혼합초기값, 이름볼드/44연필·체크·정보아이콘터치영역/행형레이드표시, 실제참가난이도 참여중문구. 완료명령용추천difficulty와서버참가difficulty를분리했다. 작은3열강제/추천3개빈행예약을제거하고기존카드폭/가변열·대표/순서·비회원legacy배치를유지한다. 신규API/외부갱신/서버표시원장은추가하지않았다.
+
+보존검증: 원로컬JSON/count파생값·schema1~4완료pending/원키/본문/ACK, 주차·회원·환경/epoch보호, 기존완료/정정·기본추천/입장가능난이도/골드계산·저장실패원복/재진입. 직접3파일73PASS·최종전체2988PASS/전체analyze0(7.1초)·포맷/diffcheck를확인했다. 최초전체시험실패1건은기존빈행예약기대값이승인된새배치와달라갱신했으며이후전체재검증했다. dart fix의복수파일인수는지원되지않아단일파일별로수정했다. 예외를회피하기위한정책완화/자료삭제는하지않았다.
+
+미확인: 사용자웹/앱에서개별/일괄혼합·전부해제/기본값·실제참가난이도/체크/상세·큰글자/폰/폴드/웹배치. 기기설치/조작·실제dev회원쓰기는실행하지않았다. [Backend결과6874168778](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6874168778)에구현/검증/미확인/미게시상태를회신했다. 개인주간예약그래프는후속이다. feature/my-account-ui-remake 유지·이번변경미커밋/미push·dev/main미반영·배포/DB초기화/Issue종료/Penpot02이관없음.
+
+## 2026-11-14 — 내 계정 현재 구현 웹·앱 사용자 인수 / 브랜치 보관
+
+사용자가 최신 변경은 웹·앱 모두 정상 작동한다고 확인하고 문서기록·최신변경전체 커밋/push·Backend 결과회신을 지시했다. dev병합은 명시적으로 제외했다. 완료구간은 반응형배치/계정도구·탭폭, 사용캐릭터전원표시/개수설정제거, 웹런치생략(네이티브유지), 관리즉시저장/전체드래그·대표버튼, 정책2 메인대표/부원정대전체이동/자동선정, 진입/복귀 서버저장값재조회다. 기존 pending/역사ACK·개인설정/수동순서·그룹snapshot 보호를 자동검증과 구분해 유지한다.
+
+검증은 기존 전체2986PASS·전체analyze0·최종직접23PASS/변경2파일분석0을 재사용했다. 이번은 문서만 변경하며 git diff --check/최신변경·신규파일 검토를 수행한다. 사용자 제작 wordmark PNG도 내용확인 후 함께 보관하되 웹런치미사용 정책은 유지한다. 정상 UI 사용자확인은 응답유실/동시성 등 모든기기경계의 전수시험을 뜻하지 않는다.
+
+레이드 종류체크/개수제한제거·카드세부표시/연필터치영역·개인주간예약그래프는 남은 구현으로 NEXT_WORK에 분리했다. feature/my-account-ui-remake를 유지하며 사용자지시의 커밋/push 완료는 실제 Git/Issue53 결과를 따른다. dev/main병합·운영배포·DB초기화·Issue종료·Penpot02이관은 하지않는다.
+
+## 2026-11-14 — 정책2 연결·내 계정 서버저장값 재조회 구현
+
+Backend 고정9308ce7e(게시6873586100)의 필수 policy_version/is_main/nullable대표·관측숫자/시각 계약을 일반 관리 DI에 연결했다. 관리용 추가대표GET을 제거하고 동일문맥 정확문자열 비교·부원정대 전체movable·서버자동선정을 지원한다. 기존 정책1 원journal/키/본문·역사ACK의 엄격검증·확정무실행거절/현재GET복구는 보존했다. legacy 관리Gateway는 기존대표필수조건을 유지한다.
+
+새로 가능한 흐름: 관리 저장/복귀·내계정 진입/탭선택에서 공통 reloadStoredData가 기존 등록/목록·개인설정GET만 읽어 순서를반영한다. 외부게임관측갱신/역할분석은 호출하지 않는다. 중복합류/후속조회·회원/환경/조회세대guard·실패시기존목록유지·성공목록교체를 적용했다. 기존반응형/카드디자인·왕관/대표버튼·즉시저장/전체드래그를 유지한다.
+
+검증: 전체 Flutter test2986PASS·전체analyze0(6.4초). 최종 DTO의 부원정대대표null/시각의미검사 보강 후 관리직접23PASS·변경2파일analyze0, 포맷/diffcheck. 원pending원문/정책1ACK복구·정확소수선정·부원정대전체movable·저장후rank·GET-only/refresh미호출·조회실패이전카드유지를 확인했다. 새실패테스트의 함수대입 컴파일오류와 방어복사getter의 identity단언을 고쳐 재검증했다. 겹친 시험의 Windows sqlite native asset복사충돌은 이전실행 종료후 해소됐다. 광범위포맷으로 생긴 무관7파일은 diff전체가 포맷만임을 확인후 되돌렸다(초기 자동검토거절 뒤 근거확인으로 승인). 기존미커밋변경을 보존했다.
+
+미확인: 실제dev회원쓰기·웹/앱사용자기기 인수. 순서변경/복귀·탭왕복·활성/대표·부원정대전체이동·메인전환자동대표를 사용자에게 안내한다. [Backend 인계6873829729](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6873829729)에 구현/검증/미확인·미커밋/미push를 회신했다. feature/my-account-ui-remake 유지·미커밋·미push·dev미반영·DB초기화/배포/Issue종료 없음.
+
+## 2026-11-14 — Backend 정책2 정확안 대조·복귀 서버조회 연계
+
+[Backend6873152385](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6873152385)의 본문·정확 Schema·전이/원ACK 합성예시·선정 fixture를 확인했다. 필수 요청 policy_version, scope.is_main, 메인 null 유지/자동선정·부원정대 null/전체movable, 같은 DB 관측 전투력·실제시각·지문, 영속 namespace 유지와 CONTRACT_POLICY_CHANGED 무실행 복구를 수용했다. 자동선정 10사례는 부동소수점 없이 문자열 소수/UTF-16 비교로 독립 대조해 모두 일치했다. 정식 Schema validator·Native parser/HTTP/DB 검증은 아니다. Backend의 문서59+기존40PASS 보고와 실제 실행검증은 구분한다.
+
+사용자가 관리복귀 후 캐릭터 목록 반영이 간헐적으로 누락됨을 보고했다. 저장성공 callback은 있으나 openCharacters의 push 복귀 후 재조회는 없다는 코드 사실을 확인했다. 실제 단일 원인은 미확정이다. 내계정 진입/복귀 시 외부 관측 갱신 없이 서버 저장값을 재조회하고 기존 저장후갱신과 공통화하는 방향에 사용자가 동의했다. 정책2와 함께 구현할 계획을 계약30/NEXT_WORK/AI_CONTEXT에 기록했다. 기존 pending·중복/늦은응답 차단·실패 시 카드 유지가 보호 범위다.
+
+[Flutter 수용6873213572](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6873213572)에 대조결과·새조회 범위·Backend 다음 인계물을 회신했다. 서버 실행은026a74fa/policy1이며 정책2는 미구현·미커밋·미push 후보다. 이번은 협업/문서·정적 대조이고 새 기능 연결·실기기 통과는 없다. 문서 diffcheck 검증, Flutter 시험 반복 없음. feature/my-account-ui-remake 유지·미커밋/미push·dev 미반영·DB/배포 없음.
+
+## 2026-11-14 — 대표 미지정 자동선정 정책 확정·Backend 계약 보완 요청
+
+사용자가 메인 원정대 변경 후 대표가 비어 다른 사람에게 표시되지 않는 문제를 지적하고, 대표가 없으면 아이템레벨 내림차순 → 전투력 내림차순 → 캐릭터명 오름차순으로 자동 지정하도록 확정했다. 한글·숫자·영문은 별도 그룹으로 나누지 않고 함께 비교한다. 메인의 소유·사용가능·사용선택 후보를 대상으로 하며 기존 유효대표는 유지한다. 부원정대에는 대표를 생성하지 않는다. 앞선 수동재선택 대기 추천은 이 확정으로 대체했다.
+
+현재 계약에는 전투력 관측이 없으므로 다른 시점의 UI 캐시를 섞은 임시 자동선정은 구현하지 않았다. [Issue53 요청6872855905](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6872855905)에 메인전환과 자동지정의 동일 트랜잭션, 권위 있는 전투력 출처/미관측 처리, 정확 decimal·혼합 이름 비교 fixture, 기존대표 유지·후보없음 예외 및 정책1 원ACK 복구 계약 보완을 전달하고 게시본을 재조회했다. 전투력 null 처리 등 기술 제안은 Backend 정확계약 대조 대기이며 확정 구현으로 기록하지 않는다. 수동 카드순서와 기존 그룹 snapshot은 보존한다.
+
+제품/활동 계약·계약30/NEXT_WORK/AI_CONTEXT를 최신화했다. 이번 변경은 문서·협업 요청이며 기능코드·API/DB 변경은 없다. 검증은 문서 내용 대조와 git diff --check이며 Flutter 검증은 반복하지 않는다. 새 자동지정 기능과 메인전환 후 실제 표시의 실기기 확인은 Backend 계약·구현 연결 이후다. feature/my-account-ui-remake 유지·기존 변경 포함 미커밋·미push·dev 미반영·배포 없음.
+
+## 2026-11-14 — main-only 정책2 제안 수용·그룹 실제경로/원journal 대조
+
+[Backend6872634409](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6872634409)은 조사/계약제안·미구현이다. 부원정대대표null·활동1..200만으로configured/ON/OFF·전체활동movable최대200, 메인만활동-대표최대199·scope.is_main/policy character-management-2 방향을수용했다. 명시부원정대저장의동일트랜잭션raw정리/version증가, 동일snapshot main reader·메인전환시자동대표승격없는재선택추천을정확전이검토로기록했다. 실제원정대전환UX/API구현/인수완료는아니다.
+
+일반그룹경로는 BackendApp.groupCharacters→BackendGroupPage.choose bottom sheet의명시선택이고 GroupCharacterChoice.compare는level/label/ID정렬임을확인했다. 현재메인대표자동기본채움은없고 legacy GroupCharacterOptionLoader와구분했다. 새기본후보준비는후속이며그룹최종명시선택/snapshot을임의제한/갱신하지않는다.
+
+현재v2 journal은policy1 body를schema1/reg/key/body/acknowledged로보존한다. 실제기기pending0건임은확인할수없어없다고가정하지않았다. [회신6872686921](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6872686921)에 구조·policy1 namespace/key 재생이policy2 신규명령으로중복실행되지않을규칙·원ACK별도엄격검증/현재GET·acknowledged면GET만복구를요청하고재조회했다. 사용자private store덤프/자료초기화·원문재작성은요구하지않는다.
+
+다음은Backend 정확Schema/전이예시·원요청복구계약고정→Native대조/실제연결이다. 계약30/NEXT_WORK/그룹제품문서의현재구현과후속을최신화했다. 이번은소스/문서대조·diffcheck만이며기능코드/서버/DB·실행시험·commit/push/dev통합/배포변경없음. feature/my-account-ui-remake의기존미커밋변경을보존했다.
+
+## 2026-11-14 — 부원정대 대표 선택 UI·안내 완전 제외
+
+사용자가 부원정대에는 비활성 대표버튼도 남기지 말고 대표선택 관련 UI를 모두 제외하도록 재확정했다. 기존 main-only 버튼/왕관 숨김은 유지하고 부원정대의 대표선택 안내문·대표확인을 요구하는 경고/오류문구·자동대표추천초안을 제거했다. 부원정대의 내부대표필드만불완전한상태를사용캐릭터오류로잘못표시하지않는다. 메인대표버튼/자격은유지한다.
+
+변경3파일 포맷/직접분석0·v2직접20PASS·diffcheck. 기존전체2982PASS는재사용하며 실제표시확인은사용자대기다. [Issue53재확정6872476692](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6872476692)에 비활성컨트롤조차표시하지않는정책과부원정대의대표필수/활동·순서계약보완대기를명시했다. 서버계약미완료를숨은대표자동선정/원pending변환으로우회하지않고전체부원정대쓰기완료로보고하지않는다. feature/my-account-ui-remake 미커밋/미push·dev미통합·배포/DB변경없음.
+
+## 2026-11-14 — 대표 카드내 버튼·왕관 저장조건 수정 / main-only 정책·서버보완 대기
+
+사용자가 관리대표 UI를 순서카드 내부 텍스트형 시그니처 버튼으로 최종결정하고 내계정 왕관 무반응과 부원정대 대표우선/그룹기본값 혼재를 보고했다. 계정대표는 메인 원정대의 사용캐릭터 중 단1명으로 확정했다. 기존 서버는 전용대표PUT main검사와 v1/v2설정의 원정대별필수 representative가 공존했다. 그룹자체대표는 별도snapshot이라는 원래제품계약을 확인했고 기존그룹기록을 자동덮어쓰지 않았다. [정책조사6872066541](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6872066541)에 서버 authoritative main-only/부원정대선택·순서/그룹기본reader 보완을 요청했다.
+
+독립 적용: 관리의 별도선택영역 제거·카드내 대표버튼 선택primaryStrong/미선택primarySubtle·해당영역 drag hit제외. v2의 main판정은 기존대표GET의is_main/account/4개버전을 동일관리문맥과 대조하며 충돌은재조회한다. non-main UI/대표변경 송신은막는다. 내계정은main에만대표표시/왕관·대표우선정렬하고 non-main의예전설정대표를 계정대표처럼올리지않는다.
+
+왕관은코드연결이남아있었지만 displayReady(count/개인prefs),provider쿨다운,summary레벨파싱까지 대표자격에섞여있었다. 대표저장전용canEdit를분리해이를제거하고 서버의현재소유/main/activity/lifecycle usable·CAS와runtime lock/원pending/명령중복검사를유지했다. 동작불가시안내/새로고침과현재대표재터치유지안내를추가했다. 실사용증상의유일원인이확정된것으로보고하지않는다.
+
+검증: 직접65PASS·최종전체2982PASS(80초)·전체analyze0(56.4초)·포맷/diffcheck/리뷰. 새경계는provider쿨다운중저장대표변경/count조회실패와무관한자격·부원정대대표우선금지·non-main선택/송신금지다. 기존왕관확인창/회원전환후거절·원ACK복구 회귀를유지했다. 실제웹/앱 새버튼/왕관/마우스·터치 버튼과드래그분리는사용자확인대기다.
+
+남은것: 기존서버 non-main 필수대표/대표포함·OFF제약·대표제외movable 정책은아직유효하여 이번UI수정을서버위조방어/모든부원정대행동완료로보고하지않는다. 자동대표선정·원pending 재작성·DB초기화로우회하지않고 Backend 회신후정리한다. [결과6872219714](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6872219714)를게시/재조회했다. feature/my-account-ui-remake 미커밋/미push·dev미통합·배포/DB변경/Issue종료없음. 제품/활동계약·그룹흐름/계약30/NEXT_WORK/AI_CONTEXT를최신정책과현재대기로구분해갱신했다.
+
+## 2026-11-14 — 웹/앱 변경 적용 사용자 확인·사용해제 설명 위치 수정
+
+사용자가 웹/앱 모두 변경점이 잘 적용된다고 보고했다. 정상 변경 적용 확인이며 오류/재진입 등 모든 실기기 경계를 통과한 것으로 확대하지 않는다. 대표 선택을 별도영역으로 분리한 것은 사용자 의도와 달랐으며 순서카드 내부 컨트롤을 유지하는 방향으로 정정했다. 왕관 또는 시그니처컬러 버튼은 사용자가 검토 중이므로 이 시각 변경은 아직 하지 않는다.
+
+사용해제 설명이 '대표 캐릭터와 표시 순서' 아래 남아 있던 위치 오류를 수정했다. '앱에서 사용할 캐릭터' 안내에 '사용을 해제해도 현재 참가 중인 레이드에서는 유지되며, 새로운 레이드 선택에서는 제외됩니다.'를 연결했다. 대표 UI/API/저장 흐름은 바꾸지 않았다. 변경파일 포맷/정적분석0·diffcheck, 실제 문구 배치는 사용자 확인 대기다. [Issue53 사용자 확인6871981409](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6871981409)에 결과와 UI 후속을 회신·재조회했다. 기존 전체2978PASS는 재사용하고 단순 문구 이동으로 전체시험을 반복하지 않았다. feature/my-account-ui-remake 유지·미커밋/미push·dev미통합·배포없음.
+
+## 2026-11-14 — 관리 즉시 저장 v2 일반 DI 연결·최종 자동검증 완료
+
+사용자 구현 지시 후 [Backend 고정026a74fa](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6861435507)를 수령했다. Schema는 기존댓글과 JSON동일이며 합성예시/고정밀·지수0 fixture·실행OpenAPI/DTO를 대조했다. 큰 OpenAPI의 Contents 응답이 비어 blob c108f1bd0223e5e82a7cc7c05ff45d562a5fdf34를 읽어 관리 GET/PUT의 ManagementContext/ManagementPut 연결을 확인했다.
+
+새로 가능한 흐름: 일반BackendApp 회원 관리 라우트에 V2CharacterManagementGateway·CharacterManagementContext·독립SecureManagementJournalStorage를 연결했다. 사용ON/OFF·대표선택·movable드롭을 한 명령으로 저장하고 저장버튼/대표확인창 없이 화면유지·상위계정을갱신한다. 대표선택은상단·순서목록은하단, 대표는표시상고정·나머지카드전체 mouse즉시/touch길게누르기·접근성순서액션을지원한다. 저장중 같은관리조작잠금과 미확정명령의 원정대별 기존대표/관리쓰기 보호를연결했다.
+
+새전용journal은송신전저장·불변key/body·응답유실복구·ACK후GET실패시GET만재시도·409현재조회후명시새명령·회원/환경/세대늦은응답폐기를다룬다. 기존 v1/개별preferences 원pending은변환하지않는다. GET의잔여선택/대표를허용해경고하며목록밖선택은사용자가본ID만명시정리한다. 새잔여를자동삭제하지않는다. 기본/수동순서는v2동일관측목록을사용하며초기진입자동쓰기/대표rank0강제는없다.
+
+검증 중 저장후내계정이 server:false 캐시rank를재사용하는지점을확인했다. restoreAfterManagementContext에서대상원정대만새개인설정을읽도록보완하고직접시험을추가했다. 다른원정대전체강제복원·provider재호출·v2 ACK를roster receipt로위장하지않는다. 기존대표/정렬·pending/자격/누락·네이티브런치/다른기능의회귀는최종전체시험으로보호했다.
+
+최종검증: **전체2978PASS(74초)·전체flutter analyze0(6.1초)·포맷/diffcheck/리뷰**. 신규v2경계19는고정예시5문맥·엄격DTO/고정밀문자열/Unicode64runes·1000/1001/201상한·정확subset·저장소실패/원요청복구/현재GET실패·동시조작/회원전환/409명시재시도·대표제외movable을포함한다. 회원통합직접시험은v2후메인rank갱신까지확인했다. 초기시험의비UUID 회원fixture와구현중 위젯/스타일컴파일지적은정정한후최종통과했다. Backend61PASS/로컬image는기존상대근거로구분한다.
+
+사용자 미확인: 로컬dev 실제회원 설정쓰기/웹·네이티브 화면. 완전재시작 후 ON/OFF 즉시반영, 대표클릭 확인창없음/현재대표OFF금지, mouse전체카드드래그·touch길게누르기/스크롤충돌·폴드, 드롭뒤메인순서/재진입, 실패/재시도표시를확인한다. 정상UI자동시험을중복추가하거나기기를설치/조작하지않았다. [Issue53결과6862127779](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6862127779)를게시·재조회했다. feature/my-account-ui-remake 유지·최신변경전체미커밋/미push·dev미통합·배포/DB초기화/Penpot이관/Issue종료없음. 레이드종류선택/카드표현·개인예약시간표는후속이다.
+
+## 2026-11-14 — Backend 관리 v2 구현·로컬 지원 보고 수신 / 미게시
+
+[Backend6861363598](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6861363598)의 신규관리 GET/PUT 구현·관리26+대표35=61PASS/33.76초·문서40사례·warm1000문맥13SQL/0.04245초/216488bytes 보고를 확인했다. 로컬image sha256:7e77c0788d2c562eedc4142c5fda2a6dc4314e8a16881a3bdd60a4e17bd937b4 반영/DB·키 보존도 상대보고다. Native에서 시험·이미지·실회원자료를 독립검증한 결과가 아니다. 고정밀decimal 단항minus 반올림 방지/지수0 fixture 추가는 게시인계 때 직접 대조한다.
+
+코드/최종계약/실행기록은 로컬미커밋/미push·고정SHA없음이며 fe5e082/dd69159를 새관리 구현본으로 사용하지 않는다. [수신회신6861426072](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6861426072)을 게시/재조회하고 NEXT_WORK/계약30/AI_CONTEXT의 Backend 미구현·미지원 대기를 게시인계대기로 교체했다. Flutter 즉시저장 신규코드/실제연동/실기기확인은 아직 없다. 문서 내용/diffcheck만 확인하며 commit/push/dev통합·DB초기화/추가배포·Issue종료는 실행하지 않았다. feature/my-account-ui-remake 유지·기존 미커밋변경 보존.
+
+## 2026-11-14 — 댓글 첨부 관리 정확 Schema/예시 대조·설계 수용
+
+[Backend6860769177](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860769177)의 미게시 로컬 산출물과 같은 댓글JSON3블록을 직접 파싱했다. Schema Context/PutBody/Error·5문맥의 전체ID/행순서·중복/usable↔blocked_reason, PUT2/의미거절3·오류11·흐름4를 정적 확인했다. 정규decimal 문자열 비교·UTF-16 comparator3사례의 기대순서가 일치했다. Backend validate.py38문서검증은 상대보고이며 Native에서 파일을 실행하지 않았다.
+
+모든 GET configuration_state에서 activity/대표 원값이 문맥 밖/비활동/null/unusable일 수 있음을 수용했다. configured를 정상자격으로 강제하지 않고 잔여ID를 경고/명시수정하며 PUT만 최종선택/대표/usable/ordered집합을 검사한다. fake행/추가조회/자동OFF와 구v1 strictparser 재해석은 없다. [수용6860821836](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860821836)에 결과·한계를 회신/재조회했다.
+
+설계질의는 해소됐지만 파일은 미커밋/미push·고정SHA없음, 신규v2는 미구현/로컬미지원이다. 후보수용은 새API/Flutter parser/HTTP/DB동시성·비용 시험통과가 아니다. 다음은 별도승인범위에서 게시/구현 인계와 원문/실행버전 대조·실제연결이다. 계약30/NEXT_WORK/AI_CONTEXT를 최신화하고 내용/diffcheck만 확인했다. 기능코드/Penpot/서버/DB/초기화·commit/push/dev통합/배포 없음·feature/my-account-ui-remake 미커밋 유지.
+
+## 2026-11-14 — 즉시 저장 Flutter 연결 설계 구체화·정확 계약 고정 요청
+
+사용자 진행 지시로 최신Issue53을 확인했으나 전체14 이후 정확Schema/예시는 아직 게시되지 않았다. BackendApp _managementGateways가 환경/회원/인증세대/원정대별 Gateway를 앱 소유하고 Page는 VM만 dispose하는 현재 연결과 onSaved→restoreAfterManagement·Runtime lock을 조사했다. 계약30 기존 섹션에 DTO/transport·v2 journal/불변원명령·확정값/draft·원정대 저장중잠금·409/유실/확정GET·초기명시확정·카드전체드래그/대표고정·상위캐시갱신·작업순서/직접경계시험을 구체화했다. Page 콜백에 save만 붙이거나 v2 ACK를 기존 roster receipt로 위장하지 않는다.
+
+[요청6860661505](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860661505)에 정확 문서/Schema/합성예시·fixture/미설정집합 불변식 고정·게시SHA/실제구현지원상태 인계를 요청하고 재조회했다. 다음은 Backend 게시본 수령/후보대조다. 현재는 독립설계 준비 완료이며 실제API/신규앱코드·HTTP시험/DB/초기화/배포·commit/push/dev통합은 하지 않았다. 문서 내용/diffcheck만 검증·feature/my-account-ui-remake 유지/미커밋 누적.
+
+## 2026-11-14 — 즉시 저장 기본정렬 보존·wire 보완 회신 수용
+
+[Backend6860182946](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860182946)의 rank→level/name/UUID 기본정렬·대표표시분리·동일v2 관측 목록, GET/선택/대표의 rank불변·동일드롭no-op 보완으로 이전 정렬질의를 해소했다. 전체1000/활동200·413 sentinel, closed scope/data/characters·digest/CAS·원ACK/GET 확정 후보를 수용했다. DB초기화 불필요·어느환경도 별도사용자확인 전 실행하지 않는 경계도 확인했다.
+
+[Flutter6860567329](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860567329)에 수용과 정확Schema/예시 대조 준비를 회신하고 재조회했다. Native 현재 double.tryParse/finite검증·Dart compareTo와 새정규decimal/UTF-16 fixture, 미설정/재설정 잔여ID·blocked_reason 집합불변식을 게시 산출물에 명시하도록 요청했다. 계약30/NEXT_WORK를 정렬질의대기에서 후보수용/게시Schema대조대기로 교체했다. 새API는 여전히 미구현·실행시험/비용검증 전이다. 문서 내용/diffcheck만 확인하며 기능코드·Penpot·서버/DB·commit/push/dev통합·배포 변경없음. feature/my-account-ui-remake 유지·미커밋 누적.
+
+## 2026-11-14 — 즉시 저장 Backend 추천안 검토·정렬보존 보완 요청
+
+[Backend6859755753](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6859755753)을 확인했다. 활성/대표 기존v1 재사용 가능·대표전용 main 제약, 순서 원자저장 현계약 부재와 통합v2 GET/PUT 후보를 확인했다. 대표 표시우선/rank분리·최종활동의 대표제외 subset·미활동 상대순서보존·digest/CAS/직렬수명 방향을 수용했다. 신규API는 아직 미구현이며 서버 시험/배포 완료로 보고하지 않는다.
+
+현재 projectScopedAccountPresentation의 레벨/이름 fallback과 Backend 후보 UUID fallback 차이를 확인해 [검토회신6859935888](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6859935888)에 기존기본정렬/첫드롭 기준 보존·상한/DTO/eligibility/원ACK확정조회 보완을 요청하고 게시본문/링크를 재조회했다. 계약30/NEXT_WORK를 기존질의대기에서 부분수용/보완대기로 교체했다. 문서 내용·diffcheck 검증만 수행, 기능코드/Penpot/서버·실행시험/commit/push·dev통합·배포 없음. feature/my-account-ui-remake 유지·기존 미커밋변경 보존. 다음은 Backend 보완회신 확인이다.
+
+## 2026-11-14 — 캐릭터 관리 즉시 저장 추가 기획·Backend 협의
+
+사용자 요청으로 앱/웹 공통 사용 ON/OFF·대표선택·드롭 즉시저장, 저장버튼/대표확인창 제거, 사용선택/상단대표선택/하단전체카드드래그·대표우선고정 방향을 기존 제품/계약30에 정리했다. 기존 Gateway의 선택/대표 원자PUT 후 항목별 순서PUT 구조와 전용 대표API를 확인했다. 활성/대표 기존API 재사용 우선·순서는 단일 원자명령 계약 보완을 제안하되 API 형태/버전은 Backend 회신 전 확정하지 않았다.
+
+Issue53 본문·최신 댓글(전체9)을 확인한 뒤 [추가협의6859431815](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6859431815)를 게시하고 재조회해 본문/링크를 확인했다. Backend에 scope·전체/subset·대표/rank·미활동순서·CAS/멱등/부분실패·최초미설정 원자확정 회신을 요청했다. 다음은 Backend 회신 후 Flutter 설계 대조다. 문서 내용/diffcheck만 검증했으며 기능코드·Penpot·서버/DB 변경·Flutter시험 반복·commit/push·dev통합·배포 없음. 기존 미커밋 변경을 보존하고 feature/my-account-ui-remake를 유지한다. 실제 UX/저장 시험은 구현 후 진행한다.
+
+## 2026-11-14 — 회원 사용 캐릭터 전원 표시·중복 표시 설정 제거
+
+MemberAccountSection의 visible/presentVisible에서 개인 visible 및 visible_count 필터를 제거했다. 활동집합 기준 전원 표시·기존 정렬/대표와 presentVisible의 누락제외는 유지한다. 일반 MemberAccountPage의 캐릭터 표시설정/표시인원 버튼·다이얼로그, 개별 역할설정의 visible 토글을 제거했다. 역할을 변경할 때 기존 visible 값은 보존하며 상세 역할 선택은 그대로다. 서버 관리 Gateway를 사용하는 CharacterManagementPage에서 표시개수 슬라이더를 숨겼다. 비회원 로컬 분기는 기존 동작을 유지한다.
+
+ScopedCharacterManagementGateway는 신규 count 저장을 하지 않으며 기존 account pending이 있으면 원래 sync 경로로 복구한다. 순서 변경의 최신 visible/role 보존 로직과 활동/대표 명령 ACK·소유권/관찰세대 guard는 변경하지 않았다. 구 표시설정은 자동 삭제하거나 true로 덮어쓰지 않는다.
+
+검증: 회원/관리 직접57PASS·공용 관리 VM/화면18PASS=75PASS, 변경4파일 dart analyze0·포맷/diffcheck. 이전 숨김캐릭터가 이제 대표변경 후보가 될 수 있다는 새 계약을 반영하고 권한 guard는 보존했다. 사용자 미확인: 사용 추가 후 별도 인원설정 없이 표시·해제 후 제외, 과거 숨김/작은 표시개수 무시, 대표/드래그순서 유지·누락 경고. 레이드 종류선택/카드 표현/시간표는 아직 후속이다. feature/my-account-ui-remake 유지·미커밋/미push·dev 미통합·배포 없음.
+
+## 2026-11-14 — 웹 브랜드 런치·인위적 대기 전체 제거
+
+사용자가 밝은 웹 런치가 눈에 부담스럽다고 보고하고 일반 웹처럼 대기를 없애도록 변경했다. BackendApp initState→서비스/Router 생성→gate.start→restoreSession 및 gate listener/사용처를 확인했다. LostPartyEntryScreen은 API를 호출하지 않고 gate는 표시만 제한하므로 웹 canEnter를 처음부터 열어도 초기화/인증복원은 그대로 실행된다. 실제 준비/오류 처리는 보존하고 Native4초 타이머는 유지했다. 직전 웹 가로 이미지 배치·sessionStorage 분기/브라우저 시험은 철회했다. 사용자가 만든 wordmark 원본은 삭제하지 않았다.
+
+새 흐름: 웹 최초/새탭/reload 모두 브랜드 화면·고정4초 지연 없이 기존 Router로 진입한다. 보존 확인: 기존 타이머·중복 start/dispose·늦은 인증 응답 후 같은경로/추가API없음·로그아웃/로컬 fallback 시험 포함9PASS, 직접4파일 분석0·포맷/diffcheck. 실제 웹 로딩/로그인복원·API 자료 표시·원URL 복귀와 네이티브 시작화면은 사용자 확인 대기. feature/my-account-ui-remake 유지·미커밋/미push·dev 미통합·배포 없음. 아래 직전 웹 런치안은 당시 이력이며 최신계약은 제품/계약30을 따른다.
+
+## 2026-11-14 — 웹 런치 배치·같은 탭 재표시 생략
+
+웹 가로 화면은 AppColors.background 위에 기존 투명 심볼과 새 lost_party_wordmark.png를 최대320 폭 안에 배치했다. 웹 세로와 네이티브의 기존 전체 이미지는 유지한다. StartupEntryGate의 플랫폼별 sessionStorage 표시기록으로 같은 탭의 재진입/새로고침은4초 브랜드 대기를 생략한다. Router가 준비되지 않았으면 중립 로딩을 표시하며 인증/세션복원·서비스 초기화는 기존 경로를 유지한다. 기록은 회원/인증 자료와 무관하며 저장소 접근 거절 시 기존 런치로 복귀한다.
+
+보존/검증: 기존4초·중복 start·dispose 후 비동기 작업 보존과 기존 이미지 시험을 포함해5PASS, 전체 flutter analyze0(55.8초), 포맷·diffcheck. 브라우저 sessionStorage 경계 시험은 Chrome 로딩에서 진행되지 않아 중단했으며 통과로 처리하지 않는다. 실제 새 탭 첫 표시·같은 탭 새로고침/경로 유지·넓은/좁은 웹·짧은 창·탭 복제/opener 저장소 복사는 사용자 확인 대기다. 일반 새 탭은 새 저장소지만 복제/opener에서 복사된 저장소는 런치를 생략할 수 있다. 미커밋/미push·dev 미통합·배포 없음, feature/my-account-ui-remake 유지.
+
+## 2026-11-14 — 계정 도구 최대폭 50% 확대
+
+사용자 요청으로 공통 toolsMaxWidth를358에서537로 변경했다. 외부 카드와 내부 버튼 배치에 같은 값이 적용되며 중앙 정렬·2열 간격·좁은 화면 가용폭 처리는 유지한다. 변경파일 포맷/정적분석·diffcheck 통과. 실제 웹 배치는 사용자 확인 대기. 미커밋/미push·dev 미통합·작업 브랜치 유지.
+
+## 2026-11-14 — 계정 도구·하단 탭 중앙 배치
+
+사용자 요청으로 계정 도구 전체 카드를 기존 최대폭358 안에서 중앙 정렬했다. 공용 AppShell 하단 NavigationBar는 최대폭600 안에 네 탭을 균등 배치하고 바깥 배경은 전체 폭으로 유지한다. 좁은 화면에서는 가용폭을 사용한다. 기존 탭 전환·배지·갱신 표시·SafeArea와 도구 callback은 그대로 보존했다(diff 검토). 변경2파일 dart analyze 오류0·포맷·git diff --check 통과. 실제 웹/앱 배치와 탭 동작은 사용자 확인 대기. feature/my-account-ui-remake 유지·미커밋/미push·dev 미통합·배포 없음.
+
+## 2026-11-14 — 웹 계정도구 외부 카드 폭 수정
+
+사용자가 웹에서 카드/등록관리버튼·나이스단 설정이 화면끝까지 늘어나는 것을 보고했다. 원인은 내부 AccountToolsGrid만 폭을 제한한 연결 누락이다. 부모 Align/ConstrainedBox로 전체 Card를최대358로 제한하고 등록관리와4버튼 사이를세로간격20으로 맞췄다. 변경2파일 정적분석0·포맷/diffcheck. 수정후웹은사용자확인대기. 캐릭터 반응형 배치는 사용자 정상보고·관련코드불변. 미커밋/미push·배포없음.
+
+## 2026-11-14 — 내 계정 리메이크 구현 착수 / 배치·도구 분리
+
+사용자 구현 승인으로 기존 feature/my-account-ui-remake의 누적문서를 유지했다. Backend fe5e0824 게시 JSON Schema를 읽고 합의 wire와 대조 착수했다. AccountResponsiveLayout과 AccountToolsGrid를 분리해 일반 MemberAccountPage에 연결했다. 카드폭 상한/가변열·큰글자 열감소, 4도구2열/20간격/파스텔/중앙정렬을 반영했다. 기존 명령 callback은 유지했다.
+
+검증: 배치경계2PASS·전체 flutter analyze0(68.4초)·변경3파일 dart analyze0·포맷/diffcheck. 실기기 미확인. 구현 전체는 진행 중이며 사용전원/표시수제거·레이드선택/원pending보호·카드/관리 리메이크·예약 reader/시간표·웹런치는 아직 남았다. 미커밋/미push·dev/main 미통합·배포 없음.
+
+## 2026-11-13 — 캐릭터 레이드 참가표시 변경 시안
+
+사용자 지시로03 카드에서 미참가 레이드의 난이도/상태를 비우고 참가레이드만 난이도+참여중(하드 참여중/노말 참여중)과 레이드명 우측 Material info_outline을 표시했다. 완료 체크박스는 유지하며 앱코드불변·미커밋/미push.
+
+## 2026-11-13 — 사용 캐릭터 선택 배경색 방식 유지
+
+사용자 지시로03의 바형/넓은 캐릭터 관리 사용선택 체크박스12개를 제거하고 선택배경 강조만 유지했다. 주간레이드 완료/표기선택 체크박스·대표/순서 하단은 변경하지 않았다. 앱코드불변·미커밋/미push.
+
+## 2026-11-13 — 계정도구 2열·최대폭/캐릭터 순서 화면 보완
+
+사용자 지시로03 기존 도구4버튼을2×2·가로16/세로20 간격으로 수정하고 계정도구 영역 최대358/내부326으로 폴드·웹에서도 제한하도록 명시했다. 현재 CharacterManagementPage의 사용 선택 아래 대표/표시순서·SliverReorderableList/drag_handle을 대조해 같은 관리섹션에 하단 스크롤 화면을 추가했다. 앱코드/02불변·미커밋/미push·배포 없음.
+
+## 2026-11-13 — Penpot03 작업 완료 예상 디자인 보완
+
+동일 메인9da5c663-eae5-804a-8008-f08d3ec06901/5섹션을 갱신했다. 이름16px볼드·레이드14px·체크박스와 참가표시 분리·버튼 가운데 정렬·관리/선택창·시간표·하단/상태를 반영했다. 02 원본 SVG를 읽기 export해 실제 SDK 아이콘을03에 재사용했다. 전체 PNG/바형 확대를 보고 대표/수정 겹침·시간축/내비게이션을 보정했다. 정적 예상안이며 실제앱/클릭프로토타입/실기기 검증은 아니다. 코드/Backend/02 원본 불변·미커밋/미push·배포 없음. 사용자 디자인 검토 대기다.
+
+## 2026-11-13 — 내 계정 최종 계약 대조·설계 수용
+
+[Backend6854151919](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6854151919)의 정확 wire·snapshot character_name 매핑/nullable·code point길이·페이지1MiB·전체지문10,000행·시각/토큰세대·정상/모순 상태표를 기존 Native 소비설계/공용parser/transport와 대조했다. 새 DTO만 canonical소문자UUID/Z/6자리이하소수초를 검증하고 runes.length를 사용하도록 설계했다. 합성200 JSON 파싱·관측시각/7일창/기간교차·시각순서·hex64/nullable직업/종료cursor 의미를 확인했다. 수06시 current_cycle_key 관측변화를 예약집합 변경으로 오해하지 않고 복구횟수를 전체조회 시도에서 보존한다. 계약30/NEXT_WORK/AI_CONTEXT의 기술보완 대기를 해소해 설계 수용으로 교체하고 [Native6854268594](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6854268594)에 회신했다.
+
+새로 가능한 앱흐름은 없고 기존기능 보존은 정적 대조다. Backend 미게시 JSON Schema 원문·신규DTO/HTTP/동시성·지문비용은 미검증이며 구현 시 확인한다. 문서 내용/diffcheck·댓글 재조회로 이번 구간을 검증하고 Flutter시험/분석·실기기 조작은 실행하지 않는다. feature/my-account-ui-remake에 누적 미커밋·미push, dev/main 미통합·코드/DB/Penpot·배포/Issue종료 없음. 이후 사용자 시안 착수 지시를 기다리며 설계 수용을 구현/게시 실행 지시로 재사용하지 않는다.
+
+## 2026-11-13 — 내 계정 구현 전 설계 소비 검토
+
+Backend55923cc의 예약 정밀설계/기존계약 조사와 Issue53 최신6853716550을 읽고 실제 BackendMemberAccount DI·MemberAccountPage/weekly·Dio transport/오류DTO·availability editor·관리gateway·TimeSpan을 대조했다. 독립 예약조회 방향을 수용하고 달력00시/게임06시 선택분리·기존server_now bootstrap·페이지 원자반영/한 번 stale복구·원예약시각/식별자·회원/환경/주차 수명을 계약30에 정리했다. [Native 검토6853911329](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6853911329)에 정확schema/상한·관측시각/지문·정상원장 상태표3개 보완을 요청했다. 추가 제품결정은 없으며 Backend 상세계약 보완 후 대조/Penpot 시각확인과 별도 구현 순서다.
+
+새로 가능해진 앱흐름/실기기검증은 없다. 기존 정상 흐름/원pending·ACK 보존은 소스/계약 정적 대조이며 기능시험 통과가 아니다. 순수문서 내용/diffcheck·Issue 게시 재조회를 수행하고 Flutter 시험/분석은 반복하지 않는다. feature/my-account-ui-remake의 기존 미커밋문서에 누적·미push, dev/main 통합·앱/서버/DB/Penpot·배포·Issue 종료 없음.
+
+## 2026-11-13 — 내 계정 Backend 회신 검토·사용자 추천안 채택
+
+[Backend6853018406](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6853018406)의 기존 표시계약 재사용/전체예약 API 부재와 확장 제안을 확인했다. 사용자가 날짜 기준 수~화7행(자정 시작/이전 실제T 첫날 새벽 포함), 현재 유효 미해제 예약만/해제 이력 제외, 선택 시 레이드명·내 캐릭터·시간, 이번 주/다음 주 추천안을 모두 채택했다. 제품 대장/계약30과 현재 상태를 교체하고 최신 visible 보존·신규 count 쓰기 중단/원pending 보존을 반영했다. [Native 확정 회신6853275922](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6853275922)을 게시·재조회했다. Backend의 정확한 읽기 확장 계약 후보가 다음 단계이며 response_profile 자체는 아직 미확정이다.
+
+새로 가능한 앱 흐름은 없고 기존 기능 보존은 문서 기준 정적 검토다. 코드·자료·Penpot 불변으로 Flutter 시험/실기기 검증을 반복하지 않고 문서 diffcheck/내용을 검토했다. feature/my-account-ui-remake에 추가문서를 미커밋·미push로 누적하며 dev/main 통합·배포·Issue 종료는 없다. 사용자 별도 지시 후 Penpot부터 시작한다.
+
+## 2026-11-13 — 내 계정 리메이크 준비 게시·Backend53 인계
+
+문서6파일을70dcc107에 한커밋으로 보관하고 origin/feature/my-account-ui-remake에 push했다. [Backend53](https://github.com/heo0328/lostparty-backend/issues/53)을 생성해 고정문서·실제코드근거·표시계약/개인전체예약조회2개질의·담당/완료조건을 전달하고 재조회했다. #8보관종료와 열린 타주제의 범위를 확인해 새준비협의를 분리했으며 서버구현/배포는 요청하지 않았다. 이번후행변경은 인계링크/답변대기 결과문서만 같은브랜치에 보관한다. 코드/테스트/환경·Penpot 불변, 새기능/실기기통과 없음·dev/main미통합·배포 없음이며 사용자 재검토 후 Penpot부터 이어간다.
+
+## 2026-11-13 — 내 계정 리메이크 준비 문서·협의 범위 정리
+
+사용자 제안/후속선택을 대조해 사용전원표시·순서유지, 레이드 개수제거/종류선택·일괄덮어쓰기/신규추천3개, 가능시간+예약 그래프·웹같은탭 최초런치·곡선/영역/연보라도구버튼을 미적용 제품계획으로 기록했다. 일반DI의 MemberAccountSection/관리gateway/personal-preferences/presentation-settings, 주간 로컬display와원pending, play-availability·schedule-overlaps/anonymous_busy, StartupEntryGate를 대조했다. 카탈로그2026.08.20의 활성난이도에서 높은입장레벨의 골드합계가 감소하는 사례는 발견하지 못해 기존 후보계산 재사용으로 정리했다.
+
+새로 가능한 앱흐름은 없고 기능/기존자료·Penpot은 변경하지 않았다. 보존기준/검증계획을 계약30에 두고 현재동작과 분리했다. #8보관종료·열린15/17/18/19 타주제를 확인해 표시설정계약/개인전체예약조회만 별도 Backend 협의로 전달한다. 문서내용·상대링크·diffcheck를 검토하고 Flutter시험/실기기/운영검증은 반복하지 않는다. feature/my-account-ui-remake에서 문서commit/push를 수행하며 dev/main통합·배포·Penpot시안은 이번승인범위 밖이다. Backend 답변과 사용자 재검토 후 Penpot부터 진행한다.
+
 ## 2026-11-13 — Issue52 종료·누적 변경 보관/dev 통합 지시
 
 최신 Backend6847918619를 확인해 추가 변경/대기가 없음을 대조했다. 사용자 지시로 [종료6848119538](https://github.com/heo0328/lostparty-backend/issues/52#issuecomment-6848119538)에 개발 완료·더 보기 수동 미확인·운영미반영/당시403 미확정의 이관 범위를 남기고 본문을 현행화해 completed 종료를 확인했다. 배포는 추가 개발 이후라는 사용자 방침을 NEXT_WORK에 기록했다. 기능은 변경하지 않아 기존266PASS/변경4파일 분석0·사용자 정상 보고를 재사용하고 diffcheck/내용 검토를 수행했다.
@@ -8587,3 +8971,7 @@ Backend 운영완료 확인 후 release/main/dev를8cb1eefb에 fast-forward·ato
 ## 2026-11-13 — 2.2.0 배포 Issue51 완료 종료
 
 사용자가 배포 이슈 현행화·종료를 지시했다. Backend API/웹6831720284와 Native Android6832046386의 공개·실파일 검증, 결과문서68f9431e의 main/dev/release 원격 반영을 본문에 연결하고 최초 준비 요청은 이력으로 보존했다. 종료 댓글을 게시하고 state=closed/state_reason=completed를 재조회했다. 후속 페이지별 개선·갱신/레드닷은 기존 NEXT_WORK/DETAIL_IMPROVEMENTS에서 관리한다. 이번 변경은 협업 기록이며 문서 diffcheck를 수행했다.
+
+## 2026-11-13 — Penpot 내 계정 1차 구성 시안
+
+03의 기존 비교보드 부재를 실조회하고 내 계정 리메이크 메인 9da5c663-eae5-804a-8008-f08d3ec06901 및 5개 섹션을 생성했다. 바형/폴드/웹 메인3·관리2·레이드 선택2·시간표3과 상태/도구 예시를 배치했다. 구성 비교용 초안이며 실제 아이콘, 대표/완료 조작, 상세 상태와 전체 PNG 검수는 보강이 남았다. 메인/시간표 PNG 확인과 시간표 표시 보정까지 진행했으며 완성 시안/앱 일치로 보고하지 않는다. 앱/Backend·02·배포 불변, 문서 미커밋/미push 유지.

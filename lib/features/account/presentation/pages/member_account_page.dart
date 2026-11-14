@@ -1,3 +1,6 @@
+import '../widgets/account_auth_actions.dart';
+import '../widgets/account_tools_grid.dart';
+import '../widgets/account_responsive_layout.dart';
 import '../../../recruitment_list/presentation/viewmodels/completion_failure.dart';
 import '../../../recruitment_list/presentation/widgets/recovery_notice_card.dart';
 import '../../../../shared/diagnostics/startup_timing.dart';
@@ -7,6 +10,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../widgets/ownership_notice_title.dart';
 import '../widgets/play_availability_card.dart';
+import '../widgets/personal_schedule_section.dart';
+import '../viewmodels/personal_schedule_view_model.dart';
 import '../viewmodels/play_availability_view_model.dart';
 import '../../../../shared/diagnostics/ui_timing.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
@@ -29,7 +34,7 @@ import '../widgets/member_settings_controls.dart';
 import '../widgets/representative_crown.dart';
 import '../widgets/account_character_card.dart';
 import '../../domain/entities/local_game_account.dart';
-import '../../domain/services/weekly_raid_display_projector.dart';
+
 import '../widgets/roster_account_header.dart';
 import '../widgets/server_accounts_panel.dart';
 import '../../domain/policies/account_label_policy.dart';
@@ -167,7 +172,9 @@ class MemberAccountPage extends StatelessWidget {
     required this.settings,
     this.weekly,
     this.availability,
+    this.schedule,
     required this.onSettings,
+    this.authActions,
     required this.onKey,
     required this.onVerify,
     required this.onManage,
@@ -189,6 +196,8 @@ class MemberAccountPage extends StatelessWidget {
   final MemberSettingsViewModel settings;
   final MemberWeeklyViewModel? weekly;
   final PlayAvailabilityViewModel? availability;
+  final PersonalScheduleViewModel? schedule;
+  final Widget? authActions;
   final VoidCallback onSettings, onKey, onVerify, onManage, onHistory;
   final void Function(String) onServerStatus;
   final void Function(String)? onCharacters, onEdit, onVerifyRegistration;
@@ -227,6 +236,9 @@ class MemberAccountPage extends StatelessWidget {
         );
         return Scaffold(
           appBar: AppBar(
+            toolbarHeight: authActions == null
+                ? kToolbarHeight
+                : AccountAuthActions.toolbarHeight(context),
             title: const OwnershipNoticeTitle(child: Text('내 계정')),
             flexibleSpace: IgnorePointer(
               child: Align(
@@ -240,6 +252,7 @@ class MemberAccountPage extends StatelessWidget {
               ),
             ),
             actions: [
+              ?authActions,
               IconButton(
                 onPressed: onSettings,
                 icon: const Icon(Icons.settings_outlined),
@@ -278,7 +291,12 @@ class MemberAccountPage extends StatelessWidget {
                     padding: EdgeInsets.all(16),
                     child: Text('등록한 원정대가 없습니다.'),
                   ),
-                if (availability != null)
+                if (availability != null && schedule != null)
+                  PersonalScheduleSection(
+                    schedule: schedule!,
+                    editor: availability!,
+                  )
+                else if (availability != null)
                   PlayAvailabilityCard(model: availability!),
                 for (final section in model.sections.where(
                   (s) => s.registration.isMain,
@@ -289,63 +307,58 @@ class MemberAccountPage extends StatelessWidget {
                 ))
                   _section(context, section),
                 const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          '계정 도구',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 12),
-                        FilledButton.icon(
-                          onPressed: onManage,
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                          ),
-                          icon: const Icon(
-                            Icons.manage_accounts_outlined,
-                            size: 24,
-                          ),
-                          label: const Text('원정대 등록·관리'),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
+                Align(
+                  alignment: Alignment.center,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: AccountToolsGrid.preferredWidth(context) + 32,
+                    ),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            TextButton(
-                              onPressed: onVerify,
-                              child: const Text('원정대 인증'),
+                            Text(
+                              '계정 도구',
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
-                            TextButton(
-                              onPressed: onKey,
-                              child: const Text('로스트아크 API 관리'),
+                            const SizedBox(height: 12),
+                            FilledButton.icon(
+                              onPressed: onManage,
+                              style: FilledButton.styleFrom(
+                                alignment: Alignment.center,
+                                minimumSize: const Size.fromHeight(48),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.manage_accounts_outlined,
+                                size: 24,
+                              ),
+                              label: const Text('원정대 등록·관리'),
                             ),
-                            TextButton(
-                              onPressed: onHistory,
-                              child: const Text('사라진 캐릭터명 기록'),
-                            ),
-                            TextButton(
-                              onPressed: model.canRefresh
+                            const SizedBox(height: 20),
+                            AccountToolsGrid(
+                              onVerify: onVerify,
+                              onKey: onKey,
+                              onHistory: onHistory,
+                              onRefresh: model.canRefresh
                                   ? model.refresh
                                   : null,
-                              child: const Text('서버 정보 다시 불러오기'),
+                            ),
+                            const Divider(),
+                            MemberSettingsControls(
+                              model: settings,
+                              classes: '나이스단으로 분류한',
+                              automaticRefreshAvailable:
+                                  automaticRefreshAvailable,
                             ),
                           ],
                         ),
-                        const Divider(),
-                        MemberSettingsControls(
-                          model: settings,
-                          classes: '나이스단으로 분류한',
-                          automaticRefreshAvailable: automaticRefreshAvailable,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -568,31 +581,6 @@ class MemberAccountPage extends StatelessWidget {
                     icon: const Icon(Icons.checklist_outlined, size: 18),
                     label: const Text('원정대 주간레이드수정'),
                   ),
-                if (section.characters.isNotEmpty)
-                  TextButton(
-                    onPressed: () => _displaySettings(
-                      context,
-                      section.registration.registrationId,
-                    ),
-                    child: const Text('캐릭터 표시 설정'),
-                  ),
-                if (count != null)
-                  TextButton(
-                    onPressed:
-                        model.canEdit &&
-                            !model.busy('count:${reg.registrationId}') &&
-                            section.registration.settings.activityIds.isNotEmpty
-                        ? () => _count(
-                            context,
-                            reg,
-                            count.visibleCount,
-                            section.registration.settings.activityIds.length,
-                          )
-                        : null,
-                    child: Text(
-                      '표시 ${section.registration.settings.activityIds.isEmpty ? 0 : count.visibleCount.clamp(1, section.registration.settings.activityIds.length)}명',
-                    ),
-                  ),
               ],
             ),
             if (count?.hasPending == true)
@@ -601,7 +589,7 @@ class MemberAccountPage extends StatelessWidget {
             if (section.displayReady &&
                 section.presentVisible.isEmpty &&
                 section.characters.isNotEmpty)
-              const Text('표시하도록 선택한 캐릭터가 없습니다. 표시 설정에서 변경할 수 있습니다.'),
+              const Text('표시할 사용 캐릭터가 없습니다. 사용할 캐릭터 관리에서 확인해 주세요.'),
           ],
         ),
       ),
@@ -614,13 +602,12 @@ class MemberAccountPage extends StatelessWidget {
     MemberAccountSection section,
   ) => LayoutBuilder(
     builder: (context, constraints) {
-      const spacing = 8.0;
-      final columns = switch (constraints.maxWidth) {
-        < 600 => 2,
-        < 900 => 3,
-        _ => 4,
-      };
-      final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+      const spacing = AccountResponsiveLayout.cardGap;
+      final layout = AccountResponsiveLayout.cards(
+        constraints.maxWidth,
+        textScale: MediaQuery.textScalerOf(context).scale(14) / 14,
+      );
+      final width = layout.cardWidth;
       return Wrap(
         key: ValueKey('member-character-grid-${reg.registrationId}'),
         spacing: spacing,
@@ -653,18 +640,10 @@ class MemberAccountPage extends StatelessWidget {
     final summary = row.role(role)?.displaySummary;
     final profile =
         jsonDecode(row.observation.profileJson) as Map<String, dynamic>;
-    final selected = main
-        ? model.representative(reg.registrationId)?.characterId ==
-              row.ref.characterId
-        : model.sections
-                  .where(
-                    (s) => s.registration.registrationId == reg.registrationId,
-                  )
-                  .firstOrNull
-                  ?.registration
-                  .settings
-                  .representativeId ==
-              row.ref.characterId;
+    final selected =
+        main &&
+        model.representative(reg.registrationId)?.characterId ==
+            row.ref.characterId;
     // View data only. Server actions below always retain the scoped UUID ref.
     final display = LocalAccountCharacter(
       id: 0,
@@ -696,7 +675,7 @@ class MemberAccountPage extends StatelessWidget {
               label: selected
                   ? '대표 캐릭터'
                   : '${row.observation.characterName}을 대표 캐릭터로 변경',
-              onPressed: model.representativeChoice(reg, row.ref) == null
+              onPressed: model.busy('representative:${reg.registrationId}')
                   ? null
                   : () => _representative(context, reg, row),
             )
@@ -706,8 +685,6 @@ class MemberAccountPage extends StatelessWidget {
           : roleLabel(role),
       status: Text(
         '${summary == null ? '상세 조회 필요' : integrityLabel(summary)}${row.cached ? ' · 이전 확인 정보' : ''}${row.preferences == null ? ' · 표시 설정 확인 필요' : ''}${row.observation.lifecycleState != 'active' ? ' · 기존 캐릭터 확인 필요' : ''}',
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall,
       ),
       weeklyRaids:
@@ -720,7 +697,8 @@ class MemberAccountPage extends StatelessWidget {
                 _canRecoverCompletion(row.ref, raidId),
           ) ??
           const [],
-      weeklyColumns: weekly?.twoCycleEnabled == true ? 3 : 1,
+      memberWeeklyLayout: true,
+      readable: true,
       onWeeklyRaidInfo: (raid) {
         final value = weekly?.entry(row.ref, raid.raidId);
         final target = weekly?.selectedCycleKey;
@@ -743,10 +721,7 @@ class MemberAccountPage extends StatelessWidget {
       busyRaidIds: weekly?.pendingCharacter == row.ref.characterId
           ? {weekly!.pendingRaid!}
           : const {},
-      reservedWeeklyRaidRows:
-          weekly?.preference(row.ref.characterId)?.displayCount == 0
-          ? 0
-          : WeeklyRaidDisplayProjector.defaultDisplayCount,
+      reservedWeeklyRaidRows: 0,
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute<void>(
@@ -934,7 +909,25 @@ class MemberAccountPage extends StatelessWidget {
     MemberCharacterState row,
   ) async {
     final choice = model.representativeChoice(reg, row.ref);
-    if (choice == null || !model.openRepresentativeDialog(choice)) return;
+    if (choice == null) {
+      final selected =
+          model.representative(reg.registrationId)?.characterId ==
+          row.ref.characterId;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            selected
+                ? '현재 대표 캐릭터입니다.'
+                : '최신 대표 정보와 사용 캐릭터 자격을 확인해 주세요. 저장 중인 변경이 있으면 먼저 결과를 확인해 주세요.',
+          ),
+          action: !selected && model.canRefresh
+              ? SnackBarAction(label: '새로고침', onPressed: model.refresh)
+              : null,
+        ),
+      );
+      return;
+    }
+    if (!model.openRepresentativeDialog(choice)) return;
     bool? confirmed;
     try {
       confirmed = await showDialog<bool>(
@@ -993,189 +986,6 @@ class MemberAccountPage extends StatelessWidget {
     ScopedSettingsState state, {
     ScopedCharacterRef? ref,
   }) => memberPendingSettings(context, model, reg, state, ref: ref);
-  Future<void> _count(
-    BuildContext context,
-    ScopedRegistrationRef reg,
-    int old,
-    int maximum,
-  ) async {
-    final member = accountReadScope(model.runtime.session);
-    if (maximum == 0) return;
-    var value = old.clamp(1, maximum);
-    final count = await showDialog<int>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, set) => AlertDialog(
-          title: const Text('표시할 캐릭터 수'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('$value명'),
-              if (maximum > 1)
-                Slider(
-                  value: value.toDouble(),
-                  min: 1,
-                  max: maximum.toDouble(),
-                  divisions: maximum - 1,
-                  label: '$value명',
-                  onChanged: (next) => set(() => value = next.round()),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('취소'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, value),
-              child: const Text('변경'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (count != null && _sameMember(model, member)) {
-      await model.saveCount(reg, count);
-    }
-  }
-
-  Future<void> _displaySettings(BuildContext context, String id) async {
-    final member = accountReadScope(model.runtime.session);
-    final section = model.sections
-        .where((s) => s.registration.registrationId == id)
-        .firstOrNull;
-    if (section == null || !section.displayReady || !model.canEdit) return;
-    final token = memberPresentationToken(section);
-    final rows = section.ordered
-        .where(
-          (c) => section.registration.settings.activityIds.contains(
-            c.ref.characterId,
-          ),
-        )
-        .toList();
-    final draft = {
-      for (final row in rows) row.ref.characterId: row.preferences!.preferences,
-    };
-    var reordered = false;
-    final result = await showDialog<Map<String, PreferenceValues>>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, set) => AlertDialog(
-          title: const Text('캐릭터 표시 설정'),
-          content: SizedBox(
-            width: 440,
-            height: 400,
-            child: rows.isEmpty
-                ? const Center(child: Text('사용할 캐릭터를 선택해 주세요.'))
-                : ReorderableListView.builder(
-                    buildDefaultDragHandles: false,
-                    itemCount: rows.length,
-                    onReorder: (from, to) => set(() {
-                      if (to > from) to--;
-                      rows.insert(to, rows.removeAt(from));
-                      reordered = true;
-                    }),
-                    itemBuilder: (ctx, index) {
-                      final row = rows[index],
-                          value = draft[row.ref.characterId]!;
-                      return Material(
-                        key: ValueKey(row.ref.characterId),
-                        color: index.isEven
-                            ? Theme.of(ctx).colorScheme.surfaceContainerLow
-                            : Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${row.ref.characterId == section.registration.settings.representativeId ? '♛ ' : ''}${row.observation.characterName}',
-                                    ),
-                                    RadioGroup<bool>(
-                                      groupValue: value.visible,
-                                      onChanged: (v) => set(() {
-                                        draft[row
-                                            .ref
-                                            .characterId] = PreferenceValues(
-                                          preferredRole: value.preferredRole,
-                                          visible: v!,
-                                          displayOrder: value.displayOrder,
-                                        );
-                                      }),
-                                      child: Row(
-                                        children: [
-                                          const Radio<bool>(value: true),
-                                          const Text('활성'),
-                                          const Radio<bool>(value: false),
-                                          const Text('비활성'),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ReorderableDragStartListener(
-                                index: index,
-                                child: const Padding(
-                                  padding: EdgeInsets.all(8),
-                                  child: Icon(Icons.drag_handle),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('취소'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (reordered) {
-                  for (var i = 0; i < rows.length; i++) {
-                    final key = rows[i].ref.characterId,
-                        old = draft[rows[i].ref.characterId]!;
-                    draft[key] = PreferenceValues(
-                      preferredRole: old.preferredRole,
-                      visible: old.visible,
-                      displayOrder: i,
-                    );
-                  }
-                }
-                Navigator.pop(ctx, draft);
-              },
-              child: const Text('저장'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (result != null && _sameMember(model, member)) {
-      final current = model.sections
-          .where((s) => s.registration.registrationId == id)
-          .firstOrNull;
-      if (current == null || token != memberPresentationToken(current)) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('정보가 변경됐습니다. 다시 선택해 주세요.')),
-          );
-        }
-        return;
-      }
-      await model.saveDisplaySettings(
-        ScopedRegistrationRef(model.runtime.scope, id),
-        result,
-      );
-    }
-  }
 }
 
 Future<void> editMemberPreferences(
@@ -1190,7 +1000,7 @@ Future<void> editMemberPreferences(
     (jsonDecode(row.observation.profileJson) as Map)['class_name'] as String,
   );
   var role = multiRole ? memberDisplayRole(row) : CharacterBuildRole.dealer;
-  var visible = values.visible;
+
   final result = await showDialog<PreferenceValues>(
     context: context,
     builder: (ctx) => StatefulBuilder(
@@ -1212,18 +1022,6 @@ Future<void> editMemberPreferences(
                       ),
                   ],
                 ),
-              RadioGroup<bool>(
-                groupValue: visible,
-                onChanged: (v) => set(() => visible = v!),
-                child: const Row(
-                  children: [
-                    Radio<bool>(value: true),
-                    Text('활성'),
-                    Radio<bool>(value: false),
-                    Text('비활성'),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -1238,7 +1036,7 @@ Future<void> editMemberPreferences(
                 ctx,
                 PreferenceValues(
                   preferredRole: role,
-                  visible: visible,
+                  visible: values.visible,
                   displayOrder: values.displayOrder,
                 ),
               );
@@ -1357,7 +1155,7 @@ class MemberCharacterPage extends StatelessWidget {
                           ),
                       ],
                     ),
-                  if (row.preferences != null)
+                  if (row.preferences != null && supportsMultipleRoles)
                     TextButton(
                       onPressed:
                           model.canEdit &&

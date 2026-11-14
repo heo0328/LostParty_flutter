@@ -4,8 +4,13 @@ import '../../domain/play_availability.dart';
 import '../viewmodels/play_availability_view_model.dart';
 
 class PlayAvailabilityCard extends StatelessWidget {
-  const PlayAvailabilityCard({required this.model, super.key});
+  const PlayAvailabilityCard({
+    required this.model,
+    this.embedded = false,
+    super.key,
+  });
   final PlayAvailabilityViewModel model;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -13,163 +18,164 @@ class PlayAvailabilityCard extends StatelessWidget {
     builder: (context, _) {
       if (!model.visible) return const SizedBox.shrink();
       final theme = Theme.of(context);
-      return Card(
-        key: const ValueKey('play-availability-card'),
-        margin: const EdgeInsets.only(bottom: 16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              InkWell(
-                onTap: model.busy ? null : model.toggle,
-                borderRadius: BorderRadius.circular(12),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.schedule_outlined,
-                      size: 20,
-                      color: theme.colorScheme.primary,
+      final content = Padding(
+        padding: embedded ? EdgeInsets.zero : const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: model.busy ? null : model.toggle,
+              borderRadius: BorderRadius.circular(12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.schedule_outlined,
+                    size: 20,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      embedded ? '가능 시간 설정' : '레이드 진행 가능 시간',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        '레이드 진행 가능 시간',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                  ),
+                  if (model.busy)
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    if (model.busy)
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    Icon(
-                      model.expanded ? Icons.expand_less : Icons.expand_more,
-                      semanticLabel: model.expanded ? '접기' : '펼치기',
+                  Icon(
+                    model.expanded ? Icons.expand_less : Icons.expand_more,
+                    semanticLabel: model.expanded ? '접기' : '펼치기',
+                  ),
+                ],
+              ),
+            ),
+            if (!model.expanded) ...[
+              const SizedBox(height: 8),
+              Text(
+                model.value == null
+                    ? (model.loading ? '시간 설정을 불러오는 중입니다.' : '시간 설정을 확인해 주세요.')
+                    : _summary(model.value!.intervals),
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+            if (model.expanded && model.value != null) ...[
+              const SizedBox(height: 16),
+              const Text('플레이할 수 있는 요일과 시간을 선택해 주세요.'),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final day in playWeekdays)
+                    FilterChip(
+                      key: ValueKey('play-day-$day'),
+                      label: Text(playWeekdayLabels[day - 1]),
+                      selected: model.draft.any((r) => r.weekday == day),
+                      onSelected: model.editable
+                          ? (_) => model.selectDay(day)
+                          : null,
+                      visualDensity: VisualDensity.compact,
                     ),
-                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              for (final day in playWeekdays) ..._dayRows(context, day),
+              const SizedBox(height: 8),
+              Text(
+                '24시간제 · 5분 단위 · 다음 날 종료 가능\n한 구간 최대 24시간 · 한국 시간',
+                style: theme.textTheme.bodySmall,
+              ),
+              if (!model.validDraft)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '각 구간의 시작과 종료를 설정해 주세요. 길이는 0시간 초과, 24시간 이하여야 합니다.',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                ),
+            ],
+            if (model.failure != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _failure(model.failure!),
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ],
+            if (model.notice != null) ...[
+              const SizedBox(height: 8),
+              Text(model.notice!),
+              if (model.expanded)
+                Text(
+                  '서버 저장값: ${_summary(model.value?.intervals ?? [])}',
+                  style: theme.textTheme.bodySmall,
+                ),
+            ],
+            if (model.hasPending && !model.saving) ...[
+              const SizedBox(height: 8),
+              const Text('저장 결과 확인이 필요합니다. 재시도해도 중복 저장되지 않습니다.'),
+              Wrap(
+                spacing: 8,
+                children: [
+                  FilledButton(
+                    onPressed: model.canRetry ? model.retry : null,
+                    child: const Text('저장 재시도'),
+                  ),
+                  OutlinedButton(
+                    onPressed: model.busy
+                        ? null
+                        : () => _reviewPending(context),
+                    child: const Text('저장값 확인'),
+                  ),
+                ],
+              ),
+            ] else if (model.needsReview ||
+                (model.value == null && !model.loading))
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                  onPressed: model.busy ? null : model.reload,
+                  child: Text(model.needsReview ? '최신 값 확인' : '다시 불러오기'),
                 ),
               ),
-              if (!model.expanded) ...[
-                const SizedBox(height: 8),
-                Text(
-                  model.value == null
-                      ? (model.loading
-                            ? '시간 설정을 불러오는 중입니다.'
-                            : '시간 설정을 확인해 주세요.')
-                      : _summary(model.value!.intervals),
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-              if (model.expanded && model.value != null) ...[
-                const SizedBox(height: 16),
-                const Text('플레이할 수 있는 요일과 시간을 선택해 주세요.'),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final day in playWeekdays)
-                      FilterChip(
-                        key: ValueKey('play-day-$day'),
-                        label: Text(playWeekdayLabels[day - 1]),
-                        selected: model.draft.any((r) => r.weekday == day),
-                        onSelected: model.editable
-                            ? (_) => model.selectDay(day)
-                            : null,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                for (final day in playWeekdays) ..._dayRows(context, day),
-                const SizedBox(height: 8),
-                Text(
-                  '24시간제 · 5분 단위 · 다음 날 종료 가능\n한 구간 최대 24시간 · 한국 시간',
-                  style: theme.textTheme.bodySmall,
-                ),
-                if (!model.validDraft)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      '각 구간의 시작과 종료를 설정해 주세요. 길이는 0시간 초과, 24시간 이하여야 합니다.',
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                  ),
-              ],
-              if (model.failure != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _failure(model.failure!),
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
-              ],
-              if (model.notice != null) ...[
-                const SizedBox(height: 8),
-                Text(model.notice!),
-                if (model.expanded)
-                  Text(
-                    '서버 저장값: ${_summary(model.value?.intervals ?? [])}',
-                    style: theme.textTheme.bodySmall,
-                  ),
-              ],
-              if (model.hasPending && !model.saving) ...[
-                const SizedBox(height: 8),
-                const Text('저장 결과 확인이 필요합니다. 재시도해도 중복 저장되지 않습니다.'),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    FilledButton(
-                      onPressed: model.canRetry ? model.retry : null,
-                      child: const Text('저장 재시도'),
-                    ),
-                    TextButton(
-                      onPressed: model.busy
-                          ? null
-                          : () => _reviewPending(context),
-                      child: const Text('저장값 확인'),
-                    ),
-                  ],
-                ),
-              ] else if (model.needsReview ||
-                  (model.value == null && !model.loading))
+            if (model.expanded && model.value != null) ...[
+              const SizedBox(height: 16),
+              if (model.notice != null)
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: model.busy ? null : model.reload,
-                    child: Text(model.needsReview ? '최신 값 확인' : '다시 불러오기'),
+                  child: OutlinedButton(
+                    onPressed: model.editable ? model.useServer : null,
+                    child: const Text('서버 값으로 편집'),
                   ),
                 ),
-              if (model.expanded && model.value != null) ...[
-                const SizedBox(height: 16),
-                if (model.notice != null)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: model.editable ? model.useServer : null,
-                      child: const Text('서버 값으로 편집'),
-                    ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton(
+                    onPressed: model.busy ? null : model.cancel,
+                    child: Text(model.hasPending ? '닫기' : '취소'),
                   ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    OutlinedButton(
-                      onPressed: model.busy ? null : model.cancel,
-                      child: Text(model.hasPending ? '닫기' : '취소'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: model.canSave ? model.save : null,
-                      child: const Text('저장'),
-                    ),
-                  ],
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: model.canSave ? model.save : null,
+                    child: const Text('저장'),
+                  ),
+                ],
+              ),
             ],
-          ),
+          ],
         ),
       );
+      return embedded
+          ? content
+          : Card(
+              key: const ValueKey('play-availability-card'),
+              margin: const EdgeInsets.only(bottom: 16),
+              child: content,
+            );
     },
   );
 
@@ -179,80 +185,49 @@ class PlayAvailabilityCard extends StatelessWidget {
       for (var index = 0; index < rows.length; index++)
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              SizedBox(
-                width: 32,
-                child: index == 0
-                    ? Text(playWeekdayLabels[day - 1])
-                    : IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 48,
-                        ),
-                        onPressed: model.editable
-                            ? () => model.removeRow(rows[index])
-                            : null,
-                        icon: Icon(
-                          Icons.remove,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        tooltip: '시간 구간 삭제',
-                      ),
-              ),
-              Expanded(
-                flex: 10,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 12,
-                    ),
-                    minimumSize: const Size(0, 48),
-                  ),
-                  onPressed: model.editable
-                      ? () => _pick(context, rows[index], false)
-                      : null,
-                  child: Text(
-                    rows[index].start == null
-                        ? '시작'
-                        : playClock(rows[index].start!),
-                  ),
+              Text(playWeekdayLabels[day - 1]),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: model.editable
+                    ? () => _pick(context, rows[index], false)
+                    : null,
+                child: Text(
+                  rows[index].start == null
+                      ? '시작'
+                      : playClock(rows[index].start!),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6),
-                child: Text('–'),
-              ),
-              Expanded(
-                flex: 14,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 12,
-                    ),
-                    minimumSize: const Size(0, 48),
-                  ),
-                  onPressed: model.editable
-                      ? () => _pick(context, rows[index], true)
-                      : null,
-                  child: Text(
-                    rows[index].end == null
-                        ? '종료'
-                        : '${rows[index].endDayOffset == 1 ? '다음 날 ' : ''}${playClock(rows[index].end!)}',
-                  ),
+              const Text('–'),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: model.editable
+                    ? () => _pick(context, rows[index], true)
+                    : null,
+                child: Text(
+                  rows[index].end == null
+                      ? '종료'
+                      : '${rows[index].endDayOffset == 1 ? '다음 날 ' : ''}${playClock(rows[index].end!)}',
                 ),
               ),
               if (index == 0)
                 IconButton(
                   onPressed: model.editable ? () => model.addRow(day) : null,
-                  icon: const Icon(Icons.add),
                   tooltip: '시간 구간 추가',
+                  icon: const Icon(Icons.add),
                 )
               else
-                const SizedBox(width: 48),
+                IconButton(
+                  onPressed: model.editable
+                      ? () => model.removeRow(rows[index])
+                      : null,
+                  tooltip: '시간 구간 삭제',
+                  icon: const Icon(Icons.remove),
+                ),
             ],
           ),
         ),
@@ -278,7 +253,7 @@ class PlayAvailabilityCard extends StatelessWidget {
           '처리 중인 요청은 나중에 반영될 수 있습니다. 초안을 유지하고 현재 서버 값을 확인합니다.',
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('취소'),
           ),
@@ -432,7 +407,7 @@ class _PlayTimePickerState extends State<_PlayTimePicker> {
                 ),
               ),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 OutlinedButton(
                   onPressed: () => Navigator.pop(context),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/semantics.dart';
 import '../widgets/ownership_notice_title.dart';
 import '../widgets/character_name_label.dart';
 
@@ -105,6 +107,10 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
 
   Future<void> _chooseRepresentative(LocalAccountCharacter character) async {
     if (!_viewModel.canSetRepresentative(character)) return;
+    if (_viewModel.immediateSave) {
+      await _changeImmediately(() => _viewModel.setRepresentative(character));
+      return;
+    }
     final accepted = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -126,6 +132,27 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
         accepted == true &&
         _viewModel.canSetRepresentative(character)) {
       _viewModel.setRepresentative(character);
+    }
+  }
+
+  Future<void> _changeImmediately(VoidCallback change) async {
+    if (_completingSave || !_viewModel.canEditDraft) return;
+    change();
+    if (!_viewModel.hasUnsavedChanges) return;
+    await _saveImmediately();
+  }
+
+  Future<void> _saveImmediately() async {
+    if (_completingSave || !_viewModel.canSave) return;
+    setState(() => _completingSave = true);
+    try {
+      await _viewModel.save();
+      if (_viewModel.message == null &&
+          widget.managementGateway?.current == true) {
+        await widget.onSaved?.call();
+      }
+    } finally {
+      if (mounted) setState(() => _completingSave = false);
     }
   }
 
@@ -160,6 +187,13 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
 
   Widget _buildContent() {
     final selected = _viewModel.selectedCharacters;
+    final usageDescription = _viewModel.isMemberManagement
+        ? '앱에서 사용할 캐릭터를 선택해 주세요.'
+        : '선택한 캐릭터만 레이드, 그룹 및 전투력 동기화에 사용됩니다.';
+    final immediate = _viewModel.immediateSave;
+    final movable = selected
+        .where((c) => c.id != _viewModel.draftRepresentativeId)
+        .toList();
     return Column(
       children: [
         if (_viewModel.isSaving) const LinearProgressIndicator(),
@@ -167,6 +201,27 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
           _Notice(icon: Icons.error_outline, message: message)
         else if (_viewModel.representativeCooldownLabel case final label?)
           _Notice(icon: Icons.schedule, message: label),
+        if (_viewModel.managementWarning case final warning?)
+          _Notice(icon: Icons.warning_amber, message: warning),
+        if (immediate && _viewModel.missingSelectionCount > 0)
+          TextButton(
+            onPressed: !_viewModel.canEditDraft || _completingSave
+                ? null
+                : () async {
+                    await _viewModel.removeMissingSelection();
+                    if (mounted && _viewModel.message == null) {
+                      await widget.onSaved?.call();
+                    }
+                  },
+            child: Text('목록 밖 선택 ${_viewModel.missingSelectionCount}개 정리'),
+          ),
+        if (immediate && _viewModel.message != null)
+          TextButton(
+            onPressed: _viewModel.canSave && !_completingSave
+                ? _saveImmediately
+                : null,
+            child: const Text('재시도'),
+          ),
         Expanded(
           child: CustomScrollView(
             slivers: [
@@ -189,9 +244,7 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 sliver: SliverToBoxAdapter(
                   child: Text(
-                    _viewModel.isMemberManagement
-                        ? '앱에서 사용할 캐릭터를 선택해 주세요.'
-                        : '선택한 캐릭터만 레이드, 그룹 및 전투력 동기화에 사용됩니다.',
+                    '$usageDescription\n사용을 해제해도 현재 참가 중인 레이드에서는 유지되며, 새로운 레이드 선택에서는 제외됩니다.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -215,9 +268,16 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                           character: character,
                           isSelected: _viewModel.isActivitySelected(character),
                           isRepresentative:
+                              _viewModel.canChooseAccountRepresentative &&
                               _viewModel.draftRepresentativeId == character.id,
-                          enabled: _viewModel.canToggleActivity(character),
-                          onTap: () => _viewModel.toggleActivity(character),
+                          enabled:
+                              !_completingSave &&
+                              _viewModel.canToggleActivity(character),
+                          onTap: () => immediate
+                              ? _changeImmediately(
+                                  () => _viewModel.toggleActivity(character),
+                                )
+                              : _viewModel.toggleActivity(character),
                         ),
                     ],
                   ),
@@ -232,27 +292,129 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                   AppSpacing.md,
                   AppSpacing.xs,
                 ),
-                sliver: const SliverToBoxAdapter(
-                  child: _SectionHeader(title: '대표 캐릭터와 표시 순서'),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  0,
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                ),
                 sliver: SliverToBoxAdapter(
-                  child: Text(
-                    '현재 참가 중인 레이드에서는 유지되며 새로운 레이드 선택에서 제외됩니다.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                  child: _SectionHeader(
+                    title: _viewModel.canChooseAccountRepresentative
+                        ? '대표 캐릭터와 표시 순서'
+                        : '표시 순서',
                   ),
                 ),
               ),
-              if (selected.isEmpty)
+              if (immediate)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _viewModel.canChooseAccountRepresentative
+                              ? '대표는 맨 앞에 고정됩니다'
+                              : '표시 순서를 변경할 수 있습니다.',
+                        ),
+                        const Text('카드 전체를 잡아 이동하세요. 터치 화면에서는 길게 누르세요.'),
+                      ],
+                    ),
+                  ),
+                ),
+              if (immediate)
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      for (final character in selected.where(
+                        (c) => c.id == _viewModel.draftRepresentativeId,
+                      ))
+                        Card(
+                          child: ListTile(
+                            title: Text(
+                              character.characterName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(character.characterClassName),
+                            trailing: _viewModel.canChooseAccountRepresentative
+                                ? _RepresentativeButton(
+                                    selected: true,
+                                    enabled:
+                                        !_completingSave &&
+                                        _viewModel.canEditDraft,
+                                    onPressed: () =>
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('현재 대표 캐릭터입니다.'),
+                                          ),
+                                        ),
+                                  )
+                                : null,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              if (immediate)
+                SliverReorderableList(
+                  itemCount: movable.length,
+                  onReorder: (from, to) => _changeImmediately(
+                    () => _viewModel.reorderMovable(from, to),
+                  ),
+                  itemBuilder: (context, index) {
+                    final buttonKey = GlobalKey();
+                    final tile = Card(
+                      child: ListTile(
+                        title: Text(
+                          movable[index].characterName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(movable[index].characterClassName),
+                        trailing: _viewModel.canChooseAccountRepresentative
+                            ? _RepresentativeButton(
+                                key: buttonKey,
+                                selected: false,
+                                enabled:
+                                    !_completingSave &&
+                                    _viewModel.canSetRepresentative(
+                                      movable[index],
+                                    ),
+                                onPressed: () =>
+                                    _chooseRepresentative(movable[index]),
+                              )
+                            : const Icon(Icons.drag_indicator),
+                      ),
+                    );
+                    final enabled = !_completingSave && _viewModel.canEditDraft;
+                    return _WholeCardDragListener(
+                      key: ValueKey(movable[index].id),
+                      index: index,
+                      excludedKey: buttonKey,
+                      enabled: enabled,
+                      child: Semantics(
+                        customSemanticsActions: {
+                          if (enabled && index > 0)
+                            const CustomSemanticsAction(label: '위로 이동'): () =>
+                                _changeImmediately(
+                                  () => _viewModel.reorderMovable(
+                                    index,
+                                    index - 1,
+                                  ),
+                                ),
+                          if (enabled && index + 1 < movable.length)
+                            const CustomSemanticsAction(label: '아래로 이동'): () =>
+                                _changeImmediately(
+                                  () => _viewModel.reorderMovable(
+                                    index,
+                                    index + 2,
+                                  ),
+                                ),
+                        },
+                        child: tile,
+                      ),
+                    );
+                  },
+                )
+              else if (selected.isEmpty)
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -293,77 +455,147 @@ class _CharacterManagementPageState extends State<CharacterManagementPage> {
                   },
                 ),
               const SliverToBoxAdapter(child: Divider(height: 1)),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.xl,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: Row(
-                    children: [
-                      const Expanded(child: Text('메인 화면 표시 개수')),
-                      Text('${_viewModel.draftDisplayLimit}명'),
-                      if (_viewModel.maxDisplayLimit > 1)
-                        Expanded(
-                          child: Slider(
-                            value: _viewModel.draftDisplayLimit.toDouble(),
-                            min: 1,
-                            max: _viewModel.maxDisplayLimit.toDouble(),
-                            divisions: _viewModel.maxDisplayLimit - 1,
-                            label: '${_viewModel.draftDisplayLimit}명',
-                            onChanged: _viewModel.canEditDraft
-                                ? (v) => _viewModel.changeDisplayLimit(
-                                    v.round() - _viewModel.draftDisplayLimit,
-                                  )
-                                : null,
+              if (widget.managementGateway == null)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.xl,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: Row(
+                      children: [
+                        const Expanded(child: Text('메인 화면 표시 개수')),
+                        Text('${_viewModel.draftDisplayLimit}명'),
+                        if (_viewModel.maxDisplayLimit > 1)
+                          Expanded(
+                            child: Slider(
+                              value: _viewModel.draftDisplayLimit.toDouble(),
+                              min: 1,
+                              max: _viewModel.maxDisplayLimit.toDouble(),
+                              divisions: _viewModel.maxDisplayLimit - 1,
+                              label: '${_viewModel.draftDisplayLimit}명',
+                              onChanged: _viewModel.canEditDraft
+                                  ? (v) => _viewModel.changeDisplayLimit(
+                                      v.round() - _viewModel.draftDisplayLimit,
+                                    )
+                                  : null,
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
-        const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            AppSpacing.md,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: !_viewModel.canEditDraft || _completingSave
-                      ? null
-                      : () {
-                          _viewModel.discardChanges();
-                          _close();
-                        },
-                  child: const Text('취소'),
+        if (!immediate) const Divider(height: 1),
+        if (!immediate)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: !_viewModel.canEditDraft || _completingSave
+                        ? null
+                        : () {
+                            _viewModel.discardChanges();
+                            _close();
+                          },
+                    child: const Text('취소'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: FilledButton(
-                  key: const ValueKey('characterManagementSaveButton'),
-                  onPressed: _viewModel.canSave && !_completingSave
-                      ? _saveAndClose
-                      : null,
-                  child: const Text('저장'),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: FilledButton(
+                    key: const ValueKey('characterManagementSaveButton'),
+                    onPressed: _viewModel.canSave && !_completingSave
+                        ? _saveAndClose
+                        : null,
+                    child: const Text('저장'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
+}
+
+class _WholeCardDragListener extends StatelessWidget {
+  const _WholeCardDragListener({
+    required this.index,
+    required this.enabled,
+    required this.child,
+    this.excludedKey,
+    super.key,
+  });
+  final int index;
+  final bool enabled;
+  final Widget child;
+  final GlobalKey? excludedKey;
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: !enabled
+        ? null
+        : (event) {
+            final box = excludedKey?.currentContext?.findRenderObject();
+            if (box is RenderBox &&
+                box.hasSize &&
+                (box.localToGlobal(Offset.zero) & box.size).contains(
+                  event.position,
+                )) {
+              return;
+            }
+            final recognizer = event.kind == PointerDeviceKind.mouse
+                ? ImmediateMultiDragGestureRecognizer(debugOwner: this)
+                : DelayedMultiDragGestureRecognizer(debugOwner: this);
+            recognizer.gestureSettings = MediaQuery.maybeGestureSettingsOf(
+              context,
+            );
+            SliverReorderableList.of(context).startItemDragReorder(
+              index: index,
+              event: event,
+              recognizer: recognizer,
+            );
+          },
+    child: child,
+  );
+}
+
+class _RepresentativeButton extends StatelessWidget {
+  const _RepresentativeButton({
+    required this.selected,
+    required this.enabled,
+    required this.onPressed,
+    super.key,
+  });
+  final bool selected, enabled;
+  final VoidCallback onPressed;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    selected: selected,
+    child: FilledButton(
+      onPressed: enabled ? onPressed : null,
+      style: FilledButton.styleFrom(
+        backgroundColor: selected
+            ? AppColors.primaryStrong
+            : AppColors.primarySubtle,
+        foregroundColor: selected ? Colors.white : AppColors.primaryStrong,
+        minimumSize: const Size(0, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+      child: const Text('대표 캐릭터'),
+    ),
+  );
 }
 
 class _SectionHeader extends StatelessWidget {

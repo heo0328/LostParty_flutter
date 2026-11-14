@@ -1,5 +1,20 @@
 # 버그 리포트
 
+## BUG-037. 로그인 완료 뒤 비회원 모집 준비 화면 잔류 (2026-11-15)
+
+상태: 수정 연결·직접 자동검증 완료, 사용자 웹/Android 확인 대기. 사용자는 로그인 상태이며 핫리로드·F5 뒤 모집의 공개 API 준비 화면과 재시도 무반응을 보고했다. 원래 BackendApp 모집 ShellRoute는 readSession.isAuthenticated를 builder에서만 평가하고 인증 변경 직접 구독이 없었다. GoRouter17.2.0 refreshListenable은 동일 URL의 ShellRoute builder 재실행을 보장하지 않는다. 저장소 밖 임시 Flutter 시험에서 상태false→true/동일URL·builder호출수불변·guest화면잔류를 재현해1PASS했다. AccountSessionView는 직접 session 구독으로 별도 보호되어 있다.
+
+스크린샷의 재시도는 PendingBackendPartyReadRepository로 연결되며 이 구현은 서버 HTTP 없이 항상 unavailable을 반환한다. 따라서 실제 회원 조회 재시도가 아니다. F5 직후 비동기 세션 복원 전에 guest를 선택하면 같은 경합이 반복될 수 있다. 서버 장애/로그아웃/자료 손상이라고 확정하지 않는다. 실제 사용자 브라우저 인증 전이 로그는 미수집이며 재빌드에서만 정상인 정확한 타이밍까지 동일 재현한 것은 아니다. 내 계정 자체 새로고침의 별도 장애는 이 증거만으로 확정하지 않는다.
+
+수정: BackendApp 모집 ShellRoute를 기존 AccountSessionView로 감싸 session을 직접 구독한다. 동일 URL/라우터 builder 호출수 불변에서도 회원/비회원 화면을 즉시 전환한다. 인증 상태가 같은 반복 알림은 회원 위젯/모델을 보존하고 실제 로그아웃 때 회원 화면을 폐기한다. 기존 비회원의 상세/생성 자식 경로와 주차/복귀 쿼리는 그대로다. 새 API·인증/저장 로직·공개 준비 화면 UX는 변경하지 않았다. 동일URL 지연인증/숨은탭/로그아웃·다른회원/반복알림/자식라우트 회귀를 정식 시험에 추가했다. 최종 검증은 DEV_LOG/NEXT_WORK를 따른다. 실제 웹F5/Android재실행 인수는 사용자 대기다.
+
+## BUG-036. 미개방 다음주 모집 상세 HTTP500 / 다음주 생성창 빨간 안내 (2026-11-14)
+
+상태: Backend 로컬 수정 후 사용자 정상 표시 확인. [원인/수정6875007986](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6875007986): 미개방N의RoomCycle=null에include_group_state=true그룹정보처리가row.room_id를참조해AttributeError/HTTP500을만들었다. 권한검사후기존membership응답에group_state=null을반환하는최소수정으로200 relation_only/content=null을복구했다. 일반상세409/비회원403과N행미생성은유지한다.
+
+Backend격리HTTP5PASS·명세불변/로컬이미지add28707/health200반영후사용자가정상표시를확인했다. Native새DTO/오류치환/외부쓰기변경은없다. 사용자답변은표시정상확인이며다음주생성창빨간안내/모든조작경계의별도전수시험으로확대하지않는다. 해당빨간안내의정확원인은미확정이력으로보존하되재현없는추가수정을하지않는다.
+
+Backend수정은9a61d0ea/dev통합4be81dc2로게시됐다([게시6875171401](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6875171401)). 로컬반영/사용자확인은완료이며운영미반영이다. 회원식별자는사용자대화에만보존하고외부댓글/문서에복제하지않았다. DB초기화/자료복원/실회원쓰기·배포는실행하지않았다.
 ## BUG-035. 출발 전 모집 마감 무렵 기존 참가 조작 전체 비활성·빈 일정 (2026-11-10)
 
 상태: 사용자 원요청 복구 성공 보고를 받은 뒤 승인된 UI/오류 수명 개선을 Native 일반 경로에 구현했다. 최종 전체2,913PASS·분석0, 직접80개는 전체 수에 포함한다. 카드 디자인은 사용자 결정으로 차후 Penpot에서 확인하며 실제 새 카드의 기기 동작은 미확인이다. 이 확인을 위한 장애 재현/미리보기 개발은 요청하지 않는다. [Issue48](https://github.com/heo0328/lostparty-backend/issues/48)은 Backend가2026-11-10 completed로 종료했으며 상태 재조회를 확인했다. Penpot 디자인은 별도 차후 확인으로 남긴다. 사용자 지시로 이번 누적 구현·시험·문서를 6cee5b54에 커밋하고 로컬 dev에 통합했다. 원격 push와 main 반영·배포는 별도다.

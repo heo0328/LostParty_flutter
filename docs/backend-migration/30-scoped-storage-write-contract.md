@@ -5,6 +5,178 @@
 > 2026-10-16 정책 정정: 현재는 베타 이전 개발 단계다. 개발 자료는 베타 전 전체 초기화하며 구 Firebase/테스트 자료 승계·보존형 전환은 요구하지 않는다. 아래 구 기기자료 경로/schema13·정수ID 호환 보존은 당시 C 구현 기록이며 신규 기능의 필수조건에서 제외한다. 새 회원 scoped 저장/자동실행·영속대기·재로그인/기기 간 복원은 유지하고 구 실행 의존 정리는 별도 D로 진행한다. [정책09 D08](09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정-2026-10-16)/[NEXT_WORK](../project/NEXT_WORK.md). 실제 자료 삭제나 코드 제거는 아직 실행하지 않았다.
 
 
+<a id="my-account-remake-preparation"></a>
+## 내 계정 리메이크 계약·구현 기준 (2026-11-15)
+
+현재 내 계정 리메이크와 개인 주간 시간표를 일반 회원 경로에 연결했다. 아래 준비 단계의 조사표·계약 대조는 당시 근거이며 현재 연결·검증·사용자 인수 상태는 NEXT_WORK를 따른다. 개발 기본은 dev 로컬이며 기존 저장/권한·원pending/ACK를 보존한다. 운영배포·DB 초기화는 별도 지시다.
+
+예약은 [Issue53 구현 인계](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6856983342)의 Backend `fe5e0824c28f58025af201d6ef66d8289229ae60` 게시 설계·합성200과 최종 수용 계약을 대조해 `GET /v2/me/raid-reservations` / `personal-reservations-1`로 연결했다. 기존 overlaps는 그대로다. Backend 구현/로컬 반영 회신과 Flutter 실회원 연동·사용자 인수는 구분한다.
+
+### 개인 시간표 현재 구현
+
+BackendMemberAccount가 회원별 PersonalScheduleViewModel을 소유하고 MemberAccountPage의 PersonalScheduleSection에 연결한다. 편집은 기존 PlayAvailabilityViewModel과 v1 GET/PUT·원명령을 유지하며 예약 read 상태·달력 선택은 분리한다. 인증된 원정대가 없어도 로그인한 본인 예약은 표시한다.
+
+이번/다음 달력 수00시·게임06시를 분리하고 서버 clock은 기존 cycles로 최초 확보한다. 예약은 limit100 전 페이지 임시 수집·정렬/중복/cursor/revision 검증 뒤 원자 반영한다. stale 재시작/달력 clock 재동기화는 각1회로 조회 전체에서 제한한다. 오류는0건이 아니며 같은 회원/달력 이전 성공값만 시각과 함께 유지한다. Retry-After 동안 조작을 차단하고 이후 다시 활성화한다. 세션 전환/폐기는 늦은 응답을 버린다. 펼침/주차·명시 새로고침, 내 계정 선택/앱 복귀·관련 참가/일정 명령 후 갱신하며 폭 변경/build에서는 요청하지 않는다.
+
+시간표는 AccountPageTypography의 본문16/보조14·시스템 글자 확대를 사용한다. 실제 글자 측정에 따라 시간 셀 최소48 또는 라벨+16·설정 자연폭·요일 라벨폭을 계산한다. 가용폭에 따라 설정/그래프 세로·가로 전환,6/12/18/24시간 창을 선택한다. 최대폭은 설정 자연폭+간격16+24시간 필요폭+외곽32로 가운데 제한하며 좁을 때는 시간축만 스크롤한다. 원본 DateTime·식별자를 유지해 자정 분할/창 자르기를 하고 막대 선택은 중앙 알럿에 레이드/캐릭터/시간을 표시하며 시작일 YY-MM-DD HH:mm ~ HH:mm(종료일/초 생략)로 축약한다. 원시간 정밀도는 DTO/계산에서 보존한다. 이동은 공통 recruitmentFromTab으로 실제cycleKey/roomId·계정복귀를 가진 정식 모집 브랜치 go를 사용한다. 하단 상세 카드는 제거했다. 예약 겹침은 별도 레인·비겹침은 레인 재사용, 짧은 예약도48터치 영역을 확보한다. 가능시간은 유효 초안만 미저장 표시하고 취소/저장 후 원본에 따른다.
+### 실제 경로와 책임·보존할 흐름
+
+| 영역 | 현재 근거/소유 | 차후 변경/주의 |
+|---|---|---|
+| 일반 계정 | BackendApp DI→MemberAccountPage/MemberAccountViewModel→runtime→회원·환경 cache/Backend | legacy MyAccountPage만 고쳐 일반경로 연결로 보고하지 않음 |
+| 카드 표시 | MemberAccountSection.visible/presentVisible·ScopedAccountPresentation, 관리 gateway | activityIds·현재 소유/수명·누락 표시 경계를 유지하고 visible/visibleCount에 의한 숨김만 제거 |
+| 개인 설정 저장 | PersonalSettingsClient: character personal-preferences PUT의 preferred_role/visible/display_order, account presentation-settings GET/PUT의 visible_count, scoped outbox/CAS | 개수/숨김 입력 제거와 role/rank 원자본문 계약을 분리. 기존 미전송 키/본문·ACK는 변환/삭제하지 않음 |
+| 주간 표시 | MemberWeeklyViewModel._display→회원/환경 store의 display(count,raids) | 서버 표시 설정으로 착각하지 않음. 같은 JSON의 pending/schema1~4 완료명령과 분리해 설계 |
+| 개인 가능시간 | PlayAvailabilityViewModel→/v1/me/play-availability GET/PUT | ISO weekday·KST·5분/자정넘김·기존 저장/취소·원요청 수명 유지 |
+| 비교 그래프 | ScheduleComparisonPage/도메인 TimeSpan, cycle_schedule의 anonymous_busy | 렌더링·구간계산 재사용 후보. 방 권한/선택주차 자료를 회원 전체 예약으로 확대하지 않음 |
+| 웹 시작 | BackendApp의 StartupEntryGate(기본4초)와 router 준비 gate→LostPartyEntryScreen | 브랜드 표시·실제준비를 분리. Native gate·기존 URL/deep link·로그인 redirect 유지 |
+
+회귀 보호: 메인/부원정대·등록/인증/키관리·사용선택/대표/드래그순서·역할설정·수동완료/정정·주차별 참가/기록·누락 경고/복구·일괄갱신·사용자 입력/취소·원pending/ACK·회원/환경/관찰세대/소유 전환을 보존한다. 새 UI를 위해 현재 권한을 완화하거나 기존 정상 기능을 전면 재작성하지 않는다. 수동/진입 갱신·레드닷의 별도 예약 작업을 이번 준비에 포함하지 않는다.
+
+### 캐릭터 사용=표시·저장 경계
+
+- 표시 후보는 현재 원정대 activityIds를 기준으로 한다. 과거 preferences.visible=false나 presentation.visibleCount를 적용하지 않고 기존 대표우선·명시displayOrder·레벨/이름 순서를 유지한다. presentVisible의 누락/수명 경계를 분석해 누락캐릭터 경고·원자료를 보존하며 소유불가 캐릭터를 정상카드로 다시 노출하지 않는다.
+- UI에서 별도 표시설정 진입과 개수 조작을 제거하되 수동순서 편집 진입/역할설정은 보존한다. 계정관리의 순서저장 후 _pendingCount 저장 경로도 제거 대상이다. 순서를 바꾸지 않은 저장에 불필요한 쓰기를 추가하지 않는다.
+- 표시에는 새 API가 필요 없다. 기존 전체 personal-preferences PUT으로 역할/순서를 저장할 때 최신 조회의 visible과 변경하지 않는 필드를 그대로 보존한다. visible은 렌더링의 숨김 조건에서만 제외하며 true/200 일괄보정·새 생략형 writer는 요구하지 않는다. 최신값은 기존 personal-profile 또는 일괄 personal-profiles(1~50 distinct ID)로 확보하고 항목별 실패를 확인한다. 조회 실패를 기본 true로 바꾸지 않는다.
+- 신규 presentation count 쓰기와 순서저장 성공조건의 count 의존은 중단하되 기존 필드/API와 원pending·키/본문·ACK 복구는 유지한다. REVISION_CONFLICT는 재조회 후 사용자 의도를 새 명령에 재적용하며 기존 키의 본문을 바꾸지 않는다. 도입 중 개인 role/rank·주간완료를 막는 새 전역대기를 만들지 않는다.
+
+### 캐릭터 관리 즉시 저장 (2026-11-14, 일반 회원 경로 연결·사용자 웹/앱 정상확인)
+
+#### 계정 대표 단일·메인 한정 정책 정정 (사용자 추가확정)
+
+현재 구현 기준: Backend 고정9308ce7e/정책2·dev통합2ca80924([게시6873586100](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6873586100))를 소비한다. Flutter는 policy2 DTO/nullable Gateway·원journal/정책1역사ACK복구를 일반 DI에 연결했다. 서버 관측/자동선정 계약은 아래를 따르며 최종검증/사용자 인수 상태는 NEXT_WORK에 둔다.
+
+- 계약2 방향 수용: 동일v2경로/scope.is_main 필수·policy character-management-2. 부원정대 GET 대표는항상null, PUT 대표는필수키null만허용(임의nonnull409 MAIN_REGISTRATION_CHANGED), 활동1..200만으로초기configured/ON/OFF가능·대표포함/대표OFF제약없음. 드롭은활동전체exact집합/최대200, 메인은활동-대표/최대199. 부원정대명시저장의동일트랜잭션에서raw대표null정리/실제변경version증가, GET/일괄초기화/숨은자동선정없음.
+- reader/전이 최신정책: 동일관측 현재main selector를유지한다. 사용자 추가확정으로 메인전환 후 재선택대기 추천은 폐기했다. 메인에 유효대표가없으면 현재소유/usable/활동후보에서 item_level DESC→combat_power DESC→이름통합ASC로자동확정한다. 기존유효대표는스펙변화만으로교체하지않는다. 부원정대raw 자동승격/부원정대대표생성은없고 카드수동rank/그룹snapshot을보존한다. 정상메인전환과기본대표확정은같은명령/트랜잭션이어야한다. 후보없는예외는자동활성화/가짜대표로보정하지않는다.
+- 정확계약 수용: 신규 PUT은 policy_version=character-management-2 필수, 메인 대표null은 기존유효대표 유지/없으면 자동선정이다. 전투력은 같은 DB 문맥의 summary와 본인 동일UUID/lifecycle ScopedPowerCache 중 최신 성공관측/실제시각을 사용하며 미관측null은 확인값 뒤다. 오래된 성공값은 보존하며 정렬을 위한 외부호출은 없다. 정규decimal→이름 UTF-16 통합ASC→UUID 최종동률을 사용한다. 대표선정에 power/관측시각을 추가하고 order_digest에도 포함하지만 카드 기본순서/수동rank는 바꾸지 않는다. 첨부10개 선정사례를 정확문자열 비교로 대조했으며 실제 Native parser/서버 시험은 아니다. 현재policy1 DTO에는 해당 관측이 없으므로 UI캐시를 섞은 임시선정은 하지 않는다.
+- 실제그룹경로 대조: BackendApp.groupCharacters→BackendGroupPage.choose→GroupCharacterChoice.compare는현재목록bottom sheet의명시선택이며레벨DESC/label/UUID정렬이다. main대표기본자동채움은없다. legacy GroupCharacterOptionLoader의원정대별대표우선은일반Backend경로로보고하지않는다. 후속Native가동일현재roster관측 main+계정대표만기본후보로준비하되그룹의최종명시선택범위/snapshot을보존한다.
+- 원pending 현황: 실제사용자기기별0건임을확인할수없다. 소스상secure character_management_v1_(환경/회원/원정대)에 schema1/reg/key/body/acknowledged가있고body는policy1 nonnull대표/최대199이다. 새policy2로키/본문을고치거나부원정대null로자동재송신하지않는다. 이미acknowledged면현재GET만, 미확정이면원요청복구/정책1원ACK엄격검증 또는명시409후현재정책2GET을분리한다. 현재GET/신규ACK만policy2 DTO로검사한다.
+- 원요청 복구 계약 수용: 영속 operation=character-management-1 namespace를 그대로 사용한다. 과거 성공24h 이내는 원ACK, 만료는 IDEMPOTENCY_EXPIRED, 유효running은 REQUEST_IN_PROGRESS/Retry-After2·미확정 유지, 만료running/retryable/기록없음은 CONTRACT_POLICY_CHANGED 확정무실행이다. 다른본문/target은 IDEMPOTENCY_CONFLICT이며 옛키/본문을 정책2로 변환하지 않는다. 신규 정책2 GET/ACK와 과거 정책1 ACK를 별도 엄격reader로 검증한다. Backend 구현/경합·rollback·실행OpenAPI oneOf 및 Native 실제 parser 검증은 다음 단계다.
+
+#### 내 계정 진입·관리 복귀 시 서버 저장값 재조회 (연결·사용자 웹/앱 정상확인)
+
+내계정 진입/탭선택·관리복귀·저장성공을 공통 reloadStoredData로 연결한다. 기존 등록/목록GET 및 개인설정GET만 사용하고 외부게임정보 갱신·역할분석 복원은 하지않는다. 진행중 조회는합류하며 동시 재요청은 후속현재조회로 묶는다. 저장진행/원pending을보호하고 회원/환경/조회세대 guard·실패시이전카드유지/안내·성공목록일괄교체를 적용한다. GoRouter 경로변화를 구독하고 dispose시해제하며 build에서네트워크를시작하지않는다. 응답유실/부분실패를빈목록으로대체하지않는다.
+
+계정 대표는 메인 원정대의 사용 캐릭터 중1명이며 부원정대 설정의 representative 값과 구분한다. 관리의 별도선택 영역을 없애고 순서카드 내부 텍스트형 대표버튼(selected primaryStrong/unselected primarySubtle), 내계정은 왕관을 유지한다. 부원정대 대표표시/대표우선정렬은 일반내계정에서 제거한다. 대표 지정은 해제토글이 아니며 현재대표를 누르면 유지·다른 사용캐릭터를 선택해 변경한다.
+
+관리의 현재 main 판정은 정책2 scope.is_main을 사용하며 기존 추가 representative GET·4버전 대조를 제거했다. 관리 GET과 신규ACK는 정책2 전용엄격검증, 원journal에 policy_version이없는 명령의 원ACK만 정책1전용엄격검증을 사용한다. 관리 인터페이스는 대표nullable을 받되 legacy Gateway는 대표필수의 기존조건을 유지한다. 부원정대는 대표null·전체활동movable, 메인의 null은 유효기존대표유지/없으면 서버자동선정이다. 초기대표를 다른시점 UI캐시/레벨double로선정하지 않는다. 순서와 자동선정을 함께보낼때 동일관리GET의 정규문자열 비교기로 대표제외집합을 계산하고 서버CAS를 최종권위로 둔다.
+
+내계정 왕관의 연결은 존재했다. 다만 count/개인표시 readiness·provider cooldown·summary level파싱까지 저장대표 자격에 섞여 있었다. 서버 representative writer의 현재소유/메인/활동/lifecycle usable·CAS에 맞춰 저장대표 전용 canEdit를 분리하고 표시개수/전투력쿨다운/레벨문자열 의존을 제거한다. runtime lock/원pending·명령중복/소유·메인변경·현재버전 검증은 유지하고 동작불가 시 안내/새로고침을 제공한다. 실사용 증상의 단일원인이 확정된 것은 아니며 코드의 불필요한 차단 재현시험과 사용자 확인을 구분한다.
+
+현재 구현은 Backend 고정026a74fa67c36d72fb9d6d94d8bafcf707d4ffe9의 Schema/예시·실행OpenAPI와 대조했다. BackendApp→V2CharacterManagementGateway→CharacterManagementContext/전용SecureManagementJournalStorage→동일키 PUT/현재GET→화면유지/restoreAfterManagementContext로 연결했다. 기존 ScopedCharacterManagementGateway와 그 원pending은 유지하며 새 lane의 미확정 설정이 같은원정대의 기존 대표/관리쓰기를 보호한다. 사라진 선택은 자동정리하지 않고 사용자가 본 잔여ID만 명시적으로 정리한다. 성공 뒤 대상원정대의 개인설정을 새로 읽어 옛캐시 순서가 남지 않게 하며, v2 ACK를 기존 roster receipt로 위장하지 않는다. 아래는 설계·협의 근거이며 실제검증/인수 상태는 NEXT_WORK/DEV_LOG를 따른다.
+
+- 제품은 DETAIL_IMPROVEMENTS의 관리 추가 확정을 따른다. 현재 ViewModel은 toggleActivity/setRepresentative/reorder로 draft를 만들고 save에서 Gateway를 호출하며 Page는 확인창·저장후닫기를 사용한다. 즉시저장은 이 draft/저장/화면수명을 함께 바꿔야 하며 단순 콜백에 save를 붙이지 않는다.
+- 활성화/대표: 기존 character-settings PUT(선택집합+대표·settings/ownership/roster revision·idempotency)와 전용 representative GET/PUT의 재사용을 우선 협의한다. 서로 다른 version 계약을 혼용하거나 같은 사용자 명령을 복수 쓰기로 분해하지 않는다. 현재 대표 OFF 금지·최소1명·usable/소유권 검증을 보존한다.
+- 순서: 현재 Gateway는 선택/대표 PUT 후 캐릭터별 personal-preferences PUT으로 display_order를 순차 저장한다. 드롭 한 번을 단일 원자 명령으로 처리할 기존 API 확장/순서 전용 API를 Backend가 제안하도록 요청한다. canonical UUID 목록·원정대/회원 scope·전체/활동 subset의 의미·대표우선·중복/누락/타원정대·revision/CAS·응답유실 같은키 재시도·성공후 확정조회 계약이 필요하다. 변경하지 않은 preferred_role/visible은 보존하고 일부 순서만 확정하지 않는다.
+- Flutter 설계 예정: 원정대 단위 동일 설정 변경을 직렬화하고 진행중 새 조작은 명시적으로 잠그거나 합의한 큐 정책으로 처리한다. 성공후 관리화면을 닫지 않고 상위 내계정도 갱신한다. 타기기 충돌·소유상실·늦은응답/화면이탈·중간실패를 기존 pending/ACK와 구분한다. 최초 미설정의 추천 draft는 GET만으로 자동 확정하지 않으며 첫 명시 조작 시 선택+대표의 원자 확정 방식을 협의한다.
+- [Backend6859755753](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6859755753) 검토: v1 character-settings는 활성/대표를 한 명령으로 저장할 수 있다. 전용 대표API는 main 전용이므로 공통관리의 완성안은 신규 GET/PUT /v2/me/game-accounts/{registration_id}/character-settings 통합을 우선한다. 아직 후보계약·미구현이다.
+- 설계 방향 수용: 한 RR 문맥의 선택/대표/전체 비퇴역 순서·revision/order_digest를 읽고 선택/대표와 선택적 드롭순서를 한 트랜잭션으로 확정한다. 드롭은 최종활동집합에서 대표를 제외한 전체 movable subset이며 다른 슬롯의 상대순서를 보존한다. 대표는 표시상 맨앞, 수동rank와 분리한다. 정규화로 숫자rank는 달라질 수 있다. role/visible은 기존값 보존, 실제 바뀐 preferences행 version만 갱신한다. 기존 v1/직접writer·원pending/ACK는 유지한다.
+- [Backend6860182946](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860182946)로 기본정렬 차이는 설계상 해소했다. rank/null후순위→레벨내림차순/null후순위→UTF-16 이름→UUID, 대표는 표시시 맨앞이다. 동일v2 GET의 전체목록/characters를 관리 표시·첫드롭 권위로 사용한다. GET/ON/OFF/대표변경은 rank를 쓰지 않고 동일드롭 no-op, 실제변경 드롭만 rank를 정규화한다. 새 DTO decimal/UTF-16 fixture를 대조하며 기존 공용parser를 전면 변경하지 않는다.
+- 후보 wire 수용: scope/data/characters closed·policy character-management-1, 버전양수int32/소문자UUID/Z시각/hex64 지문. 전체비퇴역1000·활동1..200·movable최대199, 1001 sentinel413 CHARACTER_CONTEXT_TOO_LARGE/무음잘림없음. 생략=순서보존/null거절/대표한명일때 빈movable허용. 정렬입력 ID/rank/level/name/결과순서 지문으로 늦은드롭409를 검출하고 role/visible/시각/전투력은 지문에서 제외한다. 기존 unusable은 자동OFF하지 않고 명시수정으로 처리한다. 과거ACK/409/세대불확실은 새GET으로현재확정, 실패는 이전확정값/에러로 표시한다.
+- [정확계약6860769177](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860769177)을 댓글 JSON 원문으로 대조해 수용했다. GET은 모든 configuration_state에서 activity/대표의 저장원값을 보존하며 configured도 현재자격/집합 유효를 보장하지 않는다. activity−전체목록 잔여ID·대표null/비활동/문맥밖/unusable은 조회거절 대신 경고/명시수정으로 처리한다. characters와 ordered_all은 동일집합·동일순서·각1회, usable=true iff blocked_reason=null이다. 타회원/타원정대 모순은503, 소유없음전체403. PUT은 최종활동/대표/usable/순서집합을 엄격 검사한다. 기존 v1 strict DTO로 GET복구문맥을 재해석하지 않는다.
+- 수용/근거: [Flutter6860821836](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860821836). JSON3블록 파싱·5문맥의 순서/집합/usable 관계·PUT2개/거절3개·오류11/흐름4·정규decimal/UTF-16 comparator3개 기대일치를 정적 확인했다. Backend validate.py38문서사례는 상대보고이며 Native 미실행이다. 새 parser/HTTP/DB/동시성 시험통과가 아니다. 공용429/Retry-After 오류는 합성 Error schema로 제한하지 않는다. 멱등24h·원ACK/CONFLICT/EXPIRED/REQUEST_IN_PROGRESS 복구와 새GET현재확정을 유지한다.
+- Backend 고정 인계: [026a74fa/게시6861435507](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6861435507)의 신규v2/Schema·합성예시·comparator·실행OpenAPI를 수령했다. Schema는 댓글원문과 일치, 실행OpenAPI는 blob c108f1bd0223e5e82a7cc7c05ff45d562a5fdf34에서 GET/PUT ManagementContext/ManagementPut 연결을 확인했다. Backend관리26+대표35=61PASS/로컬image 지원은 상대보고와 Native실제연동을 구분한다.
+- 현재 다음 단계: [Flutter연결/검증6862127779](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6862127779)에 일반DI 구현·전체2978PASS/분석0과 미커밋/미push·실제회원/기기미확인 상태를 회신했다. 사용자 웹/바형/폴드 수동확인 후 구체차이를 대응하고 보관은 별도지시를 따른다. DB초기화 불필요·모든환경 별도명시확인 전 금지.
+
+#### Flutter 즉시 저장 연결 설계 (2026-11-14, 구현 준비)
+
+현재 일반경로는 BackendApp의 _managementGateways(환경/회원/인증세대/원정대 키) → CharacterManagementPage/VM → ScopedCharacterManagementGateway → 명령/ACK/확정조회 → onSaved/restoreAfterManagement다. 페이지가 Gateway를 새로 소유하거나 dispose하지 않는다. v2도 이 앱 소유 수명을 유지하며 기존 role/weekly/ownership 저장소와 무관한 전면 재작성은 하지 않는다.
+
+| 책임 | 연결 계획·보호 범위 |
+|---|---|
+| v2 계약 경계 | 전용 불변 context/character DTO와 GET/PUT transport로 분리한다. 닫힌 Schema·필드/범위·목록 동등성/상태별 불변식을 검사한다. 서버 ordered_all 목록이 권위이며 double 변환/기존 캐시로 재정렬하지 않는다. 기존 v1 strict parser는 유지한다. |
+| 명령·복구 | 활성 toggle/대표선택/reorder 의도를 canonical UUID로 구성한다. 동일 GET의 버전/지문과 명령 key/body를 고정한다. 앱 소유 단일 writer가 송신 전 원요청을 보존하고 awaitingAck→awaitingCurrent→confirmed 또는 conflict/failed를 구분한다. 기존 scoped secure journal 패턴을 참고해 회원/환경/원정대별 v2 전용 namespace를 두고 읽기/저장 실패 시 PUT하지 않는다. 기존 preferences/ownership journal의 본문·schema는 변경하지 않는다. |
+| 연속 조작 | 첫 구현은 원정대 관리 lane 하나와 요청중 관리 조작 잠금을 선택한다. 이미 보낸 요청을 새 의도로 덮거나 무제한 큐를 추가하지 않는다. 기존 Runtime lock과 연결해 같은 설정을 바꾸는 quick representative/v1 경로와 충돌하지 않게 한다. 무관한 원정대·조회/역할/주간 기능의 새 전역대기는 만들지 않는다. |
+| 화면 상태 | 마지막 확정 context와 현재 표시draft를 분리한다. 터치/드롭 즉시 draft+저장중 표시, 성공 시 원자 확정하고 화면에 머문다. 대표 확인창/하단 취소·저장/기존 저장후닫기 흐름을 제거한다. 사용선택·상단대표선택·하단순서목록은 서로 다른 조작 영역이다. |
+| 실패·재시도 | 응답유실은 같은 key/body 복구가 우선이다. 명시409는 현재GET 후 충돌안내/사용자 의도를 재확인하는 명시 재시도로 새명령을 만든다. 자동역PUT·같은키본문변조 없음. 과거ACK/세대불확실/확정GET실패는 성공최신값으로 위장하지 않는다. 이전확정값·미확정변경·오류를 구별하고 회원/환경/원정대 전환의 늦은응답은 폐기한다. |
+| 초기·불완전 선택 | 진입만으로 추천draft를 저장하지 않는다. 첫 명시조작에서 유효한 최종 선택+대표(+드롭순서)를 한 명령으로 확정한다. 결과가 무활동/대표누락이면 송신하지 않고 선택완성 안내를 표시한다. stale/usable=false 행은 경고와 명시 수정으로 처리하고 조용히 OFF하지 않는다. |
+| 정렬·드래그 | 대표는 표시만 맨앞 고정, 나머지 활동카드 전체를 mouse drag/touch long-press로 이동한다. 드롭 완료에서만 요청하고 이동중에는 송신하지 않는다. draggable subset은 최종활동-대표 전체이며 대표/미활동 슬롯 상대순서는 서버가 보존한다. no-op 드롭은 변경명령을 만들지 않는다. 키보드/접근성의 순서변경 액션도 같은 명령경로를 사용한다. |
+| 상위 화면 갱신 | 확정 시 기존 onSaved 진입을 재사용하되 닫지 않는다. v2 ACK를 기존 confirmedRoster receipt로 위장하지 않는다. 회원/원정대 관찰세대를 무효화하고 현재 roster/bootstrap·개인설정 읽기로 MemberAccountViewModel을 갱신하는 최소 adapter를 둔다. UI 갱신 실패는 이미 성공한 PUT을 재실행하는 이유가 아니다. |
+
+작업 순서/완료 조건:
+1. 댓글 첨부 Schema·예시/정렬fixture의 정적 대조는 완료했다. Backend 파일이 고정게시/구현인계되면 수용댓글과 원문·OpenAPI·실제지원버전의 일치를 확인한다. API 미구현/미배포 상태를 구분하고 임의v1 fallback으로 부분저장을 완성하지 않는다.
+2. DTO/transport·멱등명령/journal·Gateway 상태수명을 구현하고 경계시험한다. 부품만 있으면 연결대기로 기록한다.
+3. 실제 일반 DI/Page/VM에 즉시저장/전체카드드래그를 연결하고 상위 갱신·기존원pending 경계를 확인한다. Backend HTTP 지원 전에는 연동완료로 처리하지 않는다.
+4. 직접시험: 필수/unknown/nullable/범위·configured/미설정/재설정 집합,1000/1001·200/201·413, rank/레벨/UTF-16 fixture, 첫드롭/no-op·대표변경/OFF→ON·미활동상대순서, 동시 v1/preference변경409, 응답유실/원ACK/현재GET실패·재진입/저장소실패·epoch늦은응답을 검증한다. 서버 원자rollback은 Backend 시험근거와 실제HTTP 계약으로 확인한다.
+5. 공용관리/대표·로스터 복원 회귀와 전체 연결 최종 test/analyze 후 사용자 웹/바형/폴드에서 터치/드래그·스크롤충돌·저장표시·뒤로가기/재진입을 확인한다. 시각 정상흐름의 자동UI시험을 중복 양산하지 않는다.
+
+위 연결 설계는 사용자 구현 지시로 일반 회원 경로에 적용했다. 최종 검증은 전체2978PASS·분석0이며 사용자 실제연동/기기확인 대기다. 기존 [준비요청6860661505](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6860661505)은 당시 경과다. 이번 구현은 현재브랜치 미커밋/미push로 누적하며 서버/DB 변경·초기화·배포는 실행하지 않았다.
+
+### 레이드 선택·로컬 자료 수명 (2026-11-14 구현 연결)
+
+- 일반 회원 경로 MemberWeeklyViewModel→MemberWeeklyStore의 표시설정을 재사용한다. 신규API/서버표시원장 없이 선택 raid ID집합을권위로사용한다. count는기존JSON호환/ID수파생값이며회원UI의개수입력·최대5검증은제거했다. 미설정추천3/명시빈집합표시없음을구분하고기존ID·입장불가/비활성ID를보존한다. 캐릭터관리/대표/서버완료원장은변경하지않는다.
+- 일괄창은활성종류이름만표시한다. 기존usable전체(미활동포함)에선택ID그대로덮어쓰고현재입장가능subset으로저장하지않는다. 신규캐릭터에는상속하지않는다. 초기값은전체선택=true/일부선택=null/없음=false이며혼합클릭→체크·체크클릭→해제다. 적용에는true항목만포함하며혼합은체크확정해야포함된다고안내한다. 전부해제적용은명시빈집합이다.
+- 개별창은입장가능종류/해당난이도/clearGold+boundGold를표시하고개수제약없이선택한다. 현재입장불가ID는편집시보존하며기본값은설정삭제/추천3으로복귀한다. 기존eligibleCandidates의최대골드/동률displayOrder 계산은재사용한다. 현재자산에서는최고입장난이도와골드선택이일치하며역전되는새카탈로그는제품의도와대조한다.
+- 창의관측토큰은등록/선택/수명·카탈로그및표시ID를포함해열린동안변경되면저장하지않는다. 원정대별전체설정을next map으로만들고기존_disk직렬화/_persist에한번저장→guard성공후_display교체한다. 실패시이전값유지·LOCAL_STORAGE_FAILED안내,회원/환경/epoch보호를유지한다. 같은schema1~4완료pending의원문/키/ACK는변환·삭제하지않고기존저장필드형태를유지한다.
+- 회원카드는전용행배치를공통AccountCharacterCard에연결하고legacy비회원배치는보존한다. 이름볼드·44연필/완료/상세터치영역·레이드명/실제참가난이도참여중/우측상세아이콘을사용한다. 추천difficultyId는완료명령용으로유지하고participationLabel은서버entry.wire.participation의difficulty_id로별도투영해섞지않는다. 난이도단독 displayName(나메/n단)을사용하며모집용displayAlias를참가문구에사용하지않는다. horizon_cathedral의화면표시명은지평의성당을유지하고레이드aliases만성당→지평이며원식별자/정식명/원본데이터는유지한다. 미참가상태는참가난이도표시없음,완료는기존체크/정정정책유지다.
+- 회원경로의주차기능플래그에따른작은3열강제와추천3개빈행예약을제거했다. 기존카드폭/가변열·대표왕관/상세·원정대순서·외부갱신정책은유지하고UI크기/큰글자/터치는사용자웹·앱확인으로구분한다. 개인예약시간표는이번구간에포함하지않는다. 검증과보관상태는NEXT_WORK/DEV_LOG를따른다.
+
+### 개인 주간 시간표·조회 계약 협의
+
+- 가능시간은 기존 편집초안으로 즉시 preview하되 미저장 표시를 구분하고 취소하면 저장값으로 복귀한다. 예약은 서버의 현재 조회결과이며 그래프 조작으로 예약/가능시간을 자동저장하지 않는다. 시간표의 이번 주/다음 주는 calendar_week_key로 관리하며 기존 C/N 게임주차 선택과 분리한다. 자기 전체캐릭터/원정대의 미해제·본인관계가 증명된 원장을 합쳐 그리며 완료/취소/탈퇴/해산 등 실제 해제된 이력은 제외한다. 상태명이 종료/구세대여도 미해제이고 본인관계·실제T가 증명되면 남은 원장 점유를 표시한다. 미해제를 일정확정/참가권한으로 해석하지 않는다. 일부 완료/교체는 해제된 부분만 제외하고 남은 예약을 유지하며 지난시각/현재자격 때문에 지우지 않는다. 타회원 자료·완료 이력 기능은 요구하지 않는다.
+- 기존 /v2/me/raid-schedule-overlaps는 pair_count·충돌쌍 left/right를 반환하므로 그대로 보존한다. anonymous_busy도 방별 비교 reader의 권한 범위다. 전체예약은 독립 reader로 소비하며 원장/조회 기반은 Backend가 재사용한다. 별도 count/재검증 API·방별 순회는 추가하지 않는다.
+- 사용자 확정7행 window는 KST 수요일00:00~다음 수요일00:00 미만이다. 게임주차 수요일06:00~다음 수요일06:00 미만과 동일하지 않다. 첫날00~06시의 이전 실제T 예약도 포함하도록 starts_at<window_end && ends_at>window_start로 기간 교차 조회하며 실제cycle_key==화면T만으로 제한하지 않는다. 원본 시작/끝과 실제cycle_key는 보존하고 Native가 자정별 분할/window clipping·배타적 끝점을 처리한다. 다음날/end_day_offset 가능시간도 날짜로 펼친 뒤 자른다. 마지막 다음 수요일00~06시는 다음 달력 그래프에 속하며8번째 행은 추가하지 않는다.
+- 예약 선택 시 필요한 표시는 레이드명·내 캐릭터·예약 시간으로 확정했다. Backend의 필수 예약/session/segment/room·실제T/일정revision과 raid/character projection을 소비한다. 방 제목·타회원 명단은 요구하지 않으며 표시정보를 위해 모든 방 상세를 순회하지 않는다. 정확한 DTO/페이지/세대·조회상한의 수용 기준은 아래 최종 대조를 따른다.
+- 기존 TimeSpan의 merge/intersect/subtract·구간렌더링 재사용은 원예약 식별/표시정보를 유지하는 범위로 한정한다. 예약 조회실패는 ‘예약없음’이 아니며 가능시간 편집을 통째로 막지 않는다. 전체 페이지 수집 성공 전0건으로 확정하지 않고 범례·예약누락/실패·미설정·확인시점을 구분한다.
+- graph 표시폭은 시안에서 정할 최소시간셀폭을 기준으로6시간 기본·확장·24시간 전체로 전환한다. 같은 의미의 상단 전체탐색/좌우이동을 유지하고24시간이 다보이면 구간이동은 불필요하게 남기지 않는다. 확대/축소로 선택한 시간·요일·초안·스크롤 맥락을 초기화하거나 네트워크 요청을 재실행하지 않는다. polling·웹소켓·전방상세 N+1조회를 추가하지 않는다.
+
+### 구현 전 소비 설계 검토 (2026-11-13, 정적 검토·미구현)
+
+판정: 최종 구체화의 정확 DTO/원장 상태표/응답 상한을 포함해 설계 계약을 수용한다. 설계상 미해결 질의는 없으며 실제 ORM·동시성/비용 검증은 구현 시 완료조건이다. 반응형 치수·표시 배치는 Penpot 사용자 확인 후 구현한다. 새 제품 결정을 사용자에게 반복 요청하지 않는다.
+
+| 대조한 실제 경로 | 판단과 연결 계획 |
+|---|---|
+| BackendMemberAccount의 runtime.api/session·availability·weekly 생성/폐기 | 회원 시간표 읽기 모델을 이 소유 수명에 연결한다. 기존 인증/오류 transport를 재사용하며 화면 build/폭 변경에서 요청하지 않는다. 회원/환경/인증세대·선택 달력·요청세대가 달라지면 임시 페이지/이전회원 표시를 폐기한다. 회원 전체 예약에 activity/현재 소유 목록 필터를 추가하지 않는다 |
+| MemberAccountPage의 상단 MemberCycleSelector→weekly.selectCycle | 게임06시 전용 상태다. 시간표 안의 달력00시 선택은 별도 상태로 둔다. 시간표 조작으로 완료/참가의 게임주차·키·pending을 바꾸지 않는다. 그래프 키를 기존 MemberCycleMeta의06시 검증에 억지로 통과시키지 않는다 |
+| MemberRaidClient.cycles→/v2/raid-cycles의 server_now | 기존 유효 server_now를 KST 달력 수00시로 계산해 첫 calendar_week_key를 명시한다. 기기 시각만 권위로 사용하지 않는다. 유효 시각이 없거나 CALENDAR_WEEK_UNAVAILABLE이면 기존 cycles 조회를 재사용해 한 번 동기화한다. weekly 전체 프로필/카탈로그 복원을 강제 재실행하지 않는다 |
+| DioBackendAccountReadApi / AccountReadException | query·인증 재시도·status/code/requestId/retryAfter를 재사용 가능하다. 현재 오류 DTO는 추가 scope/meta를 보관하지 않으므로 새 오류 payload 없이 위 clock 재조회로 복구하는 안을 사용한다. 공용 오류 DTO 전면 변경은 필요 없다 |
+| PlayAvailabilityViewModel / PlayAvailabilityCard | 초안·저장/취소·pending과 인증된 원정대 편집자격은 기존 모델 소유다. 현재 Card의 model.visible 조기반환을 전체예약 영역에 그대로 적용하면 소유권 상실 뒤에도 유효한 본인예약을 숨길 수 있으므로 예약 읽기/표시는 로그인 회원 권한으로 분리하고 편집자격은 완화하지 않는다. 예약 읽기 실패가 편집/원명령을 잠그지 않게 한다. 유효한 초안만 preview하고 불완전 행을 임의24시간/0시로 바꾸지 않는다. 미설정은 종일 가능으로 위장하지 않는다 |
+| ScheduleComparison의 TimeSpan(int 분), busyOn의 inMinutes/merge | 보조 가능시간 합집합에는 재사용하되 원예약 DTO/식별자를 분 단위 합집합으로 대체하지 않는다. 실제시각 DateTime을 유지한 분할구간에 원예약ID를 연결해 겹침/여러 레이드와 선택 상세를 보존한다. 5분/정수분 반올림 없이 렌더링 비율을 계산하고 텍스트만 초까지 표시한다 |
+| MemberAccountSection.visible/presentVisible·ScopedCharacterManagementGateway | visible/count 숨김 제거와 누락 경고를 구분한다. gateway의 순서변경은 기존 old.visible 보존을 재사용하고 신규 _pendingCount 생성/저장 연결만 제거한다. 기존 영속 count 명령/ACK와 대표·역할·정렬 저장을 전면 재작성하지 않는다 |
+| MemberWeeklyViewModel의 회원별 display/pending·표시 preference의 count<=5 | 실제 일반 경로의 count 검증/선택 UI를 함께 바꾼다. 과거 int 캐릭터ID용 preference 클래스만 수정해 UUID 경로 완료로 보고하지 않는다. 같은 store pending/원ACK와 미설정·명시빈선택을 보존한다 |
+
+예약 소비 후보는 scope/data의 닫힌 DTO를 별도로 둔다. UUID/정책/수요일키/서버 달력 범위·7일창·UTC 원시각의 순서/기간교차·양수 schedule_revision·raid/character 식별자를 검증한다. nullable 표시는 기본 문구로 처리하되 식별자/시간 누락을 정상값으로 보정하지 않는다. 이름 fallback은 ‘레이드 정보 확인 불가’/‘캐릭터명 확인 불가’ 수준이며 현재 소유 목록 이름으로 snapshot을 덮지 않는다.
+
+페이지 수집은 같은 회원·환경·인증세대/달력창/limit/policy/result_revision에서 starts_at+reservation_id 정렬·중복예약/반복cursor를 확인한다. 성공한 전체 집합을 한 번에 교체하며 중간 페이지를 완성 그래프로 보여주지 않는다. server_now/evaluated_at은 페이지별로 흐를 수 있으므로 전체 envelope 동등성으로 stale을 만들지 않는다. 기존 성공 집합은 **같은 회원/달력창** 재조회 실패 때만 이전 조회시각/오류와 함께 유지하고 다른 주차 자료를 새 주차 밑에 표시하지 않는다.
+
+- CURSOR_STALE: 임시 수집을 버리고 같은 창 첫 페이지부터 자동 재시작은 한 번만 한다. 재발/반복 변경은 기존 성공값+재시도로 종료하며 무한 loop하지 않는다.
+- CALENDAR_WEEK_UNAVAILABLE: 기존 server_now 재동기화 후 ‘이번/다음’ 상대선택을 새 달력에 맞춰 한 번 재계산한다. 이전 자료는 새 날짜축에서 재사용하지 않는다. 자정 경과는 화면 진입/복귀·사용자 새로고침에서 관측하며 지속polling은 추가하지 않는다.
+- 400/413/503/네트워크/지원불가: 빈예약으로 치환하지 않고 예약영역 오류/재시도로 표현한다. Retry-After를 준수한다. 미게시 API404도 완료0건이 아니다. 413을 해결하려 limit를 무한 축소하거나 일부만 성공으로 표시하지 않는다.
+
+### 최종 계약 대조 결과 (2026-11-13, 기능 구현 전)
+
+최종 원본은 [6854151919](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6854151919)의 닫힌 객체/정확 wire·상태표·상한이다. 상세 JSON을 복제하지 않고 Native 적용/검증 차이만 기록한다.
+
+| 항목 | 수용한 계약·Native 주의점 |
+|---|---|
+| 입력/정책 | calendar_week_key는 실제 수요일 YYYY-MM-DD·서버 현재달력 또는+7일만. limit100 기본/1~200·cursor 선택, 정책 personal-reservations-1. 게임 current_cycle_key를 달력키로 복사하지 않는다 |
+| 객체/식별자 | 모든 필수키 존재/추가키 거절. UUID는 canonical 소문자. 현재 roleId/cacheUuid는 대문자를 소문자로 보정하므로 새 DTO에서 원문 소문자 형식을 먼저 검증한다. raid/difficulty는 기존 raidIdentifier의 [a-z0-9_]{1,64}와 일치하며 기존 공용 parser를 더 엄격하게 바꿔 타기능에 영향 주지 않는다 |
+| 시각/길이 | UTC Z·소수초0~6자리/20~27자와 실제 날짜/시각을 검증한다. roleUtc의 +00:00/무제한 소수초 허용보다 좁은 wire를 새 reader에서 확인하고 DateTime 정밀도를 유지한다. 문자열 상한은 Dart String.length(UTF-16)가 아닌 runes.length(Unicode code point), byte 상한은 별개다 |
+| 표시 원본 | Assignment의 character_name→name와 server_name/class_name allowlist. 각 키는 필수·값은 nullable(이름128/서버64/직업64 code point). null만 fallback하며 nonblank 원문을 trim/절단/현재소유 이름으로 덮지 않는다. 서버의 missing/blank→null 정규화와 클라이언트 wire 필수키 누락오류를 구분한다. 레이드 display_name nullable128·현재 고정 카탈로그 표시이며 과거 이름 snapshot으로 주장하지 않는다 |
+| 페이지 | items0~limit·result_revision 소문자hex64·next_cursor null 또는 ASCII [A-Za-z0-9_.-]1~8192. 요청 limit를 수집 도중 바꾸지 않고 전체 결과를 원자반영한다. 페이지별 DB관측 S는 server_now=evaluated_at이며 S/토큰시각은 지문에서 제외. 달력창/현재달력/정책/revision은 같아야 하나 수06시 경과의 current_cycle_key 변경만으로 예약을 오류 처리하지 않는다 |
+| 토큰/복구 | 최초 발급+600초 만료를 전파·후속페이지 연장 없음. 기존clock 재사용과 stale 재시작1회/허용달력 이탈 동기화1회를 수용한다. 복구 횟수는 사용자 조회 전체 시도에서 공유해 서로를 반복 초기화하지 않는다. 반복 시 오류/수동재시도로 끝낸다 |
+| 지원 상한 | 페이지 전체 UTF-8 JSON envelope1MiB 초과는413 RESPONSE_TOO_LARGE. 조건에 맞는 본인 미해제 원장 전체 지문은10,000행까지,10,001 sentinel은503 RESERVATION_QUERY_LIMIT_EXCEEDED. 일부 잘림/자동 limit 축소/0건 표시를 하지 않는다. 일반 AccountReadException의 code/status로 처리 가능하고 새 count/오류metadata API가 필요 없다 |
+| 정상/모순 | review/소유권상실/미확정약속·단순과거·종료/구세대라는 상태만으로 숨기지 않는다. 미해제·복합본인관계/실제T 증명 시 포함. legacy도 CycleAssignment 하나의 존재를 강제하지 않고 서버가 원본으로 증명한다. 실제 필수참조/관계/시간 모순만 전체503 RESERVATION_DATA_UNAVAILABLE. Native는 서버 판정을 로컬 현재 소유/자격으로 재구현하지 않는다 |
+
+설계 대조 근거: 게시된 합성200을 JSON으로 파싱해 scope/data·server_now=evaluated_at·7일창/기간교차·시각순서·hex64·nullable직업·종료cursor를 확인했다. 전체 JSON Schema 원문은 미게시여서 schema 자체 재검증을 수행했다고 주장하지 않는다. 기존 Dart parser/transport의 허용범위를 정적으로 대조했으며 신규 DTO/HTTP 기능시험은 실행하지 않았다.
+
+남은 것은 설계 질문이 아니라 산출물 고정과 구현 검증이다. Backend는 최종 정밀설계/JSON Schema/합성파일을 보관 지시 시 게시하고 구현 인계 때 고정 SHA·OpenAPI·실행 버전을 제공한다. Native는 게시본과 수용 댓글의 일치를 연결 시 확인한다. Backend 실제 ORM투영/관계·해제/동시성,10,000/10,001행과 페이지byte·query count/EXPLAIN/지연/메모리는 미측정이며 구현 시 확인한다. 비용 문제가 확인되면 완료 선언 전 재협의하고 임의 기능축소로 대신하지 않는다.
+
+구현 순서: 사용자 지시로 Penpot03 시각 확인 → 시안 승인/별도 구현 지시 → 표시/로컬선택·과거 pending 보호 → 전용 예약 DTO/reader/앱 소유 모델·달력 투영 → 승인 반응형/도구/시간표 연결 → 웹 브랜드 gate 분리 → 최종 자동검증·사용자 바형/폴드/웹 확인. 계약 수용은 구현/게시/배포 지시가 아니며 미게시 API를 소비해 완료로 보고하지 않는다.
+
+검증은 현재 실행하지 않았다. 이후 자동시험은 nullable/필수/오류, 페이지 원자성·중복/반복/정렬·한 번 stale 복구·인증/주차 전환, 수00/06·기기시각 오차·이전T·자정/창끝·초 정밀도/겹침, 사용전원·대표/순서/누락/원명령·개별/일괄선택 저장 실패에 집중한다. 관련 기존 play_availability/member_cycles/member_weekly/character_management_gateway/schedule_comparison/cycle_schedule 및 startup_entry_gate 시험을 회귀 기준으로 삼고 최종 전체 test/analyze를 실행한다. 실제 치수·터치·툴팁·화면분할은 사용자 확인으로 구분한다.
+
+### 웹 런치·수명
+
+- Web은 최초 방문·새 탭·새로고침 모두 브랜드 런치와4초 표시 타이머를 생략한다(2026-11-14 사용자 변경). 탭별 표시기록/sessionStorage 분기는 사용하지 않는다. 인증복귀/외부 deep link·현재URL과 명령복구를 초기화하지 않는다.
+- 서비스/Router 생성과 세션복원은 BackendApp의 기존 초기화 경로에서 실행한다. LostPartyEntryScreen은 표시 전용이며 API 시작점이 아니다. router/auth/cache의 실제 준비/실패/재시도 기능은 유지한다. Native의 기존4초 첫시작 gate는 그대로 둔다.
+
+### 다음 단계와 검증 계획 (미실행)
+
+1. 준비 문서/Backend 답변을 사용자와 재검토하고 Penpot03 동일메인에서 실제 정보량의 바형/폴드/웹·관리·개별/일괄선택·시간표/도구를 시안화한다. min/max폭·전환/스플릿·큰글자·긴이름·0/다수항목·loading/실패·스크롤은 그때 확정한다. 자동02 이관 없음.
+2. 시안/계약 승인 뒤 일반 DI에 최소 구현한다. 표시정책/로컬선택→반응형/도구·그래프→Web런치 순서로 연결하되 원명령/소유 수명을 함께 보호한다. Backend 준비 전 가짜 예약/기본0을 넣어 기능완료로 표시하지 않는다.
+3. 자동 경계: 활동선택 전원·과거숨김/count무시·순서/대표·누락/소유변경, 개별/일괄0/전체/입장불가/레벨변화·미설정3개·기존 pending동시보존/저장실패, 예약 partial/페이지/실패·자정/주차경계, 첫탭/새로고침/새탭·저장소불가·deep link, 크기변환/늦은응답·중복명령을 검증한다. 공용model/DI/저장 영향이 넓으므로 최종 연결 상태에서 전체 flutter test/analyze를 실행한다. 정상 시각/조작은 사용자 바형·폴드·웹 확인과 구분한다.
+
 ## 최신 정정 — 수동 선택 레벨·관리 통신 (2026-10-17)
 
 ### 회원 화면 복구·활동 우선 복원 (2026-10-17)

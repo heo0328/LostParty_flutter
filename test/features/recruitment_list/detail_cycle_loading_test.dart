@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lost_party/features/account/domain/account_read_session.dart';
 import 'package:lost_party/features/account/presentation/widgets/member_cycle_selector.dart';
 import 'package:lost_party/features/recruitment_list/data/backend_recruitment_repository.dart';
@@ -13,6 +14,73 @@ import 'backend_recruitment_test.dart' as base;
 import 'cycle_recruitment_test.dart' as cycles;
 
 void main() {
+  for (final pushed in [true, false]) {
+    testWidgets(
+      'explicit detail back escapes nested navigator: pushed=$pushed',
+      (tester) async {
+        final session = ReadSessionFake();
+        final gateway = cycles.CycleGateway();
+        gateway.onCycleDetail = (target) async =>
+            BackendRecruitmentRepository.parseCycleDetail(
+              cycles.detail(target),
+              base.roomId,
+              target,
+            );
+        final router = GoRouter(
+          initialLocation: pushed ? '/raid-status' : '/detail',
+          routes: [
+            GoRoute(
+              path: '/raid-status',
+              builder: (_, _) => const Scaffold(body: Text('참가 중 목록')),
+            ),
+            ShellRoute(
+              builder: (_, _, child) => child,
+              routes: [
+                GoRoute(
+                  path: '/detail',
+                  builder: (_, _) => BackendRecruitmentDetailPage(
+                    gateway: gateway,
+                    session: session,
+                    roomId: base.roomId,
+                    target: cycles.n,
+                    onLogin: () {},
+                    onCreateAnother: () {},
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        if (pushed) router.push('/detail');
+        await tester.pumpAndSettle();
+        expect(
+          Navigator.of(
+            tester.element(find.byType(BackendRecruitmentDetailPage)),
+          ).canPop(),
+          false,
+        );
+        expect(find.byType(BackButton), findsOneWidget);
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        expect(find.text('참가 중 목록'), findsOneWidget);
+        if (!pushed) {
+          expect(
+            router
+                .routeInformationProvider
+                .value
+                .uri
+                .queryParameters['target_cycle_key'],
+            cycles.n,
+          );
+        }
+        expect(gateway.writes, isEmpty);
+        await tester.pumpWidget(const SizedBox.shrink());
+        router.dispose();
+        session.dispose();
+      },
+    );
+  }
   for (final fails in [false, true]) {
     testWidgets(
       'detail blocks return to C until delayed N ${fails ? '500 failure' : 'success'} completes',

@@ -16,7 +16,8 @@ void main() {
     final shape = theme.cardTheme.shape! as RoundedRectangleBorder;
     expect(shape.borderRadius, BorderRadius.circular(AppRadius.large));
     expect(shape.side.color, AppColors.outline);
-    expect(theme.cardTheme.elevation, 0);
+    expect(theme.cardTheme.elevation, 3);
+    expect(theme.cardTheme.shadowColor, const Color(0x33000000));
   });
 
   test('selected navigation content uses the strong purple token', () {
@@ -30,36 +31,37 @@ void main() {
     );
   });
   test(
-    'disabled selection icons remain visible and enabled colors use SDK defaults',
+    'selection controls keep clear ON/OFF colors when interaction is disabled',
     () {
       final theme = AppTheme.light;
-      for (final selected in [false, true]) {
-        final states = <WidgetState>{
-          WidgetState.disabled,
-          if (selected) WidgetState.selected,
-        };
-        expect(
-          theme.checkboxTheme.fillColor!.resolve(states),
-          AppColors.textSecondary,
-        );
-        expect(
-          theme.radioTheme.fillColor!.resolve(states),
-          AppColors.textSecondary,
-        );
-        expect(
-          theme.switchTheme.thumbColor!.resolve(states),
-          AppColors.textSecondary,
-        );
+      for (final disabled in [false, true]) {
+        for (final selected in [false, true]) {
+          final states = <WidgetState>{
+            if (disabled) WidgetState.disabled,
+            if (selected) WidgetState.selected,
+          };
+          expect(theme.switchTheme.thumbColor!.resolve(states), Colors.white);
+          expect(
+            theme.switchTheme.trackColor!.resolve(states),
+            selected ? AppColors.primary : AppColors.switchOffTrack,
+          );
+          expect(theme.switchTheme.thumbIcon!.resolve(states), isNotNull);
+          expect(
+            theme.radioTheme.fillColor!.resolve(states),
+            selected ? AppColors.primary : AppColors.textSecondary,
+          );
+          expect(
+            theme.checkboxTheme.fillColor!.resolve(states),
+            selected ? AppColors.primary : Colors.transparent,
+          );
+          expect(
+            (theme.checkboxTheme.side! as WidgetStateBorderSide)
+                .resolve(states)!
+                .color,
+            selected ? AppColors.primary : AppColors.textSecondary,
+          );
+        }
       }
-      expect(theme.checkboxTheme.fillColor!.resolve({}), isNull);
-      expect(
-        theme.radioTheme.fillColor!.resolve({WidgetState.selected}),
-        isNull,
-      );
-      expect(
-        theme.switchTheme.thumbColor!.resolve({WidgetState.selected}),
-        isNull,
-      );
     },
   );
 }

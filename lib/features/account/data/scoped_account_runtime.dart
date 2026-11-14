@@ -101,6 +101,23 @@ class ScopedAccountRuntime {
   int get readGeneration => _readGeneration;
   // Shared by the existing management editor and quick representative writes.
   Object? _characterSettingsOwner;
+  final Map<Object, ({StorageScope scope, String registrationId})>
+  _managementCommands = {};
+  void holdManagementCommand(
+    Object owner,
+    StorageScope scope,
+    String registrationId,
+  ) {
+    _managementCommands[owner] = (scope: scope, registrationId: registrationId);
+  }
+
+  void releaseManagementCommand(Object owner) =>
+      _managementCommands.remove(owner);
+  bool managementCommandPending(String registrationId) =>
+      canRead &&
+      _managementCommands.values.any(
+        (v) => v.scope == scope && v.registrationId == registrationId,
+      );
   bool get characterSettingsBusy => _characterSettingsOwner != null;
   void lockCharacterSettings(Object owner) {
     if (_characterSettingsOwner != null) {

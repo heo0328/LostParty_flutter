@@ -7,6 +7,7 @@ abstract final class AppColors {
   static const primarySubtle = Color(0xFFEEE7F7);
   static const background = Color(0xFFF8F7FA);
   static const surface = Color(0xFFFFFFFF);
+  static const switchOffTrack = Color(0xFFB8B5BF);
   static const outline = Color(0xFFE8E4EC);
   static const textPrimary = Color(0xFF25232A);
   static const textSecondary = Color(0xFF68646F);

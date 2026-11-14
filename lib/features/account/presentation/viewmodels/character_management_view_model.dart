@@ -43,6 +43,19 @@ class CharacterManagementViewModel extends ChangeNotifier {
   bool _orderChanged = false;
   bool get canEditDraft => !_draftLocked;
   bool get isMemberManagement => managementGateway != null;
+  bool get immediateSave =>
+      managementGateway is ImmediateCharacterManagementGateway;
+  bool get canChooseAccountRepresentative =>
+      !immediateSave || _account?.isMain == true;
+  String? get managementWarning => _management?.warning;
+  int get missingSelectionCount => _management?.residueCount ?? 0;
+  Future<void> removeMissingSelection() async {
+    if (_draftLocked) return;
+    (managementGateway as ImmediateCharacterManagementGateway)
+        .allowMissingSelectionRemoval();
+    await save();
+  }
+
   bool get canSave =>
       !_isSaving && (managementGateway == null || managementGateway!.current);
   bool get _draftLocked =>
@@ -166,6 +179,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
   bool canSetRepresentative(LocalAccountCharacter character) {
     if (isMemberManagement) {
       return !_draftLocked &&
+          canChooseAccountRepresentative &&
           _draftSelectedIds.contains(character.id) &&
           _draftRepresentativeId != character.id &&
           _management!.usableIds.contains(character.id);
@@ -319,8 +333,10 @@ class CharacterManagementViewModel extends ChangeNotifier {
       try {
         _seedInitialRepresentative();
         final representative = _draftRepresentativeId;
-        if (representative == null) {
-          _message = '앱에서 사용할 캐릭터와 대표를 선택해 주세요.';
+        if (representative == null && !immediateSave) {
+          _message = canChooseAccountRepresentative
+              ? '앱에서 사용할 캐릭터와 대표를 선택해 주세요.'
+              : '부원정대 설정을 저장하지 못했습니다. 설정 정보를 다시 불러와 주세요.';
         } else {
           final snapshot = await gateway.save(
             selectedIds: List.of(_draftOrderedIds),
@@ -452,13 +468,24 @@ class CharacterManagementViewModel extends ChangeNotifier {
   String _managementError(Object e) {
     final pending = managementGateway?.pending == true;
     if (pending) {
-      return '저장 결과 또는 표시 설정을 확인하지 못했습니다. 저장 버튼으로 같은 요청을 다시 확인해 주세요.';
+      return immediateSave
+          ? '저장 결과를 확인하지 못했습니다. 재시도로 같은 요청을 확인해 주세요.'
+          : '저장 결과 또는 표시 설정을 확인하지 못했습니다. 저장 버튼으로 같은 요청을 다시 확인해 주세요.';
     }
     if (e is AccountReadException && e.code == 'REQUEST_IN_PROGRESS') {
       return '다른 갱신 또는 저장을 처리 중입니다. 완료 후 다시 저장해 주세요.';
     }
     if (e is AccountReadException && e.code == 'CHARACTER_UNUSABLE') {
-      return '현재 사용할 수 없는 캐릭터가 선택돼 있습니다. 사용 대상과 대표를 변경해 주세요.';
+      return canChooseAccountRepresentative
+          ? '현재 사용할 수 없는 캐릭터가 선택돼 있습니다. 사용 대상과 대표를 변경해 주세요.'
+          : '현재 사용할 수 없는 캐릭터가 선택돼 있습니다. 사용 대상을 확인해 주세요.';
+    }
+    if (e is AccountReadException && e.code == 'REVISION_CONFLICT') {
+      return '다른 변경이 확인됐습니다. 다시 조회하거나 변경 내용을 확인한 뒤 재시도해 주세요.';
+    }
+    if (e is AccountReadException &&
+        e.code == 'CHARACTER_SELECTION_REPAIR_REQUIRED') {
+      return '목록 밖 선택을 먼저 정리해 주세요. 기존 선택은 자동으로 삭제하지 않습니다.';
     }
     return '현재 소유·캐릭터 자격 또는 다른 변경을 확인해 주세요. 기존 서버 설정은 유지됩니다.';
   }
@@ -470,10 +497,12 @@ class CharacterManagementViewModel extends ChangeNotifier {
     _explicitRepresentative = false;
     _account = snapshot.account;
     _allAccounts = [snapshot.account];
-    _roster = _sortedRoster(
-      snapshot.account.characters,
-      snapshot.account.representativeCharacterId,
-    );
+    _roster = snapshot.canonicalOrder
+        ? List.of(snapshot.account.characters)
+        : _sortedRoster(
+            snapshot.account.characters,
+            snapshot.account.representativeCharacterId,
+          );
     _rememberedOrder = {
       for (final c in _roster)
         if (c.displayOrder != null) c.id: c.displayOrder!,
@@ -500,7 +529,9 @@ class CharacterManagementViewModel extends ChangeNotifier {
       ];
       _clampDisplayLimit();
     }
-    _seedInitialRepresentative();
+    if (!immediateSave || snapshot.initialSelectionRequired) {
+      _seedInitialRepresentative();
+    }
   }
 
   LocalAccountCharacter? _highestUsable(Set<int> ids) {
@@ -512,7 +543,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
             )
             .toList()
           ..sort((a, b) {
-            final level = b.itemLevel!.compareTo(a.itemLevel!);
+            final level = (b.itemLevel ?? -1).compareTo(a.itemLevel ?? -1);
             return level != 0
                 ? level
                 : a.serverCharacterId!.compareTo(b.serverCharacterId!);
@@ -520,7 +551,27 @@ class CharacterManagementViewModel extends ChangeNotifier {
     return candidates.firstOrNull;
   }
 
+  void reorderMovable(int oldIndex, int newIndex) {
+    if (_draftLocked) return;
+    final movable = _draftOrderedIds
+        .where((id) => id != _draftRepresentativeId)
+        .toList();
+    if (newIndex > oldIndex) newIndex--;
+    if (oldIndex < 0 ||
+        oldIndex >= movable.length ||
+        newIndex < 0 ||
+        newIndex >= movable.length ||
+        oldIndex == newIndex) {
+      return;
+    }
+    movable.insert(newIndex, movable.removeAt(oldIndex));
+    _draftOrderedIds = [?_draftRepresentativeId, ...movable];
+    _orderChanged = true;
+    notifyListeners();
+  }
+
   void _seedInitialRepresentative() {
+    if (immediateSave) return;
     if (!isMemberManagement ||
         _explicitRepresentative ||
         _account?.representativeCharacterId != null) {

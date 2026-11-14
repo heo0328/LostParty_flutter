@@ -232,6 +232,7 @@ void main() {
         (c) => c.serverCharacterId == secondCharacterId,
       );
       model.toggleActivity(other);
+      model.changeDisplayLimit(-1);
       calls.clear();
       await model.save();
       final counts = <String, int>{};
@@ -249,6 +250,12 @@ void main() {
         isEmpty,
       );
       expect(calls.where((r) => r.path.endsWith('/characters')), hasLength(2));
+      expect(
+        calls.where(
+          (r) => r.method == 'PUT' && r.path.endsWith('/presentation-settings'),
+        ),
+        isEmpty,
+      );
       expect(calls.length, lessThanOrEqualTo(10));
     },
   );

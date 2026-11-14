@@ -4,6 +4,78 @@ import 'package:lost_party/features/account/domain/services/weekly_raid_display_
 import 'package:lost_party/shared/raid_catalog/domain/entities/raid_catalog.dart';
 
 void main() {
+  test(
+    'display aliases preserve canonical IDs, original name and combined alias',
+    () {
+      const nightmare = RaidDifficultyDefinition(
+        difficultyId: 'nightmare',
+        name: '나이트메어',
+        displayAlias: '나르카',
+        displayOrder: 3,
+        minItemLevel: 1740,
+        clearGold: 1,
+        boundGold: 0,
+        isActive: true,
+      );
+      expect(nightmare.displayName, '나메');
+      expect(nightmare.name, '나이트메어');
+      expect(nightmare.displayAlias, '나르카');
+      const stage = RaidDifficultyDefinition(
+        difficultyId: 'stage2',
+        name: '2단계',
+        displayAlias: '지평2단',
+        displayOrder: 2,
+        minItemLevel: 1720,
+        clearGold: 0,
+        boundGold: 1,
+        isActive: true,
+      );
+      expect(stage.displayName, '2단');
+      final raid = _raid(
+        raidId: 'horizon_cathedral',
+        displayName: '지평의 성당',
+        difficulties: [stage],
+      );
+      expect(raid.displayName, '지평의 성당');
+      expect(raid.aliases, contains('지평'));
+      expect(raid.aliases, isNot(contains('성당')));
+      expect(raid.officialName, '지평의 성당');
+      expect(raid.raidId, 'horizon_cathedral');
+    },
+  );
+  test(
+    'explicit selection supports more than five and never fills missing IDs',
+    () {
+      final ids = List.generate(8, (i) => 'raid_$i');
+      final pref = CharacterWeeklyRaidDisplayPreference(
+        characterId: 1,
+        displayCount: ids.length,
+        raidIds: ids,
+      );
+      expect(pref.isValid, isTrue);
+      final candidates = [
+        for (var i = 0; i < 7; i++)
+          WeeklyRaidDisplayCandidate(
+            raid: _raid(
+              raidId: ids[i],
+              displayName: ids[i],
+              difficulties: [_difficulty(minItemLevel: 1700, clearGold: 1)],
+            ),
+            difficulty: _difficulty(minItemLevel: 1700, clearGold: 1),
+            gold: 1,
+          ),
+      ];
+      expect(
+        WeeklyRaidDisplayProjector.resolve(
+          eligible: candidates,
+          preference: pref,
+        ),
+        hasLength(7),
+      );
+      expect(pref.raidIds, hasLength(8));
+    },
+  );
+
   group('WeeklyRaidDisplayProjector', () {
     final catalog = RaidCatalog(
       schemaVersion: 1,
@@ -13,44 +85,32 @@ void main() {
         _raid(
           raidId: 'gold_low',
           displayName: '골드높음입장낮음',
-          difficulties: [
-            _difficulty(minItemLevel: 1700, clearGold: 90000),
-          ],
+          difficulties: [_difficulty(minItemLevel: 1700, clearGold: 90000)],
         ),
         _raid(
           raidId: 'mid',
           displayName: '중간',
-          difficulties: [
-            _difficulty(minItemLevel: 1720, clearGold: 50000),
-          ],
+          difficulties: [_difficulty(minItemLevel: 1720, clearGold: 50000)],
         ),
         _raid(
           raidId: 'high',
           displayName: '높은입장',
-          difficulties: [
-            _difficulty(minItemLevel: 1740, clearGold: 40000),
-          ],
+          difficulties: [_difficulty(minItemLevel: 1740, clearGold: 40000)],
         ),
         _raid(
           raidId: 'extra',
           displayName: '추가',
-          difficulties: [
-            _difficulty(minItemLevel: 1710, clearGold: 30000),
-          ],
+          difficulties: [_difficulty(minItemLevel: 1710, clearGold: 30000)],
         ),
         _raid(
           raidId: 'fifth',
           displayName: '다섯째',
-          difficulties: [
-            _difficulty(minItemLevel: 1690, clearGold: 20000),
-          ],
+          difficulties: [_difficulty(minItemLevel: 1690, clearGold: 20000)],
         ),
         _raid(
           raidId: 'too_hard',
           displayName: '입장불가',
-          difficulties: [
-            _difficulty(minItemLevel: 1800, clearGold: 999999),
-          ],
+          difficulties: [_difficulty(minItemLevel: 1800, clearGold: 999999)],
         ),
       ],
     );
@@ -61,10 +121,13 @@ void main() {
         itemLevel: 1760,
       );
 
-      expect(
-        eligible.map((c) => c.raidId),
-        ['gold_low', 'mid', 'high', 'extra', 'fifth'],
-      );
+      expect(eligible.map((c) => c.raidId), [
+        'gold_low',
+        'mid',
+        'high',
+        'extra',
+        'fifth',
+      ]);
       expect(eligible.every((c) => c.minItemLevel <= 1760), isTrue);
     });
 
@@ -95,12 +158,7 @@ void main() {
         ),
       );
 
-      expect(resolved.map((c) => c.raidId), [
-        'fifth',
-        'high',
-        'extra',
-        'mid',
-      ]);
+      expect(resolved.map((c) => c.raidId), ['fifth', 'high', 'extra', 'mid']);
     });
 
     test('resolve returns empty list for displayCount 0', () {

@@ -29,7 +29,7 @@
       ]
     },
     {
-      "raidId": "horizon_cathedral", "officialName": "어비스던전: 지평의 성당", "displayName": "지평의 성당", "aliases": ["성당"],
+      "raidId": "horizon_cathedral", "officialName": "어비스던전: 지평의 성당", "displayName": "지평의 성당", "aliases": ["지평"],
       "partySize": 4, "partyCount": 1, "requiredSupportCount": 1, "maxDealerCountPerClass": 1, "gateCount": 2, "isActive": true,
       "difficulties": [
         {"difficultyId":"stage1","name":"1단계","displayAlias":"지평1단","displayOrder":1,"minItemLevel":1700,"clearGold":0,"boundGold":30000,"isActive":true},

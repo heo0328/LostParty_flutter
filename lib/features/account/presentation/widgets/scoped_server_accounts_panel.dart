@@ -91,7 +91,7 @@ class _ScopedServerAccountsPanelState extends State<ScopedServerAccountsPanel> {
                 const Text('로그인하면 등록한 원정대를 확인할 수 있습니다.'),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton(
+                  child: FilledButton(
                     onPressed: widget.onLogin,
                     child: const Text('로그인'),
                   ),

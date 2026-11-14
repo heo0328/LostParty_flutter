@@ -11,11 +11,23 @@ class CharacterManagementSnapshot {
     required this.usableIds,
     required this.hasNiceGroup,
     this.initialSelectionRequired = false,
+    this.canonicalOrder = false,
+    this.warning,
+    this.residueCount = 0,
   });
   final LocalGameAccount account;
   final Set<int> selectedIds, usableIds;
   final bool hasNiceGroup;
   final bool initialSelectionRequired;
+  final bool canonicalOrder;
+  final String? warning;
+  final int residueCount;
+}
+
+/// Opt-in: legacy editors keep their explicit save workflow and pending commands.
+abstract interface class ImmediateCharacterManagementGateway
+    implements CharacterManagementGateway {
+  void allowMissingSelectionRemoval();
 }
 
 abstract class CharacterManagementGateway implements Listenable {
@@ -25,7 +37,7 @@ abstract class CharacterManagementGateway implements Listenable {
   Future<CharacterManagementSnapshot> load();
   Future<CharacterManagementSnapshot> save({
     required List<int> selectedIds,
-    required int representativeId,
+    required int? representativeId,
     required int displayLimit,
     bool saveDisplayOrder = true,
   });

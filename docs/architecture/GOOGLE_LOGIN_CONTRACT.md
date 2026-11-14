@@ -24,7 +24,7 @@
 
 ### 웹 Google 로그인 연결 — Issue49 (2026-11-11)
 
-현재 feature/web-support의 일반 DI는 conditional export로 Android MethodChannel과 웹 GIS 구현을 선택한다. 기존 GOOGLE_SERVER_CLIENT_ID override/공개 기본값을 재사용하며 웹 기본 원본은 http://localhost:3000, dev Backend는 http://localhost:8000이다. 공식 협업은 [Issue49](https://github.com/heo0328/lostparty-backend/issues/49), 초기 원인/Backend 설정 확인 요청은 [Native 착수](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6790881456)를 따른다. 코드 연결·합성 시험은 실제 Google 인증/서버 검증 인수와 구분한다.
+현재 feature/web-support의 일반 DI는 conditional export로 Android MethodChannel과 웹 GIS 구현을 선택한다. 기존 GOOGLE_SERVER_CLIENT_ID override/공개 기본값을 재사용하며 웹 개발 원본은 http://localhost:3000, dev Backend는 BACKEND_BASE_URL override로 http://localhost:8000을 명시한다(다른 기기에서는 접근 가능한 개발 서버 주소 사용). debug 코드 기본10.0.2.2는 Android 에뮬레이터용이며 브라우저 자동 기본값이 아니다. 공식 협업은 [Issue49](https://github.com/heo0328/lostparty-backend/issues/49), 초기 원인/Backend 설정 확인 요청은 [Native 착수](https://github.com/heo0328/lostparty-backend/issues/49#issuecomment-6790881456)를 따른다. 코드 연결·합성 시험은 실제 Google 인증/서버 검증 인수와 구분한다.
 
 - 웹 로그인 화면의 기존 버튼 자리에 공식 GIS outline/large/continue_with 한국어 버튼을 렌더링한다. 다른 배치와 로그인 유지 선택·성공 후 이전 화면 복귀는 유지한다. 페이지당 SDK script 1회 로드하며 실패/20초 timeout은 제거 후 명시 재시도다. One Tap·자동선택·쿠키 인증 전환은 없다.
 - SDK 준비 뒤 화면 진입 challenge를 한 번 발급받고, 메모리의 거래 ID/secret/nonce/expires_at와 독립 임의 button state를 보관한다. nonce를 원문 그대로 GIS initialize에 전달하고 config/버튼은 새 거래에서만 갱신한다. 일반 rebuild에서 재초기화하지 않는다. 전역 owner는 한 거래의 렌더링/콜백만 허용한다.
@@ -36,7 +36,7 @@
 
 #### 실행 설정·인수
 
-현재 시작 정책은 [scoped 복원 계약30](../backend-migration/30-scoped-storage-write-contract.md)의 후속 정정을 따른다. 기존 정적 이미지를 서비스 초기화부터4초 표시한 뒤 인증/자료 준비와 무관하게 앱으로 진입하며 앱 소유 복원 작업은 계속한다. 애니메이션 추가는 보류다. 과거2200ms·인증완료 대기·debug URL 알럿 정책은 적용하지 않는다.
+현재 시작 정책은 [scoped 복원 계약30](../backend-migration/30-scoped-storage-write-contract.md)의 후속 정정을 따른다. 네이티브는 기존 정적 이미지를 서비스 초기화부터4초 표시한 뒤 인증/자료 준비와 무관하게 진입하며 복원 작업은 계속한다. 웹은 첫 방문·새 탭·새로고침 모두 브랜드 런치와 인위적4초 대기를 생략하며 실제 인증/Router 준비와 원주소 복귀는 유지한다. 애니메이션 추가는 보류다. 과거2200ms·인증완료 대기·debug URL 알럿 정책은 적용하지 않는다.
 
 2026-11-02 사용자 재확정: 기본 개발·연동 검증은 dev 로컬 서버에서 진행한다. 운영 AWS 반영은 개발자가 명시 지시할 때만 수행하며 새 기능 개발 완료의 선행 조건으로 운영 배포를 요구하지 않는다. 기본 debug 실행은 `flutter run`, release는 `flutter run --release`다. debug에서 AWS BACKEND_BASE_URL을 명시하면 로컬 기본값을 덮어쓰므로 일반 개발 실행에는 해당 인수를 넣지 않는다. `10.0.2.2`는 Android 에뮬레이터에서 호스트를 가리키며 물리 기기는 별도 접근 가능한 로컬 주소/연결 구성이 필요하다.
 

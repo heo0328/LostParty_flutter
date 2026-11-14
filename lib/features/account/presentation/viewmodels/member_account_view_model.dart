@@ -105,7 +105,9 @@ class MemberAccountSection {
           .toList(),
       scope: characters.first.ref.scope,
       accountId: registration.accountId!,
-      representativeId: registration.settings.representativeId,
+      representativeId: registration.isMain
+          ? registration.settings.representativeId
+          : null,
       visibleCount: 200,
     );
     return projected
@@ -115,11 +117,8 @@ class MemberAccountSection {
 
   List<MemberCharacterState> get visible => ordered
       .where(
-        (c) =>
-            registration.settings.activityIds.contains(c.ref.characterId) &&
-            (c.preferences?.preferences.visible ?? true),
+        (c) => registration.settings.activityIds.contains(c.ref.characterId),
       )
-      .take(presentation?.visibleCount ?? 200)
       .toList();
 
   /// Ordinary account display only. Weekly participation still uses the raw rows.
@@ -127,10 +126,8 @@ class MemberAccountSection {
       .where(
         (c) =>
             registration.settings.activityIds.contains(c.ref.characterId) &&
-            (c.preferences?.preferences.visible ?? true) &&
             c.observation.rosterPresence?.missing != true,
       )
-      .take(presentation?.visibleCount ?? 200)
       .toList();
 }
 
@@ -275,7 +272,7 @@ class MemberAccountViewModel extends ChangeNotifier {
   bool get signedIn => !_disposed && runtime.canRead;
   bool get characterRefreshing =>
       _writes.keys.any((key) => key.startsWith('refresh:'));
-  bool get canEdit =>
+  bool get _canEditStoredRepresentative =>
       signedIn &&
       !characterRefreshing &&
       !runtime.characterSettingsBusy &&
@@ -285,8 +282,9 @@ class MemberAccountViewModel extends ChangeNotifier {
       !_writes.keys.any(
         (key) =>
             key.startsWith('representative:') || key.startsWith('display:'),
-      ) &&
-      !runner.source.cooldown.active;
+      );
+  bool get canEdit =>
+      _canEditStoredRepresentative && !runner.source.cooldown.active;
   bool busy(String key) => _writes.containsKey(key);
   bool get managementBlocked =>
       loading ||
@@ -477,16 +475,19 @@ class MemberAccountViewModel extends ChangeNotifier {
   Future<List<MemberAccountSection>> _readSections(
     List<CacheRegistrationSnapshot> regs, {
     required bool server,
+    String? refreshRegistrationId,
     bool activeCacheOnly = false,
+    bool storedOnly = false,
     ScopedMemberRoster? confirmedRoster,
     AccountBootstrap? bootstrap,
     required void Function() guard,
   }) async {
     final result = <MemberAccountSection>[];
     for (final reg in regs) {
+      final readServer = server || reg.registrationId == refreshRegistrationId;
       guard();
       final ref = runtime.reference(reg.registrationId);
-      if (server &&
+      if (readServer &&
           restoreRetrySeconds == 0 &&
           reg.isMain &&
           reg.ownershipStatus == 'owned') {
@@ -543,7 +544,7 @@ class MemberAccountViewModel extends ChangeNotifier {
         () => runtime.readCachedPersonalSettings(ref, guard: guard),
       );
       String? accountFailure;
-      if (server &&
+      if (readServer &&
           restoreRetrySeconds == 0 &&
           reg.ownershipStatus == 'owned') {
         try {
@@ -567,14 +568,23 @@ class MemberAccountViewModel extends ChangeNotifier {
           rows.add(MemberCharacterState(character, c, cached: true));
           continue;
         }
-        final prefs = await LoadTiming.local(
-          LocalLoadWork.preferences,
-          () => runtime.readCachedPersonalSettings(
-            ref,
-            character: character,
-            guard: guard,
-          ),
-        );
+        final prefs = storedOnly && readServer && reg.ownershipStatus == 'owned'
+            ? await runtime.readPersonalSettings(
+                await runtime.preparePersonalSettings(
+                  ref,
+                  character: character,
+                  guard: guard,
+                ),
+                guard: guard,
+              )
+            : await LoadTiming.local(
+                LocalLoadWork.preferences,
+                () => runtime.readCachedPersonalSettings(
+                  ref,
+                  character: character,
+                  guard: guard,
+                ),
+              );
         final dealer = await LoadTiming.local(
           LocalLoadWork.dealer,
           () => runtime.readCachedRoleBuild(
@@ -610,11 +620,11 @@ class MemberAccountViewModel extends ChangeNotifier {
       result.add(
         MemberAccountSection(
           reg,
-          server
+          readServer && !storedOnly
               ? await _restoreRows(reg, rows, guard: guard, active: true)
               : rows,
           presentation: presentation,
-          cached: !(server || confirmedCache || view?.validated == true),
+          cached: !(readServer || confirmedCache || view?.validated == true),
           failure: accountFailure,
         ),
       );
@@ -627,11 +637,19 @@ class MemberAccountViewModel extends ChangeNotifier {
   /// Reuse those receipts/settings instead of restoring every server profile again.
   Future<void> restoreAfterManagement(
     ScopedCharacterManagementGateway gateway,
-  ) async {
+  ) => identical(gateway.runtime, runtime)
+      ? _restoreAfterManagement(gateway.registrationId, gateway.confirmedRoster)
+      : Future.value();
+
+  Future<void> restoreAfterManagementContext(String registrationId) =>
+      reloadStoredData();
+
+  Future<void> _restoreAfterManagement(
+    String registrationId,
+    ScopedMemberRoster? proof, {
+    bool refreshPersonal = false,
+  }) async {
     _backgroundEpoch++;
-    final registrationId = gateway.registrationId;
-    if (!identical(gateway.runtime, runtime)) return;
-    final proof = gateway.confirmedRoster;
     if (!signedIn || commandPending()) return;
     final member = accountReadScope(runtime.session), scope = runtime.scope;
     final guard = _guard(_epoch, member, scope, runtime.readGeneration);
@@ -640,7 +658,7 @@ class MemberAccountViewModel extends ChangeNotifier {
       final reg = regs
           .where((r) => r.registrationId == registrationId)
           .firstOrNull;
-      if (reg?.ownershipStatus == 'owned' && reg!.isMain) {
+      if (!refreshPersonal && reg?.ownershipStatus == 'owned' && reg!.isMain) {
         final value = await RepresentativeClient(
           runtime.api,
         ).get(runtime.reference(registrationId), guard: guard);
@@ -654,6 +672,7 @@ class MemberAccountViewModel extends ChangeNotifier {
       _sections = await _readSections(
         regs,
         server: false,
+        refreshRegistrationId: refreshPersonal ? registrationId : null,
         confirmedRoster: proof,
         guard: guard,
       );
@@ -664,6 +683,65 @@ class MemberAccountViewModel extends ChangeNotifier {
       if (!_disposed &&
           signedIn &&
           accountReadScope(runtime.session) == member) {
+        failure = _code(e);
+        _emit();
+      }
+    }
+  }
+
+  bool _storedReadAgain = false;
+  Future<void>? _storedRead;
+  Future<void> reloadStoredData() {
+    if (_storedRead case final flight?) {
+      _storedReadAgain = true;
+      return flight;
+    }
+    late final Future<void> flight;
+    flight =
+        (() async {
+          do {
+            _storedReadAgain = false;
+            await _reloadStoredData();
+          } while (_storedReadAgain &&
+              !_disposed &&
+              signedIn &&
+              !commandPending());
+        })().whenComplete(() {
+          if (identical(_storedRead, flight)) _storedRead = null;
+        });
+    return _storedRead = flight;
+  }
+
+  Future<void> _reloadStoredData() async {
+    if (!signedIn || commandPending() || managementBlocked) return;
+    if (_flight case final flight?) await flight;
+    if (!signedIn || commandPending() || managementBlocked) return;
+    _backgroundEpoch++;
+    final member = accountReadScope(runtime.session), scope = runtime.scope;
+    final guard = _guard(_epoch, member, scope, runtime.readGeneration);
+    try {
+      final roster = await runtime.loadMemberRoster(guard: guard);
+      final sections = await _readSections(
+        roster.registrations,
+        server: true,
+        confirmedRoster: roster,
+        storedOnly: true,
+        guard: guard,
+      );
+      guard();
+      if (sections.any(
+        (s) => s.failure != null || s.characters.any((c) => c.failure != null),
+      )) {
+        throw const AccountReadException('RESTORE_FAILED');
+      }
+      _sections = sections;
+      failure = null;
+      _emit();
+    } catch (e) {
+      if (!_disposed &&
+          signedIn &&
+          accountReadScope(runtime.session) == member &&
+          runtime.scope == scope) {
         failure = _code(e);
         _emit();
       }
@@ -952,7 +1030,8 @@ class MemberAccountViewModel extends ChangeNotifier {
     ScopedRegistrationRef reg,
     ScopedCharacterRef ref,
   ) {
-    if (!canEdit ||
+    if (runtime.managementCommandPending(reg.registrationId)) return null;
+    if (!_canEditStoredRepresentative ||
         _writes.isNotEmpty ||
         representativePending(reg.registrationId) ||
         _representativeFailures.containsKey(reg.registrationId) ||
@@ -967,7 +1046,6 @@ class MemberAccountViewModel extends ChangeNotifier {
     final value = _representatives[reg.registrationId], row = character(ref);
     if (section == null ||
         section.cached ||
-        !section.displayReady ||
         !section.visible.any((c) => c.ref.characterId == ref.characterId) ||
         !section.registration.isMain ||
         section.registration.ownershipStatus != 'owned' ||
@@ -1032,7 +1110,7 @@ class MemberAccountViewModel extends ChangeNotifier {
       } finally {
         runtime.unlockCharacterSettings(lock);
       }
-    });
+    }, storedRepresentative: true);
     if (signedIn &&
         accountReadScope(runtime.session) == choice.session &&
         !representativePending(id)) {
@@ -1042,13 +1120,9 @@ class MemberAccountViewModel extends ChangeNotifier {
 
   bool _representativeEligible(CacheCharacterObservation row) {
     final profile = jsonDecode(row.profileJson) as Map;
-    final level = double.tryParse('${profile['item_level']}');
     return row.usable == true &&
         row.lifecycleState == 'active' &&
-        profile['roster_status'] == 'confirmed' &&
-        level != null &&
-        level.isFinite &&
-        level >= 0;
+        profile['roster_status'] == 'confirmed';
   }
 
   Future<void> _sendRepresentative(
@@ -1100,7 +1174,7 @@ class MemberAccountViewModel extends ChangeNotifier {
   }
 
   Future<void> retryRepresentative(ScopedRegistrationRef reg) async {
-    if (!canEdit ||
+    if (!_canEditStoredRepresentative ||
         _writes.isNotEmpty ||
         reg.scope != runtime.scope ||
         representativeRetrySeconds(reg.registrationId) > 0) {
@@ -1112,6 +1186,7 @@ class MemberAccountViewModel extends ChangeNotifier {
     await _write(
       'representative:${reg.registrationId}',
       (guard) => _sendRepresentative(reg, command, guard),
+      storedRepresentative: true,
     );
     if (signedIn &&
         accountReadScope(runtime.session) == member &&
@@ -1157,9 +1232,12 @@ class MemberAccountViewModel extends ChangeNotifier {
 
   Future<void> _write(
     String key,
-    Future<void> Function(void Function()) action,
-  ) {
-    if (!canEdit) return Future.value();
+    Future<void> Function(void Function()) action, {
+    bool storedRepresentative = false,
+  }) {
+    if (!(storedRepresentative ? _canEditStoredRepresentative : canEdit)) {
+      return Future.value();
+    }
     _backgroundEpoch++;
     if (_writes[key] case final active?) return active;
     final epoch = _epoch,
