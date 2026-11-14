@@ -54,6 +54,8 @@ Map<String, dynamic> contextWire(RecruitmentDraft d) {
 }
 
 class Gateway extends f.CycleGateway implements BetaCreationGateway {
+  @override
+  Future<List<RecruitmentGroupChoice>> groups() async => [];
   final api = old.Api();
   @override
   bool get betaContractActive => true;
@@ -596,6 +598,34 @@ void main() {
         await tester.pump();
         expect(find.text('이번 주 출발 일정'), findsOneWidget);
         expect(find.text('다음 주 출발 일정'), findsOneWidget);
+        expect(find.text('묶음 / 진행시간 설정'), findsNothing);
+        expect(find.text('레이드 추가'), findsOneWidget);
+        final minute = model.betaInput(f.c).minute;
+        final nextMinute = model.betaInput(f.n).minute;
+        expect(minute, isNotNull);
+        final dateChip = tester
+            .widgetList<ChoiceChip>(find.byType(ChoiceChip))
+            .firstWhere(
+              (chip) =>
+                  chip.label is Text &&
+                  RegExp(
+                    r'^\d+/\d+\(',
+                  ).hasMatch((chip.label as Text).data ?? '') &&
+                  !chip.selected &&
+                  chip.onSelected != null,
+            );
+        dateChip.onSelected!(true);
+        await tester.pump();
+        expect(model.betaInput(f.c).minute, minute);
+        expect(model.betaInput(f.n).minute, nextMinute);
+        await tester.ensureVisible(find.text('연결 그룹'));
+        await tester.tap(find.text('연결 그룹'));
+        await tester.pumpAndSettle();
+        expect(find.byType(PopupMenuItem<String>), findsWidgets);
+        expect(find.byType(BottomSheet), findsNothing);
+        await tester.tap(find.text('연결 그룹 없음'));
+        await tester.pumpAndSettle();
+        expect(model.draft.groupId, isNull);
         expect(find.text('아래 날짜 중 1회'), findsNothing);
         expect(find.text('선택일마다 진행'), findsNothing);
         expect(

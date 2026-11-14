@@ -38,11 +38,12 @@ void main() {
               routes: [
                 GoRoute(
                   path: '/detail',
-                  builder: (_, _) => BackendRecruitmentDetailPage(
+                  builder: (context, _) => BackendRecruitmentDetailPage(
                     gateway: gateway,
                     session: session,
                     roomId: base.roomId,
                     target: cycles.n,
+                    onExitExplorer: pushed ? () => context.pop() : null,
                     onLogin: () {},
                     onCreateAnother: () {},
                   ),
@@ -61,6 +62,7 @@ void main() {
           false,
         );
         expect(find.byType(BackButton), findsOneWidget);
+        expect(find.byType(MemberCycleSelector), findsOneWidget);
         await tester.tap(find.byType(BackButton));
         await tester.pumpAndSettle();
         expect(find.text('참가 중 목록'), findsOneWidget);

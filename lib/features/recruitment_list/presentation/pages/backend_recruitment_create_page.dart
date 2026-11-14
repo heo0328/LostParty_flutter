@@ -35,7 +35,7 @@ class _BackendRecruitmentCreatePageState
     extends State<BackendRecruitmentCreatePage> {
   BackendRecruitmentCreateViewModel get m => widget.model;
   String? _opened;
-  bool _bundleExpanded = false;
+  final _groupFieldKey = GlobalKey();
   @override
   void initState() {
     super.initState();
@@ -208,14 +208,17 @@ class _BackendRecruitmentCreatePageState
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _fieldButton(
-                    '연결 그룹',
-                    m.groups
-                            .where((g) => g.id == d.groupId)
-                            .firstOrNull
-                            ?.name ??
-                        '없음',
-                    _chooseGroup,
+                  KeyedSubtree(
+                    key: _groupFieldKey,
+                    child: _fieldButton(
+                      '연결 그룹',
+                      m.groups
+                              .where((g) => g.id == d.groupId)
+                              .firstOrNull
+                              ?.name ??
+                          '없음',
+                      _chooseGroup,
+                    ),
                   ),
                   if (m.groupsLoading)
                     const LinearProgressIndicator(minHeight: 2),
@@ -386,19 +389,7 @@ class _BackendRecruitmentCreatePageState
                       ),
                     ),
                   ],
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () =>
-                          setState(() => _bundleExpanded = !_bundleExpanded),
-                      icon: Icon(
-                        _bundleExpanded ? Icons.expand_less : Icons.add,
-                        size: 18,
-                      ),
-                      label: const Text('묶음 / 진행시간 설정'),
-                    ),
-                  ),
-                  if (_bundleExpanded) ...[
+                  ...[
                     for (var i = 0; i < d.items.length; i++) ...[
                       const Divider(),
                       if (i > 0) _raidFields(i),
@@ -406,7 +397,7 @@ class _BackendRecruitmentCreatePageState
                       if (i > 0)
                         Align(
                           alignment: Alignment.centerRight,
-                          child: TextButton(
+                          child: OutlinedButton(
                             onPressed: () {
                               final values = [...m.draft.items]..removeAt(i);
                               m.update(m.draft.copy(items: values));
@@ -432,8 +423,7 @@ class _BackendRecruitmentCreatePageState
                           ),
                         ),
                       ),
-                  ] else if (d.items.isNotEmpty)
-                    _duration(0),
+                  ],
                 ],
               ),
               RecruitmentSection(
@@ -528,7 +518,7 @@ class _BackendRecruitmentCreatePageState
                       for (final conflict in prospective['conflicts'] as List)
                         if (conflict['can_view_detail'] == true &&
                             conflict['room_id'] != null)
-                          TextButton(
+                          OutlinedButton(
                             onPressed: () => context.push(
                               membershipDetailLocation(
                                 conflict['room_id'] as String,
@@ -571,9 +561,9 @@ class _BackendRecruitmentCreatePageState
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               validation,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                fontSize: 14.3,
+                color: Theme.of(context).colorScheme.error,
               ),
             ),
           ),
@@ -610,9 +600,7 @@ class _BackendRecruitmentCreatePageState
                     ? null
                     : (_) => m.updateBeta(
                         target,
-                        m
-                            .betaInput(target)
-                            .copy(weekday: day, clearMinute: true),
+                        m.betaInput(target).copy(weekday: day),
                       ),
               ),
           ],
@@ -729,11 +717,11 @@ class _BackendRecruitmentCreatePageState
         style: const TextStyle(fontSize: 12),
       ),
       if (!m.retryExpired)
-        TextButton(
+        OutlinedButton(
           onPressed: m.canRetry ? m.retry : null,
           child: const Text('같은 요청 다시 확인'),
         ),
-      TextButton(
+      OutlinedButton(
         onPressed: !m.busy && m.delayPassed
             ? m.journalUnavailable
                   ? () => context.go('/raid-status')
@@ -750,7 +738,7 @@ class _BackendRecruitmentCreatePageState
         Wrap(
           spacing: 8,
           children: [
-            TextButton(
+            OutlinedButton(
               onPressed: () => context.push(
                 membershipDetailLocation(
                   m.recoveryRooms[i],
@@ -760,7 +748,7 @@ class _BackendRecruitmentCreatePageState
               child: Text('참가 모집 ${i + 1} 상세'),
             ),
             if (m.cycleGateway == null)
-              TextButton(
+              OutlinedButton(
                 onPressed: m.busy
                     ? null
                     : () => m.confirmRecoveredRoom(m.recoveryRooms[i]),
@@ -1051,26 +1039,27 @@ class _BackendRecruitmentCreatePageState
         m.groupFailure != null) {
       return;
     }
-    final value = await showModalBottomSheet<String>(
+    final field = _groupFieldKey.currentContext?.findRenderObject();
+    final overlay = Overlay.of(context).context.findRenderObject();
+    if (field is! RenderBox || overlay is! RenderBox) return;
+    final rect =
+        field.localToGlobal(Offset.zero, ancestor: overlay) & field.size;
+    final value = await showMenu<String>(
       context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            ListTile(
-              title: const Text('연결 그룹 없음'),
-              onTap: () => Navigator.pop(context, ''),
-            ),
-            for (final g in m.groups)
-              ListTile(
-                title: Text(g.name),
-                onTap: () => Navigator.pop(context, g.id),
-              ),
-          ],
-        ),
+      position: RelativeRect.fromRect(rect, Offset.zero & overlay.size),
+      constraints: BoxConstraints(
+        minWidth: field.size.width.clamp(0, 360),
+        maxWidth: field.size.width.clamp(0, 360),
+        maxHeight: overlay.size.height * .6,
       ),
+      items: [
+        const PopupMenuItem(value: '', child: Text('연결 그룹 없음')),
+        for (final g in m.groups)
+          PopupMenuItem(value: g.id, child: Text(g.name)),
+      ],
     );
     if (mounted &&
+        m.editable &&
         value != null &&
         binding == (m.session.userId, m.session.generation, m.editGeneration)) {
       m.update(
@@ -1147,11 +1136,11 @@ class _BackendRecruitmentCreatePageState
           ),
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('취소'),
           ),
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(context, -1),
             child: const Text('클리어시까지'),
           ),
