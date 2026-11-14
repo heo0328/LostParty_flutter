@@ -46,7 +46,7 @@ class PersonalScheduleSection extends StatelessWidget {
               ? PlayAvailabilityCard(model: editor, embedded: true)
               : const Text('가능 시간을 설정하려면 원정대 인증이 필요합니다.');
           return Align(
-            alignment: Alignment.topCenter,
+            alignment: Alignment.topLeft,
             child: SizedBox(
               width: width,
               child: Card(

@@ -736,6 +736,7 @@ void main() {
       await run();
       expect(controller.pendingServerCount, greaterThan(0));
       expect(model.canDismissAutomaticRefreshResult, isTrue);
+      expect(model.automaticRefreshResultHidden, isTrue);
       final retainedItems = controller.items;
       final phase = controller.phase;
       final pending = controller.pendingServerCount;
@@ -772,7 +773,7 @@ void main() {
       expect(model.automaticRefreshResultHidden, isTrue);
       failPut = false;
       await controller.retryServerSaved();
-      expect(model.automaticRefreshResultHidden, isFalse);
+      expect(model.automaticRefreshResultHidden, isTrue);
       model.dismissAutomaticRefreshResult();
       session.change(authenticated: false);
       expect(model.automaticRefreshResultHidden, isFalse);
@@ -2092,7 +2093,7 @@ void main() {
   );
 
   testWidgets(
-    'account content stays centered at monitor widths without reloading',
+    'account sections align left inside the bounded body without reloading',
     (tester) async {
       await tester.runAsync(run);
       tester.view.devicePixelRatio = 1;
@@ -2132,7 +2133,9 @@ void main() {
               .last;
           final rect = tester.getRect(card);
           expect(rect.width, lessThanOrEqualTo(1600));
-          expect(rect.center.dx, closeTo(width / 2, 1));
+          final bodyInset = ((width - 1600) / 2).clamp(16.0, double.infinity);
+          expect(rect.left, closeTo(bodyInset, 1));
+          expect(rect.right, lessThanOrEqualTo(width - bodyInset));
         }
       }
       expect(apiCalls.length, requests);

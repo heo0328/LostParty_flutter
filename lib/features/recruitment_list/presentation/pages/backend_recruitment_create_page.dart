@@ -1,3 +1,4 @@
+import '../../../../app/widgets/bounded_page_body.dart';
 import 'dart:async';
 import '../../data/membership_readers.dart';
 import 'package:flutter/cupertino.dart';
@@ -78,25 +79,32 @@ class _BackendRecruitmentCreatePageState
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const OwnershipNoticeTitle(child: Text('공격대 생성'))),
-    body: !m.session.isAuthenticated
-        ? _message('로그인 후 모집을 만들 수 있어요.', action: widget.onLogin, label: '로그인')
-        : !m.eligible
-        ? _message(
-            '인증한 원정대의 활동 캐릭터로 모집을 만들 수 있어요.',
-            action: () => context.go('/account'),
-            label: '내 계정 확인',
-          )
-        : m.loading && m.catalog == null
-        ? const Center(child: CircularProgressIndicator())
-        : m.hasPending && m.catalog == null
-        ? ListView(padding: const EdgeInsets.all(16), children: [_pending()])
-        : m.catalog == null
-        ? _message(
-            recruitmentFailureMessage(m.failure),
-            action: m.load,
-            label: '다시 불러오기',
-          )
-        : _form(),
+    body: BoundedPageBody(
+      viewportMaxWidth: BoundedPageBody.maxWidth + 24,
+      child: !m.session.isAuthenticated
+          ? _message(
+              '로그인 후 모집을 만들 수 있어요.',
+              action: widget.onLogin,
+              label: '로그인',
+            )
+          : !m.eligible
+          ? _message(
+              '인증한 원정대의 활동 캐릭터로 모집을 만들 수 있어요.',
+              action: () => context.go('/account'),
+              label: '내 계정 확인',
+            )
+          : m.loading && m.catalog == null
+          ? const Center(child: CircularProgressIndicator())
+          : m.hasPending && m.catalog == null
+          ? ListView(padding: const EdgeInsets.all(16), children: [_pending()])
+          : m.catalog == null
+          ? _message(
+              recruitmentFailureMessage(m.failure),
+              action: m.load,
+              label: '다시 불러오기',
+            )
+          : _form(),
+    ),
   );
 
   Widget _message(

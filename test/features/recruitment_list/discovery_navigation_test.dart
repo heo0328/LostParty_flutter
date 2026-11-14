@@ -1,3 +1,4 @@
+import 'package:lost_party/app/account_session_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -77,33 +78,35 @@ void main() {
               StatefulShellBranch(
                 routes: [
                   ShellRoute(
-                    builder: (context, state, child) =>
-                        CycleRecruitmentListPage(
-                          key: const ValueKey('explorer'),
-                          gateway: gateway,
-                          session: session,
-                          changes: changes,
-                          scopeKey: () => 'scope',
-                          mutations: mutations,
-                          onLogin: () {},
-                          onCreate: (target) =>
-                              context.push('/recruitments/create'),
-                          onRoom: (id, t) => context.go(
-                            '/recruitments/$id?target_cycle_key=$t',
-                          ),
-                          selectedRoom: state.pathParameters['id'],
-                          selectedTarget:
-                              state.uri.queryParameters['target_cycle_key'],
-                          onClearSelection: () => context.go('/recruitments'),
-                          fullScreenChild:
-                              state.uri.path == '/recruitments/create' ||
-                              state.uri.queryParameters.containsKey(
-                                'reader_profile',
-                              ),
-                          detail: state.uri.path == '/recruitments'
-                              ? null
-                              : child,
-                        ),
+                    builder: (context, state, child) => AccountSessionView(
+                      session: session,
+                      localBuilder: (_) => child,
+                      memberBuilder: (context) => CycleRecruitmentListPage(
+                        key: const ValueKey('explorer'),
+                        gateway: gateway,
+                        session: session,
+                        changes: changes,
+                        scopeKey: () => 'scope',
+                        mutations: mutations,
+                        onLogin: () {},
+                        onCreate: (target) =>
+                            context.push('/recruitments/create'),
+                        onRoom: (id, t) =>
+                            context.go('/recruitments/$id?target_cycle_key=$t'),
+                        selectedRoom: state.pathParameters['id'],
+                        selectedTarget:
+                            state.uri.queryParameters['target_cycle_key'],
+                        onClearSelection: () => context.go('/recruitments'),
+                        fullScreenChild:
+                            state.uri.path == '/recruitments/create' ||
+                            state.uri.queryParameters.containsKey(
+                              'reader_profile',
+                            ),
+                        detail: state.uri.path == '/recruitments'
+                            ? null
+                            : child,
+                      ),
+                    ),
                     routes: [
                       GoRoute(
                         path: '/recruitments',
@@ -146,12 +149,27 @@ void main() {
         '/recruitments/${f.room}',
       );
       await tester.enterText(find.byKey(const ValueKey('detailInput')), '작성 중');
-      for (final width in [840.0, 600.0, 650.0, 390.0, 1440.0]) {
+      for (final width in [
+        840.0,
+        600.0,
+        650.0,
+        390.0,
+        1440.0,
+        1920.0,
+        2560.0,
+      ]) {
         tester.view.physicalSize = Size(width, 1000);
         await tester.pumpAndSettle();
         expect(find.text('작성 중'), findsOneWidget);
         expect(gateway.searches, 1);
         expect(tester.takeException(), isNull);
+        if (width >= 600) {
+          final button = tester.getRect(
+            find.widgetWithText(FilledButton, '모집 만들기'),
+          );
+          final inset = width > 1632 ? (width - 1632) / 2 : 0.0;
+          expect(button.right, closeTo(width - inset - 16, 1));
+        }
       }
       final draft = tester
           .widget<RecruitmentFilterPage>(

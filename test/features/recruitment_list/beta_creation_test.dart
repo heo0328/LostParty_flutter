@@ -671,6 +671,19 @@ void main() {
         expect(model.createdRoomId, isNull);
         expect(find.text('공격대 생성'), findsOneWidget);
         expect(callbacks, 2);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        for (final width in [393.0, 720.0, 1920.0, 2560.0]) {
+          tester.view.physicalSize = Size(width, 1000);
+          await tester.pumpAndSettle();
+          final body = tester.getRect(find.byType(ListView).first);
+          expect(body.width - 24, lessThanOrEqualTo(1600));
+          expect(body.center.dx, closeTo(width / 2, 1));
+          expect(find.text('공격대 생성'), findsOneWidget);
+          expect(callbacks, 2);
+          expect(tester.takeException(), isNull);
+        }
         await tester.pumpWidget(const SizedBox());
         router.dispose();
         model.dispose();
