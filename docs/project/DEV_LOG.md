@@ -1,3 +1,9 @@
+## 2026-11-15 — dev 통합/원격 게시 확정
+
+누적43파일을 c1c1d4b8e621994c476cdba7000d10a230ab08f0에 보관하고 최신 origin/dev a7d822ad 기준으로 일반 병합 c4156725180050ca8e7c1954901190f24efaa55e를 만들었다. 충돌 없고 병합 tree는 작업 커밋과 동일하다. feature/my-account-ui-remake와 dev를 push하고 ls-remote 및 로컬/origin SHA 일치·clean을 확인했다. 구현 tree가 같아 최종3027PASS·분석0을 재사용했다.
+
+Backend Issue53에 [최종 인계6883381413](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6883381413)로 완료 구현·고정SHA·통합/검증·사용자 확인 범위/미확인을 회신했다. 이 후행 문서 기록은 dev에 보관·push하며 기능코드는 바꾸지 않는다. 현재 checkout dev, 작업 브랜치는 병합완료/삭제후보이나 사용자 삭제 지시 없어 보존한다. 운영배포·APK공개·main 변경·Penpot이관·Issue종료·DB초기화는 없다.
+
 ## 2026-11-15 — 내 계정 누적 완료분 보관·dev 통합
 
 사용자 지시로 b8381ef8 이후 모든 추적/신규 변경을 함께 보관한다. 시간표·가독성·인증/ID복사·스위치/공통그림자·모집생성 위치·타탭 상세 라우팅·BUG-037 구독복구를 포함한다. NEXT_WORK를 현재 완료/통합 상태로 교체하고 제품/계약/문서지도·디자인 원칙/BUG기록을 최신화했다. 과거 단계별 미커밋/dev미반영은 당시 이력으로 보존한다.
