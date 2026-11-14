@@ -1,9 +1,28 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/app/bootstrap/startup_entry_gate.dart';
 
 void main() {
+  test('default presentation is disabled only on web', () {
+    final gate = StartupEntryGate();
+    addTearDown(gate.dispose);
+    expect(gate.canEnter, kIsWeb);
+  });
+  testWidgets('disabled presentation enters immediately and notifies once', (
+    tester,
+  ) async {
+    final gate = StartupEntryGate(shouldShowEntry: () => false);
+    addTearDown(gate.dispose);
+    expect(gate.canEnter, isTrue);
+    var notifications = 0;
+    gate.addListener(() => notifications++);
+    gate.start();
+    gate.start();
+    await tester.pump(const Duration(seconds: 4));
+    expect(notifications, 1);
+  });
   testWidgets(
     'fixed four seconds without readiness or animation dependencies',
     (tester) async {

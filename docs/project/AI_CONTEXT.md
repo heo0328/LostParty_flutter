@@ -1,8 +1,14 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
-## 내 계정 UI 리메이크 준비 (2026-11-13, 미구현)
+## 내 계정 UI 리메이크 구현 진행 (2026-11-14)
 
-feature/my-account-ui-remake는 dev a7d822ad에서 분기했다. 현재 승인 범위는 기획/기술 준비문서·commit/push·Backend 필요협의이며 Penpot/앱/서버는 수정하지 않는다. 확정 제품방향은 [차후수정안](../product/DETAIL_IMPROVEMENTS.md#my-account-ui-remake), 실제 코드영향/저장/조회/검증 설계는 [계약30](../backend-migration/30-scoped-storage-write-contract.md#my-account-remake-preparation), 진행·회신대기는 NEXT_WORK를 따른다. 준비내용을 사용자가 재검토한 뒤 기존03 C방향 샘플을 발전시키는 단계로 이어가며 지금 구현/배포하지 않는다.
+사용자는 현재 구현을 웹·앱 모두 정상 작동한다고 확인했다. 반응형 캐릭터배치/계정도구/하단탭, 사용캐릭터 전원표시, 웹런치생략(네이티브유지), 관리즉시저장/전체드래그, Backend9308ce7e 정책2의 메인한정대표·부원정대전체이동·자동대표, 내계정 진입/복귀 서버저장값재조회가 완료 구간이다. 기존원pending/역사ACK·수동순서·그룹snapshot을 보존한다. 자동검증/실제사용자보고의 범위는 NEXT_WORK/DEV_LOG에서 구분한다.
+
+사용자 지시로 현재브랜치의 최신변경전체를 커밋·push하며 dev병합/배포는 하지않는다. 남은 레이드종류선택/카드세부개선·개인예약시간표 구현을 위해 브랜치를 유지한다. 전체 리메이크 완료는 아니다.
+
+### 준비설계 당시 근거 (2026-11-13)
+
+feature/my-account-ui-remake는 dev a7d822ad에서 분기했다. 사용자 확정 범위와 Backend55923cc 기초설계/Issue53 최종 구체화를 대조해 독립 예약조회·정확 wire/표시원본/상한·정상원장 상태표를 설계로 수용했다. 표시 기존API·원pending/ACK 보존, 달력00시/게임06시·편집/조회 수명·페이지 원자성/오류·원시각/예약ID를 유지하며 설계상 미해결 질의는 없다. 최종 산출물 고정게시와 실제 ORM/동시성·비용 검증은 추후 보관/구현 단계다. 제품은 [차후수정안](../product/DETAIL_IMPROVEMENTS.md#my-account-ui-remake), 최종 대조는 [계약30](../backend-migration/30-scoped-storage-write-contract.md#my-account-remake-preparation), 보관·회신은 NEXT_WORK를 따른다. 아직 문서/협의 단계이며 Penpot/앱/서버는 수정하지 않는다. 사용자 별도 지시 후 기존03 C방향 시안을 발전시키고 구현/배포는 별도다.
 
 ## Issue52 기록 소비 수정 개발 완료·이슈 종료 (2026-11-13)
 

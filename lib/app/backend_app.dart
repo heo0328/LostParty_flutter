@@ -54,7 +54,7 @@ import '../features/account/domain/entities/local_game_account.dart';
 import '../features/account/domain/services/character_summary_sync_service.dart';
 import '../features/account/presentation/pages/my_account_page.dart';
 import '../features/account/presentation/pages/character_management_page.dart';
-import '../features/account/data/scoped_character_management_gateway.dart';
+import '../features/account/data/v2_character_management_gateway.dart';
 import '../features/account/data/member_weekly_store.dart';
 import '../features/account/presentation/pages/api_token_settings_page.dart';
 import '../features/account/presentation/pages/member_key_page.dart';
@@ -133,7 +133,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   CycleParticipationController? _participation;
   RecruitmentCommandTransport? _recruitmentCommands;
   final _managementGateways =
-      <(String, String, int, String), ScopedCharacterManagementGateway>{};
+      <(String, String, int, String), V2CharacterManagementGateway>{};
   GoRouter? _router;
   OwnershipNoticeNavigation? _ownershipNavigation;
   PartyCycleRuntime? _cycle;
@@ -447,6 +447,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
     );
     Future<void> openCharacters(BuildContext context, String id) async {
       await context.push('/account/characters/manage?registrationId=$id');
+      await _memberAccount?.model.reloadStoredData();
     }
 
     final raidCatalog = RaidCatalogRepositoryImpl(
@@ -735,6 +736,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
             raidUsage: raidUsage,
             rosterIssues: rosterIssues,
             onRaidStatusSelected: () => unawaited(raidUsage.refresh()),
+            onAccountSelected: () =>
+                unawaited(_memberAccount?.model.reloadStoredData()),
             scopedStartupRefresh:
                 _memberAccount?.automaticRefreshEnabled == true
                 ? _memberAccount!.runner
@@ -901,9 +904,12 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                           );
                           final gateway = _managementGateways.putIfAbsent(
                             key,
-                            () => ScopedCharacterManagementGateway(
+                            () => V2CharacterManagementGateway(
                               runtime,
                               id,
+                              metadata: () => _memberAccount!.model.sections
+                                  .expand((s) => s.characters)
+                                  .map((c) => c.observation),
                               otherWorkPending: () =>
                                   _memberAccount?.model.managementBlocked ??
                                   true,
@@ -913,7 +919,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             accountRepository: accounts,
                             managementGateway: gateway,
                             onSaved: () => _memberAccount!.model
-                                .restoreAfterManagement(gateway),
+                                .restoreAfterManagementContext(id),
                             memberSettings: _memberSettings,
                             automaticRefreshAvailable:
                                 _memberAccount!.automaticRefreshEnabled,
@@ -1297,6 +1303,8 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         theme: AppTheme.light,
         home: _configurationError != null
             ? Scaffold(body: Center(child: Text(_configurationError!)))
+            : _entryGate.canEnter
+            ? const Scaffold(body: Center(child: CircularProgressIndicator()))
             : const LostPartyEntryScreen(embedded: true),
       );
     }

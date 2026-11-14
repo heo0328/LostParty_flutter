@@ -458,6 +458,39 @@ void main() {
   }
 
   test(
+    'v2 management refresh observes changed personal rank in the main account',
+    () async {
+      await run();
+      final ref = model.sections.single.characters.first.ref;
+      preferences[ref.characterId] = {
+        'version': 2,
+        'preferred_role': null,
+        'visible': true,
+        'display_order': 9,
+        'saved_at': clock.toIso8601String(),
+      };
+      apiCalls.clear();
+      await model.restoreAfterManagementContext(registrationId);
+      expect(model.failure, isNull);
+      expect(model.character(ref)!.preferences!.preferences.displayOrder, 9);
+      expect(apiCalls.every((r) => r.method == 'GET'), isTrue);
+      expect(apiCalls.where((r) => r.path.endsWith('/refresh')), isEmpty);
+    },
+  );
+
+  test(
+    'failed stored reload retains previous cards and exposes failure',
+    () async {
+      await run();
+      final before = model.sections;
+      failRoster = true;
+      await model.reloadStoredData();
+      expect(model.failure, isNotNull);
+      expect(model.sections, orderedEquals(before));
+    },
+  );
+
+  test(
     'normal batch runtime keeps only the existing final bootstrap refresh',
     () async {
       final remote = binding.source.remote;
@@ -1414,7 +1447,7 @@ void main() {
           runtime.reference(registrationId),
           model.sections.single.characters.last.ref,
         ),
-        isNull,
+        isNotNull,
       );
       expect(armoryCalls, isEmpty);
       expect(
@@ -1423,7 +1456,7 @@ void main() {
         reason: 'Suspect roster must remain readable',
       );
       expect(model.sections.single.characters, hasLength(2));
-      expect(model.sections.single.visible, hasLength(1));
+      expect(model.sections.single.visible, hasLength(2));
     },
   );
 
@@ -1617,6 +1650,66 @@ void main() {
         originalActivity,
       );
       expect(armoryCalls, hasLength(2));
+    },
+  );
+
+  test(
+    'provider cooldown does not block a stored representative change',
+    () async {
+      await run();
+      cooldown.observe(clock.add(const Duration(minutes: 5)));
+      expect(model.canEdit, false);
+      final choice = model.representativeChoice(
+        runtime.reference(registrationId),
+        model.sections.single.characters.last.ref,
+      );
+      expect(choice, isNotNull);
+      await model.changeRepresentative(choice!);
+      expect(
+        apiCalls.where(
+          (r) => r.method == 'PUT' && r.path.endsWith('/representative'),
+        ),
+        hasLength(1),
+      );
+    },
+  );
+
+  test(
+    'retired count readiness does not gate the main representative command',
+    () async {
+      apiRespond = (r) {
+        if (r.path.endsWith('/presentation-settings')) throw failure(r);
+        return serve(r);
+      };
+      await run();
+      expect(model.sections.single.displayReady, false);
+      expect(
+        model.representativeChoice(
+          runtime.reference(registrationId),
+          model.sections.single.characters.last.ref,
+        ),
+        isNotNull,
+      );
+    },
+  );
+
+  test(
+    'secondary registration does not elevate its legacy representative',
+    () async {
+      await run();
+      final section = model.sections.single;
+      final nonMain = CacheRegistrationSnapshot.fromStorage({
+        ...section.registration.toStorage(),
+        'main': false,
+      });
+      final secondary = MemberAccountSection(
+        nonMain,
+        section.characters,
+        presentation: section.presentation,
+        cached: section.cached,
+      );
+      expect(section.ordered.first.ref.characterId, characterId);
+      expect(secondary.ordered.first.ref.characterId, secondCharacterId);
     },
   );
 
@@ -1960,7 +2053,7 @@ void main() {
   );
 
   testWidgets(
-    'cancelling a focused visible-count dialog closes safely without writes',
+    'retired character visibility and count controls are absent without writes',
     (tester) async {
       await tester.runAsync(run);
       await tester.pumpWidget(
@@ -1998,27 +2091,9 @@ void main() {
         lessThan(tester.getTopLeft(cards.last).dx),
       );
       final before = apiCalls.where((r) => r.method != 'GET').length;
-      for (final close in ['cancel', 'back', 'outside']) {
-        await tester.ensureVisible(find.text('표시 2명'));
-        await tester.tap(find.text('표시 2명'));
-        await tester.pumpAndSettle();
-        final slider = tester.widget<Slider>(find.byType(Slider));
-        expect(slider.min, 1);
-        expect(slider.max, 2);
-        slider.onChanged!(1);
-        if (close == 'cancel') {
-          await tester.tap(find.text('취소'));
-        } else if (close == 'back') {
-          await tester.binding.handlePopRoute();
-        } else {
-          await tester.tapAt(const Offset(10, 10));
-        }
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: close);
-        expect(find.text('표시할 캐릭터 수'), findsNothing);
-        expect(apiCalls.where((r) => r.method != 'GET'), hasLength(before));
-        expect(model.sections.single.presentation!.visibleCount, 6);
-      }
+      expect(find.text('표시 2명'), findsNothing);
+      expect(find.text('캐릭터 표시 설정'), findsNothing);
+      expect(apiCalls.where((r) => r.method != 'GET'), hasLength(before));
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
@@ -2048,7 +2123,7 @@ void main() {
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('비활성'));
+      expect(find.text('비활성'), findsNothing);
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

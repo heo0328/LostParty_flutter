@@ -19,6 +19,7 @@ class AppShell extends StatefulWidget {
     this.startupCharacterRefreshRunner,
     this.scopedStartupRefresh,
     this.onRaidStatusSelected,
+    this.onAccountSelected,
     this.raidUsage,
     this.rosterIssues,
     super.key,
@@ -29,6 +30,7 @@ class AppShell extends StatefulWidget {
   final StartupCharacterRefreshRunner? startupCharacterRefreshRunner;
   final ScopedStartupRefreshController? scopedStartupRefresh;
   final VoidCallback? onRaidStatusSelected;
+  final VoidCallback? onAccountSelected;
   final RaidRoomUsageController? raidUsage;
   final RosterIssueController? rosterIssues;
 
@@ -37,6 +39,37 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  GoRouter? _accountRouter;
+  String? _accountPath;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.of(context);
+    if (!identical(_accountRouter, router)) {
+      _accountRouter?.routeInformationProvider.removeListener(
+        _accountRouteChanged,
+      );
+      _accountRouter = router;
+      router.routeInformationProvider.addListener(_accountRouteChanged);
+      _accountRouteChanged();
+    }
+  }
+
+  void _accountRouteChanged() {
+    final path = _accountRouter?.routeInformationProvider.value.uri.path;
+    if (path == _accountPath) return;
+    _accountPath = path;
+    if (path == '/account') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _accountPath == '/account') {
+          widget.onAccountSelected?.call();
+        }
+      });
+    }
+  }
+
+  static const _navigationMaxWidth = 600.0;
+
   var _alertShownThisSession = false;
   StreamSubscription<List<ManualVerificationRequest>>? _disputeSubscription;
   List<ManualVerificationRequest> _incomingDisputes = const [];
@@ -92,6 +125,9 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
+    _accountRouter?.routeInformationProvider.removeListener(
+      _accountRouteChanged,
+    );
     _disputeSubscription?.cancel();
     widget.scopedStartupRefresh?.removeListener(_scopedRefreshChanged);
     _refreshSubscription?.cancel();
@@ -106,31 +142,42 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: widget.navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: _selectBranch,
-        destinations: [
-          NavigationDestination(
-            icon: _raidIcon(Icons.event_note_outlined),
-            selectedIcon: _raidIcon(Icons.event_note),
-            label: '레이드 현황',
+      bottomNavigationBar: ColoredBox(
+        color:
+            NavigationBarTheme.of(context).backgroundColor ??
+            Theme.of(context).colorScheme.surfaceContainer,
+        child: Align(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _navigationMaxWidth),
+            child: NavigationBar(
+              selectedIndex: widget.navigationShell.currentIndex,
+              onDestinationSelected: _selectBranch,
+              destinations: [
+                NavigationDestination(
+                  icon: _raidIcon(Icons.event_note_outlined),
+                  selectedIcon: _raidIcon(Icons.event_note),
+                  label: '레이드 현황',
+                ),
+                NavigationDestination(
+                  icon: _accountIcon(Icons.person_outline),
+                  selectedIcon: _accountIcon(Icons.person),
+                  label: '내 계정',
+                ),
+                const NavigationDestination(
+                  icon: Icon(Icons.groups_outlined),
+                  selectedIcon: Icon(Icons.groups),
+                  label: '레이드 모집',
+                ),
+                const NavigationDestination(
+                  icon: Icon(Icons.diversity_3_outlined),
+                  selectedIcon: Icon(Icons.diversity_3),
+                  label: '그룹',
+                ),
+              ],
+            ),
           ),
-          NavigationDestination(
-            icon: _accountIcon(Icons.person_outline),
-            selectedIcon: _accountIcon(Icons.person),
-            label: '내 계정',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.groups_outlined),
-            selectedIcon: Icon(Icons.groups),
-            label: '레이드 모집',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.diversity_3_outlined),
-            selectedIcon: Icon(Icons.diversity_3),
-            label: '그룹',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -190,6 +237,7 @@ class _AppShellState extends State<AppShell> {
   void _selectBranch(int index) {
     widget.navigationShell.goBranch(index, initialLocation: true);
     if (index == 0) widget.onRaidStatusSelected?.call();
+    if (index == 1) widget.onAccountSelected?.call();
     unawaited(_maybeShowDisputeAlert());
   }
 
