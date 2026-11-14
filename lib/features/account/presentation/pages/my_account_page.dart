@@ -1,3 +1,4 @@
+import '../widgets/account_auth_actions.dart';
 import '../widgets/roster_account_header.dart';
 import 'dart:async';
 
@@ -30,6 +31,7 @@ import '../widgets/server_power_controls.dart';
 
 class MyAccountPage extends StatefulWidget {
   const MyAccountPage({
+    this.authActions,
     required this.apiTokenStore,
     required this.accountRepository,
     this.summarySyncService,
@@ -71,6 +73,7 @@ class MyAccountPage extends StatefulWidget {
   final bool showServerOwnership;
   final bool basicOnly;
   final VoidCallback? onAuthenticate;
+  final Widget? authActions;
   final Widget? serverAccountsSection;
   final ServerCombatPowerViewModel? serverPowers;
   final ApiCooldown? apiCooldown;
@@ -241,6 +244,7 @@ class _MyAccountPageState extends State<MyAccountPage> {
         title: const Text('부계정 삭제'),
         content: Text('${account.label}과 저장된 캐릭터 정보를 삭제할까요?'),
         actions: [
+          ?widget.authActions,
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('취소'),
@@ -438,6 +442,9 @@ class _MyAccountPageState extends State<MyAccountPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: widget.authActions == null
+            ? kToolbarHeight
+            : AccountAuthActions.toolbarHeight(context),
         title: OwnershipNoticeTitle(child: Text(widget.title)),
         actions: [
           IconButton(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lost_party/features/recruitment_list/data/membership_readers.dart';
 import 'package:lost_party/features/recruitment_list/data/cycle_interaction_repository.dart';
 import 'package:lost_party/features/recruitment_list/presentation/pages/cycle_recruitment_list_page.dart';
 import 'package:lost_party/features/recruitment_list/presentation/pages/recruitment_filter_page.dart';
@@ -31,33 +32,97 @@ void main() {
       final router = GoRouter(
         initialLocation: '/recruitments',
         routes: [
-          ShellRoute(
-            builder: (context, state, child) => CycleRecruitmentListPage(
-              key: const ValueKey('explorer'),
-              gateway: gateway,
-              session: session,
-              changes: changes,
-              scopeKey: () => 'scope',
-              mutations: mutations,
-              onLogin: () {},
-              onCreate: (_) {},
-              onRoom: (id, t) =>
-                  context.go('/recruitments/$id?target_cycle_key=$t'),
-              selectedRoom: state.pathParameters['id'],
-              selectedTarget: state.uri.queryParameters['target_cycle_key'],
-              onClearSelection: () => context.go('/recruitments'),
-              detail: state.pathParameters['id'] == null ? null : child,
+          StatefulShellRoute.indexedStack(
+            builder: (context, state, shell) => Scaffold(
+              body: shell,
+              bottomNavigationBar: FilledButton(
+                onPressed: () => shell.goBranch(2, initialLocation: true),
+                child: const Text('모집 탭'),
+              ),
             ),
-            routes: [
-              GoRoute(
-                path: '/recruitments',
-                builder: (_, _) => const SizedBox(),
+            branches: [
+              StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: ':id',
-                    builder: (_, state) => const Scaffold(
-                      body: TextField(key: ValueKey('detailInput')),
+                    path: '/raid-status',
+                    builder: (context, _) => Scaffold(
+                      body: FilledButton(
+                        onPressed: () => context.go(
+                          recruitmentFromTab(
+                            membershipDetailLocation(f.room, '2026-10-14'),
+                            'raid-status',
+                          ),
+                        ),
+                        child: const Text('현황 방 이동'),
+                      ),
                     ),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/account',
+                    builder: (context, _) => Scaffold(
+                      body: FilledButton(
+                        onPressed: () => context.go(
+                          '/recruitments/${f.room}?reader_profile=membership-actions-1',
+                        ),
+                        child: const Text('예약 방 이동'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  ShellRoute(
+                    builder: (context, state, child) =>
+                        CycleRecruitmentListPage(
+                          key: const ValueKey('explorer'),
+                          gateway: gateway,
+                          session: session,
+                          changes: changes,
+                          scopeKey: () => 'scope',
+                          mutations: mutations,
+                          onLogin: () {},
+                          onCreate: (target) =>
+                              context.push('/recruitments/create'),
+                          onRoom: (id, t) => context.go(
+                            '/recruitments/$id?target_cycle_key=$t',
+                          ),
+                          selectedRoom: state.pathParameters['id'],
+                          selectedTarget:
+                              state.uri.queryParameters['target_cycle_key'],
+                          onClearSelection: () => context.go('/recruitments'),
+                          fullScreenChild:
+                              state.uri.path == '/recruitments/create' ||
+                              state.uri.queryParameters.containsKey(
+                                'reader_profile',
+                              ),
+                          detail: state.uri.path == '/recruitments'
+                              ? null
+                              : child,
+                        ),
+                    routes: [
+                      GoRoute(
+                        path: '/recruitments',
+                        builder: (_, _) => const SizedBox(),
+                        routes: [
+                          GoRoute(
+                            path: 'create',
+                            builder: (_, _) =>
+                                const Scaffold(body: Text('생성 화면')),
+                          ),
+                          GoRoute(
+                            path: ':id',
+                            builder: (_, state) => const Scaffold(
+                              body: TextField(key: ValueKey('detailInput')),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -141,6 +206,26 @@ void main() {
       router.go('/recruitments');
       await tester.pumpAndSettle();
       expect(gateway.searches, 2);
+      for (final origin in ['account', 'raid-status']) {
+        for (final width in [390.0, 1440.0]) {
+          tester.view.physicalSize = Size(width, 1000);
+          router.go('/$origin');
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.text(origin == 'account' ? '예약 방 이동' : '현황 방 이동'),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.text('모집 탭'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('모집 만들기'));
+          await tester.pumpAndSettle();
+          expect(find.text('생성 화면'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          router.pop();
+          await tester.pumpAndSettle();
+        }
+      }
       await tester.pumpWidget(const SizedBox());
       router.dispose();
       mutations.dispose();

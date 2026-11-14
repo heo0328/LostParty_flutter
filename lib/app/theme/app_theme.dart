@@ -4,6 +4,7 @@ import 'app_colors.dart';
 import 'app_radius.dart';
 
 abstract final class AppTheme {
+  static const _controlShadow = Color(0x26000000);
   static ThemeData get light {
     final scheme =
         ColorScheme.fromSeed(
@@ -33,40 +34,40 @@ abstract final class AppTheme {
       // Keep disabled selection marks visible without restoring interaction.
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.disabled)
-              ? AppColors.textSecondary
-              : null,
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.primary
+              : Colors.transparent,
         ),
-        checkColor: WidgetStateProperty.resolveWith(
-          (states) =>
-              states.contains(WidgetState.disabled) ? Colors.white : null,
+        checkColor: WidgetStatePropertyAll(scheme.onPrimary),
+        side: WidgetStateBorderSide.resolveWith(
+          (states) => BorderSide(
+            width: 2,
+            color: states.contains(WidgetState.selected)
+                ? scheme.primary
+                : scheme.onSurfaceVariant,
+          ),
         ),
-      ),
+      ), // Disabled changes interaction only; selection stays fully legible.
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.disabled)
-              ? AppColors.textSecondary
-              : null,
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.primary
+              : scheme.onSurfaceVariant,
         ),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.disabled)
-              ? AppColors.textSecondary
-              : null,
+        thumbColor: const WidgetStatePropertyAll(Colors.white),
+        // Material 3 keeps the OFF thumb at the full icon-bearing diameter.
+        // The transparent icon preserves a plain, equally sized thumb.
+        thumbIcon: const WidgetStatePropertyAll(
+          Icon(Icons.circle, color: Colors.transparent),
         ),
         trackColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.disabled)
-              ? (states.contains(WidgetState.selected)
-                    ? AppColors.primarySoft
-                    : AppColors.outline)
-              : null,
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.primary
+              : AppColors.switchOffTrack,
         ),
-        trackOutlineColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.disabled)
-              ? AppColors.textSecondary
-              : null,
-        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
@@ -78,7 +79,8 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: AppColors.surface,
-        elevation: 0,
+        elevation: 3,
+        shadowColor: const Color(0x33000000),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.large),
@@ -110,6 +112,9 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          elevation: 2,
+          shadowColor: _controlShadow,
+          surfaceTintColor: Colors.transparent,
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           disabledBackgroundColor: AppColors.outline,
@@ -125,7 +130,9 @@ abstract final class AppTheme {
           foregroundColor: Colors.white,
           disabledBackgroundColor: AppColors.outline,
           disabledForegroundColor: AppColors.textDisabled,
-          elevation: 0,
+          elevation: 2,
+          shadowColor: _controlShadow,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.medium),
           ),
@@ -133,12 +140,23 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          elevation: 2,
+          shadowColor: _controlShadow,
+          surfaceTintColor: Colors.transparent,
+          backgroundColor: AppColors.surface,
           foregroundColor: AppColors.primaryStrong,
           side: const BorderSide(color: AppColors.primarySoft),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.medium),
           ),
         ),
+      ),
+      chipTheme: const ChipThemeData(
+        elevation: 2,
+        pressElevation: 2,
+        shadowColor: _controlShadow,
+        selectedShadowColor: _controlShadow,
+        surfaceTintColor: Colors.transparent,
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,

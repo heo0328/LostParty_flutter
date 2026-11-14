@@ -2,6 +2,12 @@
 
 > 기존 서비스 전용 항목은 [원문·출처 기록](../../legacy/firebase/extracted/docs/design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md)으로 분리했다. 남은 제품/협업 문맥의 신규 서버 적용 여부는 별도 설계에서 판단한다.
 
+## 공통 구현 디자인 보완 (2026-11-15 사용자 확정)
+
+공통 Material Card는 elevation3·검정 shadow alpha20%(#33000000), Filled/Elevated/OutlinedButton과 Chip은 elevation2·검정 shadow 약15%(#26000000)를 사용한다. surfaceTint는 투명이고 기존 색/테두리/곡률은 유지한다. OutlinedButton은 그림자를 드러내는 흰 surface 배경을 사용한다. 별도 BoxDecoration/위젯별 override·AlertDialog는 이 CardTheme 변경과 구분하며 전 화면에 같은 그림자가 있다고 해석하지 않는다.
+
+내 계정은 AccountPageTypography의 제목18/본문·버튼16/보조14와 시스템 글자 확대를 사용한다. 여백을 비례 확대하거나 글자를 자동축소하지 않고 내용에 맞춰 영역/버튼 높이·자연폭이 정해진다. 화면폭보다 커지는 경우 감싸기/영역 내부 스크롤을 사용한다. 요일 그래프 간격8·외곽곡률6·단색 배경에1시간 세로선(1px·14%)을 막대 위에 표시한다. 공통 선택 컨트롤은 비활성에도 흐림을 넣지 않으며 실제 입력 차단은 유지한다. 펜폿03/02의 기존 보드 이관은 별도 지시다.
+
 ## 적용 상태와 확정 기준
 
 제품 판단의 우선순위는 **사용자가 앱과 현재 페이지의 목적·기능·상태를 이해하고 의도한 행동을 쉽게 수행하는 것**이다(2026-10-23 사용자 확정). 기술/패턴의 표현과 구현 편의보다 이 기준을 우선하며, 개발 판단·측정·후속 최적화 범위는 [공통 품질 기준](../architecture/DEVELOPMENT_QUALITY_AND_UX_STANDARD.md)을 따른다.
@@ -16,7 +22,7 @@ Theme·Bottom Navigation·공개 모집 대표 Card 시범 적용 결과를 사�
 - Text Primary는 `#25232A`, Text Secondary는 `#68646F`, Text Disabled는 `#A8A4AD`를 사용한다.
 - spacing scale은 `4, 8, 12, 16, 20, 24, 32`다.
 - radius는 Small `6`, Medium `12`, Large `16`, Pill `999`다.
-- 일반 Card는 흰색 Surface, Large radius, 약한 `#E8E4EC` border와 elevation 0을 기본으로 한다.
+- 일반 Card는 흰색 Surface, Large radius, 약한 `#E8E4EC` border와 elevation 3·그림자 검정20%를 기본으로 한다(2026-11-15 사용자 확정).
 - Bottom Navigation은 흰색 Surface와 Lavender 선택 Pill을 유지한다.
 - 상태색은 v1에서 success·warning·error·neutral의 최소 semantic 집합만 둔다. Dealer·Support 전용 색상은 실제 역할 Chip 적용 단계에서 확정한다.
 - 화면 밀도는 Utility App에 맞춘 중간 밀도를 사용한다. 화면 좌우와 Card 내부는 기본 16, 주요 정보 간격은 8, 밀접한 metadata 간격은 4~6을 기준으로 한다.

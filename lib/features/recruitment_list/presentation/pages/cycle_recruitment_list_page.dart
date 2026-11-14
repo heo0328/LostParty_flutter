@@ -275,7 +275,12 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
       onRefresh: m.refresh,
       child: ListView(
         controller: _scroll,
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          64 + MediaQuery.textScalerOf(context).scale(16) * 1.4,
+        ),
         children: [
           Wrap(
             spacing: 4,
@@ -533,22 +538,32 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
               icon: const Icon(Icons.refresh),
               tooltip: '새로고침',
             ),
-            if (wide)
-              OutlinedButton(
-                onPressed: () => widget.onCreate(m.target),
-                child: const Text('+ 모집 만들기'),
-              ),
           ],
         ),
-        bottomNavigationBar: wide || widget.detail != null
+        floatingActionButton: !wide && widget.detail != null
             ? null
-            : SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: RecruitmentPrimaryButton(
-                    label: '+ 모집 만들기',
-                    onPressed: () => widget.onCreate(m.target),
+            : ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: math.max(0, box.maxWidth - 32),
+                ),
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
+                  onPressed: () => widget.onCreate(m.target),
+                  icon: const Icon(Icons.add),
+                  label: const Text('모집 만들기'),
                 ),
               ),
         body: Center(

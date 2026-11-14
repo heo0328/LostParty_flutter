@@ -18,6 +18,8 @@ import 'backend_account_lifecycle.dart';
 import '../features/account/data/play_availability_repository.dart';
 import '../features/account/domain/services/account_detail_access.dart';
 import '../features/account/presentation/viewmodels/play_availability_view_model.dart';
+import '../features/account/data/personal_reservations_repository.dart';
+import '../features/account/presentation/viewmodels/personal_schedule_view_model.dart';
 
 /// App owns member list + runner; pages/shell only subscribe. No DB ownership.
 class BackendMemberAccount {
@@ -87,6 +89,10 @@ class BackendMemberAccount {
             ),
           ),
     );
+    schedule = PersonalScheduleViewModel(
+      repository: BackendPersonalReservationsRepository(runtime.api),
+      session: runtime.session,
+    );
     if (weeklyStore != null) {
       weekly = MemberWeeklyViewModel(
         model: model,
@@ -101,6 +107,7 @@ class BackendMemberAccount {
   late final ScopedStartupRefreshController runner;
   late final MemberAccountViewModel model;
   late final PlayAvailabilityViewModel availability;
+  late final PersonalScheduleViewModel schedule;
   MemberWeeklyViewModel? weekly;
   bool _disposed = false, _initialized = false, _automaticInitialized = false;
   bool _displayWasReady = false;
@@ -151,6 +158,7 @@ class BackendMemberAccount {
     weekly?.removeListener(_startAutomaticWhenDisplayReady);
     weekly?.dispose();
     availability.dispose();
+    schedule.dispose();
     model.dispose();
     runner.dispose();
     source.dispose();

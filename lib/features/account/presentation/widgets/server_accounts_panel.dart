@@ -115,7 +115,10 @@ class ServerAccountsPanel extends StatelessWidget {
               const Text('로그인하면 등록한 원정대를 확인할 수 있습니다.'),
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton(onPressed: onLogin, child: const Text('로그인')),
+                child: FilledButton(
+                  onPressed: onLogin,
+                  child: const Text('로그인'),
+                ),
               ),
             ] else if (viewModel.loading)
               const LinearProgressIndicator()

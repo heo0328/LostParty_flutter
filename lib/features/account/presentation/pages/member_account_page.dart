@@ -1,3 +1,4 @@
+import '../widgets/account_auth_actions.dart';
 import '../widgets/account_tools_grid.dart';
 import '../widgets/account_responsive_layout.dart';
 import '../../../recruitment_list/presentation/viewmodels/completion_failure.dart';
@@ -9,6 +10,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../widgets/ownership_notice_title.dart';
 import '../widgets/play_availability_card.dart';
+import '../widgets/personal_schedule_section.dart';
+import '../viewmodels/personal_schedule_view_model.dart';
 import '../viewmodels/play_availability_view_model.dart';
 import '../../../../shared/diagnostics/ui_timing.dart';
 import '../../../../shared/formatters/local_date_time_formatter.dart';
@@ -169,7 +172,9 @@ class MemberAccountPage extends StatelessWidget {
     required this.settings,
     this.weekly,
     this.availability,
+    this.schedule,
     required this.onSettings,
+    this.authActions,
     required this.onKey,
     required this.onVerify,
     required this.onManage,
@@ -191,6 +196,8 @@ class MemberAccountPage extends StatelessWidget {
   final MemberSettingsViewModel settings;
   final MemberWeeklyViewModel? weekly;
   final PlayAvailabilityViewModel? availability;
+  final PersonalScheduleViewModel? schedule;
+  final Widget? authActions;
   final VoidCallback onSettings, onKey, onVerify, onManage, onHistory;
   final void Function(String) onServerStatus;
   final void Function(String)? onCharacters, onEdit, onVerifyRegistration;
@@ -229,6 +236,9 @@ class MemberAccountPage extends StatelessWidget {
         );
         return Scaffold(
           appBar: AppBar(
+            toolbarHeight: authActions == null
+                ? kToolbarHeight
+                : AccountAuthActions.toolbarHeight(context),
             title: const OwnershipNoticeTitle(child: Text('내 계정')),
             flexibleSpace: IgnorePointer(
               child: Align(
@@ -242,6 +252,7 @@ class MemberAccountPage extends StatelessWidget {
               ),
             ),
             actions: [
+              ?authActions,
               IconButton(
                 onPressed: onSettings,
                 icon: const Icon(Icons.settings_outlined),
@@ -280,7 +291,12 @@ class MemberAccountPage extends StatelessWidget {
                     padding: EdgeInsets.all(16),
                     child: Text('등록한 원정대가 없습니다.'),
                   ),
-                if (availability != null)
+                if (availability != null && schedule != null)
+                  PersonalScheduleSection(
+                    schedule: schedule!,
+                    editor: availability!,
+                  )
+                else if (availability != null)
                   PlayAvailabilityCard(model: availability!),
                 for (final section in model.sections.where(
                   (s) => s.registration.isMain,
@@ -294,8 +310,8 @@ class MemberAccountPage extends StatelessWidget {
                 Align(
                   alignment: Alignment.center,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: AccountResponsiveLayout.toolsMaxWidth,
+                    constraints: BoxConstraints(
+                      maxWidth: AccountToolsGrid.preferredWidth(context) + 32,
                     ),
                     child: Card(
                       child: Padding(
@@ -669,8 +685,6 @@ class MemberAccountPage extends StatelessWidget {
           : roleLabel(role),
       status: Text(
         '${summary == null ? '상세 조회 필요' : integrityLabel(summary)}${row.cached ? ' · 이전 확인 정보' : ''}${row.preferences == null ? ' · 표시 설정 확인 필요' : ''}${row.observation.lifecycleState != 'active' ? ' · 기존 캐릭터 확인 필요' : ''}',
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall,
       ),
       weeklyRaids:
@@ -684,6 +698,7 @@ class MemberAccountPage extends StatelessWidget {
           ) ??
           const [],
       memberWeeklyLayout: true,
+      readable: true,
       onWeeklyRaidInfo: (raid) {
         final value = weekly?.entry(row.ref, raid.raidId);
         final target = weekly?.selectedCycleKey;

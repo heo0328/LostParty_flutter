@@ -1,3 +1,5 @@
+import '../features/account/presentation/widgets/account_page_typography.dart';
+import '../features/account/presentation/widgets/account_auth_actions.dart';
 import '../features/recruitment_list/presentation/widgets/participation_recovery_card.dart';
 import '../shared/diagnostics/startup_timing.dart';
 import '../shared/diagnostics/startup_http_timing.dart';
@@ -653,6 +655,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       changes: _memberAccount?.model ?? auth,
       scopeKey: cycleScopeKey,
       onMutation: (t) async {
+        _memberAccount?.schedule.invalidate();
         rosterIssues.invalidate(notifyRooms: false);
         final weekly = _memberAccount?.weekly;
         await weekly?.refreshTarget(t);
@@ -662,6 +665,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
         }
       },
       onRelationEnded: (targets) async {
+        _memberAccount?.schedule.invalidate();
         rosterIssues.invalidate(notifyRooms: false);
         for (final t in targets) {
           await _memberAccount?.weekly?.refreshTarget(t);
@@ -697,34 +701,37 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       protected: protected,
       alertOnEntry: alertOnEntry,
     );
-    Widget localAccounts(BuildContext context) => MyAccountPage(
-      basicOnly: true,
-      onAuthenticate: () => readSession.isAuthenticated
-          ? context.push('/settings/game-account-verification')
-          : showLoginRequired(context, auth),
-      apiTokenStore: tokenStore,
-      apiCooldown: _cooldown,
-      accountRepository: accounts,
-      summarySyncService: summary,
-      showServerOwnership: false,
-      serverAccountsSection: lifecycle.model != null
-          ? ScopedServerAccountsPanel(
-              model: lifecycle.model!,
-              onLogin: () => showLoginRequired(context, auth),
-              onManage: () => manageServerAccounts(context),
-              onOpen: (id) async {
-                await context.push('/account/server/$id');
-              },
-              onHistory: () async {
-                await context.push('/account/character-retirements');
-              },
-            )
-          : ServerAccountsPanel(
-              viewModel: _serverReads!,
-              onLogin: () => showLoginRequired(context, auth),
-              onManage: () => manageServerAccounts(context),
-              onOpen: (id) => context.push('/account/server/$id'),
-            ),
+    Widget localAccounts(BuildContext context) => AccountPageTypography(
+      child: MyAccountPage(
+        authActions: AccountAuthActions(auth: auth),
+        basicOnly: true,
+        onAuthenticate: () => readSession.isAuthenticated
+            ? context.push('/settings/game-account-verification')
+            : showLoginRequired(context, auth),
+        apiTokenStore: tokenStore,
+        apiCooldown: _cooldown,
+        accountRepository: accounts,
+        summarySyncService: summary,
+        showServerOwnership: false,
+        serverAccountsSection: lifecycle.model != null
+            ? ScopedServerAccountsPanel(
+                model: lifecycle.model!,
+                onLogin: () => showLoginRequired(context, auth),
+                onManage: () => manageServerAccounts(context),
+                onOpen: (id) async {
+                  await context.push('/account/server/$id');
+                },
+                onHistory: () async {
+                  await context.push('/account/character-retirements');
+                },
+              )
+            : ServerAccountsPanel(
+                viewModel: _serverReads!,
+                onLogin: () => showLoginRequired(context, auth),
+                onManage: () => manageServerAccounts(context),
+                onOpen: (id) => context.push('/account/server/$id'),
+              ),
+      ),
     );
     return GoRouter(
       initialLocation: '/account',
@@ -736,8 +743,10 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
             raidUsage: raidUsage,
             rosterIssues: rosterIssues,
             onRaidStatusSelected: () => unawaited(raidUsage.refresh()),
-            onAccountSelected: () =>
-                unawaited(_memberAccount?.model.reloadStoredData()),
+            onAccountSelected: () {
+              _memberAccount?.schedule.invalidate();
+              unawaited(_memberAccount?.model.reloadStoredData());
+            },
             scopedStartupRefresh:
                 _memberAccount?.automaticRefreshEnabled == true
                 ? _memberAccount!.runner
@@ -762,16 +771,26 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                           repository: cycleReads,
                           scopeKey: cycleScopeKey,
                           onLogin: () => showLoginRequired(context, auth),
-                          onRoom: (id, t) =>
-                              context.push(membershipDetailLocation(id, t)),
-                          onApplicationRoom: (id, t) => context.push(
-                            Uri(
-                              path: '/recruitments/$id',
-                              queryParameters: {'target_cycle_key': t},
-                            ).toString(),
+                          onRoom: (id, t) => context.go(
+                            recruitmentFromTab(
+                              membershipDetailLocation(id, t),
+                              'raid-status',
+                            ),
                           ),
-                          onRecord: (id, t, anchor) => context.push(
-                            membershipDetailLocation(id, t, anchor: anchor),
+                          onApplicationRoom: (id, t) => context.go(
+                            recruitmentFromTab(
+                              Uri(
+                                path: '/recruitments/$id',
+                                queryParameters: {'target_cycle_key': t},
+                              ).toString(),
+                              'raid-status',
+                            ),
+                          ),
+                          onRecord: (id, t, anchor) => context.go(
+                            recruitmentFromTab(
+                              membershipDetailLocation(id, t, anchor: anchor),
+                              'raid-status',
+                            ),
                           ),
                         ),
                 ),
@@ -785,79 +804,88 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                     session: readSession,
                     localBuilder: localAccounts,
                     memberBuilder: _memberAccount != null
-                        ? (context) => MemberAccountPage(
-                            model: _memberAccount!.model,
-                            availability: _memberAccount!.availability,
-                            weekly: _memberAccount!.weekly,
-                            participationChanges: participation,
-                            participationRecoveryBuilder: (_) =>
-                                ParticipationRecoveryCard(
-                                  controller: participation,
-                                ),
-                            canUseParticipationCommands: () =>
-                                participation.canAct,
-                            canRecoverParticipationCompletion:
-                                (room, target, round) =>
-                                    participation.matchesCompletion(
-                                      room,
-                                      target,
-                                      'personal_completion',
-                                    ) &&
-                                    participation.pendingCompletionRound ==
-                                        round,
-                            onCompleteParticipation:
-                                (
-                                  ctx,
-                                  room,
-                                  target,
-                                  round,
-                                  character,
-                                  label,
-                                ) async {
-                                  final binding = cycleScopeKey();
-                                  await showDeparture(
+                        ? (context) => AccountPageTypography(
+                            child: MemberAccountPage(
+                              authActions: AccountAuthActions(auth: auth),
+                              model: _memberAccount!.model,
+                              availability: _memberAccount!.availability,
+                              schedule: _memberAccount!.schedule,
+                              weekly: _memberAccount!.weekly,
+                              participationChanges: participation,
+                              participationRecoveryBuilder: (_) =>
+                                  ParticipationRecoveryCard(
+                                    controller: participation,
+                                  ),
+                              canUseParticipationCommands: () =>
+                                  participation.canAct,
+                              canRecoverParticipationCompletion:
+                                  (room, target, round) =>
+                                      participation.matchesCompletion(
+                                        room,
+                                        target,
+                                        'personal_completion',
+                                      ) &&
+                                      participation.pendingCompletionRound ==
+                                          round,
+                              onCompleteParticipation:
+                                  (
                                     ctx,
-                                    participation,
-                                    room: room,
-                                    target: target,
-                                    initialRound: round,
-                                    expectedCharacter: character,
-                                    closeOnSuccess: true,
-                                    raidLabel: (_) => label,
-                                    isCurrent: () =>
-                                        binding == cycleScopeKey() &&
-                                        _memberAccount
-                                                ?.weekly
-                                                ?.selectedCycleKey ==
-                                            target,
-                                  );
-                                },
-                            onParticipation: (id, t) =>
-                                context.push(membershipDetailLocation(id, t)),
-                            settings: _memberSettings!,
-                            onSettings: () => context.push('/settings'),
-                            onKey: () => context.push('/settings/api-token'),
-                            onVerify: () => context.push(
-                              '/settings/game-account-verification',
+                                    room,
+                                    target,
+                                    round,
+                                    character,
+                                    label,
+                                  ) async {
+                                    final binding = cycleScopeKey();
+                                    await showDeparture(
+                                      ctx,
+                                      participation,
+                                      room: room,
+                                      target: target,
+                                      initialRound: round,
+                                      expectedCharacter: character,
+                                      closeOnSuccess: true,
+                                      raidLabel: (_) => label,
+                                      isCurrent: () =>
+                                          binding == cycleScopeKey() &&
+                                          _memberAccount
+                                                  ?.weekly
+                                                  ?.selectedCycleKey ==
+                                              target,
+                                    );
+                                  },
+                              onParticipation: (id, t) => context.go(
+                                recruitmentFromTab(
+                                  membershipDetailLocation(id, t),
+                                  'account',
+                                ),
+                              ),
+                              settings: _memberSettings!,
+                              onSettings: () => context.push('/settings'),
+                              onKey: () => context.push('/settings/api-token'),
+                              onVerify: () => context.push(
+                                '/settings/game-account-verification',
+                              ),
+                              onManage: () => manageServerAccounts(context),
+                              automaticRefreshAvailable:
+                                  _memberAccount!.automaticRefreshEnabled,
+                              onEdit: (id) => editServerAccount(context, id),
+                              onVerifyRegistration: (id) => context
+                                  .push(
+                                    '/settings/game-account-verification?registrationId=$id',
+                                  )
+                                  .then((_) async {
+                                    if (readSession.isAuthenticated) {
+                                      await _memberAccount?.model.refresh();
+                                    }
+                                  }),
+                              onHistory: () => context.push(
+                                '/account/character-retirements',
+                              ),
+                              onServerStatus: (id) =>
+                                  context.push('/account/server/$id'),
+                              onCharacters: (id) => openCharacters(context, id),
                             ),
-                            onManage: () => manageServerAccounts(context),
-                            automaticRefreshAvailable:
-                                _memberAccount!.automaticRefreshEnabled,
-                            onEdit: (id) => editServerAccount(context, id),
-                            onVerifyRegistration: (id) => context
-                                .push(
-                                  '/settings/game-account-verification?registrationId=$id',
-                                )
-                                .then((_) async {
-                                  if (readSession.isAuthenticated) {
-                                    await _memberAccount?.model.refresh();
-                                  }
-                                }),
-                            onHistory: () =>
-                                context.push('/account/character-retirements'),
-                            onServerStatus: (id) =>
-                                context.push('/account/server/$id'),
-                            onCharacters: (id) => openCharacters(context, id),
                           )
                         : null,
                   ),
@@ -959,50 +987,48 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
             StatefulShellBranch(
               routes: [
                 ShellRoute(
-                  builder: (context, state, child) =>
-                      readSession.isAuthenticated
-                      ? CycleRecruitmentListPage(
-                          key: const ValueKey('recruitmentExplorer'),
-                          selectedRoom: state.pathParameters['recruitmentId'],
-                          selectedTarget:
-                              state.uri.queryParameters['target_cycle_key'],
-                          fullScreenChild:
-                              state.uri.path == '/recruitments/create' ||
-                              state.uri.queryParameters.containsKey(
-                                'reader_profile',
-                              ) ||
-                              state.uri.queryParameters.containsKey(
-                                'membership_id',
-                              ),
-                          detail: state.uri.path == '/recruitments'
-                              ? null
-                              : child,
-                          onClearSelection: () => context.go('/recruitments'),
-                          groupChanges: _groupChanges,
-                          gateway: cycleInteractions,
-                          session: readSession,
-                          changes: _memberAccount?.model ?? auth,
-                          scopeKey: cycleScopeKey,
-                          mutations: participation,
-                          onRoom: (id, t) => context.go(
-                            '/recruitments/$id?target_cycle_key=$t',
+                  builder: (context, state, child) => AccountSessionView(
+                    session: readSession,
+                    memberBuilder: (context) => CycleRecruitmentListPage(
+                      key: const ValueKey('recruitmentExplorer'),
+                      selectedRoom: state.pathParameters['recruitmentId'],
+                      selectedTarget:
+                          state.uri.queryParameters['target_cycle_key'],
+                      fullScreenChild:
+                          state.uri.path == '/recruitments/create' ||
+                          state.uri.queryParameters.containsKey(
+                            'reader_profile',
+                          ) ||
+                          state.uri.queryParameters.containsKey(
+                            'membership_id',
                           ),
-                          onCreate: (t) => context.push(
-                            '/recruitments/create${t == null ? '' : '?target_cycle_key=$t'}',
+                      detail: state.uri.path == '/recruitments' ? null : child,
+                      onClearSelection: () => context.go('/recruitments'),
+                      groupChanges: _groupChanges,
+                      gateway: cycleInteractions,
+                      session: readSession,
+                      changes: _memberAccount?.model ?? auth,
+                      scopeKey: cycleScopeKey,
+                      mutations: participation,
+                      onRoom: (id, t) =>
+                          context.go('/recruitments/$id?target_cycle_key=$t'),
+                      onCreate: (t) => context.push(
+                        '/recruitments/create${t == null ? '' : '?target_cycle_key=$t'}',
+                      ),
+                      onLogin: () => showLoginRequired(context, auth),
+                    ),
+                    localBuilder: (context) => state.uri.path != '/recruitments'
+                        ? child
+                        : RecruitmentListPage(
+                            partyReadRepository:
+                                PendingBackendPartyReadRepository(),
+                            backendConnectionPending: true,
+                            cycleKey: _cycle!.current.key,
+                            currentPlayerId: '',
+                            accountDatabase: _database,
+                            raidCatalogRepository: raidCatalog,
                           ),
-                          onLogin: () => showLoginRequired(context, auth),
-                        )
-                      : state.uri.path != '/recruitments'
-                      ? child
-                      : RecruitmentListPage(
-                          partyReadRepository:
-                              PendingBackendPartyReadRepository(),
-                          backendConnectionPending: true,
-                          cycleKey: _cycle!.current.key,
-                          currentPlayerId: '',
-                          accountDatabase: _database,
-                          raidCatalogRepository: raidCatalog,
-                        ),
+                  ),
                   routes: [
                     GoRoute(
                       path: '/recruitments',
@@ -1096,7 +1122,12 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                                 }
                               },
                               roomId: state.pathParameters['recruitmentId']!,
-                              onExitExplorer: memberReader
+                              onExitExplorer:
+                                  recruitmentReturnLocation(state.uri) != null
+                                  ? () => context.go(
+                                      recruitmentReturnLocation(state.uri)!,
+                                    )
+                                  : memberReader
                                   ? null
                                   : () => context.go('/recruitments'),
                               onLogin: () => showLoginRequired(context, auth),
@@ -1252,6 +1283,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       StartupTiming.active?.finish(StartupResult.interrupted);
     }
     if (state == AppLifecycleState.resumed) {
+      _memberAccount?.schedule.invalidate();
       unawaited(_memberKey?.reload());
       unawaited(_ownership?.resume());
       unawaited(_memberAccount?.weekly?.refresh());

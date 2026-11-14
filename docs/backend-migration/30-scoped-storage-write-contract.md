@@ -6,12 +6,19 @@
 
 
 <a id="my-account-remake-preparation"></a>
-## 내 계정 리메이크 준비 설계 (2026-11-13, 제품 확정·구현 미적용)
+## 내 계정 리메이크 계약·구현 기준 (2026-11-15)
 
-이 절은 아래 기존 표시수/숨김 UX를 대체할 **차후 구현 기준**이다. 현재 코드는 아직 기존 동작이며 이번 승인 범위는 조사·문서 보관/push·Backend 협의까지다. 제품 원본은 [DETAIL_IMPROVEMENTS](../product/DETAIL_IMPROVEMENTS.md#my-account-ui-remake), 시각/치수 확정은 디자인 기준의 다음 Penpot 단계다. 개발 기본은 dev 로컬, 현재 자료/기존 권한을 유지하며 베타 전 초기화나 운영배포를 선행조건으로 만들지 않는다.
+현재 내 계정 리메이크와 개인 주간 시간표를 일반 회원 경로에 연결했다. 아래 준비 단계의 조사표·계약 대조는 당시 근거이며 현재 연결·검증·사용자 인수 상태는 NEXT_WORK를 따른다. 개발 기본은 dev 로컬이며 기존 저장/권한·원pending/ACK를 보존한다. 운영배포·DB 초기화는 별도 지시다.
 
-협의는 [Backend Issue53](https://github.com/heo0328/lostparty-backend/issues/53)에서 진행한다. 고정55923cc07b83e854de3a367dd837234c0289b28a의 [기초 예약 설계](https://github.com/heo0328/lostparty-backend/blob/55923cc07b83e854de3a367dd837234c0289b28a/docs/features/rosters/activity-and-presentation/my-account-reservations-design.md)과 [최종 구체화6854151919](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6854151919)를 합쳐 Native 최종 소비 대조를 완료했다. 독립 GET /v2/me/raid-reservations·personal-reservations-1 계약을 설계 기준으로 수용하며 이전 overlaps response_profile 후보는 대체했다. 최종 보완은 댓글이 공개 근거이고 해당 JSON Schema/합성파일은 Backend 미커밋·미push이므로 원문 파일 검수/게시된 API와 구분한다. 서버 기능/OpenAPI 구현·배포 완료가 아니다.
+예약은 [Issue53 구현 인계](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6856983342)의 Backend `fe5e0824c28f58025af201d6ef66d8289229ae60` 게시 설계·합성200과 최종 수용 계약을 대조해 `GET /v2/me/raid-reservations` / `personal-reservations-1`로 연결했다. 기존 overlaps는 그대로다. Backend 구현/로컬 반영 회신과 Flutter 실회원 연동·사용자 인수는 구분한다.
 
+### 개인 시간표 현재 구현
+
+BackendMemberAccount가 회원별 PersonalScheduleViewModel을 소유하고 MemberAccountPage의 PersonalScheduleSection에 연결한다. 편집은 기존 PlayAvailabilityViewModel과 v1 GET/PUT·원명령을 유지하며 예약 read 상태·달력 선택은 분리한다. 인증된 원정대가 없어도 로그인한 본인 예약은 표시한다.
+
+이번/다음 달력 수00시·게임06시를 분리하고 서버 clock은 기존 cycles로 최초 확보한다. 예약은 limit100 전 페이지 임시 수집·정렬/중복/cursor/revision 검증 뒤 원자 반영한다. stale 재시작/달력 clock 재동기화는 각1회로 조회 전체에서 제한한다. 오류는0건이 아니며 같은 회원/달력 이전 성공값만 시각과 함께 유지한다. Retry-After 동안 조작을 차단하고 이후 다시 활성화한다. 세션 전환/폐기는 늦은 응답을 버린다. 펼침/주차·명시 새로고침, 내 계정 선택/앱 복귀·관련 참가/일정 명령 후 갱신하며 폭 변경/build에서는 요청하지 않는다.
+
+시간표는 AccountPageTypography의 본문16/보조14·시스템 글자 확대를 사용한다. 실제 글자 측정에 따라 시간 셀 최소48 또는 라벨+16·설정 자연폭·요일 라벨폭을 계산한다. 가용폭에 따라 설정/그래프 세로·가로 전환,6/12/18/24시간 창을 선택한다. 최대폭은 설정 자연폭+간격16+24시간 필요폭+외곽32로 가운데 제한하며 좁을 때는 시간축만 스크롤한다. 원본 DateTime·식별자를 유지해 자정 분할/창 자르기를 하고 막대 선택은 중앙 알럿에 레이드/캐릭터/시간을 표시하며 시작일 YY-MM-DD HH:mm ~ HH:mm(종료일/초 생략)로 축약한다. 원시간 정밀도는 DTO/계산에서 보존한다. 이동은 공통 recruitmentFromTab으로 실제cycleKey/roomId·계정복귀를 가진 정식 모집 브랜치 go를 사용한다. 하단 상세 카드는 제거했다. 예약 겹침은 별도 레인·비겹침은 레인 재사용, 짧은 예약도48터치 영역을 확보한다. 가능시간은 유효 초안만 미저장 표시하고 취소/저장 후 원본에 따른다.
 ### 실제 경로와 책임·보존할 흐름
 
 | 영역 | 현재 근거/소유 | 차후 변경/주의 |

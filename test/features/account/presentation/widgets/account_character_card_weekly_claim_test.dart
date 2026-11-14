@@ -7,6 +7,66 @@ import 'package:lost_party/features/account/presentation/models/weekly_raid_stat
 import 'package:lost_party/features/account/presentation/widgets/account_character_card.dart';
 
 void main() {
+  for (final scale in [1.0, 1.5, 2.0]) {
+    testWidgets(
+      'readable member card wraps without shrinking at scale $scale',
+      (tester) async {
+        const name = '아주긴캐릭터이름LongCharacter123';
+        const character = LocalAccountCharacter(
+          id: 1,
+          serverCharacterId: 'character-1',
+          serverName: '루페온',
+          characterName: name,
+          characterLevel: 70,
+          characterClassName: '소서리스',
+          itemLevel: 1760,
+          combatPower: 123456789,
+          isVisible: true,
+          displayOrder: 0,
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: Scaffold(
+                body: SingleChildScrollView(
+                  child: SizedBox(
+                    width: 220,
+                    child: AccountCharacterCard(
+                      character: character,
+                      isRepresentative: true,
+                      readable: true,
+                      memberWeeklyLayout: true,
+                      showWeeklyRaidEditor: true,
+                      combatPowerNote: '마지막으로 확인한 전투력 정보',
+                      weeklyRaids: const [
+                        WeeklyRaidStatusItem(
+                          raidId: 'raid',
+                          difficultyId: 'hard',
+                          label: '지평의 성당',
+                          isCompleted: false,
+                          statusKind: WeeklyRaidStatusKind.active,
+                          participationLabel: '3단 참여중',
+                        ),
+                      ],
+                      onWeeklyRaidChanged: (_, _) {},
+                      onWeeklyRaidInfo: (_) {},
+                      onEditWeeklyRaids: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        final label = tester.widget<Text>(find.text(name));
+        expect(label.style!.fontSize, 18);
+        expect(label.maxLines, isNull);
+        expect(find.text('3단 참여중'), findsOneWidget);
+      },
+    );
+  }
   testWidgets('shows foreign gems as a red account-card error', (tester) async {
     const summary = GemValidationSummary(
       totalCount: 11,

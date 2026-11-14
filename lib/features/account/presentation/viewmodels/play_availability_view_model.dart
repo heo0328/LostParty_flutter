@@ -46,6 +46,9 @@ class PlayAvailabilityViewModel extends ChangeNotifier {
   bool get editable =>
       visible && expanded && value != null && !busy && !hasPending;
   bool get validDraft => _draft.every((r) => r.valid);
+  bool get hasDraftChanges =>
+      expanded &&
+      !listEquals(_draft, value?.intervals ?? const <PlayTimeRow>[]);
   bool get canSave => editable && !needsReview && validDraft && _delayPassed;
   bool get _delayPassed => _retryAt == null || !now().isBefore(_retryAt!);
   bool get canRetry =>

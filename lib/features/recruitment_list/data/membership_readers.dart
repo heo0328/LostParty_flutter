@@ -10,6 +10,33 @@ import 'cycle_member_actions.dart' show actionTime;
 
 const membershipReaderProfile = 'membership-actions-1';
 
+/// Cross-tab destinations use go(), with an explicit, allowlisted return tab.
+/// Pushing a second copy of the recruitment shell shares its Navigator key.
+String recruitmentFromTab(String location, String tab) {
+  roleCheck(tab == 'account' || tab == 'raid-status');
+  final uri = Uri.parse(location);
+  roleCheck(
+    uri.path.startsWith('/recruitments/') &&
+        !uri.hasAuthority &&
+        !uri.hasScheme,
+  );
+  return uri
+      .replace(queryParameters: {...uri.queryParameters, 'return_to': tab})
+      .toString();
+}
+
+String? recruitmentReturnLocation(Uri location) {
+  final tab = location.queryParameters['return_to'];
+  if (tab == 'account') return '/account';
+  if (tab != 'raid-status') return null;
+  return Uri(
+    path: '/raid-status',
+    queryParameters: {
+      'target_cycle_key': ?location.queryParameters['target_cycle_key'],
+    },
+  ).toString();
+}
+
 String membershipDetailLocation(
   String room,
   String? target, {
