@@ -1,3 +1,9 @@
+## 2026-11-15 — 모집 UI 보완 보관·dev/main 동일 시점 통합
+
+최신 코드/시험/문서10파일 전체를55dbf448에커밋하고fix/recruitment-ui-and-schedule에push했다. dev14ba4250에일반병합한7ec492b5de59e01231492b0bfbdc300778bdce4a를push했고병합tree가작업브랜치와같음을확인했다. main68f9431e는dev의조상이므로강제변경없이fast-forward했다. 이통합완료기록까지포함한최종dev/main을동일커밋으로push하며실제최종SHA는Git/원격참조로확인한다. 현재checkout dev·작업브랜치보존/삭제없음.
+
+새흐름·보존한기존흐름·검증·최신모집웹/Android실기기미확인은아래기록과NEXT_WORK를따른다. 문서/통합만수행해기존시험결과를재사용하고diffcheck/내용리뷰를통과했다. API/저장계약변경·추가Backend요청없음. 태그생성·운영웹배포·APK게시·DB초기화·Penpot이관·Issue종료없음.
+
 ## 2026-11-15 — 문서 대조·작업 브랜치 보관 및 dev/main 정렬 지시
 
 사용자가 현재까지 문서 최신화를 점검한 뒤 최신 변경 전체 커밋/push·dev 병합/push·main 동일 시점 정렬/push를 지시했다. NEXT_WORK의 이전 미커밋/main 제외 상태와 계정 상단 안내/ID복사 배치 등 오래된 현재 설명을 교체하고 AI_CONTEXT·모집 설계37·수동 인증 계약의 실제 노출 상태를 대조했다. 과거 상태는 이 로그에 보존한다.
