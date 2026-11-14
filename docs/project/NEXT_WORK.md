@@ -2,7 +2,7 @@
 
 ## 보관·통합
 
-사용자 지시로 feature/responsive-ui-layout의 최신 누적 변경 전체를 커밋·푸시하고 최신 dev에 일반 병합·푸시한다. 이후 main도 dev와 같은 최종 커밋으로 fast-forward·푸시한다. 기준 dev/main은 a07eca63이며 작업 브랜치는 보존한다. 실제 완료 SHA는 DEV_LOG/Git을 따른다. 운영 배포·APK/태그 게시·DB 변경·Penpot 이관은 수행하지 않는다.
+사용자 지시로 최신 누적15파일을576d698e에커밋하고feature/responsive-ui-layout에push했다. 최신dev a07eca63에일반병합한172f5df4도push했으며작업브랜치와파일내용이동일함을확인했다. 완료기록까지포함한최종dev/main은같은커밋으로fast-forward/push한다. 최종SHA는Git/원격참조로확인한다. 현재checkout dev·미커밋없이보관하며작업브랜치는보존한다. 운영배포·APK/태그게시·DB변경·Penpot이관없음.
 
 ## 이번 완료
 
