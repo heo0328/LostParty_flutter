@@ -1,3 +1,4 @@
+import '../../../../app/widgets/bounded_page_body.dart';
 import '../widgets/bounded_card_text.dart';
 import '../widgets/account_auth_actions.dart';
 import '../widgets/account_tools_grid.dart';
@@ -262,118 +263,113 @@ class MemberAccountPage extends StatelessWidget {
             ],
           ),
           body: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, box) {
-                final side =
-                    ((box.maxWidth - AccountResponsiveLayout.pageMaxWidth) / 2)
-                        .clamp(16.0, double.infinity);
-                return ListView(
-                  padding: EdgeInsets.symmetric(horizontal: side, vertical: 16),
-                  children: [
-                    if (automaticRefreshAvailable)
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: AccountResponsiveLayout.refreshMaxWidth,
-                          ),
-                          child: IntrinsicWidth(child: _progress(context)),
-                        ),
-                      ),
-                    if (model.failure != null)
-                      Text(
-                        memberAccountFailure(model.failure),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    if (model.restoreRetrySeconds > 0)
-                      Text('${model.restoreRetrySeconds}초 후 다시 시도해 주세요.'),
-                    if (model.sections.isEmpty &&
-                        !model.loading &&
-                        model.failure == null)
-                      const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('등록한 원정대가 없습니다.'),
-                      ),
-                    if (availability != null && schedule != null)
-                      PersonalScheduleSection(
-                        schedule: schedule!,
-                        editor: availability!,
-                      )
-                    else if (availability != null)
-                      PlayAvailabilityCard(model: availability!),
-                    if (!model.sections.any((s) => s.registration.isMain))
-                      _characterWeekControls(context),
-                    for (final section in model.sections.where(
-                      (s) => s.registration.isMain,
-                    ))
-                      _section(context, section),
-                    for (final section in model.sections.where(
-                      (s) => !s.registration.isMain,
-                    ))
-                      _section(context, section),
-                    const SizedBox(height: 16),
+            child: BoundedPageBody(
+              // The existing 1600 limit excludes the list's 16px side padding.
+              viewportMaxWidth: AccountResponsiveLayout.pageMaxWidth + 32,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (automaticRefreshAvailable)
                     Align(
-                      alignment: Alignment.center,
+                      alignment: Alignment.topLeft,
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth:
-                              AccountToolsGrid.preferredWidth(context) + 32,
+                        constraints: const BoxConstraints(
+                          maxWidth: AccountResponsiveLayout.refreshMaxWidth,
                         ),
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  '계정 도구',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 12),
-                                FilledButton.icon(
-                                  onPressed: onManage,
-                                  style: FilledButton.styleFrom(
-                                    alignment: Alignment.center,
-                                    minimumSize: const Size.fromHeight(48),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
+                        child: IntrinsicWidth(child: _progress(context)),
+                      ),
+                    ),
+                  if (model.failure != null)
+                    Text(
+                      memberAccountFailure(model.failure),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  if (model.restoreRetrySeconds > 0)
+                    Text('${model.restoreRetrySeconds}초 후 다시 시도해 주세요.'),
+                  if (model.sections.isEmpty &&
+                      !model.loading &&
+                      model.failure == null)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('등록한 원정대가 없습니다.'),
+                    ),
+                  if (availability != null && schedule != null)
+                    PersonalScheduleSection(
+                      schedule: schedule!,
+                      editor: availability!,
+                    )
+                  else if (availability != null)
+                    PlayAvailabilityCard(model: availability!),
+                  if (!model.sections.any((s) => s.registration.isMain))
+                    _characterWeekControls(context),
+                  for (final section in model.sections.where(
+                    (s) => s.registration.isMain,
+                  ))
+                    _section(context, section),
+                  for (final section in model.sections.where(
+                    (s) => !s.registration.isMain,
+                  ))
+                    _section(context, section),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: AccountToolsGrid.preferredWidth(context) + 32,
+                      ),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                '계정 도구',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 12),
+                              FilledButton.icon(
+                                onPressed: onManage,
+                                style: FilledButton.styleFrom(
+                                  alignment: Alignment.center,
+                                  minimumSize: const Size.fromHeight(48),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
                                   ),
-                                  icon: const Icon(
-                                    Icons.manage_accounts_outlined,
-                                    size: 24,
-                                  ),
-                                  label: const Text('원정대 등록·관리'),
                                 ),
-                                const SizedBox(height: 20),
-                                AccountToolsGrid(
-                                  onVerify: onVerify,
-                                  onKey: onKey,
-                                  onHistory: onHistory,
-                                  onRefresh: model.canRefresh
-                                      ? model.refresh
-                                      : null,
+                                icon: const Icon(
+                                  Icons.manage_accounts_outlined,
+                                  size: 24,
                                 ),
-                                const Divider(),
-                                MemberSettingsControls(
-                                  model: settings,
-                                  classes: '나이스단으로 분류한',
-                                  automaticRefreshAvailable:
-                                      automaticRefreshAvailable,
-                                ),
-                              ],
-                            ),
+                                label: const Text('원정대 등록·관리'),
+                              ),
+                              const SizedBox(height: 20),
+                              AccountToolsGrid(
+                                onVerify: onVerify,
+                                onKey: onKey,
+                                onHistory: onHistory,
+                                onRefresh: model.canRefresh
+                                    ? model.refresh
+                                    : null,
+                              ),
+                              const Divider(),
+                              MemberSettingsControls(
+                                model: settings,
+                                classes: '나이스단으로 분류한',
+                                automaticRefreshAvailable:
+                                    automaticRefreshAvailable,
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  ],
-                );
-              },
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -384,7 +380,7 @@ class MemberAccountPage extends StatelessWidget {
     final r = model.runner, cooldown = r.source.cooldown;
     if (model.automaticRefreshResultHidden) {
       return Align(
-        alignment: Alignment.centerRight,
+        alignment: Alignment.centerLeft,
         child: OutlinedButton.icon(
           key: const ValueKey('show-automatic-refresh-result'),
           onPressed: model.showAutomaticRefreshResult,
@@ -499,7 +495,7 @@ class MemberAccountPage extends StatelessWidget {
   Widget _section(BuildContext context, MemberAccountSection section) =>
       LayoutBuilder(
         builder: (context, box) => Align(
-          alignment: Alignment.topCenter,
+          alignment: Alignment.topLeft,
           child: SizedBox(
             width: AccountResponsiveLayout.rosterWidth(
               box.maxWidth,

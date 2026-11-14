@@ -386,6 +386,9 @@ class MemberAccountViewModel extends ChangeNotifier {
   void _runnerChanged() {
     final busy = runner.isBusy;
     if (busy) _automaticRefreshResultHidden = false;
+    if (_wasRunnerBusy && runner.phase == ScopedRefreshPhase.completed) {
+      _automaticRefreshResultHidden = true;
+    }
     if (!busy && _wasRunnerBusy && runner.consumed && signedIn) {
       if (_flight != null) {
         _refreshAfter = true;

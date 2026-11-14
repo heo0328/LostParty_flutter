@@ -1,9 +1,10 @@
+import '../../../../app/widgets/bounded_page_body.dart';
 import 'dart:math' as math;
 
 /// Shared account layout rules. These depend on available space, not device type.
 abstract final class AccountResponsiveLayout {
   static const cardGap = 12.0;
-  static const pageMaxWidth = 1600.0;
+  static const pageMaxWidth = BoundedPageBody.maxWidth;
   static const refreshMaxWidth = 640.0;
 
   static double rosterWidth(

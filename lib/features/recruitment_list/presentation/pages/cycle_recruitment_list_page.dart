@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../../app/widgets/bounded_page_body.dart';
 import 'dart:math' as math;
 import '../../data/discovery_search.dart';
 import '../../data/beta/beta_read.dart';
@@ -514,7 +515,8 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
         1.0,
         MediaQuery.textScalerOf(context).scale(14) / 14,
       );
-      final width = math.min(box.maxWidth, 1600.0);
+      const viewportMaxWidth = BoundedPageBody.maxWidth + 32;
+      final width = math.min(box.maxWidth, viewportMaxWidth);
       final wide = width >= 600 * scale && !widget.fullScreenChild;
       final tripleWidth = width >= 1100 * scale && !widget.fullScreenChild;
       final inner = width - 32;
@@ -542,31 +544,33 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
         ),
         floatingActionButton: !wide && widget.detail != null
             ? null
-            : ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: math.max(0, box.maxWidth - 32),
-                ),
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 56),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+            : Padding(
+                padding: EdgeInsets.only(right: (box.maxWidth - width) / 2),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: math.max(0, width - 32),
                   ),
-                  onPressed: () => widget.onCreate(m.target),
-                  icon: const Icon(Icons.add),
-                  label: const Text('모집 만들기'),
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 56),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      textStyle: Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    onPressed: () => widget.onCreate(m.target),
+                    icon: const Icon(Icons.add),
+                    label: const Text('모집 만들기'),
+                  ),
                 ),
               ),
-        body: Center(
+        body: BoundedPageBody(
+          viewportMaxWidth: viewportMaxWidth,
           child: SizedBox(
             width: width,
             child: Column(
