@@ -2092,6 +2092,55 @@ void main() {
   );
 
   testWidgets(
+    'account content stays centered at monitor widths without reloading',
+    (tester) async {
+      await tester.runAsync(run);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final requests = apiCalls.length;
+      for (final width in [320.0, 720.0, 1440.0, 1920.0, 2560.0]) {
+        for (final scale in [1.0, 2.0]) {
+          tester.view.physicalSize = Size(width, 1400);
+          await tester.pumpWidget(
+            MaterialApp(
+              home: MediaQuery(
+                data: MediaQueryData(
+                  size: Size(width, 1400),
+                  textScaler: TextScaler.linear(scale),
+                ),
+                child: MemberAccountPage(
+                  model: model,
+                  settings: settingsModel,
+                  onSettings: () {},
+                  onKey: () {},
+                  onVerify: () {},
+                  onManage: () {},
+                  onHistory: () {},
+                  onServerStatus: (_) {},
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+          final card = find
+              .ancestor(
+                of: find.byType(AccountCharacterCard).first,
+                matching: find.byType(Card),
+              )
+              .last;
+          final rect = tester.getRect(card);
+          expect(rect.width, lessThanOrEqualTo(1600));
+          expect(rect.center.dx, closeTo(width / 2, 1));
+        }
+      }
+      expect(apiCalls.length, requests);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
     'focused character preferences cancel keeps the route and saved settings intact',
     (tester) async {
       await tester.runAsync(run);
