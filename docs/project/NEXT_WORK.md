@@ -4,7 +4,7 @@
 
 순서: 버전/승인문구고정커밋·push→게시없는서명APK/웹Actions준비→고정run/source/artifactID/hash/만료·웹manifest검증/인계→Backend운영반영/웹자산확인→main/dev릴리즈시점반영·v2.3.0태그/Android공개→공개파일/본문검증·결과기록. 실패후반복배포는하지않으며원인과상태를확인한다. 기존코드검증은재사용하고버전/패키징/서명·실파일경계를검증한다. 사용자기기/브라우저조작은대행하지않는다.
 
-공동채널: https://github.com/heo0328/lostparty-backend/issues/54 . Backend담당최종source/image/계약/DBrevision·이미운영반영된범위/잔여·백업/자료보존/복귀·공개준비회신을요청했다. artifact인계전미확정웹파일은배포하지않는다. 아직준비중/실제게시없음이며개별단계완료와운영인수를구분한다.
+공동채널: https://github.com/heo0328/lostparty-backend/issues/54 . Backend담당최종source/image/계약/DBrevision·이미운영반영된범위/잔여·백업/자료보존/복귀·공개준비회신을요청했다. artifact인계전미확정웹파일은배포하지않는다. 준비완료: 고정소스027f8215의APK43653096756/웹43653104251성공, 실제다운로드APK서명/정식패키지/2.3.0+8/체크섬·웹전체자산manifest검증통과. 원장은docs/releases/v2.3.0-artifacts.json이다. Backend54 운영준비/반영범위회신대기이며아직운영게시·태그생성없음. 웹고정파일인계6885913490을완료했다. 후속은같은Issue회신확인→공동반영/게시이며필요시기존태그파이프라인의재빌드공개APK와준비APK를구분해검증한다. artifact만료전후반드시재확인하고묵시대체/재배포하지않는다.
 
 ## 이전 완료 — 반응형 UI 공통 폭·정렬 개선 통합 (2026-11-15)
 

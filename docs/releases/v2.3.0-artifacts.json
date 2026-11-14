@@ -1,0 +1,50 @@
+{
+    "version":  "2.3.0+8",
+    "source_commit":  "027f8215cfcf65caa93d9db7aea5a33a38d5b83a",
+    "status":  "prepared_verified_awaiting_backend",
+    "notes_sha256":  "6c0b0fd643753e586f4be22d963a3115b4a67dde0a6e8c3a9849b1d47b33ad02",
+    "collaboration_issue":  "https://github.com/heo0328/lostparty-backend/issues/54",
+    "android":  {
+                    "run_id":  43653096756,
+                    "artifact_id":  14137081624,
+                    "artifact_name":  "android-apk-2.3.0-8",
+                    "expires_at":  "2026-11-21T23:30:49Z",
+                    "package":  "kr.co.heowork0921.lostparty",
+                    "version_code":  8,
+                    "certificate_sha256":  "8ef16c58cbb605e2c74c99c4d8e9f252b00c3dd90837594d5e5ca40f0caed030"
+                },
+    "web":  {
+                "run_id":  43653104251,
+                "artifact_id":  14137081307,
+                "artifact_name":  "lostparty-web-2.3.0-8-027f8215cfcf",
+                "expires_at":  "2026-11-28T23:28:04Z",
+                "handoff_comment":  "https://github.com/heo0328/lostparty-backend/issues/54#issuecomment-6885913490"
+            },
+    "files":  [
+                  {
+                      "name":  "lostparty-2.3.0-8-android.apk",
+                      "bytes":  91767294,
+                      "sha256":  "59c80991e005768cd8cd3cd82a64993ca7f282a44965a55e42ae90af8db0a384"
+                  },
+                  {
+                      "name":  "lostparty-2.3.0-8-android.apk.sha256",
+                      "bytes":  96,
+                      "sha256":  "b0ff1265d76fb6859fd39ed7354bef6fb982a8c4f1e6a4e7cdc2c6e6937220f1"
+                  },
+                  {
+                      "name":  "lostparty-v2.3.0-web.zip",
+                      "bytes":  14344329,
+                      "sha256":  "e52a68806d72e14f5da80e2c16d088126d292f1619526827ea49b5c23cb14c24"
+                  },
+                  {
+                      "name":  "lostparty-v2.3.0-web.zip.sha256",
+                      "bytes":  91,
+                      "sha256":  "5ae5321eb5c9eb129c8999a41e7d75c6e9ccb5aabd1e94dd28f10130ea8d8c3c"
+                  },
+                  {
+                      "name":  "release-manifest.json",
+                      "bytes":  6033,
+                      "sha256":  "4025ef0210845e332e8e16d53582567a43fa6ec3d180357ed37cb3bdab00177d"
+                  }
+              ]
+}
