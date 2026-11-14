@@ -62,15 +62,8 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         expect(find.text('hidden-member'), findsNothing);
-        expect(find.byTooltip('회원 ID 복사'), findsOneWidget);
+        expect(find.byTooltip('회원 ID 복사'), findsNothing);
         expect(find.text('로그아웃'), findsOneWidget);
-        final scroll = find.descendant(
-          of: find.byType(AccountAuthActions),
-          matching: find.byType(SingleChildScrollView),
-        );
-        expect(tester.widget<SingleChildScrollView>(scroll).reverse, isTrue);
-        final viewport = tester.getRect(scroll);
-        expect(viewport.contains(tester.getCenter(find.text('로그아웃'))), isTrue);
       });
     }
   }

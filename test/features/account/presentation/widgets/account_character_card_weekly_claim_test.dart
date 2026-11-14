@@ -9,7 +9,7 @@ import 'package:lost_party/features/account/presentation/widgets/account_charact
 void main() {
   for (final scale in [1.0, 1.5, 2.0]) {
     testWidgets(
-      'readable member card wraps without shrinking at scale $scale',
+      'readable member card shrinks within bounded size at scale $scale',
       (tester) async {
         const name = '아주긴캐릭터이름LongCharacter123';
         const character = LocalAccountCharacter(
@@ -61,8 +61,8 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         final label = tester.widget<Text>(find.text(name));
-        expect(label.style!.fontSize, 18);
-        expect(label.maxLines, isNull);
+        expect(label.style!.fontSize, inInclusiveRange(18 * .7, 18));
+        expect(label.maxLines, 1);
         expect(find.text('3단 참여중'), findsOneWidget);
       },
     );

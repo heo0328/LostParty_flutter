@@ -7,6 +7,7 @@ import '../../domain/entities/character_build_analysis.dart';
 import '../../domain/entities/weekly_raid_status_projection.dart';
 import '../models/weekly_raid_status_item.dart';
 import 'character_name_label.dart';
+import 'bounded_card_text.dart';
 
 class AccountCharacterCard extends StatelessWidget {
   const AccountCharacterCard({
@@ -18,6 +19,7 @@ class AccountCharacterCard extends StatelessWidget {
     this.representativeCombatPower,
     this.overrideRepresentativeCombatPower = false,
     this.combatPowerNote,
+    this.roleLabel,
     this.gemValidationSummary,
     this.showWeeklyRaidEditor = false,
     this.weeklyRaidHiddenByPreference = false,
@@ -41,7 +43,7 @@ class AccountCharacterCard extends StatelessWidget {
   final List<WeeklyRaidStatusItem> weeklyRaids;
   final double? representativeCombatPower;
   final bool overrideRepresentativeCombatPower;
-  final String? combatPowerNote;
+  final String? combatPowerNote, roleLabel;
   final GemValidationSummary? gemValidationSummary;
   final bool showWeeklyRaidEditor;
   final bool weeklyRaidHiddenByPreference;
@@ -82,7 +84,7 @@ class AccountCharacterCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: readable
-                        ? Text(
+                        ? BoundedCardText(
                             character.characterName,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontSize: 18,
@@ -105,31 +107,37 @@ class AccountCharacterCard extends StatelessWidget {
                     ),
                 ],
               ),
-              Text(
-                character.characterClassName,
-                maxLines: readable ? null : 1,
-                overflow: readable
-                    ? TextOverflow.visible
-                    : TextOverflow.ellipsis,
-                style: readable
-                    ? theme.textTheme.bodyMedium?.copyWith(fontSize: 14)
-                    : theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '아이템 Lv. ${_formatNumber(character.itemLevel)}',
-                maxLines: readable ? null : 1,
-                overflow: readable
-                    ? TextOverflow.visible
-                    : TextOverflow.ellipsis,
-                style: readable
-                    ? theme.textTheme.bodyMedium?.copyWith(fontSize: 16)
-                    : theme.textTheme.bodySmall,
-              ),
-              if (!basicOnly)
+              if (readable) ...[
+                BoundedCardText(
+                  '${character.characterClassName}${roleLabel == null ? '' : ' · $roleLabel'}',
+                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
+                ),
+                const SizedBox(height: 6),
+                BoundedCardText(
+                  'Lv. ${_formatNumber(character.itemLevel)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
+                  preserveValue: true,
+                ),
+                if (!basicOnly)
+                  BoundedCardText(
+                    '전투력 ${_formatNumber(overrideRepresentativeCombatPower ? representativeCombatPower : character.combatPower)}${combatPowerNote == null ? '' : ' · $combatPowerNote'}',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
+                    preserveValue: true,
+                  ),
+              ] else ...[
                 Text(
-                  '전투력 ${_formatNumber(overrideRepresentativeCombatPower ? representativeCombatPower : character.combatPower)}'
-                  '${combatPowerNote == null ? '' : ' · $combatPowerNote'}',
+                  character.characterClassName,
+                  maxLines: readable ? null : 1,
+                  overflow: readable
+                      ? TextOverflow.visible
+                      : TextOverflow.ellipsis,
+                  style: readable
+                      ? theme.textTheme.bodyMedium?.copyWith(fontSize: 14)
+                      : theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '아이템 Lv. ${_formatNumber(character.itemLevel)}',
                   maxLines: readable ? null : 1,
                   overflow: readable
                       ? TextOverflow.visible
@@ -138,6 +146,19 @@ class AccountCharacterCard extends StatelessWidget {
                       ? theme.textTheme.bodyMedium?.copyWith(fontSize: 16)
                       : theme.textTheme.bodySmall,
                 ),
+                if (!basicOnly)
+                  Text(
+                    '전투력 ${_formatNumber(overrideRepresentativeCombatPower ? representativeCombatPower : character.combatPower)}'
+                    '${combatPowerNote == null ? '' : ' · $combatPowerNote'}',
+                    maxLines: readable ? null : 1,
+                    overflow: readable
+                        ? TextOverflow.visible
+                        : TextOverflow.ellipsis,
+                    style: readable
+                        ? theme.textTheme.bodyMedium?.copyWith(fontSize: 16)
+                        : theme.textTheme.bodySmall,
+                  ),
+              ],
               if (!basicOnly)
                 if (_gemValidationItems case final items
                     when items.isNotEmpty) ...[
@@ -320,46 +341,62 @@ class AccountCharacterCard extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox(
-          width: 44,
-          height: 44,
-          child: Checkbox(
-            key: ValueKey(
-              'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
-            ),
-            value: raid.isCompleted,
-            onChanged: allowed
-                ? (v) => onWeeklyRaidChanged!(raid, v ?? false)
-                : null,
-          ),
-        ),
         Expanded(
-          child: InkWell(
-            onTap: allowed
-                ? () => onWeeklyRaidChanged!(raid, !raid.isCompleted)
-                : null,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Semantics(
+            checked: raid.isCompleted,
+            enabled: allowed,
+            child: InkWell(
+              onTap: allowed
+                  ? () => onWeeklyRaidChanged!(raid, !raid.isCompleted)
+                  : null,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Row(
                   children: [
-                    Text(
-                      raid.label,
-                      style: readable
-                          ? theme.textTheme.bodyLarge?.copyWith(fontSize: 16)
-                          : theme.textTheme.bodyMedium,
-                    ),
-                    if (raid.participationLabel case final label?)
-                      Text(
-                        label,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: readable ? 14 : null,
-                          color: theme.colorScheme.primary,
+                    SizedBox(
+                      width: 28,
+                      height: 44,
+                      child: ExcludeSemantics(
+                        child: IgnorePointer(
+                          child: Checkbox(
+                            key: ValueKey(
+                              'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+                            ),
+                            value: raid.isCompleted,
+                            onChanged: allowed
+                                ? (v) => onWeeklyRaidChanged!(raid, v ?? false)
+                                : null,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                          ),
                         ),
                       ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          BoundedCardText(
+                            raid.label,
+                            style: readable
+                                ? theme.textTheme.bodyLarge?.copyWith(
+                                    fontSize: 16,
+                                  )
+                                : theme.textTheme.bodyMedium,
+                          ),
+                          if (raid.participationLabel case final label?)
+                            BoundedCardText(
+                              label,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: readable ? 14 : null,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

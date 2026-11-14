@@ -1,3 +1,4 @@
+import '../widgets/bounded_card_text.dart';
 import '../widgets/account_auth_actions.dart';
 import '../widgets/account_tools_grid.dart';
 import '../widgets/account_responsive_layout.dart';
@@ -102,7 +103,7 @@ Future<bool> _confirmServer(
         '이 기기의 미완료 변경 대신 현재 서버 정보를 사용합니다. 처리 중이던 요청은 나중에 반영될 수 있습니다.',
       ),
       actions: [
-        TextButton(
+        OutlinedButton(
           onPressed: () => Navigator.pop(ctx, false),
           child: const Text('취소'),
         ),
@@ -145,7 +146,7 @@ Widget memberPendingSettings(
             ? '서버 저장 대기 · 약 $seconds초 후 재시도'
             : '서버 저장 대기${review ? ' · 변경 확인 필요' : ''}',
       ),
-      TextButton(
+      OutlinedButton(
         onPressed:
             model.canEdit &&
                 seconds == 0 &&
@@ -261,108 +262,118 @@ class MemberAccountPage extends StatelessWidget {
             ],
           ),
           body: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (automaticRefreshAvailable) _progress(context),
-                if (weekly?.cycles case final meta?)
-                  MemberCycleSelector(
-                    cycles: meta,
-                    value: weekly!.selectedCycleKey!,
-                    enabled: !weekly!.busy && !weekly!.hasPending,
-                    onChanged: weekly!.selectCycle,
-                  ),
-                if (participationRecoveryBuilder != null)
-                  participationRecoveryBuilder!(context),
-                if (weekly != null) _weeklyStatus(context, weekly!),
-                if (model.failure != null)
-                  Text(
-                    memberAccountFailure(model.failure),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                if (model.restoreRetrySeconds > 0)
-                  Text('${model.restoreRetrySeconds}초 후 다시 시도해 주세요.'),
-                if (model.sections.isEmpty &&
-                    !model.loading &&
-                    model.failure == null)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('등록한 원정대가 없습니다.'),
-                  ),
-                if (availability != null && schedule != null)
-                  PersonalScheduleSection(
-                    schedule: schedule!,
-                    editor: availability!,
-                  )
-                else if (availability != null)
-                  PlayAvailabilityCard(model: availability!),
-                for (final section in model.sections.where(
-                  (s) => s.registration.isMain,
-                ))
-                  _section(context, section),
-                for (final section in model.sections.where(
-                  (s) => !s.registration.isMain,
-                ))
-                  _section(context, section),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.center,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: AccountToolsGrid.preferredWidth(context) + 32,
-                    ),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              '계정 도구',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton.icon(
-                              onPressed: onManage,
-                              style: FilledButton.styleFrom(
-                                alignment: Alignment.center,
-                                minimumSize: const Size.fromHeight(48),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final side =
+                    ((box.maxWidth - AccountResponsiveLayout.pageMaxWidth) / 2)
+                        .clamp(16.0, double.infinity);
+                return ListView(
+                  padding: EdgeInsets.symmetric(horizontal: side, vertical: 16),
+                  children: [
+                    if (automaticRefreshAvailable)
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: AccountResponsiveLayout.refreshMaxWidth,
+                          ),
+                          child: IntrinsicWidth(child: _progress(context)),
+                        ),
+                      ),
+                    if (model.failure != null)
+                      Text(
+                        memberAccountFailure(model.failure),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    if (model.restoreRetrySeconds > 0)
+                      Text('${model.restoreRetrySeconds}초 후 다시 시도해 주세요.'),
+                    if (model.sections.isEmpty &&
+                        !model.loading &&
+                        model.failure == null)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text('등록한 원정대가 없습니다.'),
+                      ),
+                    if (availability != null && schedule != null)
+                      PersonalScheduleSection(
+                        schedule: schedule!,
+                        editor: availability!,
+                      )
+                    else if (availability != null)
+                      PlayAvailabilityCard(model: availability!),
+                    if (!model.sections.any((s) => s.registration.isMain))
+                      _characterWeekControls(context),
+                    for (final section in model.sections.where(
+                      (s) => s.registration.isMain,
+                    ))
+                      _section(context, section),
+                    for (final section in model.sections.where(
+                      (s) => !s.registration.isMain,
+                    ))
+                      _section(context, section),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.center,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth:
+                              AccountToolsGrid.preferredWidth(context) + 32,
+                        ),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  '계정 도구',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
                                 ),
-                              ),
-                              icon: const Icon(
-                                Icons.manage_accounts_outlined,
-                                size: 24,
-                              ),
-                              label: const Text('원정대 등록·관리'),
+                                const SizedBox(height: 12),
+                                FilledButton.icon(
+                                  onPressed: onManage,
+                                  style: FilledButton.styleFrom(
+                                    alignment: Alignment.center,
+                                    minimumSize: const Size.fromHeight(48),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.manage_accounts_outlined,
+                                    size: 24,
+                                  ),
+                                  label: const Text('원정대 등록·관리'),
+                                ),
+                                const SizedBox(height: 20),
+                                AccountToolsGrid(
+                                  onVerify: onVerify,
+                                  onKey: onKey,
+                                  onHistory: onHistory,
+                                  onRefresh: model.canRefresh
+                                      ? model.refresh
+                                      : null,
+                                ),
+                                const Divider(),
+                                MemberSettingsControls(
+                                  model: settings,
+                                  classes: '나이스단으로 분류한',
+                                  automaticRefreshAvailable:
+                                      automaticRefreshAvailable,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 20),
-                            AccountToolsGrid(
-                              onVerify: onVerify,
-                              onKey: onKey,
-                              onHistory: onHistory,
-                              onRefresh: model.canRefresh
-                                  ? model.refresh
-                                  : null,
-                            ),
-                            const Divider(),
-                            MemberSettingsControls(
-                              model: settings,
-                              classes: '나이스단으로 분류한',
-                              automaticRefreshAvailable:
-                                  automaticRefreshAvailable,
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         );
@@ -374,7 +385,7 @@ class MemberAccountPage extends StatelessWidget {
     if (model.automaticRefreshResultHidden) {
       return Align(
         alignment: Alignment.centerRight,
-        child: TextButton.icon(
+        child: OutlinedButton.icon(
           key: const ValueKey('show-automatic-refresh-result'),
           onPressed: model.showAutomaticRefreshResult,
           icon: const Icon(Icons.history, size: 18),
@@ -440,7 +451,7 @@ class MemberAccountPage extends StatelessWidget {
               spacing: 8,
               children: [
                 if (!r.consumed)
-                  TextButton(
+                  OutlinedButton(
                     onPressed: r.isBusy || cooldown.active
                         ? null
                         : () async {
@@ -451,12 +462,12 @@ class MemberAccountPage extends StatelessWidget {
                     child: const Text('준비 상태 다시 확인'),
                   ),
                 if (r.incompleteCount > 0)
-                  TextButton(
+                  OutlinedButton(
                     onPressed: r.canRetry ? r.retryIncomplete : null,
                     child: const Text('미완료 캐릭터 다시 시도'),
                   ),
                 if (r.pendingServerCount > 0)
-                  TextButton(
+                  OutlinedButton(
                     onPressed: r.canRetryServer ? r.retryServerSaved : null,
                     child: const Text('서버 저장만 다시 시도'),
                   ),
@@ -485,7 +496,48 @@ class MemberAccountPage extends StatelessWidget {
         1,
   );
 
-  Widget _section(BuildContext context, MemberAccountSection section) {
+  Widget _section(BuildContext context, MemberAccountSection section) =>
+      LayoutBuilder(
+        builder: (context, box) => Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: AccountResponsiveLayout.rosterWidth(
+              box.maxWidth,
+              section.presentVisible.length,
+              textScale: MediaQuery.textScalerOf(context).scale(14) / 14,
+            ),
+            child: _sectionCard(context, section),
+          ),
+        ),
+      );
+
+  Widget _characterWeekControls(BuildContext context) => Column(
+    key: const ValueKey('member-character-week-controls'),
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      if (weekly != null)
+        Text(
+          '캐릭터 주간 레이드',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      if (weekly?.cycles case final meta?)
+        MemberCycleSelector(
+          contentWidth: true,
+          stretch: true,
+          cycles: meta,
+          value: weekly!.selectedCycleKey!,
+          enabled: !weekly!.busy && !weekly!.hasPending,
+          onChanged: weekly!.selectCycle,
+        ),
+      if (participationRecoveryBuilder != null)
+        participationRecoveryBuilder!(context),
+      if (weekly != null) _weeklyStatus(context, weekly!),
+    ],
+  );
+  Widget _sectionCard(BuildContext context, MemberAccountSection section) {
     final reg = ScopedRegistrationRef(
       model.runtime.scope,
       section.registration.registrationId,
@@ -497,6 +549,11 @@ class MemberAccountPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (section.registration.isMain &&
+                (weekly != null || participationRecoveryBuilder != null)) ...[
+              _characterWeekControls(context),
+              const Divider(height: 24),
+            ],
             RosterAccountHeader(
               label: _label(section),
               showEdit: onEdit != null,
@@ -547,7 +604,7 @@ class MemberAccountPage extends StatelessWidget {
                         ? '대표 변경 결과 확인 필요 · ${model.representativeRetrySeconds(reg.registrationId)}초 후 재시도'
                         : '대표 변경 결과 확인이 필요합니다.',
                   ),
-                  TextButton(
+                  OutlinedButton(
                     onPressed:
                         model.canEdit &&
                             model.representativeRetrySeconds(
@@ -558,7 +615,7 @@ class MemberAccountPage extends StatelessWidget {
                         : null,
                     child: const Text('같은 변경 재시도'),
                   ),
-                  TextButton(
+                  OutlinedButton(
                     onPressed: model.canEdit ? model.refresh : null,
                     child: const Text('대표 캐릭터 다시 조회'),
                   ),
@@ -605,6 +662,7 @@ class MemberAccountPage extends StatelessWidget {
       const spacing = AccountResponsiveLayout.cardGap;
       final layout = AccountResponsiveLayout.cards(
         constraints.maxWidth,
+        itemCount: section.presentVisible.length,
         textScale: MediaQuery.textScalerOf(context).scale(14) / 14,
       );
       final width = layout.cardWidth;
@@ -680,10 +738,8 @@ class MemberAccountPage extends StatelessWidget {
                   : () => _representative(context, reg, row),
             )
           : null,
-      combatPowerNote: preferred == null && summary == null
-          ? null
-          : roleLabel(role),
-      status: Text(
+      roleLabel: preferred == null && summary == null ? null : roleLabel(role),
+      status: BoundedCardText(
         '${summary == null ? '상세 조회 필요' : integrityLabel(summary)}${row.cached ? ' · 이전 확인 정보' : ''}${row.preferences == null ? ' · 표시 설정 확인 필요' : ''}${row.observation.lifecycleState != 'active' ? ' · 기존 캐릭터 확인 필요' : ''}',
         style: Theme.of(context).textTheme.bodySmall,
       ),
@@ -769,7 +825,7 @@ class MemberAccountPage extends StatelessWidget {
         if (!state.loading)
           Wrap(
             children: [
-              TextButton(
+              OutlinedButton(
                 onPressed: state.writing || state.retrySeconds > 0
                     ? null
                     : () => state.refresh(reloadCatalog: true),
@@ -778,12 +834,12 @@ class MemberAccountPage extends StatelessWidget {
               if (state.hasPending &&
                   !state.pendingFailed &&
                   (!state.pendingReview || state.canRetry))
-                TextButton(
+                OutlinedButton(
                   onPressed: state.canRetry ? state.retry : null,
                   child: const Text('재시도'),
                 ),
               if (state.canUseCurrent)
-                TextButton(
+                OutlinedButton(
                   onPressed: state.useCurrent,
                   child: const Text('현재 정보로 화면갱신'),
                 ),
@@ -852,7 +908,7 @@ class MemberAccountPage extends StatelessWidget {
               '$name 캐릭터의 ${raid.label} 완료를 해제할까요?\n대상 주차 · ${correction.target}\n이전 모집방의 참가·자리·예약은 자동 복구되지 않습니다.',
             ),
             actions: [
-              TextButton(
+              OutlinedButton(
                 onPressed: () => Navigator.pop(ctx, false),
                 child: const Text('취소'),
               ),
@@ -884,7 +940,7 @@ class MemberAccountPage extends StatelessWidget {
               : '$name 캐릭터의 ${raid.label} 레이드 완료를 해제할까요?',
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('취소'),
           ),
@@ -947,7 +1003,7 @@ class MemberAccountPage extends StatelessWidget {
                     : '회원 또는 캐릭터 상태가 변경됐습니다. 목록을 다시 확인해 주세요.',
               ),
               actions: [
-                TextButton(
+                OutlinedButton(
                   onPressed: () => Navigator.pop(ctx, false),
                   child: const Text('취소'),
                 ),
@@ -1026,7 +1082,7 @@ Future<void> editMemberPreferences(
           ),
         ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('취소'),
           ),
@@ -1099,7 +1155,7 @@ class MemberCharacterPage extends StatelessWidget {
                 children: [
                   if (row.observation.lifecycleState != 'active')
                     const Text('기존 캐릭터 확인 필요 · 새로운 사용 전에 원정대를 확인해 주세요.'),
-                  TextButton.icon(
+                  OutlinedButton.icon(
                     onPressed: model.canRefreshCharacter(ref)
                         ? () => model.refreshCharacter(registration, ref)
                         : null,
@@ -1156,7 +1212,7 @@ class MemberCharacterPage extends StatelessWidget {
                       ],
                     ),
                   if (row.preferences != null && supportsMultipleRoles)
-                    TextButton(
+                    OutlinedButton(
                       onPressed:
                           model.canEdit &&
                               !model.busy('prefs:${ref.characterId}')
@@ -1229,7 +1285,7 @@ class MemberCharacterPage extends StatelessWidget {
             if (state?.hasPending == true) ...[
               const Text('서버 저장 대기 · 현재 기기에 저장된 결과입니다.'),
               if (waiting) Text('약 $seconds초 후 다시 시도할 수 있습니다.'),
-              TextButton(
+              OutlinedButton(
                 onPressed:
                     model.canEdit &&
                         !waiting &&
