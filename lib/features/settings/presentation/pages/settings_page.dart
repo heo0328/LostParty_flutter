@@ -141,14 +141,6 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => context.push('/settings/game-account-verification'),
           ),
           ListTile(
-            key: const ValueKey('settingsManualVerification'),
-            leading: const Icon(Icons.chat_outlined),
-            title: const Text('수동 인증'),
-            subtitle: const Text('인게임 채팅 코드로 운영자 인증을 요청합니다.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/manual-verification'),
-          ),
-          ListTile(
             key: const ValueKey('settingsApiToken'),
             leading: const Icon(Icons.key_outlined),
             title: const Text('Lost Ark API 토큰'),

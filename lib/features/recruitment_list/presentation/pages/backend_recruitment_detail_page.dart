@@ -305,8 +305,7 @@ class _BackendRecruitmentDetailPageState
       ),
       body: Column(
         children: [
-          if (widget.onExitExplorer == null &&
-              !m.readOnly &&
+          if (!m.readOnly &&
               m.cycles != null &&
               m.target != null &&
               widget.session.isAuthenticated)
@@ -821,7 +820,7 @@ class _BackendRecruitmentDetailPageState
             padding: const EdgeInsets.only(bottom: 12),
             child: CycleOutcomeActions(
               showClosure: false,
-              completeLabel: '주차 완료',
+              completeLabel: '이번주 레이드 완료',
               isCurrent: () =>
                   mounted && m.target == m.cycles?.current.key && !m.loading,
               controller: widget.participation!,
