@@ -65,7 +65,7 @@ class WeeklyRaidDisplayProjector {
         ),
       );
     }
-    if (preference.displayCount == 0) return const [];
+    if (preference.raidIds.isEmpty) return const [];
     final byId = {
       for (final candidate in eligible) candidate.raidId: candidate,
     };

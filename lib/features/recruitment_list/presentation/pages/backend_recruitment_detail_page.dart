@@ -272,9 +272,28 @@ class _BackendRecruitmentDetailPageState
     listenable: m,
     builder: (context, _) => Scaffold(
       appBar: AppBar(
-        leading: widget.onExitExplorer == null
-            ? null
-            : BackButton(onPressed: widget.onExitExplorer),
+        leading: BackButton(
+          onPressed:
+              widget.onExitExplorer ??
+              () {
+                final router = GoRouter.maybeOf(context);
+                if (router?.canPop() == true) {
+                  router!.pop();
+                } else if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  router?.go(
+                    Uri(
+                      path: '/raid-status',
+                      queryParameters: {
+                        if (widget.target != null)
+                          'target_cycle_key': widget.target!,
+                      },
+                    ).toString(),
+                  );
+                }
+              },
+        ),
         title: const OwnershipNoticeTitle(child: Text('모집 상세')),
         actions: [
           IconButton(
@@ -497,6 +516,7 @@ class _BackendRecruitmentDetailPageState
           ),
         RecruitmentSection(
           title: value.title,
+          trailing: _canLead ? _managementButton('common', '모집명 변경') : null,
           children: [
             Wrap(
               spacing: 8,
@@ -560,17 +580,17 @@ class _BackendRecruitmentDetailPageState
         if (_canLead)
           Wrap(
             spacing: 8,
-            children: [
-              _managementButton('settings', '모집 조건 변경'),
-              _managementButton('common', '공통 정보 변경'),
-            ],
+            runSpacing: 8,
+            children: [_managementButton('settings', '모집 조건 변경')],
           ),
 
+        if (_canLead) const SizedBox(height: 8),
         if (_canManage) ...[
           ListenableBuilder(
             listenable: widget.participation!,
             builder: (context, _) => Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 if (m.waitingForApproval && !m.loading)
                   const Padding(

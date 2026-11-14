@@ -15,7 +15,6 @@ class CharacterWeeklyRaidDisplayPreference {
 
   bool get isValid =>
       displayCount >= 0 &&
-      displayCount <= 5 &&
       raidIds.length == displayCount &&
       raidIds.toSet().length == raidIds.length;
 }

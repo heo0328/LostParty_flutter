@@ -22,7 +22,7 @@ const cycleManagementLabels = {
   'settings': '모집 조건 변경',
   'formation': '파티 편성',
   'remove': '참가자 내보내기',
-  'common': '공통 정보 변경',
+  'common': '모집명 변경',
   'leave': '전체 주차 탈퇴',
   'end': '모집 전체 종료',
 };

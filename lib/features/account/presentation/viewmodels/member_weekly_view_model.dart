@@ -409,7 +409,10 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     model.runtime.requireCurrent(member, scope);
   }
 
-  Future<void> _persist(StorageScope scope) {
+  Future<void> _persist(
+    StorageScope scope, {
+    Map<String, CharacterWeeklyRaidDisplayPreference>? display,
+  }) {
     final encoded = jsonEncode({
       'schema': _pending?.tracksTransport == true
           ? 4
@@ -418,7 +421,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
           : 2,
       'pending': _pending?.toJson(),
       'display': {
-        for (final entry in _display.entries)
+        for (final entry in (display ?? _display).entries)
           entry.key: {
             'count': entry.value.displayCount,
             'raids': entry.value.raidIds,
@@ -808,6 +811,28 @@ class MemberWeeklyViewModel extends ChangeNotifier {
       r.settings.version,
       r.ownershipRevision,
       r.rosterRevision,
+      for (final row in section.characters)
+        [row.ref.characterId, selectedDisplayIds(row.ref)],
+      catalog?.catalogVersion,
+      catalog?.raids
+          .map(
+            (r) => [
+              r.raidId,
+              r.isActive,
+              r.difficulties
+                  .map(
+                    (d) => [
+                      d.difficultyId,
+                      d.isActive,
+                      d.requiredItemLevel,
+                      d.clearGold,
+                      d.boundGold,
+                    ],
+                  )
+                  .toList(),
+            ],
+          )
+          .toList(),
       for (final c in section.characters)
         [
           c.ref.characterId,
@@ -820,11 +845,70 @@ class MemberWeeklyViewModel extends ChangeNotifier {
   bool canEditRosterDisplay(String id) =>
       _loaded && !busy && catalog != null && rosterDisplayToken(id) != null;
 
-  Future<void> saveRosterDisplay(String id, int count, String token) async {
+  List<String> selectedDisplayIds(ScopedCharacterRef ref) =>
+      preference(ref.characterId)?.raidIds ??
+      displayed(ref).map((c) => c.raidId).toList();
+
+  Map<String, bool?> rosterDisplaySelection(String id) {
+    final section = model.sections.firstWhere(
+      (s) => s.registration.registrationId == id,
+    );
+    final rows = section.characters
+        .where((c) => c.observation.usable == true)
+        .toList();
+    return {
+      for (final raid in catalog!.raids.where((r) => r.isActive))
+        raid.raidId: rows.isEmpty
+            ? false
+            : rows.every((c) => selectedDisplayIds(c.ref).contains(raid.raidId))
+            ? true
+            : rows.any((c) => selectedDisplayIds(c.ref).contains(raid.raidId))
+            ? null
+            : false,
+    };
+  }
+
+  String displayToken(ScopedCharacterRef ref) => jsonEncode([
+    rosterDisplayToken(
+      model.sections
+          .firstWhere((s) => s.characters.any((c) => c.ref == ref))
+          .registration
+          .registrationId,
+    ),
+    selectedDisplayIds(ref),
+    catalog?.catalogVersion,
+    catalog?.raids
+        .map(
+          (r) => [
+            r.raidId,
+            r.isActive,
+            r.difficulties
+                .map(
+                  (d) => [
+                    d.difficultyId,
+                    d.isActive,
+                    d.requiredItemLevel,
+                    d.clearGold,
+                    d.boundGold,
+                  ],
+                )
+                .toList(),
+          ],
+        )
+        .toList(),
+  ]);
+
+  Future<void> saveRosterDisplay(
+    String id,
+    List<String> raids,
+    String token,
+  ) async {
     if (!canEditRosterDisplay(id) ||
         token != rosterDisplayToken(id) ||
-        count < 0 ||
-        count > WeeklyRaidDisplayProjector.maxDisplayCount) {
+        raids.toSet().length != raids.length ||
+        !raids.every(
+          (id) => catalog!.raids.any((r) => r.isActive && r.raidId == id),
+        )) {
       return;
     }
     final section = model.sections.firstWhere(
@@ -836,24 +920,22 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     final before = Map<String, CharacterWeeklyRaidDisplayPreference>.of(
       _display,
     );
+    final next = Map<String, CharacterWeeklyRaidDisplayPreference>.of(before);
     writing = true;
     _emit();
     try {
       for (final row in section.characters.where(
         (c) => c.observation.usable == true,
       )) {
-        final selected = WeeklyRaidDisplayProjector.selectionForCount(
-          eligible: eligible(row.ref),
-          requestedCount: count,
-        );
-        _display[row.ref.characterId] = CharacterWeeklyRaidDisplayPreference(
+        next[row.ref.characterId] = CharacterWeeklyRaidDisplayPreference(
           characterId: 0,
-          displayCount: selected.length,
-          raidIds: selected.map((r) => r.raidId).toList(),
+          displayCount: raids.length,
+          raidIds: List.unmodifiable(raids),
         );
       }
-      await _persist(scope);
+      await _persist(scope, display: next);
       _guard(epoch, member, scope);
+      _display = next;
       failure = null;
     } catch (_) {
       if (!_disposed && epoch == _epoch) {
@@ -900,15 +982,18 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     final before = Map<String, CharacterWeeklyRaidDisplayPreference>.of(
       _display,
     );
+    final next = Map<String, CharacterWeeklyRaidDisplayPreference>.of(before);
     writing = true;
+    _emit();
     try {
       if (pref == null) {
-        _display.remove(ref.characterId);
+        next.remove(ref.characterId);
       } else {
-        _display[ref.characterId] = pref;
+        next[ref.characterId] = pref;
       }
-      await _persist(scope);
+      await _persist(scope, display: next);
       _guard(epoch, member, scope);
+      _display = next;
       failure = null;
     } catch (e) {
       if (!_disposed && epoch == _epoch) {
@@ -1106,6 +1191,22 @@ class MemberWeeklyViewModel extends ChangeNotifier {
     }
   }
 
+  String? _participationLabel(ScopedCharacterRef ref, String raidId) {
+    final state = entry(ref, raidId);
+    if (state?.participating != true) return null;
+    final participation = state!.wire['participation'];
+    final difficultyId = participation is Map
+        ? participation['difficulty_id']
+        : null;
+    final raid = catalog?.raids.where((r) => r.raidId == raidId).firstOrNull;
+    final difficulty = raid?.difficulties
+        .where((d) => d.difficultyId == difficultyId)
+        .firstOrNull;
+    return difficulty == null
+        ? '참가중'
+        : '${difficulty.displayName} ${difficulty.difficultyId.startsWith('stage') ? '참여중' : '참가중'}';
+  }
+
   List<WeeklyRaidStatusItem> items(
     ScopedCharacterRef ref, {
     bool allowParticipationCompletion = false,
@@ -1116,6 +1217,7 @@ class MemberWeeklyViewModel extends ChangeNotifier {
         raidId: c.raidId,
         difficultyId: c.difficultyId,
         label: c.label,
+        participationLabel: _participationLabel(ref, c.raidId),
         isCompleted: entry(ref, c.raidId)?.completed ?? false,
         statusKind: entry(ref, c.raidId)?.reviewRequired == true
             ? WeeklyRaidStatusKind.inconsistent

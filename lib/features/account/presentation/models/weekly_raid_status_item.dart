@@ -11,6 +11,7 @@ class WeeklyRaidStatusItem {
     this.hasCompletedEvidence = false,
     this.toggleAllowed = true,
     this.statusOverride,
+    this.participationLabel,
   });
 
   final String raidId;
@@ -22,6 +23,7 @@ class WeeklyRaidStatusItem {
   final bool hasCompletedEvidence;
   final bool toggleAllowed;
   final String? statusOverride;
+  final String? participationLabel;
 
   bool get canToggle =>
       toggleAllowed &&

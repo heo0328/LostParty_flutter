@@ -31,7 +31,7 @@ import '../widgets/member_settings_controls.dart';
 import '../widgets/representative_crown.dart';
 import '../widgets/account_character_card.dart';
 import '../../domain/entities/local_game_account.dart';
-import '../../domain/services/weekly_raid_display_projector.dart';
+
 import '../widgets/roster_account_header.dart';
 import '../widgets/server_accounts_panel.dart';
 import '../../domain/policies/account_label_policy.dart';
@@ -683,7 +683,7 @@ class MemberAccountPage extends StatelessWidget {
                 _canRecoverCompletion(row.ref, raidId),
           ) ??
           const [],
-      weeklyColumns: weekly?.twoCycleEnabled == true ? 3 : 1,
+      memberWeeklyLayout: true,
       onWeeklyRaidInfo: (raid) {
         final value = weekly?.entry(row.ref, raid.raidId);
         final target = weekly?.selectedCycleKey;
@@ -706,10 +706,7 @@ class MemberAccountPage extends StatelessWidget {
       busyRaidIds: weekly?.pendingCharacter == row.ref.characterId
           ? {weekly!.pendingRaid!}
           : const {},
-      reservedWeeklyRaidRows:
-          weekly?.preference(row.ref.characterId)?.displayCount == 0
-          ? 0
-          : WeeklyRaidDisplayProjector.defaultDisplayCount,
+      reservedWeeklyRaidRows: 0,
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute<void>(

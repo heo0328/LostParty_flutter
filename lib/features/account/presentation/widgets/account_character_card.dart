@@ -28,6 +28,7 @@ class AccountCharacterCard extends StatelessWidget {
     this.status,
     this.reservedWeeklyRaidRows = 0,
     this.weeklyColumns = 1,
+    this.memberWeeklyLayout = false,
     this.onWeeklyRaidInfo,
     super.key,
   });
@@ -50,6 +51,7 @@ class AccountCharacterCard extends StatelessWidget {
   final Widget? representativeControl, status;
   final int reservedWeeklyRaidRows;
   final int weeklyColumns;
+  final bool memberWeeklyLayout;
   final void Function(WeeklyRaidStatusItem)? onWeeklyRaidInfo;
 
   static const double raidRowHeight = 26;
@@ -74,7 +76,14 @@ class AccountCharacterCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: CharacterNameLabel(character.characterName)),
+                  Expanded(
+                    child: CharacterNameLabel(
+                      character.characterName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                   if (representativeControl != null)
                     representativeControl!
                   else if (isRepresentative)
@@ -160,8 +169,8 @@ class AccountCharacterCard extends StatelessWidget {
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(
-                          minWidth: 28,
-                          minHeight: 28,
+                          minWidth: 44,
+                          minHeight: 44,
                         ),
                         onPressed: onEditWeeklyRaids,
                         icon: const Icon(Icons.edit_outlined, size: 16),
@@ -178,7 +187,9 @@ class AccountCharacterCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (weeklyColumns == 3)
+                if (memberWeeklyLayout)
+                  for (final raid in weeklyRaids) _memberRaidRow(context, raid)
+                else if (weeklyColumns == 3)
                   _weeklyGrid(context)
                 else ...[
                   for (final raid in weeklyRaids)
@@ -257,6 +268,79 @@ class AccountCharacterCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _memberRaidRow(BuildContext context, WeeklyRaidStatusItem raid) {
+    final allowed =
+        onWeeklyRaidChanged != null &&
+        raid.canToggle &&
+        !busyRaidIds.contains(raid.raidId);
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 44,
+          height: 44,
+          child: Checkbox(
+            key: ValueKey(
+              'weeklyRaidClaim-${character.serverCharacterId}-${raid.raidId}',
+            ),
+            value: raid.isCompleted,
+            onChanged: allowed
+                ? (v) => onWeeklyRaidChanged!(raid, v ?? false)
+                : null,
+          ),
+        ),
+        Expanded(
+          child: InkWell(
+            onTap: allowed
+                ? () => onWeeklyRaidChanged!(raid, !raid.isCompleted)
+                : null,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(raid.label, style: theme.textTheme.bodyMedium),
+                    if (raid.participationLabel case final label?)
+                      Text(
+                        label,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (raid.statusMessage case final message?)
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: IconButton(
+              tooltip: message,
+              onPressed: onWeeklyRaidInfo == null
+                  ? null
+                  : () => onWeeklyRaidInfo!(raid),
+              icon: Icon(
+                raid.statusKind == WeeklyRaidStatusKind.inconsistent
+                    ? Icons.error_outline
+                    : Icons.info_outline,
+                size: 18,
+                color: raid.statusKind == WeeklyRaidStatusKind.inconsistent
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.primary,
+              ),
+            ),
+          ),
+      ],
     );
   }
 

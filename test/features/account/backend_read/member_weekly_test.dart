@@ -591,6 +591,11 @@ void main() {
       final item = weekly.items(ref()).firstWhere((i) => i.raidId == raid);
       expect(item.canToggle, isFalse);
       expect(item.statusMessage, '현재 참가 중인 레이드입니다.');
+      final actual = weekly.catalog!.raids
+          .firstWhere((r) => r.raidId == raid)
+          .difficulties
+          .firstWhere((d) => d.difficultyId == 'hard');
+      expect(item.participationLabel, '${actual.displayName} 참가중');
       await weekly.change(ref(), item, true);
       expect(calls.where((r) => r.method == 'PUT'), isEmpty);
     },
@@ -685,12 +690,18 @@ void main() {
       model.setCount(2);
       await load();
       final token = weekly.rosterDisplayToken(registrationId)!;
-      await weekly.saveRosterDisplay(registrationId, 1, token);
+      await weekly.saveRosterDisplay(registrationId, [
+        weekly.eligible(ref()).first.raidId,
+      ], token);
       for (final row in model.sections.single.characters) {
         expect(weekly.items(row.ref), hasLength(1));
       }
       store.failWrite = true;
-      await weekly.saveRosterDisplay(registrationId, 0, token);
+      await weekly.saveRosterDisplay(
+        registrationId,
+        [],
+        weekly.rosterDisplayToken(registrationId)!,
+      );
       for (final row in model.sections.single.characters) {
         expect(weekly.items(row.ref), hasLength(1));
       }
@@ -710,12 +721,53 @@ void main() {
       }
       expect(calls.where((r) => r.method == 'PUT'), isEmpty);
       model.setCount(3);
-      await weekly.saveRosterDisplay(registrationId, 0, token);
+      await weekly.saveRosterDisplay(registrationId, [], token);
       expect(
         weekly.items(ref()),
         hasLength(1),
         reason: 'A stale roster dialog cannot apply to a changed roster.',
       );
+    },
+  );
+  test(
+    'mixed roster choices and unavailable IDs survive persistence',
+    () async {
+      model.setCount(2);
+      await load();
+      final id = weekly.eligible(ref()).first.raidId;
+      final all = model.sections.single.characters;
+      await weekly.saveDisplay(
+        all.first.ref,
+        CharacterWeeklyRaidDisplayPreference(
+          characterId: 0,
+          displayCount: 2,
+          raidIds: [id, 'future_raid'],
+        ),
+      );
+      await weekly.saveDisplay(
+        all.last.ref,
+        const CharacterWeeklyRaidDisplayPreference(
+          characterId: 0,
+          displayCount: 0,
+          raidIds: [],
+        ),
+      );
+      expect(weekly.rosterDisplaySelection(registrationId)[id], isNull);
+      expect(
+        weekly.preference(all.first.ref.characterId)!.raidIds,
+        contains('future_raid'),
+      );
+      final token = weekly.rosterDisplayToken(registrationId)!;
+      await weekly.saveRosterDisplay(registrationId, [id], token);
+      expect(weekly.rosterDisplaySelection(registrationId)[id], isTrue);
+      expect(weekly.preference(all.first.ref.characterId)!.raidIds, [id]);
+      await weekly.saveRosterDisplay(
+        registrationId,
+        [],
+        weekly.rosterDisplayToken(registrationId)!,
+      );
+      expect(weekly.rosterDisplaySelection(registrationId)[id], isFalse);
+      expect(calls.where((r) => r.method == 'PUT'), isEmpty);
     },
   );
   test(

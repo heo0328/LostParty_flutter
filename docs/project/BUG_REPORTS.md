@@ -1,5 +1,12 @@
 # 버그 리포트
 
+## BUG-036. 미개방 다음주 모집 상세 HTTP500 / 다음주 생성창 빨간 안내 (2026-11-14)
+
+상태: Backend 로컬 수정 후 사용자 정상 표시 확인. [원인/수정6875007986](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6875007986): 미개방N의RoomCycle=null에include_group_state=true그룹정보처리가row.room_id를참조해AttributeError/HTTP500을만들었다. 권한검사후기존membership응답에group_state=null을반환하는최소수정으로200 relation_only/content=null을복구했다. 일반상세409/비회원403과N행미생성은유지한다.
+
+Backend격리HTTP5PASS·명세불변/로컬이미지add28707/health200반영후사용자가정상표시를확인했다. Native새DTO/오류치환/외부쓰기변경은없다. 사용자답변은표시정상확인이며다음주생성창빨간안내/모든조작경계의별도전수시험으로확대하지않는다. 해당빨간안내의정확원인은미확정이력으로보존하되재현없는추가수정을하지않는다.
+
+Backend수정은9a61d0ea/dev통합4be81dc2로게시됐다([게시6875171401](https://github.com/heo0328/lostparty-backend/issues/53#issuecomment-6875171401)). 로컬반영/사용자확인은완료이며운영미반영이다. 회원식별자는사용자대화에만보존하고외부댓글/문서에복제하지않았다. DB초기화/자료복원/실회원쓰기·배포는실행하지않았다.
 ## BUG-035. 출발 전 모집 마감 무렵 기존 참가 조작 전체 비활성·빈 일정 (2026-11-10)
 
 상태: 사용자 원요청 복구 성공 보고를 받은 뒤 승인된 UI/오류 수명 개선을 Native 일반 경로에 구현했다. 최종 전체2,913PASS·분석0, 직접80개는 전체 수에 포함한다. 카드 디자인은 사용자 결정으로 차후 Penpot에서 확인하며 실제 새 카드의 기기 동작은 미확인이다. 이 확인을 위한 장애 재현/미리보기 개발은 요청하지 않는다. [Issue48](https://github.com/heo0328/lostparty-backend/issues/48)은 Backend가2026-11-10 completed로 종료했으며 상태 재조회를 확인했다. Penpot 디자인은 별도 차후 확인으로 남긴다. 사용자 지시로 이번 누적 구현·시험·문서를 6cee5b54에 커밋하고 로컬 dev에 통합했다. 원격 push와 main 반영·배포는 별도다.

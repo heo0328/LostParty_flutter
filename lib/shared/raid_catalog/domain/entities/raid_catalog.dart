@@ -17,7 +17,7 @@ class RaidDefinition {
     required this.raidId,
     required this.officialName,
     required this.displayName,
-    required this.aliases,
+    required List<String> aliases,
     required this.partySize,
     required this.partyCount,
     required this.requiredSupportCount,
@@ -25,12 +25,17 @@ class RaidDefinition {
     required this.gateCount,
     required this.isActive,
     required this.difficulties,
-  });
+  }) : _aliases = aliases;
 
   final String raidId;
   final String officialName;
   final String displayName;
-  final List<String> aliases;
+  final List<String> _aliases;
+
+  /// Client alias correction also applies to a catalog fetched from the server.
+  List<String> get aliases => raidId == 'horizon_cathedral'
+      ? List.unmodifiable({..._aliases.where((a) => a != '성당'), '지평'})
+      : _aliases;
   final int partySize;
   final int partyCount;
   final int requiredSupportCount;
@@ -55,6 +60,15 @@ class RaidDifficultyDefinition {
 
   final String difficultyId;
   final String name;
+
+  /// Difficulty alone, separate from the combined recruitment displayAlias.
+  String get displayName => switch (difficultyId) {
+    'nightmare' => '나메',
+    'stage1' => '1단',
+    'stage2' => '2단',
+    'stage3' => '3단',
+    _ => name,
+  };
   final String displayAlias;
   final int displayOrder;
   final int minItemLevel;

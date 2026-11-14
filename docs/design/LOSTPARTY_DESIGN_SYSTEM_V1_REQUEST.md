@@ -28,7 +28,7 @@ Theme·Bottom Navigation·공개 모집 대표 Card 시범 적용 결과를 사�
 1. 공통 Color·Spacing·Radius token과 Light Theme
 2. 기존 Bottom Navigation의 token 적용
 3. 공개 모집 대표 Card의 정보 계층·Badge·Surface 적용
-4. 자동 테스트와 Android 실기기 확인
+4. 자동 테스트와 사용자 웹·Android 앱 확인(좁은 폰·접힘/펼침 폴드·웹 가용폭/큰 글자·터치/마우스·키보드·URL/뒤로가기 포함, 영향 범위에 한정)
 
 
 ### 내 계정 화면 배치 확정 (2026-10-14)

@@ -2071,16 +2071,9 @@ void main() {
         ),
       );
       final cards = find.byType(AccountCharacterCard);
-      expect(cards, findsNWidgets(2));
       expect(
         find.byKey(const ValueKey('weeklyRaidReservedArea')),
-        findsNWidgets(2),
-      );
-      expect(
-        tester
-            .getSize(find.byKey(const ValueKey('weeklyRaidReservedArea')).first)
-            .height,
-        78,
+        findsNothing,
       );
       expect(
         tester.getTopLeft(cards.first).dy,

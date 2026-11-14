@@ -12,6 +12,8 @@
 
 현재 1인 개발이며 Firebase 구현을 제거하고 자체 Python Backend·단일 Google 로그인으로 회원을 구분한다. 관련 앱/Backend 구현 후 테스트하며 베타 직전 개발자료를 비우고 베타 이후 자료는 보존한다. [정책09 D08](backend-migration/09-migration-decisions.md#d08-개발--베타--운영-데이터-수명--사용자-확정). 실제 삭제/배포는 별도 실행 지시가 필요하다.
 
+웹과 Android 앱을 함께 서비스·개발한다. 이후 기능/API·공용모델·UI 설계/검증은 양쪽을 고려하며 세부 실행 기준은 AGENTS와 ai_rules를 따른다. 내 계정 리메이크는 개인 주간 가능시간·예약 그래프 한 구간만 남았고 그 이전 구현/최소 상세 개선은 완료했다. 최신 검증/인수·보관 상태는 NEXT_WORK를 따른다.
+
 ## 기능·기술 계약 지도
 
 - [그룹 제품 흐름](product/GROUP_PRODUCT_FLOW.md)·[그룹 연결 설계39](backend-migration/39-group-flutter-integration-design.md): 전체 UX·기존 구현/현재 서버·미연결/미제공·단계별 완료 조건.

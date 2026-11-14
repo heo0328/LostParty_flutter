@@ -3,7 +3,6 @@ import '../../../../shared/formatters/display_number_formatter.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/entities/character_weekly_raid_display_preference.dart';
 import '../../domain/scoped_cache_models.dart';
-import '../../domain/services/weekly_raid_display_projector.dart';
 import '../viewmodels/member_weekly_view_model.dart';
 
 Future<void> editMemberRosterWeeklyDisplay(
@@ -14,26 +13,35 @@ Future<void> editMemberRosterWeeklyDisplay(
   if (!model.canEditRosterDisplay(id)) return;
   final member = accountReadScope(model.model.runtime.session);
   final token = model.rosterDisplayToken(id)!;
-  var count = WeeklyRaidDisplayProjector.defaultDisplayCount;
-  final result = await showDialog<int>(
+  final choices = model.rosterDisplaySelection(id);
+  final result = await showDialog<List<String>>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, set) => AlertDialog(
         title: const Text('원정대 주간 레이드 표시'),
-        content: Wrap(
-          spacing: 8,
-          children: [
-            for (
-              var n = 0;
-              n <= WeeklyRaidDisplayProjector.maxDisplayCount;
-              n++
-            )
-              ChoiceChip(
-                label: Text('$n'),
-                selected: count == n,
-                onSelected: (_) => set(() => count = n),
-              ),
-          ],
+        content: SizedBox(
+          width: 360,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('체크한 종류로 전체 캐릭터에 적용합니다. 일부만 선택된 항목은 체크해야 포함됩니다.'),
+                for (final raid in model.catalog!.raids.where(
+                  (r) => r.isActive,
+                ))
+                  CheckboxListTile(
+                    title: Text(raid.displayName),
+                    contentPadding: EdgeInsets.zero,
+                    tristate: true,
+                    value: choices[raid.raidId],
+                    onChanged: (_) => set(
+                      () => choices[raid.raidId] = choices[raid.raidId] != true,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
         actions: [
           TextButton(
@@ -41,7 +49,13 @@ Future<void> editMemberRosterWeeklyDisplay(
             child: const Text('취소'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, count),
+            onPressed: () => Navigator.pop(
+              ctx,
+              choices.entries
+                  .where((e) => e.value == true)
+                  .map((e) => e.key)
+                  .toList(),
+            ),
             child: const Text('적용'),
           ),
         ],
@@ -54,18 +68,16 @@ Future<void> editMemberRosterWeeklyDisplay(
     return;
   }
   if (model.rosterDisplayToken(id) != token) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('정보가 변경됐습니다. 다시 선택해 주세요.')));
-    }
+    if (context.mounted) _changed(context);
     return;
   }
   await model.saveRosterDisplay(id, result, token);
 }
 
-/// Reuses the existing 0..5 count/raid selection flow; this is a device setting,
-/// independent of the server's weekly completion ledger.
+void _changed(BuildContext context) => ScaffoldMessenger.of(
+  context,
+).showSnackBar(const SnackBar(content: Text('정보가 변경됐습니다. 다시 선택해 주세요.')));
+
 Future<void> editMemberWeeklyDisplay(
   BuildContext context,
   MemberWeeklyViewModel model,
@@ -73,24 +85,13 @@ Future<void> editMemberWeeklyDisplay(
 ) async {
   if (!model.canEditDisplay(ref)) return;
   final member = accountReadScope(model.model.runtime.session);
+  final token = model.displayToken(ref);
   final eligible = model.eligible(ref);
-  if (eligible.isEmpty) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('입장 가능한 주간 레이드가 없습니다.')));
-    return;
-  }
   final preference = model.preference(ref.characterId);
-  final maxCount = eligible.length.clamp(
-    0,
-    WeeklyRaidDisplayProjector.maxDisplayCount,
-  );
-  var count =
-      (preference?.displayCount ??
-              WeeklyRaidDisplayProjector.defaultDisplayCount)
-          .clamp(0, maxCount);
-  final selected = model.displayed(ref).map((c) => c.raidId).toSet();
-  final result = await showDialog<({int count, List<String> raids})>(
+  final selected = model.selectedDisplayIds(ref).toSet();
+  final eligibleIds = eligible.map((c) => c.raidId).toSet();
+  final retained = selected.difference(eligibleIds);
+  final result = await showDialog<({bool reset, List<String> raids})>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, set) => AlertDialog(
@@ -100,45 +101,26 @@ Future<void> editMemberWeeklyDisplay(
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('표시 개수'),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (var n = 0; n <= maxCount; n++)
-                      ChoiceChip(
-                        label: Text('$n'),
-                        selected: count == n,
-                        onSelected: (_) => set(() {
-                          count = n;
-                          while (selected.length > count) {
-                            selected.remove(selected.last);
-                          }
-                        }),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(count == 0 ? '표시할 레이드를 숨깁니다.' : '레이드를 $count개 선택하세요.'),
-                if (count > 0)
-                  for (final c in eligible)
-                    CheckboxListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(c.label),
-                      subtitle: Text(
-                        '입장 ${DisplayNumberFormatter.whole(c.minItemLevel.toString())} · 골드 ${DisplayNumberFormatter.integer(c.gold)}',
-                      ),
-                      value: selected.contains(c.raidId),
-                      onChanged: (checked) => set(() {
-                        if (checked == true) {
-                          if (selected.length < count) selected.add(c.raidId);
-                        } else {
-                          selected.remove(c.raidId);
-                        }
-                      }),
+                if (eligible.isEmpty) const Text('입장 가능한 주간 레이드가 없습니다.'),
+                if (retained.isNotEmpty)
+                  const Text('현재 입장할 수 없는 레이드의 기존 선택은 유지됩니다.'),
+                for (final c in eligible)
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(c.label),
+                    subtitle: Text(
+                      '${c.difficulty.displayName} · 클리어 골드 ${DisplayNumberFormatter.integer(c.gold)}',
                     ),
+                    value: selected.contains(c.raidId),
+                    onChanged: (checked) => set(() {
+                      if (checked == true) {
+                        selected.add(c.raidId);
+                      } else {
+                        selected.remove(c.raidId);
+                      }
+                    }),
+                  ),
               ],
             ),
           ),
@@ -151,19 +133,12 @@ Future<void> editMemberWeeklyDisplay(
           if (preference != null)
             TextButton(
               onPressed: () =>
-                  Navigator.pop(ctx, (count: -1, raids: <String>[])),
+                  Navigator.pop(ctx, (reset: true, raids: <String>[])),
               child: const Text('기본값'),
             ),
           FilledButton(
-            onPressed: selected.length == count
-                ? () => Navigator.pop(ctx, (
-                    count: count,
-                    raids: [
-                      for (final c in eligible)
-                        if (selected.contains(c.raidId)) c.raidId,
-                    ],
-                  ))
-                : null,
+            onPressed: () =>
+                Navigator.pop(ctx, (reset: false, raids: selected.toList())),
             child: const Text('저장'),
           ),
         ],
@@ -176,13 +151,17 @@ Future<void> editMemberWeeklyDisplay(
       !model.canEditDisplay(ref)) {
     return;
   }
+  if (model.displayToken(ref) != token) {
+    if (context.mounted) _changed(context);
+    return;
+  }
   await model.saveDisplay(
     ref,
-    result.count < 0
+    result.reset
         ? null
         : CharacterWeeklyRaidDisplayPreference(
             characterId: 0,
-            displayCount: result.count,
+            displayCount: result.raids.length,
             raidIds: result.raids,
           ),
   );
