@@ -191,11 +191,75 @@ class _BackendRecruitmentCreatePageState
                           ? '참가 가능한 레이드를 확인하고 있어요.'
                           : '이 캐릭터로 모집할 수 있는 레이드가 없어요. 참가·완료 상태와 아이템 레벨을 확인해 주세요.',
                     ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('파티장 승인'),
+                        selected: !d.directJoin,
+                        onSelected: (_) => m.update(d.copy(directJoin: false)),
+                      ),
+                      ChoiceChip(
+                        label: const Text('바로 가입'),
+                        selected: d.directJoin,
+                        onSelected: (_) => m.update(d.copy(directJoin: true)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _fieldButton(
+                    '연결 그룹',
+                    m.groups
+                            .where((g) => g.id == d.groupId)
+                            .firstOrNull
+                            ?.name ??
+                        '없음',
+                    _chooseGroup,
+                  ),
+                  if (m.groupsLoading)
+                    const LinearProgressIndicator(minHeight: 2),
+                  if (m.groupFailure != null)
+                    Text(
+                      recruitmentFailureMessage(m.groupFailure),
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('전체 공개'),
+                        selected: !d.groupOnly,
+                        onSelected: (_) => m.update(d.copy(clearGroup: true)),
+                      ),
+                      ChoiceChip(
+                        label: const Text('그룹 전용'),
+                        selected: d.groupOnly,
+                        onSelected: d.groupId == null
+                            ? null
+                            : (_) => m.update(d.copy(groupOnly: true)),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               RecruitmentSection(
                 title: '출발 일정',
                 children: [
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Text('다음 주도 함께하기', style: _scheduleHeadingStyle),
+                    value: d.continueTogether,
+                    onChanged:
+                        d.targetCycleKey != null &&
+                            d.targetCycleKey != m.cycles?.current.key
+                        ? null
+                        : (v) => m.update(d.copy(continueTogether: v)),
+                  ),
+                  const SizedBox(height: 8),
                   if (m.betaEnabled)
                     _betaSchedules()
                   else ...[
@@ -478,76 +542,6 @@ class _BackendRecruitmentCreatePageState
                     ],
                 ],
               ),
-              RecruitmentSection(
-                title: '참가 방식 · 공개 범위',
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      ChoiceChip(
-                        label: const Text('파티장 승인'),
-                        selected: !d.directJoin,
-                        onSelected: (_) => m.update(d.copy(directJoin: false)),
-                      ),
-                      ChoiceChip(
-                        label: const Text('바로 가입'),
-                        selected: d.directJoin,
-                        onSelected: (_) => m.update(d.copy(directJoin: true)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _fieldButton(
-                    '연결 그룹',
-                    m.groups
-                            .where((g) => g.id == d.groupId)
-                            .firstOrNull
-                            ?.name ??
-                        '없음',
-                    _chooseGroup,
-                  ),
-                  if (m.groupsLoading)
-                    const LinearProgressIndicator(minHeight: 2),
-                  if (m.groupFailure != null)
-                    Text(
-                      recruitmentFailureMessage(m.groupFailure),
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      ChoiceChip(
-                        label: const Text('전체 공개'),
-                        selected: !d.groupOnly,
-                        onSelected: (_) => m.update(d.copy(clearGroup: true)),
-                      ),
-                      ChoiceChip(
-                        label: const Text('그룹 전용'),
-                        selected: d.groupOnly,
-                        onSelected: d.groupId == null
-                            ? null
-                            : (_) => m.update(d.copy(groupOnly: true)),
-                      ),
-                    ],
-                  ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title: const Text(
-                      '다음 주도 함께하기',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    value: d.continueTogether,
-                    onChanged:
-                        d.targetCycleKey != null &&
-                            d.targetCycleKey != m.cycles?.current.key
-                        ? null
-                        : (v) => m.update(d.copy(continueTogether: v)),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -587,13 +581,17 @@ class _BackendRecruitmentCreatePageState
     );
   }
 
+  TextStyle? get _scheduleHeadingStyle => Theme.of(
+    context,
+  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700);
+
   Widget _betaSchedules() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       for (final target in m.betaTargets) ...[
         Text(
           target == m.cycles?.current.key ? '이번 주 출발 일정' : '다음 주 출발 일정',
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: _scheduleHeadingStyle,
         ),
         const SizedBox(height: 8),
         Wrap(

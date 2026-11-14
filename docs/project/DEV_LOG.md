@@ -1,3 +1,11 @@
+## 2026-11-15 — 모집 생성 배치 변경 보관
+
+사용자 지시로 배치 변경과 NEXT_WORK/DEV_LOG 최신3파일 전체를 커밋·작업브랜치 push한다. 마지막 코드 이후 변경은 문서뿐이므로 생성31PASS·분석0을 재사용하고 diffcheck/원격 동기화를 확인한다. dev병합/배포 없이 브랜치를 유지하며 실제 고정SHA는 Git 이력을 따른다.
+
+## 2026-11-15 — 모집 생성 기본정보/출발일정 배치 개선
+
+사용자 요청으로 참가방식·공개범위 별도 영역을 제거하고 파티장승인/바로가입·연결그룹/로딩·오류·전체공개/그룹전용 컨트롤을 기본정보 맨 아래로 이동했다. 다음주도함께하기는 출발일정 첫 항목으로 이동하고 주차별 출발일정 제목과 같은 bodyMedium/w700 공통 스타일을 사용한다. 기존 콜백·그룹전용 자격/선택 초기화·continueTogether/대상주차 비활성·C/N 일정/pending·submit API는 보존했다. 관련 생성31PASS·최종 변경파일analyze0·포맷/diffcheck. 웹/Android 실제 배치는 사용자 확인 대기다. dev00e978aa에서 별도 목적 feature/recruitment-create-layout을 분기했으며 미커밋/미push·dev미반영·배포없음.
+
 ## 2026-11-15 — dev 통합/원격 게시 확정
 
 누적43파일을 c1c1d4b8e621994c476cdba7000d10a230ab08f0에 보관하고 최신 origin/dev a7d822ad 기준으로 일반 병합 c4156725180050ca8e7c1954901190f24efaa55e를 만들었다. 충돌 없고 병합 tree는 작업 커밋과 동일하다. feature/my-account-ui-remake와 dev를 push하고 ls-remote 및 로컬/origin SHA 일치·clean을 확인했다. 구현 tree가 같아 최종3027PASS·분석0을 재사용했다.
