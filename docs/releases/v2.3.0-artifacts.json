@@ -1,7 +1,7 @@
 {
     "version":  "2.3.0+8",
     "source_commit":  "027f8215cfcf65caa93d9db7aea5a33a38d5b83a",
-    "status":  "prepared_verified_awaiting_backend",
+    "status":  "published_verified",
     "notes_sha256":  "6c0b0fd643753e586f4be22d963a3115b4a67dde0a6e8c3a9849b1d47b33ad02",
     "collaboration_issue":  "https://github.com/heo0328/lostparty-backend/issues/54",
     "android":  {
@@ -46,5 +46,47 @@
                       "bytes":  6033,
                       "sha256":  "4025ef0210845e332e8e16d53582567a43fa6ec3d180357ed37cb3bdab00177d"
                   }
-              ]
+              ],
+    "public_release":  {
+                           "id":  445774890,
+                           "url":  "https://github.com/heo0328/LostParty_flutter/releases/tag/v2.3.0",
+                           "tag":  "v2.3.0",
+                           "tag_source":  "02326960",
+                           "run_id":  43670183453,
+                           "published_at":  "2026-11-15T03:05:44Z",
+                           "assets":  [
+                                          {
+                                              "name":  "lostparty-v2.3.0-android.apk",
+                                              "bytes":  91767294,
+                                              "sha256":  "eb30f9d96297440961f9b9ca0699e0ab0999c434373489696cafc38547cf8c20"
+                                          },
+                                          {
+                                              "name":  "lostparty-v2.3.0-android.apk.sha256",
+                                              "bytes":  95,
+                                              "sha256":  "fe3e98cf107a15c1c763d1c4e998873a8996af7efd81d4ccf7a9d89d5180d033"
+                                          },
+                                          {
+                                              "name":  "lostparty-v2.3.0-web.zip",
+                                              "bytes":  14344329,
+                                              "sha256":  "e52a68806d72e14f5da80e2c16d088126d292f1619526827ea49b5c23cb14c24"
+                                          },
+                                          {
+                                              "name":  "lostparty-v2.3.0-web.zip.sha256",
+                                              "bytes":  91,
+                                              "sha256":  "5ae5321eb5c9eb129c8999a41e7d75c6e9ccb5aabd1e94dd28f10130ea8d8c3c"
+                                          },
+                                          {
+                                              "name":  "release-manifest.json",
+                                              "bytes":  6033,
+                                              "sha256":  "4025ef0210845e332e8e16d53582567a43fa6ec3d180357ed37cb3bdab00177d"
+                                          }
+                                      ]
+                       },
+    "backend_release":  {
+                            "source":  "05daa424f06aa34edd76867bac1c78f9d558b51a",
+                            "run_id":  43665092583,
+                            "image":  "sha256:71e30188a79d903efbe52ba5a590add4d400c47ee7d5d35f3a26646cfe834d9d",
+                            "database_revision":  "0036_roster_presence",
+                            "handoff":  "https://github.com/heo0328/lostparty-backend/issues/54#issuecomment-6887988908"
+                        }
 }

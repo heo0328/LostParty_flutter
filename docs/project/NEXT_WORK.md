@@ -1,18 +1,9 @@
-## 최신 운영 결과 — Android 공개 단계
+# 현재 상태 — 2.3.0+8 운영 공개 완료 (2026-11-15)
 
-Backend54 회신6887988908: API v2.3.0/source05daa424/image71e30188…34d9d 및웹2.3.0+8/source027f8215 운영반영완료. run43665092583 full/publish/deploy성공·DB0036/118테이블행집합동일·환경/키보존·HTTPS34자산동일을Backend가확인했다. 이전백업/통합승인대기는해소됐다. Native는승인된안내문/기존릴리즈키로main/dev에release시점을반영하고v2.3.0태그공개를진행한다. 태그워크플로재빌드APK는준비APK와구분해검증한다. 실제기기로그인인수/BUG-038해결을주장하지않으며Issue종료없음.
+Backend API/웹은Issue54 회신6887988908에서운영반영/보존·HTTPS34자산확인완료다. Native태그02326960/v2.3.0·Actions43670183453성공과공개Release의5파일/승인본문일치를확인했다. 실제공개APK의정식패키지/2.3.0+8/기존release서명·checksum을검증했고웹원3파일도첨부/재다운로드검증했다. 공개APK는태그workflow재빌드본으로준비APK와hash가다르며둘을원장에분리했다. Native도운영health/database ok·indexhash일치를확인했다.
 
-# 현재 작업 — 2.3.0+8 공동 운영 게시
+현재원장은docs/releases/v2.3.0-artifacts.json, 공개안내문은docs/releases/v2.3.0.md다. 결과기록은release/dev/main에보관하며불변공개태그는이동하지않는다. 실제기기Google로그인/업데이트설치전수인수를새로수행한것은아니다. BUG-038은미해결·현재미재현으로유지하고후속재발시별도조사한다. Issue54종료·DB초기화·키교체·Penpot이관없음. 그외콘텐츠/별칭편집등차후작업은DETAIL_IMPROVEMENTS를따른다.
 
-사용자가 공개 안내문을 승인하고 운영 게시 절차 시작·버전2.3.0+8을 확정했다. release/2.3.0은최신dev/main5aebb623에서분기했다. 안내문원본은docs/releases/v2.3.0.md다. 같은release키와2026-11-11사용자백업/접근확인을재사용한다. BUG-038미해결/현재사용자미재현은내부원장에보존하고수정완료라고공개하지않는다. 자료초기화·키교체·기존Release/태그덮어쓰기·Issue종료는제외한다.
-
-순서: 버전/승인문구고정커밋·push→게시없는서명APK/웹Actions준비→고정run/source/artifactID/hash/만료·웹manifest검증/인계→Backend운영반영/웹자산확인→main/dev릴리즈시점반영·v2.3.0태그/Android공개→공개파일/본문검증·결과기록. 실패후반복배포는하지않으며원인과상태를확인한다. 기존코드검증은재사용하고버전/패키징/서명·실파일경계를검증한다. 사용자기기/브라우저조작은대행하지않는다.
-
-공동채널: https://github.com/heo0328/lostparty-backend/issues/54 . Backend담당최종source/image/계약/DBrevision·이미운영반영된범위/잔여·백업/자료보존/복귀·공개준비회신을요청했다. artifact인계전미확정웹파일은배포하지않는다. 준비완료: 고정소스027f8215의APK43653096756/웹43653104251성공, 실제다운로드APK서명/정식패키지/2.3.0+8/체크섬·웹전체자산manifest검증통과. 원장은docs/releases/v2.3.0-artifacts.json이다. Backend54 회신6885970390 수신: source기준b7c0361·DB0036/환경·키변경없음, 웹원3파일/34자산독립검증·로컬비활성stage성공. Backend최종source게시/full검증은완료됐고불변image/실제baseline·최신백업/복귀사전점검및운영반영결과회신대기이며아직운영게시·태그생성없음. 웹고정파일인계6885913490을완료했다. 후속은같은Issue회신확인→공동반영/게시이며필요시기존태그파이프라인의재빌드공개APK와준비APK를구분해검증한다. artifact만료전후반드시재확인하고묵시대체/재배포하지않는다.
-
-Backend 최신상태: [회신6887240354](https://github.com/heo0328/lostparty-backend/issues/54#issuecomment-6887240354). 정정source cb271ffd2907d658317d4aabcf259b5751a26ce5/run43659269018의verify·회귀8분할·validation이전체success다. 앞선실패는DB0023 legacy helper의부원정대/대표입력을현재앱시험에재사용한계약불일치였고현재앱시험만정정·원본legacy/app/OpenAPI/main-only검증은보존했다. 격리수정2+legacy1=3PASS. validation artifact14140107526/validation-43659269018-1·만료2026-12-15T01:09:36Z. publish/deploy skipped·운영교체없음이며Backend최종운영source/불변image·실제baseline/최신백업/복귀사전점검완료회신대기다. Native고정산출물/승인문구는유지하고추가빌드/기기시험요청없음.
-
-사용자 후속 작업진행 지시(2026-11-15): Backend54댓글6887347191에 운영 사전점검/최종image·baseline/최신백업 확인 후 API→고정웹 반영 절차 진행을 요청했다. Native는 승인안내문hash·원파일5개bytes/hash·고정앱소스 동일성과 artifact2개 expired=false를 재확인했다. 웹/API 실제 반영 완료 회신 전 Android태그/공개는 하지 않는다. 현재 릴리즈 소스는 그대로이며 추가빌드/기기대행없음.
 ## 이전 완료 — 반응형 UI 공통 폭·정렬 개선 통합 (2026-11-15)
 
 ## 보관·통합

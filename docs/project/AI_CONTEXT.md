@@ -1,8 +1,8 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
-## 2.3.0+8 운영 게시 준비 (2026-11-15)
+## 2.3.0+8 운영 공개 완료 (2026-11-15)
 
-사용자가 안내문/버전/운영게시절차시작을승인했다. release/2.3.0 고정소스027f8215의APK/웹수동Actions성공·실파일서명/패키지/버전/체크섬·웹manifest를검증했고Backend Issue54에공동게시준비/웹고정파일을인계했다. 실제운영반영/태그/공개는아직없고Backend준비회신대기다. 현재순서는NEXT_WORK, 산출물원장은releases/v2.3.0-artifacts.json, 승인안내문은releases/v2.3.0.md를따른다.
+Backend API/웹 운영반영·자료/환경보존 회신을수용하고Native v2.3.0/태그02326960·Actions43670183453 공개를완료했다. 공개5파일/승인본문·APK기존서명/버전/checksum·웹원manifest와운영health/index를검증했다. 기기인수미확인과BUG-038미해결은유지한다. 정확산출물은releases/v2.3.0-artifacts.json, 후속은NEXT_WORK다. Issue종료없음.
 
 ## 반응형 UI 공통 폭·정렬 개선 (2026-11-15)
 
