@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
-import '../../../shared/game_catalog/domain/entities/game_catalog.dart';
 import '../../../shared/lost_ark_api/client/api_cooldown.dart';
 import 'account_read_session.dart';
 import 'entities/character_build_role.dart';
@@ -125,18 +124,15 @@ class ScopedRefreshBatch {
   ScopedRefreshBatch({
     required this.scope,
     required this.session,
-    required this.keyVersion,
     required this.settingsVersion,
     required this.niceGroupEnabled,
-    required this.catalog,
     this.observationGeneration = 0,
     required List<ScopedRefreshTarget> targets,
   }) : targets = List.unmodifiable(targets);
   final StorageScope scope;
   final AccountReadScope session;
-  final int keyVersion, settingsVersion;
+  final int settingsVersion;
   final bool niceGroupEnabled;
-  final GameCatalog catalog;
   final int observationGeneration;
   final List<ScopedRefreshTarget> targets;
 }
@@ -146,6 +142,7 @@ class ScopedRefreshItem {
     this.target,
     this.status, {
     this.code,
+    this.failure,
     this.role,
     this.warning = false,
     this.serverPending = false,
@@ -153,6 +150,7 @@ class ScopedRefreshItem {
   final ScopedRefreshTarget target;
   final ScopedRefreshStatus status;
   final String? code;
+  final AccountReadException? failure;
   final CharacterBuildRole? role;
   final bool warning, serverPending;
   bool get incomplete => {
@@ -167,7 +165,6 @@ abstract interface class ScopedStartupRefreshSource {
   Listenable get changes;
   StorageScope? get scope;
   ApiCooldown get cooldown;
-  int? get keyVersion;
   int? get settingsVersion;
   void requireCurrent(ScopedRefreshBatch batch);
   Future<ScopedRefreshBatch> prepare();
@@ -175,21 +172,29 @@ abstract interface class ScopedStartupRefreshSource {
     ScopedRefreshBatch batch,
     ScopedRefreshTarget target,
     void Function() guard,
-    void Function(ScopedRefreshItem) onLocalSaved,
+    void Function(ScopedRefreshItem) onSaved,
   );
-  Future<ScopedRefreshItem> retryUpload(
+  Future<ScopedRefreshItem> recoverResult(
     ScopedRefreshItem saved,
     void Function() guard,
   );
 }
 
 /// Explicit refresh of one owned character, independent of startup/Nice-group policy.
+abstract interface class ScopedRosterRefreshSource {
+  Future<List<ScopedRefreshItem>> refreshRoster(
+    ScopedRegistrationRef registration,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onSaved,
+  );
+}
+
 abstract interface class ScopedCharacterRefreshSource {
   Future<ScopedRefreshItem> refreshCharacter(
     ScopedRegistrationRef registration,
     ScopedCharacterRef character,
     void Function() guard,
-    void Function(ScopedRefreshItem) onLocalSaved,
+    void Function(ScopedRefreshItem) onSaved,
   );
 }
 
@@ -203,7 +208,7 @@ abstract interface class ScopedBatchRefreshSource {
     void Function(ScopedRefreshItem) onSaved,
     bool Function(ScopedRefreshTarget, Object) onFailure,
   );
-  Future<void> retryUploads(
+  Future<void> recoverResultsBatch(
     List<ScopedRefreshItem> items,
     void Function() guard,
     void Function(ScopedRefreshItem) onResult,

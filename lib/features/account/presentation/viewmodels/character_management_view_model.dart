@@ -17,7 +17,7 @@ import '../../domain/services/character_usage_level_policy.dart';
 
 class CharacterManagementViewModel extends ChangeNotifier {
   CharacterManagementViewModel({
-    required AccountRepository accountRepository,
+    AccountRepository? accountRepository,
     RepresentativeCharacterSyncGateway? representativeSyncGateway,
     ActivityCharactersRepository? activityCharactersRepository,
     NiceGroupAutoRefreshSettingsRepository? niceGroupSettingsRepository,
@@ -72,7 +72,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  final AccountRepository _accountRepository;
+  final AccountRepository? _accountRepository;
   final RepresentativeCharacterSyncGateway? _representativeSyncGateway;
   final ActivityCharactersRepository? _activityCharactersRepository;
   final NiceGroupAutoRefreshSettingsRepository? _niceGroupSettingsRepository;
@@ -391,14 +391,14 @@ class CharacterManagementViewModel extends ChangeNotifier {
       for (final character in account.characters) {
         final isVisible = _draftSelectedIds.contains(character.id);
         if (character.isVisible != isVisible) {
-          await _accountRepository.updateCharacterVisibility(
+          await _accountRepository!.updateCharacterVisibility(
             accountId: account.id,
             characterId: character.id,
             isVisible: isVisible,
           );
         }
       }
-      await _accountRepository.updateCharacterDisplayOrder(
+      await _accountRepository!.updateCharacterDisplayOrder(
         accountId: account.id,
         characterIds: _fullDisplayOrderIdsForSave(account),
       );
@@ -441,7 +441,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
   }
 
   Future<void> _reloadAccounts() async {
-    _allAccounts = await _accountRepository.loadAccounts();
+    _allAccounts = await _accountRepository!.loadAccounts();
     _niceGroupResult = _niceGroupPolicy.evaluate(_allAccounts);
     if (accountId == null) {
       _account = await _accountRepository.loadMainAccount();
@@ -834,7 +834,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
             .firstOrNull;
         if (localCharacter != null &&
             account.representativeCharacterId != localCharacter.id) {
-          await _accountRepository.setRepresentativeCharacter(
+          await _accountRepository!.setRepresentativeCharacter(
             accountId: account.id,
             characterId: localCharacter.id,
           );
@@ -897,7 +897,7 @@ class CharacterManagementViewModel extends ChangeNotifier {
   }
 
   Future<void> _markReconciled(int accountId, String serverCharacterId) {
-    return _accountRepository.markRepresentativeReconciled(
+    return _accountRepository!.markRepresentativeReconciled(
       accountId: accountId,
       serverCharacterId: serverCharacterId,
     );

@@ -123,7 +123,7 @@ void main() {
     final parsed = previous.page(raw).items.single;
     expect(parsed.itemLevel.label, '아이템 레벨 1700');
     expect(parsed.status, contains('분석 오류'));
-    expect(parsed.status, contains('마지막 성공'));
+    expect(parsed.status, isNot(contains('마지막 성공')));
     item['display_reason'] = 'APPLICATION_CONTEXT_CHANGED';
     item['comparison'] = null;
     item['analysis'] = null;

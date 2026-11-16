@@ -7,12 +7,6 @@ class ApiCooldown extends ChangeNotifier {
   final DateTime Function() now;
   DateTime? until;
   Timer? _timer;
-  String? _tokenIdentity;
-  void bindToken(String token) {
-    if (_tokenIdentity != null && _tokenIdentity != token) clear();
-    _tokenIdentity = token;
-  }
-
   int get seconds => until == null
       ? 0
       : (until!.difference(now()).inMilliseconds / 1000).ceil().clamp(0, 86400);
@@ -31,7 +25,6 @@ class ApiCooldown extends ChangeNotifier {
 
   void clear() {
     until = null;
-    _tokenIdentity = null;
     _timer?.cancel();
     notifyListeners();
   }
@@ -41,19 +34,4 @@ class ApiCooldown extends ChangeNotifier {
     _timer?.cancel();
     super.dispose();
   }
-}
-
-DateTime providerRetryAt(String? reset, DateTime observed) {
-  final seconds = int.tryParse(reset ?? '');
-  if (seconds != null && seconds > 0 && seconds < 100000000000) {
-    final deadline = DateTime.fromMillisecondsSinceEpoch(
-      seconds * 1000,
-      isUtc: true,
-    );
-    if (deadline.isAfter(observed) &&
-        deadline.difference(observed) <= const Duration(seconds: 300)) {
-      return deadline;
-    }
-  }
-  return observed.add(const Duration(seconds: 60));
 }

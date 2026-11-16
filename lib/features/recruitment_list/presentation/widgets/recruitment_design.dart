@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../account/domain/member_cycle_models.dart';
+import '../../domain/recruitment_cycle_targets.dart';
 
 // Penpot03: approved white cards and solid lavender controls, not default chips.
 const recruitmentSelectionFill = Color(0xFFEEE7F8);
@@ -11,8 +12,15 @@ class RecruitmentWeekTabs extends StatelessWidget {
     required this.cycles,
     required this.value,
     required this.onChanged,
-  });
-  final MemberCycles cycles;
+  }) : targets = null;
+  const RecruitmentWeekTabs.targets({
+    super.key,
+    required this.targets,
+    required this.value,
+    required this.onChanged,
+  }) : cycles = null;
+  final MemberCycles? cycles;
+  final RecruitmentCycleTargets? targets;
   final String? value;
   final ValueChanged<String>? onChanged;
   @override
@@ -25,8 +33,8 @@ class RecruitmentWeekTabs extends StatelessWidget {
     child: Row(
       children: [
         for (final entry in {
-          cycles.current.key: '이번주',
-          cycles.next.key: '다음주',
+          (targets?.current.key ?? cycles!.current.key): '이번주',
+          (targets?.next.key ?? cycles!.next.key): '다음주',
         }.entries)
           Expanded(
             child: RecruitmentOptionButton(

@@ -1,5 +1,7 @@
 # LOST ARK Open API 사용 설계
 
+> 2026-11-16 현재: 개발자 키는 Backend에만 보관하며 Native/웹의 서버 수집·분석·저장 요청과 저장된 요약/detail 소비를 연결했다. 개인키 입력/복원·직접 호출·로컬 raw 분석/summary 업로드 경로는 제거했다. 현재 계약은 [계약25](../backend-migration/25-member-lostark-key-request.md#native-implementation-design), 실연동/인수 대기는 [NEXT_WORK](../project/NEXT_WORK.md)다. 아래 1차 로컬 저장/직접 조회 설명은 과거 조사 근거이며 현재 실행 계약이 아니다.
+
 ## 1. 문서 목적
 LOSTPARTY에서 Lost Ark Open API를 사용하기 위한 1차 설계 문서다.
 현재까지 공식 API 문서와 실제 캐릭터 조회 결과로 확인한 내용, 그리고 프로젝트에서 사용할 조회/저장/갱신 정책을 정리한다.

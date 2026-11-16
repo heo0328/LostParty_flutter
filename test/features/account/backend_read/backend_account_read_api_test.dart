@@ -1,10 +1,37 @@
 import 'package:dio/dio.dart';
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/data/backend_account_read_api.dart';
 import 'package:lost_party/features/account/domain/account_read_session.dart';
 import '../../../support/server_account_read_fakes.dart';
 
 void main() {
+  test('public HTTP request omits Authorization on the actual wire', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final connection = Dio(
+      BaseOptions(baseUrl: 'http://127.0.0.1:${server.port}'),
+    );
+    final guest = ReadSessionFake()..change(authenticated: false);
+    final request = server.first.then((r) async {
+      final authorization = r.headers.value(HttpHeaders.authorizationHeader);
+      r.response.headers.contentType = ContentType.json;
+      r.response.write(jsonEncode(<String, dynamic>{}));
+      await r.response.close();
+      return authorization;
+    });
+    try {
+      await DioBackendAccountReadApi(
+        connection,
+        guest,
+      ).requestPublic('/v1/raid-cycle');
+      expect(await request, isNull);
+    } finally {
+      connection.close(force: true);
+      guest.dispose();
+      await server.close(force: true);
+    }
+  });
   late Dio dio;
   late ReadSessionFake session;
   late DioBackendAccountReadApi api;
@@ -80,6 +107,68 @@ void main() {
       expect(requests, 2);
       expect(session.refreshCalls, 1);
       expect(session.rejects, 0);
+    },
+  );
+  test(
+    'public search does not acquire a token or reject a member session',
+    () async {
+      session.change(authenticated: false);
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.headers.containsKey('Authorization'), isFalse);
+            fail(options, handler, 401, 'ACCESS_EXPIRED');
+          },
+        ),
+      );
+      await expectLater(
+        api.requestPublic('/v2/raid-rooms/search', method: 'POST', body: {}),
+        throwsA(code('ACCESS_EXPIRED')),
+      );
+      expect(session.accessCalls, 0);
+      expect(session.refreshCalls, 0);
+      expect(session.rejects, 0);
+    },
+  );
+  test(
+    'public transport cannot bypass private endpoint authentication',
+    () async {
+      session.change(authenticated: false);
+      var requests = 0;
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (_, handler) {
+            requests++;
+            handler.reject(DioException(requestOptions: RequestOptions()));
+          },
+        ),
+      );
+      await expectLater(
+        api.requestPublic('/v1/me/game-accounts'),
+        throwsA(code('AUTH_REQUIRED')),
+      );
+      expect(requests, 0);
+      expect(session.accessCalls, 0);
+    },
+  );
+  test(
+    'late public result is discarded after authentication changes',
+    () async {
+      session.change(authenticated: false);
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            session.change(authenticated: true);
+            handler.resolve(
+              Response(requestOptions: options, statusCode: 200, data: {}),
+            );
+          },
+        ),
+      );
+      await expectLater(
+        api.requestPublic('/v1/raid-cycle'),
+        throwsA(code('STALE_READ')),
+      );
     },
   );
   test('a second expired response does not enter a refresh loop', () async {

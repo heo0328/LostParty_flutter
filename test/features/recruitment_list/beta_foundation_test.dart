@@ -19,6 +19,7 @@ import 'package:lost_party/features/recruitment_list/data/membership_readers.dar
 import 'package:lost_party/features/recruitment_list/data/cycle_interaction_repository.dart';
 import '../../support/server_account_read_fakes.dart';
 import 'cycle_recruitment_test.dart' as f;
+import 'cycle_group_policy_test.dart' as group_fixture;
 import 'backend_recruitment_test.dart' as b;
 import 'membership_readers_test.dart' as records;
 
@@ -525,6 +526,8 @@ void main() {
       'application-display memo remains a snapshot; null application is never manufactured',
       () {
         final json = f.detail(f.c), d = json['data'] as Map<String, dynamic>;
+        json['group_policy_version'] = BetaContract.groupPolicyVersion;
+        json['group_policy'] = group_fixture.policy(group: null);
         d['my_membership'] = null;
         d['permissions'] = {
           'view_detail': {

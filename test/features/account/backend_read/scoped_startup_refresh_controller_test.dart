@@ -9,10 +9,8 @@ import 'package:lost_party/features/account/domain/scoped_startup_refresh.dart';
 import 'package:lost_party/features/account/domain/services/nice_group_policy.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/scoped_startup_refresh_controller.dart';
 import 'package:lost_party/shared/lost_ark_api/client/api_cooldown.dart';
-import 'package:lost_party/shared/lost_ark_api/client/lost_ark_api_exception.dart';
 
 import '../../../support/server_account_read_fakes.dart';
-import 'scoped_role_sync_test.dart' as fixtures show catalog;
 
 const member = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const other = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -83,8 +81,6 @@ class FakeSource extends ChangeNotifier implements ScopedStartupRefreshSource {
         )
       : null;
   @override
-  int? keyVersion = 1;
-  @override
   int? settingsVersion = 1;
   bool nice = true;
   List<CacheRosterSnapshot> rosters = [
@@ -106,8 +102,8 @@ class FakeSource extends ChangeNotifier implements ScopedStartupRefreshSource {
   @override
   void requireCurrent(ScopedRefreshBatch batch) {
     requireAccountReadScope(session, batch.session);
-    if (scope != batch.scope || keyVersion != batch.keyVersion) {
-      throw const AccountReadException('KEY_CHANGED');
+    if (scope != batch.scope) {
+      throw const AccountReadException('SETTINGS_CHANGED');
     }
   }
 
@@ -120,14 +116,11 @@ class FakeSource extends ChangeNotifier implements ScopedStartupRefreshSource {
     if (settingsVersion == null) {
       throw const AccountReadException('SETTINGS_NOT_READY');
     }
-    if (keyVersion == null) throw const AccountReadException('KEY_NOT_READY');
     return ScopedRefreshBatch(
       scope: scope!,
       session: accountReadScope(session),
-      keyVersion: keyVersion!,
       settingsVersion: settingsVersion!,
       niceGroupEnabled: nice,
-      catalog: fixtures.catalog(),
       targets: projectScopedRefreshTargets(
         scope!,
         rosters,
@@ -159,7 +152,7 @@ class FakeSource extends ChangeNotifier implements ScopedStartupRefreshSource {
   }
 
   @override
-  Future<ScopedRefreshItem> retryUpload(
+  Future<ScopedRefreshItem> recoverResult(
     ScopedRefreshItem saved,
     void Function() guard,
   ) async {
@@ -285,7 +278,10 @@ void main() {
       source.onRefresh = (b, t, g, saved) async {
         if (t.ref.characterId == characterId) {
           await limited.future;
-          throw LostArkApiException(type: LostArkApiErrorType.rateLimited);
+          throw const AccountReadException(
+            'UPSTREAM_RATE_LIMITED',
+            status: 503,
+          );
         }
         entered.complete();
         await peer.future;
@@ -336,7 +332,7 @@ void main() {
   );
   for (final code in [
     'SETTINGS_NOT_READY',
-    'KEY_NOT_READY',
+    'SETTINGS_NOT_READY',
     'ROSTER_FAILED',
     'CATALOG_FAILED',
   ]) {
@@ -565,7 +561,7 @@ void main() {
     },
   );
   test(
-    'key change interrupts remaining and rejects delayed old detail write',
+    'session change interrupts remaining and rejects delayed old detail write',
     () async {
       final entered = Completer<void>(), release = Completer<void>();
       int committed = 0;
@@ -579,7 +575,7 @@ void main() {
       c.initialize();
       final flight = c.startIfReady();
       await entered.future;
-      source.keyVersion = 2;
+      source.session.generation++;
       source.changed();
       release.complete();
       await flight;
@@ -636,7 +632,7 @@ void main() {
     },
   );
   test(
-    'completed local save is preserved if key changes before upload completes',
+    'completed local save is preserved if settings changes before upload completes',
     () async {
       final entered = Completer<void>(), release = Completer<void>();
       source.onRefresh = (b, t, g, s) async {
@@ -657,7 +653,7 @@ void main() {
       c.initialize();
       final flight = c.startIfReady();
       await entered.future;
-      source.keyVersion = null;
+      source.session.generation++;
       source.changed();
       release.complete();
       await flight;
@@ -712,8 +708,9 @@ void main() {
       bool limited = true;
       source.onRefresh = (b, t, g, s) async {
         if (limited) {
-          throw LostArkApiException(
-            type: LostArkApiErrorType.rateLimited,
+          throw AccountReadException(
+            'UPSTREAM_RATE_LIMITED',
+            status: 503,
             retryAt: source.clock.add(const Duration(seconds: 10)),
           );
         }

@@ -179,7 +179,7 @@ class BackendGroupViewModel extends ChangeNotifier {
     hasPendingRequest = false;
     cursor = null;
     _emit();
-    if (authenticated) load();
+    load();
   }
 
   void _groupsChanged() {
@@ -187,7 +187,15 @@ class BackendGroupViewModel extends ChangeNotifier {
   }
 
   Future<void> load({bool more = false}) async {
-    if (_disposed || !authenticated) return;
+    if (_disposed ||
+        (!authenticated &&
+            !{
+              GroupPageKind.home,
+              GroupPageKind.search,
+              GroupPageKind.detail,
+            }.contains(kind))) {
+      return;
+    }
     final e = ++_epoch, binding = repository.readScope;
     if (kind == GroupPageKind.detail && groupId != null) {
       repository.clearInviteContext(groupId!, owner: this);
@@ -212,6 +220,7 @@ class BackendGroupViewModel extends ChangeNotifier {
         activityFailures.clear();
       }
       if (kind == GroupPageKind.home) {
+        if (!authenticated) return;
         final value = await repository.all(
           '/v1/me/groups',
           query: {'reader_profile': 'group-display-1'},
@@ -263,18 +272,22 @@ class BackendGroupViewModel extends ChangeNotifier {
         }
       } else if (kind == GroupPageKind.search) {
         if (query.trim().isNotEmpty) {
-          final page = await repository.get(
-            '/v1/groups',
-            query: {'q': query.trim(), 'limit': 20, 'cursor': ?cursor},
-          );
+          final page =
+              await (authenticated ? repository.get : repository.publicSummary)(
+                '/v1/groups',
+                query: {'q': query.trim(), 'limit': 20, 'cursor': ?cursor},
+              );
           if (!current()) return;
           rows = [...rows, ...groupItems(page)];
           cursor = page['next_cursor'];
         }
       } else if (groupId != null) {
-        final pub = await repository.get('/v1/groups/$groupId');
+        final pub = await (authenticated
+            ? repository.get
+            : repository.publicSummary)('/v1/groups/$groupId');
         if (!current()) return;
         summary = pub;
+        if (!authenticated) return;
         GroupDetailSnapshot? next;
         try {
           final value = await repository.get(
@@ -339,7 +352,7 @@ class BackendGroupViewModel extends ChangeNotifier {
           }
         }
       }
-      if (current()) {
+      if (current() && authenticated) {
         final pending = await repository.pending();
         if (current()) hasPendingRequest = pending != null;
       }

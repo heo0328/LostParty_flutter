@@ -12,8 +12,9 @@ const membershipReaderProfile = 'membership-actions-1';
 
 /// Cross-tab destinations use go(), with an explicit, allowlisted return tab.
 /// Pushing a second copy of the recruitment shell shares its Navigator key.
-String recruitmentFromTab(String location, String tab) {
-  roleCheck(tab == 'account' || tab == 'raid-status');
+String recruitmentFromTab(String location, String tab, {String? groupId}) {
+  roleCheck(tab == 'account' || tab == 'raid-status' || tab == 'groups');
+  if (tab == 'groups') roleId(groupId);
   final uri = Uri.parse(location);
   roleCheck(
     uri.path.startsWith('/recruitments/') &&
@@ -21,13 +22,27 @@ String recruitmentFromTab(String location, String tab) {
         !uri.hasScheme,
   );
   return uri
-      .replace(queryParameters: {...uri.queryParameters, 'return_to': tab})
+      .replace(
+        queryParameters: {
+          ...uri.queryParameters,
+          'return_to': tab,
+          if (tab == 'groups') 'return_group_id': groupId,
+        },
+      )
       .toString();
 }
 
 String? recruitmentReturnLocation(Uri location) {
   final tab = location.queryParameters['return_to'];
   if (tab == 'account') return '/account';
+  if (tab == 'groups') {
+    try {
+      final id = roleId(location.queryParameters['return_group_id']);
+      return '/groups/$id/raids';
+    } on FormatException {
+      return null;
+    }
+  }
   if (tab != 'raid-status') return null;
   return Uri(
     path: '/raid-status',

@@ -172,9 +172,7 @@ class _RecruitmentFilterPageState extends State<RecruitmentFilterPage> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: m,
     builder: (context, _) {
-      final f = m.filter,
-          d = f.departure,
-          active = binding == m.scopeKey() && m.session.isAuthenticated;
+      final f = m.filter, d = f.departure, active = binding == m.scopeKey();
       final date = d.weekday == null || m.target == null
           ? null
           : d.date(m.target!, d.weekday!);
@@ -217,9 +215,9 @@ class _RecruitmentFilterPageState extends State<RecruitmentFilterPage> {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (m.cycles != null)
-                        RecruitmentWeekTabs(
-                          cycles: m.cycles!,
+                      if (m.cycleTargets != null)
+                        RecruitmentWeekTabs.targets(
+                          targets: m.cycleTargets!,
                           value: m.target,
                           onChanged: m.selectTarget,
                         ),
@@ -321,7 +319,13 @@ class _RecruitmentFilterPageState extends State<RecruitmentFilterPage> {
                           ],
                         ),
                       ),
-                      if (f.category == 'group_linked')
+                      if (f.category == 'group_linked' &&
+                          !m.session.isAuthenticated)
+                        const RecruitmentDesignCard(
+                          child: Text('그룹원·캐릭터 조건은 로그인 후 사용할 수 있습니다.'),
+                        ),
+                      if (f.category == 'group_linked' &&
+                          m.session.isAuthenticated)
                         RecruitmentDesignCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,

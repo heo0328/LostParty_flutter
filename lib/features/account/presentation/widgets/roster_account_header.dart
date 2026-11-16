@@ -10,9 +10,11 @@ class RosterAccountHeader extends StatelessWidget {
     this.showEdit = false,
     this.showCharacters = false,
     this.showVerify = false,
+    this.refreshAction,
     super.key,
   });
   final String label;
+  final Widget? refreshAction;
   final bool showEdit, showCharacters, showVerify;
   final VoidCallback? onVerify, onEdit, onCharacters;
 
@@ -43,6 +45,7 @@ class RosterAccountHeader extends StatelessWidget {
           child: const Text('원정대 인증'),
         ),
       ],
+      if (refreshAction != null) ...[const SizedBox(width: 8), refreshAction!],
     ],
   );
   List<Widget> get _actions => [

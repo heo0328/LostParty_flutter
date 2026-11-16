@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dio/dio.dart';
+import 'package:lost_party/features/account/data/backend_account_read_api.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:lost_party/features/recruitment_list/presentation/viewmodels/cycle_search_view_model.dart';
@@ -11,6 +13,45 @@ import 'discovery_fixtures.dart';
 import 'cycle_interaction_test.dart' as f;
 
 void main() {
+  test(
+    'real discovery gateway uses anonymous transport without group state',
+    () async {
+      final session = ReadSessionFake()..change(authenticated: false);
+      final dio = Dio(BaseOptions(baseUrl: 'https://backend.invalid'));
+      addTearDown(() {
+        dio.close();
+        session.dispose();
+      });
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.headers['Authorization'], isNull);
+            expect(options.path, '/v2/raid-rooms/search');
+            expect(options.queryParameters['include_group_state'], isNull);
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: discoveryWire(f.searchWire(f.c)),
+              ),
+            );
+          },
+        ),
+      );
+      final api = base.Api();
+      final gateway = CycleInteractionRepository(
+        api: api,
+        recruitment: cycles.CycleGateway(),
+        includeGroupList: true,
+        publicApi: DioBackendAccountReadApi(dio, session),
+        contractMode: RecruitmentContractMode.betaWire2,
+      );
+      final result = await gateway.search(f.c, CycleSearchFilter());
+      expect(result.totalCount, 1);
+      expect(session.accessCalls, 0);
+      expect(api.requests, isEmpty);
+    },
+  );
   test('pinned discovery projection and request validate', () {
     final raw = discoveryWire(f.searchWire(f.c));
     final contract = BetaContract(mode: RecruitmentContractMode.betaWire2);

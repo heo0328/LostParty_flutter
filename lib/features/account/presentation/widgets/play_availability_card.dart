@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../../recruitment_list/presentation/widgets/recruitment_time_picker.dart';
 import '../../domain/play_availability.dart';
 import '../viewmodels/play_availability_view_model.dart';
 
@@ -86,7 +86,7 @@ class PlayAvailabilityCard extends StatelessWidget {
               for (final day in playWeekdays) ..._dayRows(context, day),
               const SizedBox(height: 8),
               Text(
-                '24시간제 · 5분 단위 · 다음 날 종료 가능\n한 구간 최대 24시간 · 한국 시간',
+                '24시간제 · 1분 단위 · 다음 날 종료 가능\n한 구간 최대 24시간 · 한국 시간',
                 style: theme.textTheme.bodySmall,
               ),
               if (!model.validDraft)
@@ -214,6 +214,24 @@ class PlayAvailabilityCard extends StatelessWidget {
                       : '${rows[index].endDayOffset == 1 ? '다음 날 ' : ''}${playClock(rows[index].end!)}',
                 ),
               ),
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('같은 날')),
+                  ButtonSegment(value: 1, label: Text('다음 날')),
+                ],
+                selected: {rows[index].endDayOffset},
+                onSelectionChanged: !model.editable
+                    ? null
+                    : (value) => model.replaceRow(
+                        rows[index],
+                        PlayTimeRow(
+                          weekday: day,
+                          start: rows[index].start,
+                          end: rows[index].end,
+                          endDayOffset: value.single,
+                        ),
+                      ),
+              ),
               if (index == 0)
                 IconButton(
                   onPressed: model.editable ? () => model.addRow(day) : null,
@@ -235,12 +253,21 @@ class PlayAvailabilityCard extends StatelessWidget {
   }
 
   Future<void> _pick(BuildContext context, PlayTimeRow row, bool ending) async {
-    final result = await showModalBottomSheet<PlayTimeRow>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _PlayTimePicker(row: row, ending: ending),
+    final generation = model.editGeneration;
+    final minute = await showRecruitmentTimePicker(
+      context,
+      initial: (ending ? row.end : row.start) ?? 0,
     );
-    if (result != null) model.replaceRow(row, result);
+    if (!context.mounted ||
+        generation != model.editGeneration ||
+        !model.editable ||
+        minute == null) {
+      return;
+    }
+    model.replaceRow(
+      row,
+      row.withTime(ending: ending, minute: minute, offset: row.endDayOffset),
+    );
   }
 
   Future<void> _reviewPending(BuildContext context) async {
@@ -289,142 +316,3 @@ String _failure(String code) => switch (code) {
   'IDEMPOTENCY_CONFLICT' => '최신 저장값을 확인한 뒤 다시 저장해 주세요.',
   _ => '시간 설정을 확인하거나 저장하지 못했습니다. 초안은 유지됩니다.',
 };
-
-class _PlayTimePicker extends StatefulWidget {
-  const _PlayTimePicker({required this.row, required this.ending});
-  final PlayTimeRow row;
-  final bool ending;
-  @override
-  State<_PlayTimePicker> createState() => _PlayTimePickerState();
-}
-
-class _PlayTimePickerState extends State<_PlayTimePicker> {
-  late int hour, minute, offset;
-  late final FixedExtentScrollController hours, minutes;
-  @override
-  void initState() {
-    super.initState();
-    final time = (widget.ending ? widget.row.end : widget.row.start) ?? 0;
-    hour = time ~/ 60;
-    minute = time % 60;
-    offset = widget.row.endDayOffset;
-    hours = FixedExtentScrollController(initialItem: hour);
-    minutes = FixedExtentScrollController(initialItem: minute ~/ 5);
-  }
-
-  @override
-  void dispose() {
-    hours.dispose();
-    minutes.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final result = widget.row.withTime(
-      ending: widget.ending,
-      minute: hour * 60 + minute,
-      offset: offset,
-    );
-    final invalid = result.duration != null && !result.valid;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${playWeekdayLabels[widget.row.weekday - 1]}요일 ${widget.ending ? '종료' : '시작'} 시간',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                  tooltip: '닫기',
-                ),
-              ],
-            ),
-            if (widget.ending)
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 0, label: Text('같은 날')),
-                  ButtonSegment(value: 1, label: Text('다음 날')),
-                ],
-                selected: {offset},
-                onSelectionChanged: (value) =>
-                    setState(() => offset = value.single),
-              ),
-            SizedBox(
-              height: 160,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: CupertinoPicker(
-                      scrollController: hours,
-                      itemExtent: 40,
-                      onSelectedItemChanged: (n) => setState(() => hour = n),
-                      children: [
-                        for (var i = 0; i < 24; i++)
-                          Center(
-                            child: Text('${i.toString().padLeft(2, '0')} 시'),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const Text(':'),
-                  Expanded(
-                    child: CupertinoPicker(
-                      scrollController: minutes,
-                      itemExtent: 40,
-                      onSelectedItemChanged: (n) =>
-                          setState(() => minute = n * 5),
-                      children: [
-                        for (var i = 0; i < 60; i += 5)
-                          Center(
-                            child: Text('${i.toString().padLeft(2, '0')} 분'),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (result.duration != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  invalid
-                      ? '한 구간은 0시간 초과, 최대 24시간입니다.'
-                      : '${playClock(result.start!)} → ${result.endDayOffset == 1 ? '다음 날 ' : ''}${playClock(result.end!)} · ${result.duration! ~/ 60}시간 ${result.duration! % 60}분',
-                  style: TextStyle(
-                    color: invalid ? Theme.of(context).colorScheme.error : null,
-                  ),
-                ),
-              ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('취소'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: invalid
-                      ? null
-                      : () => Navigator.pop(context, result),
-                  child: const Text('적용'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

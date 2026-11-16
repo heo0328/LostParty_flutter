@@ -154,7 +154,7 @@ void main() {
     () {
       final j = wire('current_error_retained_success'), p = page(j);
       final item = p.items.single;
-      expect(item.status, contains('마지막 성공'));
+      expect(item.status, isNot(contains('마지막 성공')));
       expect(item.status, contains('분석 오류'));
       final actual = item.comparison!['actual'];
       j['data']['items'][0]['comparison']['actual'] = '0';

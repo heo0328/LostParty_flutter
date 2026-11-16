@@ -33,18 +33,21 @@ class CandidatePower {
   CandidatePower(Map<String, dynamic> j) {
     roleShape(
       j,
-      'value source trust observed_at saved_at power_revision integrity_status',
+      'value source trust observed_at saved_at summary_version integrity_status issues',
     );
+    for (final issue in raidList(j['issues'])) {
+      AnalysisIssue.fromJson(roleMap(issue));
+    }
     value = candidateDecimal(j['value']);
     source = j['source'] as String;
     roleCheck(
-      {'stored_role_success', 'unavailable', 'not_disclosed'}.contains(source),
+      {'server_analysis', 'unavailable', 'not_disclosed'}.contains(source),
     );
-    if (source == 'stored_role_success') {
-      roleCheck(value != null && j['trust'] == 'client_submitted');
-      roleUtc(j['observed_at']);
+    if (source == 'server_analysis') {
+      roleCheck(j['trust'] == 'server_computed');
+      if (j['observed_at'] != null) roleUtc(j['observed_at']);
       roleUtc(j['saved_at']);
-      rolePositive(j['power_revision']);
+      rolePositive(j['summary_version']);
       roleCheck(
         {
           'clean',
@@ -60,7 +63,7 @@ class CandidatePower {
               'trust',
               'observed_at',
               'saved_at',
-              'power_revision',
+              'summary_version',
               'integrity_status',
             ].every((k) => j[k] == null),
       );

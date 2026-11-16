@@ -91,6 +91,27 @@ Map<String, dynamic> contextWire() => old.copy(
 );
 
 void main() {
+  test(
+    'minute availability copies pass the current beta context reader unchanged',
+    () async {
+      final raw = contextWire();
+      final submission = raw['data']['members'][0]['submission'];
+      submission['intervals'][0]['start'] = '18:03';
+      submission['intervals'][0]['end'] = '20:17';
+      final api = base.Api()..respond = (_, q) async => raw;
+      final view = await CycleScheduleReader(
+        BetaInteractionApi(api),
+      ).read(base.roomId, cycles.n, 'context');
+      expect(
+        view.data['members'][0]['submission']['intervals'][0]['start'],
+        '18:03',
+      );
+      expect(
+        view.data['members'][0]['submission']['intervals'][0]['end'],
+        '20:17',
+      );
+    },
+  );
   test('beta context reader preserves per-member copy metadata', () async {
     final api = base.Api()..respond = (_, q) async => contextWire();
     final view = await CycleScheduleReader(

@@ -47,50 +47,5 @@ Map<String, dynamic>? startupBatchReply(
       ],
     };
   }
-  if (request.path == '/v2/me/role-summary-batches') {
-    return {
-      'items': [
-        for (final item in (request.data as Map)['items'] as List)
-          () {
-            final id = item['character_id'],
-                role = item['role'],
-                command = item['command_id'];
-            final body = Map<String, dynamic>.from(item as Map)
-              ..remove('character_id')
-              ..remove('role')
-              ..remove('command_id');
-            final identity = {
-              'character_id': id,
-              'role': role,
-              'command_id': command,
-            };
-            try {
-              return {
-                ...identity,
-                'status': 200,
-                'error': null,
-                'result': single(
-                  request.copyWith(
-                    path: '/v2/me/characters/$id/role-summaries/$role',
-                    method: 'PUT',
-                    data: body,
-                    queryParameters: {},
-                    headers: {...request.headers, 'Idempotency-Key': command},
-                  ),
-                ),
-              };
-            } on DioException catch (e) {
-              if (e.response == null) rethrow;
-              return {
-                ...identity,
-                'status': e.response!.statusCode,
-                'result': null,
-                'error': error(e),
-              };
-            }
-          }(),
-      ],
-    };
-  }
   return null;
 }

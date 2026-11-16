@@ -2,6 +2,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/recruitment_list/data/membership_readers.dart';
 
 void main() {
+  test('group raid return is restricted to the original canonical group', () {
+    const id = '00000000-0000-4000-8000-000000000001';
+    final uri = Uri.parse(
+      recruitmentFromTab(
+        '/recruitments/$id?target_cycle_key=2026-11-11',
+        'groups',
+        groupId: id,
+      ),
+    );
+    expect(recruitmentReturnLocation(uri), '/groups/$id/raids');
+    expect(uri.queryParameters['target_cycle_key'], '2026-11-11');
+    expect(
+      recruitmentReturnLocation(
+        Uri.parse('/recruitments/$id?return_to=groups&return_group_id=bad'),
+      ),
+      isNull,
+    );
+  });
   test(
     'cross-tab location preserves reader/anchor queries and return week',
     () {

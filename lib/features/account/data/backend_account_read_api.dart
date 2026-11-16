@@ -69,9 +69,65 @@ class DioBackendAccountReadApi
     Map<String, dynamic>? query,
     String? idempotencyKey,
     int expectedStatus = 200,
+  }) => _request(
+    path,
+    method: method,
+    body: body,
+    query: query,
+    idempotencyKey: idempotencyKey,
+    expectedStatus: expectedStatus,
+  );
+
+  Future<Map<String, dynamic>?> requestPublic(
+    String path, {
+    String method = 'GET',
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+  }) => _request(
+    path,
+    method: method,
+    body: body,
+    query: query,
+    publicRead: true,
+  );
+
+  Future<Map<String, dynamic>?> _request(
+    String path, {
+    String method = 'GET',
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+    String? idempotencyKey,
+    int expectedStatus = 200,
+    bool publicRead = false,
   }) async {
-    final scope = accountReadScope(session);
+    final generation = session.generation, user = session.userId;
+    final environment = dio.options.baseUrl;
+    if (publicRead &&
+        !(method == 'POST' && path == '/v2/raid-rooms/search' ||
+            method == 'GET' &&
+                (path == '/v1/raid-catalog' ||
+                    path == '/v1/raid-cycle' ||
+                    path == '/v1/groups' ||
+                    RegExp(r'^/v1/groups/[0-9a-fA-F-]{36}$').hasMatch(path) ||
+                    RegExp(
+                      r'^/v2/raid-rooms/[0-9a-fA-F-]{36}$',
+                    ).hasMatch(path)))) {
+      throw const AccountReadException('AUTH_REQUIRED', status: 401);
+    }
+    final scope = publicRead ? null : accountReadScope(session);
+    void guard() {
+      if (environment != dio.options.baseUrl) {
+        throw const AccountReadException('ENVIRONMENT_CHANGED');
+      }
+      if (scope != null) {
+        requireAccountReadScope(session, scope);
+      } else if (generation != session.generation || user != session.userId) {
+        throw const AccountReadException('STALE_READ');
+      }
+    }
+
     if (cooldown?.active == true &&
+        path != '/v2/me/character-analysis/refresh' &&
         (path.endsWith('/refresh') || path.endsWith('/preview'))) {
       throw AccountReadException(
         'UPSTREAM_RATE_LIMITED',
@@ -82,11 +138,13 @@ class DioBackendAccountReadApi
     }
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final access = await StartupTiming.run(
-          StartupWork.accessToken,
-          session.accessToken,
-        );
-        requireAccountReadScope(session, scope);
+        final access = publicRead
+            ? null
+            : await StartupTiming.run(
+                StartupWork.accessToken,
+                session.accessToken,
+              );
+        guard();
         final response = await LoadTiming.http(
           () => dio.request<Object?>(
             path,
@@ -95,19 +153,19 @@ class DioBackendAccountReadApi
             options: Options(
               followRedirects: false,
               method: method,
-              receiveTimeout: path == '/v2/me/role-summary-batches'
+              receiveTimeout: path == '/v2/me/character-analysis/refresh'
                   ? const Duration(seconds: 60)
                   : path.endsWith('/combat-power/refresh')
                   ? const Duration(seconds: 30)
                   : null,
               headers: {
-                'Authorization': 'Bearer $access',
+                if (access != null) 'Authorization': 'Bearer $access',
                 'Idempotency-Key': ?idempotencyKey,
               },
             ),
           ),
         );
-        requireAccountReadScope(session, scope);
+        guard();
         if (response.statusCode == 204 && expectedStatus == 204) return null;
         if (response.statusCode != expectedStatus ||
             response.data is! Map<String, dynamic>) {
@@ -115,7 +173,7 @@ class DioBackendAccountReadApi
         }
         return response.data! as Map<String, dynamic>;
       } on DioException catch (error) {
-        requireAccountReadScope(session, scope);
+        guard();
         final response = error.response;
         final data = response?.data;
         final detail = data is Map ? data['error'] : null;
@@ -127,7 +185,8 @@ class DioBackendAccountReadApi
             : response == null
             ? 'NETWORK_UNAVAILABLE'
             : 'INVALID_RESPONSE';
-        if (attempt == 0 &&
+        if (!publicRead &&
+            attempt == 0 &&
             response?.statusCode == 401 &&
             code == 'ACCESS_EXPIRED') {
           try {
@@ -139,13 +198,14 @@ class DioBackendAccountReadApi
               retryAfter: failure.retryAfter,
             );
           }
-          requireAccountReadScope(session, scope);
+          guard();
           continue;
         }
-        if ((response?.statusCode == 401 && code != 'INVALID_RESPONSE') ||
-            (response?.statusCode == 403 && code == 'ACCOUNT_DISABLED')) {
+        if (!publicRead &&
+            ((response?.statusCode == 401 && code != 'INVALID_RESPONSE') ||
+                (response?.statusCode == 403 && code == 'ACCOUNT_DISABLED'))) {
           await session.reject(
-            scope.generation,
+            scope!.generation,
             AuthApiException(code, status: response?.statusCode),
           );
         }

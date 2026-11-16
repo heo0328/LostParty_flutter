@@ -5,21 +5,15 @@ import '../../../../app/theme/app_colors.dart';
 class AccountToolsGrid extends StatelessWidget {
   const AccountToolsGrid({
     required this.onVerify,
-    required this.onKey,
     required this.onHistory,
     required this.onRefresh,
     super.key,
   });
 
-  final VoidCallback onVerify, onKey, onHistory;
+  final VoidCallback onVerify, onHistory;
   final VoidCallback? onRefresh;
 
-  static const labels = [
-    '원정대 인증',
-    '로스트아크 API 관리',
-    '사라진 캐릭터명 기록',
-    '서버 정보 다시 불러오기',
-  ];
+  static const labels = ['원정대 인증', '사라진 캐릭터명 기록', '서버 정보 다시 불러오기'];
 
   /// Two buttons plus fixed padding/gap; grows with the actual font and scaler.
   static double buttonWidth(BuildContext context) {
@@ -46,7 +40,7 @@ class AccountToolsGrid extends StatelessWidget {
       final natural = buttonWidth(context);
       final columns = constraints.maxWidth >= natural * 2 + 16 ? 2 : 1;
       final width = columns == 2 ? natural : constraints.maxWidth;
-      final actions = [onVerify, onKey, onHistory, onRefresh];
+      final actions = [onVerify, onHistory, onRefresh];
       return Wrap(
         spacing: 16,
         runSpacing: 20,

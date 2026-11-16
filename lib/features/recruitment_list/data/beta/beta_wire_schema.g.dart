@@ -1,3 +1,4 @@
+// Runtime projection updated to Backend 5172c753; query/profile selections preserved.
 // Projected by tool/extract_discovery_wire.mjs; discovery source 558ee6da4299dea49729ebaca5825ce9a235a42e; SHA256 3fdc06616d64e19aa7abf35b548cf1156fa7fbee6bcfb02c1dccf4ce9a9d7052.
 const betaWireSchemaJson = r'''
 {
@@ -5555,38 +5556,19 @@ const betaWireSchemaJson = r'''
         },
         "source": {
           "type": "string",
-          "const": "flutter_analysis",
+          "const": "server_analysis",
           "title": "Source"
         },
         "trust": {
           "type": "string",
-          "const": "client_submitted",
+          "const": "server_computed",
           "title": "Trust"
         },
-        "current_summary_version": {
+        "summary_version": {
           "type": "integer",
           "maximum": 2147483647,
           "minimum": 1,
-          "title": "Current Summary Version"
-        },
-        "success_summary_version": {
-          "anyOf": [
-            {
-              "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Success Summary Version"
-        },
-        "power_revision": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
-          "title": "Power Revision"
+          "title": "Summary Version"
         },
         "observed_at": {
           "anyOf": [
@@ -5600,7 +5582,7 @@ const betaWireSchemaJson = r'''
           ],
           "title": "Observed At"
         },
-        "success_saved_at": {
+        "saved_at": {
           "anyOf": [
             {
               "type": "string",
@@ -5610,21 +5592,31 @@ const betaWireSchemaJson = r'''
               "type": "null"
             }
           ],
-          "title": "Success Saved At"
+          "title": "Saved At"
         },
-        "success_issues": {
+        "integrity_status": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "clean",
+                "review",
+                "error",
+                "unavailable"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Integrity Status"
+        },
+        "issues": {
           "items": {
             "$ref": "#/$defs/AnalysisIssue"
           },
           "type": "array",
-          "title": "Success Issues"
-        },
-        "current_issues": {
-          "items": {
-            "$ref": "#/$defs/AnalysisIssue"
-          },
-          "type": "array",
-          "title": "Current Issues"
+          "title": "Issues"
         }
       },
       "additionalProperties": false,
@@ -5636,13 +5628,11 @@ const betaWireSchemaJson = r'''
         "state",
         "source",
         "trust",
-        "current_summary_version",
-        "success_summary_version",
-        "power_revision",
+        "summary_version",
         "observed_at",
-        "success_saved_at",
-        "success_issues",
-        "current_issues"
+        "saved_at",
+        "integrity_status",
+        "issues"
       ],
       "title": "AdmissionCandidatePower"
     },
@@ -7714,12 +7704,12 @@ const betaWireSchemaJson = r'''
         },
         "start": {
           "type": "string",
-          "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][05]$",
+          "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$",
           "title": "Start"
         },
         "end": {
           "type": "string",
-          "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][05]$",
+          "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$",
           "title": "End"
         },
         "end_day_offset": {
@@ -8062,13 +8052,19 @@ const betaWireSchemaJson = r'''
     "BPowerComparison": {
       "properties": {
         "selected_role": {
-          "$ref": "#/$defs/SelectedRole"
+          "type": "string",
+          "enum": [
+            "dealer",
+            "support"
+          ],
+          "title": "Selected Role"
         },
         "requirement": {
           "anyOf": [
             {
               "type": "string",
               "maxLength": 32,
+              "minLength": 1,
               "pattern": "^[0-9]+(?:\\.[0-9]+)?$"
             },
             {
@@ -8082,6 +8078,7 @@ const betaWireSchemaJson = r'''
             {
               "type": "string",
               "maxLength": 32,
+              "minLength": 1,
               "pattern": "^[0-9]+(?:\\.[0-9]+)?$"
             },
             {
@@ -8091,42 +8088,30 @@ const betaWireSchemaJson = r'''
           "title": "Actual"
         },
         "state": {
-          "$ref": "#/$defs/State8"
+          "type": "string",
+          "enum": [
+            "unrestricted",
+            "missing",
+            "below",
+            "meets"
+          ],
+          "title": "State"
         },
         "source": {
           "type": "string",
-          "const": "flutter_analysis",
+          "const": "server_analysis",
           "title": "Source"
         },
         "trust": {
           "type": "string",
-          "const": "client_submitted",
+          "const": "server_computed",
           "title": "Trust"
         },
-        "current_summary_version": {
+        "summary_version": {
           "type": "integer",
           "maximum": 2147483647,
           "minimum": 1,
-          "title": "Current Summary Version"
-        },
-        "success_summary_version": {
-          "anyOf": [
-            {
-              "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Success Summary Version"
-        },
-        "power_revision": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
-          "title": "Power Revision"
+          "title": "Summary Version"
         },
         "observed_at": {
           "anyOf": [
@@ -8140,7 +8125,7 @@ const betaWireSchemaJson = r'''
           ],
           "title": "Observed At"
         },
-        "success_saved_at": {
+        "saved_at": {
           "anyOf": [
             {
               "type": "string",
@@ -8150,21 +8135,31 @@ const betaWireSchemaJson = r'''
               "type": "null"
             }
           ],
-          "title": "Success Saved At"
+          "title": "Saved At"
         },
-        "success_issues": {
+        "integrity_status": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "clean",
+                "review",
+                "error",
+                "unavailable"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Integrity Status"
+        },
+        "issues": {
           "items": {
             "$ref": "#/$defs/BAnalysisIssue"
           },
           "type": "array",
-          "title": "Success Issues"
-        },
-        "current_issues": {
-          "items": {
-            "$ref": "#/$defs/BAnalysisIssue"
-          },
-          "type": "array",
-          "title": "Current Issues"
+          "title": "Issues"
         }
       },
       "additionalProperties": false,
@@ -8176,13 +8171,11 @@ const betaWireSchemaJson = r'''
         "state",
         "source",
         "trust",
-        "current_summary_version",
-        "success_summary_version",
-        "power_revision",
+        "summary_version",
         "observed_at",
-        "success_saved_at",
-        "success_issues",
-        "current_issues"
+        "saved_at",
+        "integrity_status",
+        "issues"
       ],
       "title": "BPowerComparison"
     },
@@ -9619,6 +9612,52 @@ const betaWireSchemaJson = r'''
     },
     "Beta_ApplicationDisplayDetailResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -9901,6 +9940,52 @@ const betaWireSchemaJson = r'''
     },
     "Beta_ApplicationDisplayPageResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -13338,7 +13423,7 @@ const betaWireSchemaJson = r'''
         "source": {
           "type": "string",
           "enum": [
-            "stored_role_success",
+            "server_analysis",
             "unavailable",
             "not_disclosed"
           ],
@@ -13348,7 +13433,7 @@ const betaWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "string",
-              "const": "client_submitted"
+              "const": "server_computed"
             },
             {
               "type": "null"
@@ -13380,7 +13465,7 @@ const betaWireSchemaJson = r'''
           ],
           "title": "Saved At"
         },
-        "power_revision": {
+        "summary_version": {
           "anyOf": [
             {
               "type": "integer",
@@ -13390,7 +13475,7 @@ const betaWireSchemaJson = r'''
               "type": "null"
             }
           ],
-          "title": "Power Revision"
+          "title": "Summary Version"
         },
         "integrity_status": {
           "anyOf": [
@@ -13408,6 +13493,13 @@ const betaWireSchemaJson = r'''
             }
           ],
           "title": "Integrity Status"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/AnalysisIssue"
+          },
+          "type": "array",
+          "title": "Issues"
         }
       },
       "additionalProperties": false,
@@ -13418,8 +13510,9 @@ const betaWireSchemaJson = r'''
         "trust",
         "observed_at",
         "saved_at",
-        "power_revision",
-        "integrity_status"
+        "summary_version",
+        "integrity_status",
+        "issues"
       ],
       "title": "CandidatePower"
     },
@@ -22164,6 +22257,16 @@ const betaWireSchemaJson = r'''
     },
     "Successor": {
       "properties": {
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "cycle_member_id": {
           "type": "string",
           "format": "uuid",
@@ -25301,6 +25404,52 @@ const betaWireSchemaJson = r'''
     },
     "ApplicationDisplayDetailResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -25473,6 +25622,52 @@ const betaWireSchemaJson = r'''
     },
     "ApplicationDisplayPageResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -26518,6 +26713,52 @@ const betaWireSchemaJson = r'''
     },
     "Beta_GroupLinkedApplicationDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -27204,6 +27445,52 @@ const betaWireSchemaJson = r'''
     },
     "GroupLinkedApplicationDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -29367,6 +29654,52 @@ const betaWireSchemaJson = r'''
     },
     "Participation_ApplicationDisplayDetailResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -29455,6 +29788,52 @@ const betaWireSchemaJson = r'''
     },
     "Participation_Beta_ApplicationDisplayDetailResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -29579,6 +29958,52 @@ const betaWireSchemaJson = r'''
     },
     "Participation_Beta_GroupLinkedApplicationDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -30531,6 +30956,52 @@ const betaWireSchemaJson = r'''
     },
     "Participation_GroupLinkedApplicationDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -31713,6 +32184,52 @@ const betaWireSchemaJson = r'''
     },
     "RosterIssues_ApplicationDisplayDetailResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -31944,6 +32461,52 @@ const betaWireSchemaJson = r'''
     },
     "RosterIssues_Beta_ApplicationDisplayDetailResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -32100,6 +32663,52 @@ const betaWireSchemaJson = r'''
     },
     "RosterIssues_Beta_GroupLinkedApplicationDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -33052,6 +33661,52 @@ const betaWireSchemaJson = r'''
     },
     "RosterIssues_GroupLinkedApplicationDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -33834,6 +34489,52 @@ const betaWireSchemaJson = r'''
     },
     "RosterIssues_Participation_ApplicationDisplayDetailResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -33859,6 +34560,52 @@ const betaWireSchemaJson = r'''
     },
     "RosterIssues_Participation_Beta_ApplicationDisplayDetailResponse": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -33991,6 +34738,52 @@ const betaWireSchemaJson = r'''
     },
     "RosterIssues_Participation_Beta_GroupLinkedApplicationDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },
@@ -34995,6 +35788,52 @@ const betaWireSchemaJson = r'''
     },
     "RosterIssues_Participation_GroupLinkedApplicationDetail": {
       "properties": {
+        "group_policy_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "cycle-group-policy-1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Version"
+        },
+        "group_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Metadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Effect"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group_policy_effects": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Effect"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Policy Effects"
+        },
         "scope": {
           "$ref": "#/$defs/app__raid_rooms__cycle_wire__Scope"
         },

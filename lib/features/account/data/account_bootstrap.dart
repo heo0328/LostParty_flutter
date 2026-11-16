@@ -99,7 +99,7 @@ class BootstrapRegistration {
     profiles = List.unmodifiable(
       raidList(
         json['personal_profiles'],
-      ).map((p) => PersonalProfile.fromJson(roleMap(p))),
+      ).map((p) => PersonalProfile.fromJson(roleMap(p), summaryOnly: true)),
     );
     unavailable = {};
     for (final v in raidList(json['unavailable_characters'])) {

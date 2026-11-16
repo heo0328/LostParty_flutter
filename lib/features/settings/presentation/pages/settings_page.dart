@@ -140,14 +140,6 @@ class _SettingsPageState extends State<SettingsPage> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/game-account-verification'),
           ),
-          ListTile(
-            key: const ValueKey('settingsApiToken'),
-            leading: const Icon(Icons.key_outlined),
-            title: const Text('Lost Ark API 토큰'),
-            subtitle: const Text('계정과 캐릭터 조회에 사용할 토큰을 관리합니다.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/api-token'),
-          ),
           FutureBuilder<bool>(
             future: _isOperator,
             builder: (context, snapshot) {

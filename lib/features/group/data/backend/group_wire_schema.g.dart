@@ -1,3 +1,4 @@
+// Role projection updated to Backend b95cff51; other profiles unchanged.
 // Validation projection: Backend 22b16207; invite display c38144528c42eda7fcf2912fa412d3a005fc68e7; invite eligibility fdd51c8e9a4d9a5eda8c5f175485965a013ee99a.
 const groupWireSchemaJson = r'''
 {
@@ -974,17 +975,17 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_relation_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Relation Revision"
         },
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         },
         "registration_id": {
@@ -999,32 +1000,32 @@ const groupWireSchemaJson = r'''
         },
         "expected_registration_version": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Registration Version"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Ownership Revision"
         },
         "expected_roster_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Roster Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Lifecycle Revision"
         },
         "expected_limits_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Limits Revision"
         },
         "expected_usage_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Usage Revision"
         }
       },
@@ -1065,12 +1066,12 @@ const groupWireSchemaJson = r'''
         },
         "used": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Used"
         },
         "limit": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Limit"
         }
       },
@@ -1121,12 +1122,12 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "evaluated_at": {
@@ -1211,27 +1212,27 @@ const groupWireSchemaJson = r'''
         },
         "expected_registration_version": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Registration Version"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Ownership Revision"
         },
         "expected_roster_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Roster Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Lifecycle Revision"
         },
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         }
       },
@@ -1252,17 +1253,17 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_subject_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Subject Revision"
         },
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         }
       },
@@ -1318,32 +1319,32 @@ const groupWireSchemaJson = r'''
         },
         "expected_registration_version": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Registration Version"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Ownership Revision"
         },
         "expected_roster_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Roster Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Lifecycle Revision"
         },
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         },
         "expected_membership_id": {
@@ -1353,7 +1354,7 @@ const groupWireSchemaJson = r'''
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         }
       },
@@ -1500,12 +1501,12 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         },
         "expected_code_id": {
@@ -1522,7 +1523,7 @@ const groupWireSchemaJson = r'''
         },
         "expected_code_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Code Revision"
         }
       },
@@ -1572,32 +1573,32 @@ const groupWireSchemaJson = r'''
         },
         "expected_registration_version": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Registration Version"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Ownership Revision"
         },
         "expected_roster_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Roster Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Lifecycle Revision"
         },
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         },
         "expected_code_id": {
@@ -1607,17 +1608,17 @@ const groupWireSchemaJson = r'''
         },
         "expected_code_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Code Revision"
         },
         "expected_limits_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Limits Revision"
         },
         "expected_usage_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Usage Revision"
         }
       },
@@ -1647,7 +1648,7 @@ const groupWireSchemaJson = r'''
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "code_id": {
@@ -1657,7 +1658,7 @@ const groupWireSchemaJson = r'''
         },
         "code_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Code Revision"
         }
       },
@@ -1675,12 +1676,12 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         },
         "expected_code_id": {
@@ -1697,7 +1698,7 @@ const groupWireSchemaJson = r'''
         },
         "expected_code_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Code Revision"
         },
         "visible_to_members": {
@@ -1720,12 +1721,12 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         },
         "expected_code_id": {
@@ -1742,7 +1743,7 @@ const groupWireSchemaJson = r'''
         },
         "expected_code_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Code Revision"
         },
         "visible_to_members": {
@@ -1765,12 +1766,12 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         },
         "expected_membership_id": {
@@ -1780,7 +1781,7 @@ const groupWireSchemaJson = r'''
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         }
       },
@@ -1857,7 +1858,7 @@ const groupWireSchemaJson = r'''
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "my_membership": {
@@ -1930,7 +1931,7 @@ const groupWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Revision"
         },
         "display": {
@@ -1992,12 +1993,12 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "items": {
@@ -2051,7 +2052,7 @@ const groupWireSchemaJson = r'''
         },
         "directory_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Directory Revision"
         },
         "items": {
@@ -2094,7 +2095,7 @@ const groupWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Revision"
         },
         "display": {
@@ -2109,7 +2110,7 @@ const groupWireSchemaJson = r'''
         },
         "application_count": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Application Count"
         },
         "blocked": {
@@ -2159,12 +2160,12 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "my_membership": {
@@ -2186,7 +2187,7 @@ const groupWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0.0
+              "minimum": 0
             },
             {
               "type": "null"
@@ -2247,7 +2248,7 @@ const groupWireSchemaJson = r'''
       "properties": {
         "version": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Version"
         },
         "saved_at": {
@@ -2293,17 +2294,17 @@ const groupWireSchemaJson = r'''
       "properties": {
         "limit": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Limit"
         },
         "used": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Used"
         },
         "remaining": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Remaining"
         },
         "state": {
@@ -2340,22 +2341,22 @@ const groupWireSchemaJson = r'''
         },
         "expected_registration_version": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Registration Version"
         },
         "expected_ownership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Ownership Revision"
         },
         "expected_roster_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Roster Revision"
         },
         "expected_lifecycle_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Lifecycle Revision"
         },
         "name": {
@@ -2365,12 +2366,12 @@ const groupWireSchemaJson = r'''
         },
         "expected_limits_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Limits Revision"
         },
         "expected_usage_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Usage Revision"
         }
       },
@@ -2405,7 +2406,7 @@ const groupWireSchemaJson = r'''
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "my_membership": {
@@ -2445,17 +2446,17 @@ const groupWireSchemaJson = r'''
         },
         "membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Membership Revision"
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "ended_at": {
@@ -2485,12 +2486,12 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "evaluated_at": {
@@ -2516,17 +2517,17 @@ const groupWireSchemaJson = r'''
         },
         "pending_applications": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Pending Applications"
         },
         "pending_invitations": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Pending Invitations"
         },
         "action_required": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Action Required"
         }
       },
@@ -2559,7 +2560,7 @@ const groupWireSchemaJson = r'''
         },
         "membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Membership Revision"
         },
         "ended_at": {
@@ -2587,12 +2588,12 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "my_membership": {
@@ -2630,7 +2631,7 @@ const groupWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Revision"
         },
         "display": {
@@ -2674,12 +2675,12 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "items": {
@@ -2735,7 +2736,7 @@ const groupWireSchemaJson = r'''
         },
         "room_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Room Revision"
         },
         "state": {
@@ -2788,12 +2789,12 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "evaluated_at": {
@@ -2818,7 +2819,7 @@ const groupWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0.0
+              "minimum": 0
             },
             {
               "type": "null"
@@ -2876,7 +2877,7 @@ const groupWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 1.0
+              "minimum": 1
             },
             {
               "type": "null"
@@ -2886,7 +2887,7 @@ const groupWireSchemaJson = r'''
         },
         "target_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Target Revision"
         },
         "state": {
@@ -2956,7 +2957,7 @@ const groupWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Revision"
         },
         "group": {
@@ -2964,7 +2965,7 @@ const groupWireSchemaJson = r'''
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "display": {
@@ -3001,7 +3002,7 @@ const groupWireSchemaJson = r'''
         },
         "application_count": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Application Count"
         },
         "permissions": {
@@ -3041,17 +3042,17 @@ const groupWireSchemaJson = r'''
         },
         "membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Membership Revision"
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "ended_at": {
@@ -3080,12 +3081,12 @@ const groupWireSchemaJson = r'''
         },
         "expected_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Revision"
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         }
       },
@@ -3129,7 +3130,7 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "character_id": {
@@ -3198,27 +3199,27 @@ const groupWireSchemaJson = r'''
         },
         "received_invitations": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Received Invitations"
         },
         "sent_applications": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Sent Applications"
         },
         "managed_applications": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Managed Applications"
         },
         "managed_invitations": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Managed Invitations"
         },
         "action_required": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Action Required"
         }
       },
@@ -3255,7 +3256,7 @@ const groupWireSchemaJson = r'''
         "source": {
           "type": "string",
           "enum": [
-            "stored_role_success",
+            "server_analysis",
             "unavailable"
           ],
           "title": "Source"
@@ -3264,7 +3265,7 @@ const groupWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "string",
-              "const": "client_submitted"
+              "const": "server_computed"
             },
             {
               "type": "null"
@@ -3296,17 +3297,24 @@ const groupWireSchemaJson = r'''
           ],
           "title": "Saved At"
         },
-        "power_revision": {
+        "summary_version": {
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 1.0
+              "minimum": 1
             },
             {
               "type": "null"
             }
           ],
-          "title": "Power Revision"
+          "title": "Summary Version"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/components/schemas/AnalysisIssue"
+          },
+          "type": "array",
+          "title": "Issues"
         },
         "analysis": {
           "anyOf": [
@@ -3342,7 +3350,8 @@ const groupWireSchemaJson = r'''
         "trust",
         "observed_at",
         "saved_at",
-        "power_revision",
+        "summary_version",
+        "issues",
         "analysis",
         "reason"
       ],
@@ -3361,12 +3370,12 @@ const groupWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Revision"
         },
         "member_count": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Member Count"
         },
         "representative": {
@@ -3406,7 +3415,7 @@ const groupWireSchemaJson = r'''
         },
         "directory_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Directory Revision"
         },
         "next_cursor": {
@@ -3442,12 +3451,12 @@ const groupWireSchemaJson = r'''
         },
         "ownership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Ownership Revision"
         },
         "lifecycle_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Lifecycle Revision"
         },
         "item_level": {
@@ -3511,22 +3520,22 @@ const groupWireSchemaJson = r'''
         },
         "expected_target_ownership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Target Ownership Revision"
         },
         "expected_target_lifecycle_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Target Lifecycle Revision"
         },
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         }
       },
@@ -3557,7 +3566,7 @@ const groupWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Revision"
         },
         "active": {
@@ -3626,7 +3635,7 @@ const groupWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Revision"
         },
         "display": {
@@ -3641,7 +3650,7 @@ const groupWireSchemaJson = r'''
         },
         "application_count": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Application Count"
         },
         "blocked": {
@@ -3692,22 +3701,22 @@ const groupWireSchemaJson = r'''
         },
         "group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Group Revision"
         },
         "members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Members Revision"
         },
         "previous_leader_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Previous Leader Membership Revision"
         },
         "leader_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Leader Membership Revision"
         },
         "transferred_at": {
@@ -3734,12 +3743,12 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         },
         "expected_membership_id": {
@@ -3749,7 +3758,7 @@ const groupWireSchemaJson = r'''
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         }
       },
@@ -3767,17 +3776,17 @@ const groupWireSchemaJson = r'''
       "properties": {
         "group_capacity": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Group Capacity"
         },
         "joined_groups": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Joined Groups"
         },
         "raid_rooms": {
           "type": "integer",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Raid Rooms"
         }
       },
@@ -3822,7 +3831,7 @@ const groupWireSchemaJson = r'''
         },
         "directory_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Directory Revision"
         },
         "next_cursor": {
@@ -3850,17 +3859,17 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_relation_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Relation Revision"
         },
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         },
         "block_future": {
@@ -3882,17 +3891,17 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_relation_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Relation Revision"
         },
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         }
       },
@@ -3967,12 +3976,12 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         },
         "expected_membership_id": {
@@ -3982,12 +3991,12 @@ const groupWireSchemaJson = r'''
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         },
         "expected_target_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Target Membership Revision"
         }
       },
@@ -4006,12 +4015,12 @@ const groupWireSchemaJson = r'''
       "properties": {
         "expected_group_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Group Revision"
         },
         "expected_members_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Members Revision"
         },
         "expected_membership_id": {
@@ -4021,7 +4030,7 @@ const groupWireSchemaJson = r'''
         },
         "expected_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Membership Revision"
         },
         "target_membership_id": {
@@ -4031,7 +4040,7 @@ const groupWireSchemaJson = r'''
         },
         "expected_target_membership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Expected Target Membership Revision"
         }
       },
@@ -4078,12 +4087,12 @@ const groupWireSchemaJson = r'''
         },
         "limits_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Limits Revision"
         },
         "usage_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Usage Revision"
         },
         "limit_source": {
@@ -4141,7 +4150,7 @@ const groupWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0.0
+              "minimum": 0
             },
             {
               "type": "null"
@@ -4153,7 +4162,7 @@ const groupWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "integer",
-              "minimum": 0.0
+              "minimum": 0
             },
             {
               "type": "null"
@@ -4210,7 +4219,7 @@ const groupWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Revision"
         },
         "joined_at": {
@@ -4284,12 +4293,12 @@ const groupWireSchemaJson = r'''
         },
         "ownership_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Ownership Revision"
         },
         "lifecycle_revision": {
           "type": "integer",
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Lifecycle Revision"
         },
         "item_level": {

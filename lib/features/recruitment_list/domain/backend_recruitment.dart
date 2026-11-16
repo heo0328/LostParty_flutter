@@ -345,30 +345,9 @@ class RecruitmentCreationContext {
     allowed = raidBool(permission['allowed']);
     reason = permission['reason'] as String?;
     final comparison = roleMap(json['comparison']);
-    roleShape(
-      comparison,
-      'selected_role requirement actual state source trust current_summary_version success_summary_version power_revision observed_at success_saved_at success_issues current_issues',
-    );
-    roleCheck(comparison['selected_role'] == draft.role);
-    roleCheck(
-      comparison['source'] == 'flutter_analysis' &&
-          comparison['trust'] == 'client_submitted',
-    );
-    rolePositive(comparison['current_summary_version']);
-    rolePositive(comparison['power_revision']);
-    roleCheck(
-      {
-        'unrestricted',
-        'missing',
-        'below',
-        'meets',
-      }.contains(comparison['state']),
-    );
+    validateServerPowerComparison(comparison, draft.role);
     actualPower = comparison['actual'] as String?;
-    final issues = [
-      ...raidList(comparison['current_issues']),
-      ...raidList(comparison['success_issues']),
-    ];
+    final issues = raidList(comparison['issues']);
     hasBuildWarning = issues.isNotEmpty;
     if (actualPower != null) {
       roleCheck(RegExp(r'^[0-9]+(?:\.[0-9]+)?$').hasMatch(actualPower!));
