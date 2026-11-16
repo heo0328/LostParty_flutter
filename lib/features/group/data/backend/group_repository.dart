@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../account/domain/account_read_session.dart';
+import '../../../account/data/backend_account_read_api.dart';
 import '../../../account/domain/scoped_cache_models.dart';
 import '../../../account/data/local/scoped_command_key.dart';
 import '../../../auth/domain/backend_auth_models.dart';
@@ -177,6 +178,20 @@ class GroupRepository {
     String path, {
     Map<String, dynamic> query = const {},
   }) => request('GET', path, query: query);
+
+  Future<Map<String, dynamic>> publicSummary(
+    String path, {
+    Map<String, dynamic> query = const {},
+  }) async {
+    GroupContract.request('GET', path, query, null);
+    final raw = await DioBackendAccountReadApi(
+      dio,
+      session,
+    ).requestPublic(path, query: query);
+    GroupContract.response('GET', path, 200, raw);
+    return groupMap(raw);
+  }
+
   Future<List<Map<String, dynamic>>> all(
     String path, {
     Map<String, dynamic> query = const {},

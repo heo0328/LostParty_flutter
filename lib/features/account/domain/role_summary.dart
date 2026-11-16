@@ -1,3 +1,4 @@
+import '../../../../shared/backend/server_analysis_wire.dart';
 import 'dart:convert';
 
 import '../../../../shared/character_build/build_integrity_snapshot.dart';
@@ -6,6 +7,17 @@ import 'scoped_cache_models.dart';
 
 const roleSummaryContract = '6e4f625c3b62c92ec412373b33ed8a3441af8149';
 const personalSettingsContract = '7027f0b690e1c232fafc5d09faa9d6c169c99962';
+
+void validateServerPowerComparison(Map<String, dynamic> json, String role) {
+  ServerAnalysisWire.definition('BPowerComparison', json);
+  roleCheck(json['selected_role'] == role);
+  for (final key in ['observed_at', 'saved_at']) {
+    if (json[key] != null) roleUtc(json[key]);
+  }
+  for (final issue in json['issues'] as List) {
+    AnalysisIssue.fromJson(roleMap(issue));
+  }
+}
 
 void roleCheck(bool valid) {
   if (!valid) throw const FormatException('Invalid role summary.');
@@ -81,7 +93,7 @@ class RoleSummary {
       json,
       'source analysis_rules_version analyzed_at combat_power item_level combat_power_observed_at item_level_observed_at integrity_status catalog_version issues observed_lifecycle_revision',
     );
-    roleCheck(json['source'] == 'flutter_analysis');
+    roleCheck(json['source'] == 'server_analysis');
     final rules = roleIdentifier(json['analysis_rules_version']);
     final catalog = json['catalog_version'] == null
         ? null
@@ -157,7 +169,7 @@ class RoleSummary {
   final List<AnalysisIssue> issues;
   final int lifecycleRevision;
   Map<String, dynamic> toJson() => {
-    'source': 'flutter_analysis',
+    'source': 'server_analysis',
     'analysis_rules_version': rulesVersion,
     'analyzed_at': analyzedAt.toIso8601String(),
     'combat_power': combatPower,
@@ -174,31 +186,50 @@ class RoleSummary {
 }
 
 class StoredRoleSummary {
-  StoredRoleSummary.fromJson(Map<String, dynamic> json) {
-    roleShape(json, 'version summary saved_at');
+  StoredRoleSummary.fromJson(
+    Map<String, dynamic> json, {
+    this.summaryOnly = false,
+  }) {
+    if (!summaryOnly) ServerAnalysisWire.definition('RoleAnalysis', json);
+    roleShape(
+      json,
+      summaryOnly
+          ? 'version summary saved_at'
+          : 'version summary saved_at detail',
+    );
+    detail = summaryOnly || json['detail'] == null
+        ? null
+        : roleMap(json['detail']);
     version = rolePositive(json['version']);
     summary = json['summary'] == null
         ? null
         : RoleSummary.fromJson(roleMap(json['summary']));
     savedAt = json['saved_at'] == null ? null : roleUtc(json['saved_at']);
+    if (!summaryOnly) roleCheck((summary == null) == (detail == null));
     roleCheck(
       summary == null
           ? version == 1 && savedAt == null
           : version >= 2 && savedAt != null,
     );
   }
+  final bool summaryOnly;
+  late final Map<String, dynamic>? detail;
   late final int version;
   late final RoleSummary? summary;
   late final DateTime? savedAt;
   Map<String, dynamic> toJson() => {
     'version': version,
     'summary': summary?.toJson(),
+    if (!summaryOnly) 'detail': detail,
     'saved_at': savedAt?.toIso8601String(),
   };
 }
 
 class PersonalProfile {
-  PersonalProfile.fromJson(Map<String, dynamic> json) {
+  PersonalProfile.fromJson(
+    Map<String, dynamic> json, {
+    bool summaryOnly = false,
+  }) {
     roleShape(
       json,
       'character_id game_account_id ownership_revision lifecycle_revision lifecycle_state dealer support preferences',
@@ -212,8 +243,14 @@ class PersonalProfile {
           json['lifecycle_state'] == 'suspect',
     );
     lifecycleState = json['lifecycle_state'] as String;
-    dealer = StoredRoleSummary.fromJson(roleMap(json['dealer']));
-    support = StoredRoleSummary.fromJson(roleMap(json['support']));
+    dealer = StoredRoleSummary.fromJson(
+      roleMap(json['dealer']),
+      summaryOnly: summaryOnly,
+    );
+    support = StoredRoleSummary.fromJson(
+      roleMap(json['support']),
+      summaryOnly: summaryOnly,
+    );
     for (final value in [dealer, support]) {
       roleCheck(
         value.summary == null ||
@@ -226,6 +263,16 @@ class PersonalProfile {
   late final int ownershipRevision, lifecycleRevision;
   late final StoredRoleSummary dealer, support;
   late final PersonalPreferences preferences;
+  Map<String, dynamic> toJson() => {
+    'character_id': characterId,
+    'game_account_id': accountId,
+    'ownership_revision': ownershipRevision,
+    'lifecycle_revision': lifecycleRevision,
+    'lifecycle_state': lifecycleState,
+    'dealer': dealer.toJson(),
+    'support': support.toJson(),
+    'preferences': preferences.toJson(),
+  };
   StoredRoleSummary role(CharacterBuildRole role) =>
       role == CharacterBuildRole.dealer ? dealer : support;
 }

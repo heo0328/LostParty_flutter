@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../../../../shared/game_catalog/domain/repositories/game_catalog_repository.dart';
-import '../../data/mappers/character_build_analysis_mapper.dart';
+import '../../data/mappers/server_analysis_detail_mapper.dart';
 import '../../data/repositories/scoped_role_repository.dart';
 import '../../data/repositories/scoped_settings_repository.dart';
 import '../../data/scoped_account_runtime.dart';
@@ -235,6 +235,7 @@ class MemberAccountViewModel extends ChangeNotifier {
   bool restoring = false;
   int _backgroundEpoch = 0;
   String? failure;
+  AccountReadException? failureDetails;
   DateTime? _restoreRetryAt;
   Timer? _restoreRetryTimer;
   int get restoreRetrySeconds => _restoreRetryAt == null
@@ -1249,13 +1250,17 @@ class MemberAccountViewModel extends ChangeNotifier {
         generation = runtime.readGeneration;
     final guard = _guard(epoch, member, scope, generation);
     failure = null;
+    failureDetails = null;
     late final Future<void> flight;
     flight =
         Future<void>(() async {
           try {
             await action(guard);
           } catch (e) {
-            if (!_disposed && epoch == _epoch) failure = _code(e);
+            if (!_disposed && epoch == _epoch) {
+              failure = _code(e);
+              failureDetails = e is AccountReadException ? e : null;
+            }
           }
         }).whenComplete(() {
           if (identical(_writes[key], flight)) _writes.remove(key);
@@ -1407,30 +1412,6 @@ class MemberAccountViewModel extends ChangeNotifier {
       }
     },
   );
-  Future<void> resolveRole(
-    ScopedRegistrationRef reg,
-    ScopedCharacterRef ref,
-    CharacterBuildRole role, {
-    bool useServer = false,
-  }) => _write('role:${ref.characterId}:${role.name}', (guard) async {
-    cacheRequire(
-      reg.scope == runtime.scope && ref.scope == runtime.scope,
-      'SCOPE_CHANGED',
-    );
-    ScopedRoleState? value;
-    if (useServer) {
-      value = await runtime.useServerRoleBuild(reg, ref, role, guard: guard);
-    } else {
-      final r = await runtime.syncRoleBuild(reg, ref, role, guard: guard);
-      value = r.state;
-      if (r.failure != null) failure = r.failure!.code;
-    }
-    guard();
-    if (value != null) {
-      _setCharacter(ref, character(ref)!.withRole(role, value));
-      if (!value.hasPending) runner.serverResolved(ref, role);
-    }
-  });
   bool canRefreshCharacter(ScopedCharacterRef ref) =>
       canEdit &&
       detailsAvailable(ref) &&
@@ -1456,18 +1437,24 @@ class MemberAccountViewModel extends ChangeNotifier {
             );
         guard();
         if (result.code != null) failure = result.code;
+        failureDetails = result.failure;
       } finally {
         if (saved?.role case final role?) {
-          final local = await runtime.readCachedRoleBuild(
-            registration,
-            ref,
-            role,
-            guard: guard,
-          );
-          guard();
-          final row = character(ref);
-          if (row != null) _setCharacter(ref, row.withRole(role, local));
-          if (local?.hasPending == false) runner.serverResolved(ref, role);
+          try {
+            final local = await runtime.readCachedRoleBuild(
+              registration,
+              ref,
+              role,
+              guard: guard,
+            );
+            guard();
+            final row = character(ref);
+            if (row != null) _setCharacter(ref, row.withRole(role, local));
+            if (local?.hasPending == false) runner.serverResolved(ref, role);
+          } on ScopedCacheException {
+            guard();
+            failure = 'SERVER_RESULT_REFRESH_REQUIRED';
+          }
         }
       }
     });
@@ -1478,21 +1465,32 @@ class MemberAccountViewModel extends ChangeNotifier {
     CharacterBuildRole role,
   ) async {
     if (!detailsAvailable(ref)) return null;
-    final row = character(ref), state = character(ref)?.role(role);
-    if (row == null || state?.rawMatchesDisplay != true) return null;
-    final member = accountReadScope(runtime.session),
-        scope = runtime.scope,
-        epoch = _epoch;
-    final gameCatalog = await catalog.loadCatalog();
-    runtime.requireCurrent(member, scope);
-    if (epoch != _epoch || _disposed) {
-      throw const AccountReadException('STALE_READ');
+    final reg = sections
+        .where((s) => s.registration.accountId == ref.accountId)
+        .firstOrNull;
+    if (reg == null) return null;
+    final captured = accountReadScope(runtime.session), epoch = _epoch;
+    void current() {
+      runtime.requireCurrent(captured, ref.scope);
+      if (_disposed || epoch != _epoch) {
+        throw const AccountReadException('STALE_READ');
+      }
     }
-    if (!detailsAvailable(ref)) return null;
-    return const CharacterBuildAnalysisMapper().fromJson(
-      jsonDecode(state!.rawJson!) as Map<String, dynamic>,
-      catalog: gameCatalog,
-    );
+
+    var state = character(ref)?.role(role);
+    if (state?.server.detail == null) {
+      final plan = await runtime.prepareRoleBuild(
+        ScopedRegistrationRef(ref.scope, reg.registration.registrationId),
+        ref,
+        guard: current,
+      );
+      state = await runtime.readRoleBuild(plan, role, guard: current);
+      current();
+      final row = character(ref);
+      if (row != null) _setCharacter(ref, row.withRole(role, state));
+    }
+    final detail = state?.server.detail;
+    return detail == null ? null : serverAnalysisDetail(detail);
   }
 
   @override

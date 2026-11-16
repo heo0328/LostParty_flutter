@@ -82,6 +82,68 @@ void main() {
       expect(session.rejects, 0);
     },
   );
+  test(
+    'public search does not acquire a token or reject a member session',
+    () async {
+      session.change(authenticated: false);
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.headers['Authorization'], isNull);
+            fail(options, handler, 401, 'ACCESS_EXPIRED');
+          },
+        ),
+      );
+      await expectLater(
+        api.requestPublic('/v2/raid-rooms/search', method: 'POST', body: {}),
+        throwsA(code('ACCESS_EXPIRED')),
+      );
+      expect(session.accessCalls, 0);
+      expect(session.refreshCalls, 0);
+      expect(session.rejects, 0);
+    },
+  );
+  test(
+    'public transport cannot bypass private endpoint authentication',
+    () async {
+      session.change(authenticated: false);
+      var requests = 0;
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (_, handler) {
+            requests++;
+            handler.reject(DioException(requestOptions: RequestOptions()));
+          },
+        ),
+      );
+      await expectLater(
+        api.requestPublic('/v1/me/game-accounts'),
+        throwsA(code('AUTH_REQUIRED')),
+      );
+      expect(requests, 0);
+      expect(session.accessCalls, 0);
+    },
+  );
+  test(
+    'late public result is discarded after authentication changes',
+    () async {
+      session.change(authenticated: false);
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            session.change(authenticated: true);
+            handler.resolve(
+              Response(requestOptions: options, statusCode: 200, data: {}),
+            );
+          },
+        ),
+      );
+      await expectLater(
+        api.requestPublic('/v1/raid-cycle'),
+        throwsA(code('STALE_READ')),
+      );
+    },
+  );
   test('a second expired response does not enter a refresh loop', () async {
     var requests = 0;
     dio.interceptors.add(

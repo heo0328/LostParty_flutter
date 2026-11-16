@@ -5,6 +5,7 @@ import '../../../account/domain/member_cycle_models.dart';
 import '../../../account/domain/role_summary.dart';
 import '../../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../../domain/backend_recruitment.dart';
+import '../../domain/recruitment_cycle_targets.dart';
 import '../../data/cycle_read_repository.dart';
 import '../../data/group_character_candidates.dart';
 import '../../data/cycle_interaction_repository.dart';
@@ -48,6 +49,9 @@ class CycleSearchViewModel extends ChangeNotifier {
   int _epoch = 0, _groupEpoch = 0, _mutationVersion = 0;
   Timer? _timer;
   MemberCycles? cycles;
+  RecruitmentCycleTargets? _publicTargets;
+  RecruitmentCycleTargets? get cycleTargets =>
+      cycles == null ? _publicTargets : RecruitmentCycleTargets.member(cycles!);
   RaidCatalog? catalog;
   List<RecruitmentGroupChoice> groups = [];
   CycleFilterContext? groupContext;
@@ -99,6 +103,7 @@ class CycleSearchViewModel extends ChangeNotifier {
   Future<void> loadCandidates({bool more = false}) async {
     final group = filter.groupId, context = groupContext;
     if (_disposed ||
+        !session.isAuthenticated ||
         candidateLoading ||
         groupLoading ||
         group == null ||
@@ -199,17 +204,16 @@ class CycleSearchViewModel extends ChangeNotifier {
   }
 
   final _cursors = <String>{};
-  bool _valid(int e) =>
-      !_disposed &&
-      e == _epoch &&
-      session.isAuthenticated &&
-      scopeKey() == _binding;
+  bool _valid(int e) => !_disposed && e == _epoch && scopeKey() == _binding;
   void _emit() {
     if (!_disposed) notifyListeners();
   }
 
   void _access() {
-    if (_binding == scopeKey() && session.isAuthenticated) return;
+    if (_binding == scopeKey()) return;
+    final publicFilter = searchEnabled
+        ? filter.copy(clearGroup: true, clearScope: true)
+        : CycleSearchFilter();
     _binding = scopeKey();
     _epoch++;
     _groupEpoch++;
@@ -222,18 +226,19 @@ class CycleSearchViewModel extends ChangeNotifier {
     totalCount = null;
     resultRevision = displayedSignature = null;
     cycles = null;
+    _publicTargets = null;
     groupContext = null;
     target = null;
     rows = [];
     groups = [];
-    filter = CycleSearchFilter();
+    filter = publicFilter;
     cursor = null;
     _digest = null;
     failure = groupFailure = null;
     loading = groupLoading = false;
     _timer?.cancel();
     _emit();
-    if (session.isAuthenticated && searchEnabled) unawaited(load());
+    if (searchEnabled) unawaited(load());
   }
 
   Future<void> _groupChanged() async {
@@ -304,10 +309,24 @@ class CycleSearchViewModel extends ChangeNotifier {
         if (_disposed || e != _epoch) return;
         catalog = labels;
       }
-      if (!session.isAuthenticated) return;
-      final meta = await gateway.cycles();
+      final RecruitmentCycleTargets meta;
+      if (session.isAuthenticated) {
+        final member = await gateway.cycles();
+        if (!_valid(e)) return;
+        cycles = member;
+        meta = RecruitmentCycleTargets.member(member);
+      } else {
+        final publicGateway = gateway;
+        if (publicGateway is! PublicRecruitmentGateway ||
+            !(publicGateway as PublicRecruitmentGateway).supportsPublicSearch) {
+          return;
+        }
+        final current = await (publicGateway as PublicRecruitmentGateway)
+            .publicCycle();
+        if (!_valid(e)) return;
+        meta = _publicTargets = RecruitmentCycleTargets.public(current);
+      }
       if (!_valid(e)) return;
-      cycles = meta;
       target = meta.find(target ?? '')?.key ?? meta.current.key;
       _timer?.cancel();
       _timer = Timer(
@@ -340,7 +359,7 @@ class CycleSearchViewModel extends ChangeNotifier {
   }
 
   void selectTarget(String t) {
-    if (cycles?.find(t) == null || target == t) return;
+    if (cycleTargets?.find(t) == null || target == t) return;
     _filters[target ?? ''] = filter;
     target = t;
     filter = _filters[t] ?? CycleSearchFilter();
@@ -364,6 +383,9 @@ class CycleSearchViewModel extends ChangeNotifier {
 
   void update(CycleSearchFilter next) {
     if (target == null) return;
+    if (!session.isAuthenticated) {
+      next = next.copy(clearGroup: true, clearScope: true);
+    }
     if (next.category != filter.category && next.category != 'group_linked') {
       _groupEpoch++;
       groupContext = null;
@@ -420,6 +442,7 @@ class CycleSearchViewModel extends ChangeNotifier {
   }
 
   void selectGroups(Set<String> ids) {
+    if (!session.isAuthenticated) return;
     if (ids.length <= 1) {
       unawaited(selectGroup(ids.firstOrNull));
       return;
@@ -473,6 +496,7 @@ class CycleSearchViewModel extends ChangeNotifier {
       clock: _clock,
     );
     d.cycles = cycles;
+    d._publicTargets = _publicTargets;
     d.catalog = catalog;
     d.target = target;
     d.filter = filter;
@@ -493,11 +517,10 @@ class CycleSearchViewModel extends ChangeNotifier {
     final t = draft.target;
     if (_disposed ||
         draft._disposed ||
-        !session.isAuthenticated ||
         draft._binding != scopeKey() ||
         t == null ||
-        cycles?.find(t) == null ||
-        cycles?.current.key != draft.cycles?.current.key ||
+        cycleTargets?.find(t) == null ||
+        cycleTargets?.current.key != draft.cycleTargets?.current.key ||
         draft.groupLoading ||
         draft.candidateLoading ||
         draft.selectionPending ||
@@ -547,6 +570,7 @@ class CycleSearchViewModel extends ChangeNotifier {
     bool recovered = false,
     bool pruneInvalid = false,
   }) async {
+    if (!session.isAuthenticated && group != null) return;
     final previous = filter,
         previousContext = groupContext ?? _candidateCache[group]?.$1;
     final e = ++_groupEpoch;
@@ -693,7 +717,6 @@ class CycleSearchViewModel extends ChangeNotifier {
             (groupContext == null ||
                 candidateFailure != null ||
                 groupFailure != null)) ||
-        !session.isAuthenticated ||
         target == null ||
         (more && cursor == null)) {
       return;

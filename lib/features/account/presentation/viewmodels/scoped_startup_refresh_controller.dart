@@ -4,7 +4,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../../../shared/lost_ark_api/client/lost_ark_api_exception.dart';
 import '../../domain/account_read_session.dart';
 import '../../domain/entities/character_build_role.dart';
 import '../../domain/scoped_cache_models.dart';
@@ -105,7 +104,6 @@ class ScopedStartupRefreshController extends ChangeNotifier {
     source.session.userId,
     source.session.generation,
     source.session.isAuthenticated,
-    source.keyVersion,
   );
   void initialize() {
     if (_initialized || _disposed) return;
@@ -302,38 +300,24 @@ class ScopedStartupRefreshController extends ChangeNotifier {
       bool failed(ScopedRefreshTarget target, Object error) {
         guard();
         final id = target.ref.characterId;
-        final code = error is LostArkApiException
-            ? 'ARMORY_${error.type.name.toUpperCase()}'
-            : error is AccountReadException
+        final code = error is AccountReadException
             ? error.code
             : error is ScopedCacheException
             ? error.code
             : 'ANALYSIS_FAILED';
-        if (error is LostArkApiException ||
-            running.items[id]!.status != ScopedRefreshStatus.saved) {
+        if (running.items[id]!.status != ScopedRefreshStatus.saved) {
           running.items[id] = ScopedRefreshItem(
             target,
-            ScopedRefreshStatus.failed,
+            code == 'ANALYSIS_RESULT_UNKNOWN'
+                ? ScopedRefreshStatus.interrupted
+                : ScopedRefreshStatus.failed,
             code: code,
+            serverPending: code == 'ANALYSIS_RESULT_UNKNOWN',
+            failure: error is AccountReadException ? error : null,
           );
         }
-        if (error is LostArkApiException &&
-            error.type == LostArkApiErrorType.rateLimited) {
-          source.cooldown.observe(
-            error.retryAt ??
-                source.cooldown.now().add(const Duration(seconds: 60)),
-          );
-          _failure = 'RATE_LIMITED';
-          stopScheduling = true;
-        } else if (error is LostArkApiException &&
-            {
-              LostArkApiErrorType.unauthorized,
-              LostArkApiErrorType.missingToken,
-              LostArkApiErrorType.cancelled,
-            }.contains(error.type)) {
-          _failure = 'KEY_NOT_READY';
-          stopScheduling = true;
-        } else if (error is AccountReadException && error.status == 429) {
+        if (error is AccountReadException &&
+            (error.status == 429 || error.code == 'UPSTREAM_RATE_LIMITED')) {
           source.cooldown.observe(
             error.retryAt ??
                 source.cooldown.now().add(
@@ -498,7 +482,7 @@ class ScopedStartupRefreshController extends ChangeNotifier {
           try {
             if (source is ScopedBatchRefreshSource) {
               try {
-                await (source as ScopedBatchRefreshSource).retryUploads(
+                await (source as ScopedBatchRefreshSource).recoverResultsBatch(
                   run.items.values.where((i) => i.serverPending).toList(),
                   guard,
                   (saved) {
@@ -521,7 +505,7 @@ class ScopedStartupRefreshController extends ChangeNotifier {
                 guard();
                 if (source.cooldown.active) break;
                 try {
-                  final saved = await source.retryUpload(e.value, guard);
+                  final saved = await source.recoverResult(e.value, guard);
                   guard();
                   run.items[e.key] = saved;
                 } on AccountReadException catch (error) {

@@ -22,6 +22,7 @@ import 'package:lost_party/features/account/presentation/viewmodels/member_weekl
 import 'package:lost_party/features/account/presentation/viewmodels/scoped_startup_refresh_controller.dart';
 
 import '../../../support/server_account_read_fakes.dart';
+import '../../../support/server_analysis_fixtures.dart';
 import 'member_account_integration_test.dart' show Catalog;
 import 'member_weekly_test.dart' show WeeklyMemoryStore, catalogWire;
 import 'scoped_startup_refresh_controller_test.dart' show FakeSource;
@@ -36,6 +37,15 @@ Map<String, dynamic> example([String key = 'owned_activity_defaults']) =>
         as Map<String, dynamic>;
 Map<String, dynamic> registration(Map<String, dynamic> data) =>
     (data['registrations'] as List).single as Map<String, dynamic>;
+
+Map<String, dynamic> fullProfile(Map<String, dynamic> p) => {
+  ...p,
+  for (final role in ['dealer', 'support'])
+    role: {
+      ...(p[role] as Map<String, dynamic>),
+      'detail': p[role]['summary'] == null ? null : analysisDetail(role: role),
+    },
+};
 
 void main() {
   test(
@@ -271,8 +281,10 @@ void main() {
         // Existing preparation uses a current profile; fixture it without changing production writes.
         final old = respond;
         respond = (r) => r.path.endsWith('/personal-profile')
-            ? (registration(example())['personal_profiles'] as List).single
-                  as Map<String, dynamic>
+            ? fullProfile(
+                (registration(example())['personal_profiles'] as List).single
+                    as Map<String, dynamic>,
+              )
             : old(r);
         final plan = await runtime.preparePersonalSettings(
           ref,
@@ -401,8 +413,9 @@ void main() {
             return r['presentation'] as Map<String, dynamic>;
           }
           if (request.path.endsWith('/personal-profile')) {
-            return (r['personal_profiles'] as List).single
-                as Map<String, dynamic>;
+            return fullProfile(
+              (r['personal_profiles'] as List).single as Map<String, dynamic>,
+            );
           }
           throw StateError('Unexpected fallback request');
         };

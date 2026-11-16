@@ -39,6 +39,7 @@ Map<String, dynamic> emptyRole() => {
   'version': 1,
   'summary': null,
   'saved_at': null,
+  'detail': null,
 };
 Matcher cacheError(String code) =>
     throwsA(isA<ScopedCacheException>().having((e) => e.code, 'code', code));

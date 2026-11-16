@@ -1,3 +1,5 @@
+import '../../../support/server_analysis_fixtures.dart';
+import 'package:lost_party/features/account/data/character_analysis_client.dart';
 import 'account_bootstrap_test.dart' as bootstrap_fixture show example;
 import '../../../support/startup_batch_fakes.dart';
 import 'package:lost_party/shared/diagnostics/startup_timing.dart';
@@ -8,13 +10,11 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/data/backend_account_read_api.dart';
-import 'package:lost_party/features/account/data/datasources/lost_ark_character_remote_data_source.dart';
 import 'package:lost_party/features/account/data/local/scoped_account_cache_database.dart';
 import 'package:lost_party/features/account/data/scoped_account_runtime.dart';
 import 'package:lost_party/features/account/data/scoped_character_management_gateway.dart';
 import 'package:lost_party/app/backend_account_lifecycle.dart';
 import 'package:lost_party/app/backend_member_account.dart';
-import 'package:lost_party/features/account/presentation/viewmodels/member_lostark_key.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/member_settings_view_model.dart';
 import 'package:lost_party/features/account/presentation/viewmodels/member_account_view_model.dart';
 import 'package:lost_party/features/account/domain/role_summary.dart';
@@ -22,7 +22,6 @@ import 'package:lost_party/features/account/domain/scoped_cache_models.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 import 'package:lost_party/features/account/presentation/pages/member_account_page.dart';
 import 'package:lost_party/features/account/presentation/widgets/account_character_card.dart';
-import 'member_lostark_key_test.dart' as key_fixture;
 import 'member_settings_test.dart' as settings_fixture;
 import 'member_weekly_test.dart' as weekly_fixture;
 import 'package:lost_party/features/account/data/member_raid_client.dart';
@@ -32,10 +31,7 @@ import 'package:lost_party/features/account/domain/server_account_read_repositor
 import 'package:lost_party/features/account/presentation/viewmodels/scoped_startup_refresh_controller.dart';
 import 'package:lost_party/shared/game_catalog/domain/entities/game_catalog.dart';
 import 'package:lost_party/shared/game_catalog/domain/repositories/game_catalog_repository.dart';
-import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
-import 'package:lost_party/shared/lost_ark_api/auth/api_token_store.dart';
 import 'package:lost_party/shared/lost_ark_api/client/api_cooldown.dart';
-import 'package:lost_party/shared/lost_ark_api/client/lost_ark_api_client.dart';
 
 import '../../../support/server_account_read_fakes.dart';
 import 'scoped_role_sync_test.dart'
@@ -55,19 +51,10 @@ class Catalog implements GameCatalogRepository {
   Future<GameCatalog> loadCatalog() async => fixtures.catalog();
 }
 
-class Token implements ApiTokenStore {
-  @override
-  Future<ApiToken?> read() async => ApiToken('fixture-token');
-  @override
-  Future<void> write(ApiToken token) async {}
-  @override
-  Future<void> delete() async {}
-}
-
 void main() {
   late ScopedAccountCacheDatabase db;
   late ReadSessionFake session;
-  late Dio backend, provider;
+  late Dio backend;
   late DioBackendAccountReadApi api;
   late ScopedAccountRuntime runtime;
   late ApiCooldown cooldown;
@@ -75,18 +62,18 @@ void main() {
   late BackendAccountLifecycle lifecycle;
   late BackendMemberAccount binding;
   late MemberAccountViewModel model;
-  late MemberLostArkKey key;
   late MemberSettingsViewModel settingsModel;
-  late key_fixture.KeyApi keyApi;
   late settings_fixture.SettingsApiFake settingsApi;
   late Map<String, Map<String, dynamic>> preferences;
   late Map<String, dynamic> presentation;
 
   late ScopedStartupRefreshController controller;
+  late MemoryAnalysisJournal analysisJournal;
+  final analysisReplays = <String, Map<String, dynamic>>{};
 
-  late List<RequestOptions> apiCalls, armoryCalls;
+  late List<RequestOptions> apiCalls, backendObservations;
   late FutureOr<Map<String, dynamic>> Function(RequestOptions) apiRespond,
-      armoryRespond;
+      backendCollect;
   late Map<String, Map<String, dynamic>> roleSummaries;
   late DateTime clock;
   int registrationVersion = 1, selectionVersion = 1;
@@ -105,6 +92,7 @@ void main() {
     'version': 1,
     'summary': null,
     'saved_at': null,
+    'detail': null,
   };
   DioException failure(RequestOptions r) => DioException.badResponse(
     statusCode: 503,
@@ -133,7 +121,65 @@ void main() {
         'next_cursor': null,
       };
     }
-    if (r.path.endsWith('/refresh')) {
+    if (r.path == '/v2/me/character-analysis/refresh') {
+      if (failPut) {
+        return {
+          'evaluated_at': clock.toIso8601String(),
+          'items': [
+            for (final command in (r.data as Map)['items'])
+              {
+                'command_id': command['command_id'],
+                'character_id': command['character_id'],
+                'state': 'unknown',
+                'status': 503,
+                'retry': 'same_command',
+                'detected_role': null,
+                'result': null,
+                'error': {
+                  'code': 'SERVICE_UNAVAILABLE',
+                  'message': 'safe',
+                  'request_id': 'fixture-request',
+                  'retry_at': null,
+                  'retry_after_seconds': null,
+                },
+              },
+          ],
+        };
+      }
+      return {
+        'evaluated_at': clock.toIso8601String(),
+        'items': [
+          for (final command in (r.data as Map)['items'])
+            analysisReplays.putIfAbsent(command['command_id'], () {
+              final id = command['character_id'] as String;
+              final head = serverAnalysisHead(
+                version:
+                    (command['expected_summary_versions']['dealer'] as int) + 1,
+              );
+              roleSummaries[id] = head;
+              return {
+                'command_id': command['command_id'],
+                'character_id': id,
+                'status': 200,
+                'state': 'saved',
+                'retry': 'none',
+                'detected_role': 'dealer',
+                'error': null,
+                'result': {
+                  'character_id': id,
+                  'game_account_id': account,
+                  'ownership_revision': 1,
+                  'lifecycle_revision': 1,
+                  'role': 'dealer',
+                  'analysis': head,
+                },
+              };
+            }),
+        ],
+      };
+    }
+    if (r.path.endsWith('/refresh') &&
+        !r.path.contains('/character-analysis/')) {
       final key = r.headers['Idempotency-Key'] as String;
       return refreshReplies.putIfAbsent(key, () {
         registrationVersion++;
@@ -221,7 +267,12 @@ void main() {
         'ownership_revision': 1,
         'lifecycle_revision': 1,
         'lifecycle_state': 'active',
-        'dealer': roleSummaries[id] ?? empty(),
+        'dealer': roleSummaries[id] == null
+            ? empty()
+            : {
+                ...roleSummaries[id]!,
+                'detail': roleSummaries[id]!['detail'] ?? analysisDetail(),
+              },
         'support': empty(),
         'preferences':
             preferences[id] ??
@@ -316,6 +367,11 @@ void main() {
     };
   }
 
+  Map<String, dynamic> summaryProfile(Map<String, dynamic> p) => {
+    ...p,
+    for (final role in ['dealer', 'support'])
+      role: Map<String, dynamic>.from(p[role] as Map)..remove('detail'),
+  };
   setUp(() {
     clock = DateTime.utc(2026, 10, 16);
     registrationVersion = selectionVersion = 1;
@@ -336,15 +392,16 @@ void main() {
       'saved_at': null,
     };
     apiCalls = [];
-    armoryCalls = [];
+    backendObservations = [];
     signals = Signals();
 
     session = ReadSessionFake()..userId = member;
     cooldown = ApiCooldown(now: () => clock);
     backend = Dio(BaseOptions(baseUrl: 'https://example.test/api'));
-    provider = Dio();
+    analysisJournal = MemoryAnalysisJournal();
+    analysisReplays.clear();
     apiRespond = serve;
-    armoryRespond = (r) => fixtures.armory(
+    backendCollect = (r) => fixtures.armory(
       name: Uri.decodeComponent(r.path.split('/').last),
       className: className,
     );
@@ -353,31 +410,28 @@ void main() {
         onRequest: (r, h) async {
           apiCalls.add(r);
           try {
+            if (r.path == '/v2/me/character-analysis/refresh') {
+              for (final command in (r.data as Map)['items']) {
+                if (analysisReplays.containsKey(command['command_id'])) {
+                  continue;
+                }
+                final name = command['character_id'] == characterId
+                    ? 'sample'
+                    : command['character_id'] == secondCharacterId
+                    ? 'second'
+                    : 'character';
+                final observation = RequestOptions(
+                  path: '/synthetic-backend-observation/$name',
+                );
+                backendObservations.add(observation);
+                await backendCollect(observation);
+              }
+            }
             h.resolve(
               Response(
                 requestOptions: r,
                 statusCode: 200,
                 data: await apiRespond(r),
-              ),
-            );
-          } catch (e) {
-            h.reject(
-              e is DioException ? e : DioException(requestOptions: r, error: e),
-            );
-          }
-        },
-      ),
-    );
-    provider.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (r, h) async {
-          armoryCalls.add(r);
-          try {
-            h.resolve(
-              Response(
-                requestOptions: r,
-                statusCode: 200,
-                data: await armoryRespond(r),
               ),
             );
           } catch (e) {
@@ -397,14 +451,6 @@ void main() {
       enabled: true,
     );
     runtime = lifecycle.runtime!;
-    keyApi = key_fixture.KeyApi()..token = key_fixture.jwt;
-    key = MemberLostArkKey(
-      keyApi,
-      session,
-      key_fixture.DeviceStore(),
-      key_fixture.GuestStore(),
-      cooldown,
-    );
     settingsApi = settings_fixture.SettingsApiFake();
     settingsApi.current['nice_group_auto_refresh_enabled'] = true;
     settingsModel = MemberSettingsViewModel(settingsApi, session);
@@ -412,15 +458,10 @@ void main() {
       lifecycle: lifecycle,
       automaticRefreshEnabled: true,
       settings: settingsModel,
-      key: key,
-      remote: LostArkCharacterRemoteDataSource(
-        apiClient: LostArkApiClient(
-          apiTokenStore: key,
-          dio: provider,
-          cooldown: cooldown,
-          scopeIdentity: () =>
-              (session.userId, session.generation, key.value?.version),
-        ),
+      analysisClient: CharacterAnalysisClient(
+        api,
+        journal: analysisJournal,
+        now: () => clock,
       ),
       catalog: Catalog(),
       cooldown: cooldown,
@@ -430,14 +471,12 @@ void main() {
   });
   tearDown(() async {
     binding.dispose();
-    key.dispose();
     settingsModel.dispose();
     await lifecycle.close();
     session.dispose();
     signals.dispose();
     cooldown.dispose();
     backend.close();
-    provider.close();
   });
   Future<void> until(bool Function() done) async {
     for (var i = 0; i < 1000; i++) {
@@ -448,7 +487,7 @@ void main() {
   }
 
   Future<void> run() async {
-    await until(() => !key.busy && !settingsModel.busy);
+    await until(() => !settingsModel.busy);
     binding.initialize();
     await controller.startIfReady();
     await model.refresh();
@@ -493,7 +532,6 @@ void main() {
   test(
     'normal batch runtime keeps only the existing final bootstrap refresh',
     () async {
-      final remote = binding.source.remote;
       binding.dispose();
       await lifecycle.close();
       db = ScopedAccountCacheDatabase(NativeDatabase.memory());
@@ -509,8 +547,11 @@ void main() {
         lifecycle: lifecycle,
         automaticRefreshEnabled: true,
         settings: settingsModel,
-        key: key,
-        remote: remote,
+        analysisClient: CharacterAnalysisClient(
+          api,
+          journal: analysisJournal,
+          now: () => clock,
+        ),
         catalog: Catalog(),
         cooldown: cooldown,
       );
@@ -533,7 +574,8 @@ void main() {
             registration['settings'] = selection();
             registration['character_count'] = 9;
           }
-        } else if (r.path.endsWith('/refresh')) {
+        } else if (r.path.endsWith('/refresh') &&
+            !r.path.contains('/character-analysis/')) {
           (data['registration'] as Map)['settings'] = selection();
           (data['registration'] as Map)['character_count'] = 9;
         } else if (r.path.endsWith('/characters')) {
@@ -583,8 +625,10 @@ void main() {
             ),
             'personal_profiles': [
               for (final id in ids)
-                nineServe(
-                  r.copyWith(path: '/v2/me/characters/$id/personal-profile'),
+                summaryProfile(
+                  nineServe(
+                    r.copyWith(path: '/v2/me/characters/$id/personal-profile'),
+                  ),
                 ),
             ],
             'unavailable_characters': <Object>[],
@@ -599,12 +643,17 @@ void main() {
         trace.finish(StartupResult.interrupted);
         StartupTiming.testTrace = null;
       });
-      await until(() => !key.busy && !settingsModel.busy);
+      await until(() => !settingsModel.busy);
       binding.initialize();
       await until(() => lines.any((line) => line.contains('event=finalModel')));
-      expect(controller.savedCount, 9);
+      expect(
+        controller.savedCount,
+        9,
+        reason:
+            '${controller.failure} / ${model.failure} / ${controller.items.map((i) => i.code).toList()}',
+      );
       expect(controller.pendingServerCount, 0);
-      expect(armoryCalls, hasLength(9));
+      expect(backendObservations, hasLength(9));
       expect(model.failure, isNull);
       expect(
         apiCalls.where((r) => r.path == '/v2/me/account-bootstrap'),
@@ -615,7 +664,7 @@ void main() {
         hasLength(1),
       );
       expect(
-        apiCalls.where((r) => r.path == '/v2/me/role-summary-batches'),
+        apiCalls.where((r) => r.path == '/v2/me/character-analysis/refresh'),
         hasLength(1),
       );
       expect(
@@ -654,7 +703,7 @@ void main() {
         }
         return serve(request);
       };
-      await until(() => !key.busy && !settingsModel.busy);
+      await until(() => !settingsModel.busy);
       binding.initialize();
       await until(() => entered.isCompleted);
       expect(trace.runnerDone, isTrue);
@@ -675,39 +724,17 @@ void main() {
       await run();
       final row = model.sections.single.characters.first;
       final registration = ScopedRegistrationRef(row.ref.scope, registrationId);
-      final before = armoryCalls.length;
+      final before = backendObservations.length;
       final opposite = row.support;
       final first = model.refreshCharacter(registration, row.ref);
       final duplicate = model.refreshCharacter(registration, row.ref);
       await Future.wait([first, duplicate]);
       expect(model.failure, isNull);
-      expect(armoryCalls.length - before, 1);
+      expect(backendObservations.length - before, 1);
       expect(model.character(row.ref)!.dealer!.hasPending, isFalse);
       expect(model.character(row.ref)!.support, same(opposite));
       expect(model.characterRefreshing, isFalse);
       expect(model.canRefreshCharacter(row.ref), isTrue);
-    },
-  );
-
-  test(
-    'explicit refresh keeps locally saved result when upload fails',
-    () async {
-      await run();
-      final row = model.sections.single.characters.first;
-      failPut = true;
-      await model.refreshCharacter(
-        ScopedRegistrationRef(row.ref.scope, registrationId),
-        row.ref,
-      );
-      expect(model.character(row.ref)!.dealer!.hasPending, isTrue);
-      expect(model.character(row.ref)!.dealer!.rawJson, isNotNull);
-      failPut = false;
-      await model.resolveRole(
-        ScopedRegistrationRef(row.ref.scope, registrationId),
-        row.ref,
-        CharacterBuildRole.dealer,
-      );
-      expect(model.character(row.ref)!.dealer!.hasPending, isFalse);
     },
   );
 
@@ -717,7 +744,7 @@ void main() {
       await run();
       final row = model.sections.single.characters.first;
       final original = row.dealer;
-      armoryRespond = (r) => throw failure(r);
+      backendCollect = (r) => throw failure(r);
       await model.refreshCharacter(
         ScopedRegistrationRef(row.ref.scope, registrationId),
         row.ref,
@@ -756,7 +783,7 @@ void main() {
       await entered.future;
       expect(model.loading, isTrue);
       final callsBeforeClose = apiCalls.length,
-          providerBeforeClose = armoryCalls.length;
+          providerBeforeClose = backendObservations.length;
       model.dismissAutomaticRefreshResult();
       expect(model.automaticRefreshResultHidden, isTrue);
       expect(controller.phase, phase);
@@ -764,7 +791,7 @@ void main() {
       expect(controller.pendingServerCount, pending);
       expect(controller.canRetryServer, retryable);
       expect(apiCalls, hasLength(callsBeforeClose));
-      expect(armoryCalls, hasLength(providerBeforeClose));
+      expect(backendObservations, hasLength(providerBeforeClose));
       model.showAutomaticRefreshResult();
       expect(model.automaticRefreshResultHidden, isFalse);
       model.dismissAutomaticRefreshResult();
@@ -781,14 +808,16 @@ void main() {
   );
 
   void restorationOnly() {
-    final remote = binding.source.remote;
     binding.dispose();
     binding = BackendMemberAccount(
       lifecycle: lifecycle,
       automaticRefreshEnabled: false,
       settings: settingsModel,
-      key: key,
-      remote: remote,
+      analysisClient: CharacterAnalysisClient(
+        api,
+        journal: analysisJournal,
+        now: () => clock,
+      ),
       catalog: Catalog(),
       cooldown: cooldown,
     );
@@ -800,14 +829,16 @@ void main() {
     test(
       'saved screen and weekly read precede armories (failure=$failWeekly)',
       () async {
-        final remote = binding.source.remote;
         binding.dispose();
         binding = BackendMemberAccount(
           lifecycle: lifecycle,
           automaticRefreshEnabled: true,
           settings: settingsModel,
-          key: key,
-          remote: remote,
+          analysisClient: CharacterAnalysisClient(
+            api,
+            journal: analysisJournal,
+            now: () => clock,
+          ),
           catalog: Catalog(),
           cooldown: cooldown,
           weeklyStore: weekly_fixture.WeeklyMemoryStore(),
@@ -898,7 +929,7 @@ void main() {
           }
           return serve(r);
         };
-        armoryRespond = (r) async {
+        backendCollect = (r) async {
           if (!armoryEntered.isCompleted) armoryEntered.complete();
           await armoryRelease.future;
           return fixtures.armory(
@@ -911,7 +942,7 @@ void main() {
         expect(model.loading, isFalse);
         expect(model.sections.single.visible, hasLength(2));
         expect(model.sections.single.cached, isFalse);
-        expect(armoryCalls, isEmpty);
+        expect(backendObservations, isEmpty);
         expect(controller.consumed, isFalse);
         readRelease.complete();
         await armoryEntered.future.timeout(const Duration(seconds: 5));
@@ -1128,8 +1159,6 @@ void main() {
     'default member restore reads persisted summaries with no key or activities during provider cooldown',
     () async {
       restorationOnly();
-      keyApi.token = null;
-      await key.reload();
       cooldown.observe(clock.add(const Duration(minutes: 5)));
       roleSummaries[characterId] = {
         'version': 2,
@@ -1187,9 +1216,9 @@ void main() {
       );
       expect(cached!.displaySummary!.combatPower, '4344.63');
       expect(cached.displaySummary!.itemLevel, '1770.83');
-      expect(cached.rawJson, isNull);
+      expect(cached.server.detail, isNotNull);
       expect(controller.consumed, isFalse);
-      expect(armoryCalls, isEmpty);
+      expect(backendObservations, isEmpty);
       expect(apiCalls.every((r) => r.method == 'GET'), isTrue);
     },
   );
@@ -1226,7 +1255,7 @@ void main() {
         apiCalls.where((r) => r.path.endsWith('/character-settings')),
         hasLength(1),
       );
-      expect(armoryCalls, isEmpty);
+      expect(backendObservations, isEmpty);
     },
   );
   test(
@@ -1311,7 +1340,7 @@ void main() {
     'restoration-only binding cannot invoke provider preparation even when key and settings are ready',
     () async {
       restorationOnly();
-      await until(() => !key.busy && !settingsModel.busy);
+      await until(() => !settingsModel.busy);
       binding.initialize();
       await model.refresh();
       final reads = apiCalls.length;
@@ -1319,7 +1348,7 @@ void main() {
       await controller.retryIncomplete();
       await controller.retryServerSaved();
       expect(apiCalls, hasLength(reads));
-      expect(armoryCalls, isEmpty);
+      expect(backendObservations, isEmpty);
       expect(apiCalls.every((r) => r.method == 'GET'), isTrue);
       expect(controller.consumed, isFalse);
       expect(model.sections.single.displayReady, isTrue);
@@ -1359,7 +1388,7 @@ void main() {
       await model.refresh();
       expect(model.failure, isNull);
       expect(model.sections.single.characters, hasLength(2));
-      expect(armoryCalls, isEmpty);
+      expect(backendObservations, isEmpty);
     },
   );
 
@@ -1382,43 +1411,37 @@ void main() {
         apiCalls.where((r) => r.path == '/v1/me/game-accounts'),
         hasLength(1), // No provider preparation before the saved screen read.
       );
-      expect(armoryCalls, isEmpty);
+      expect(backendObservations, isEmpty);
       release.complete();
       await joined;
       await run();
       expect(controller.savedCount, 2);
-      expect(armoryCalls, hasLength(2));
+      expect(backendObservations, hasLength(2));
       expect(model.failure, isNull);
       expect(model.sections.single.displayReady, isTrue);
       for (final row in model.sections.single.characters) {
         expect(row.failure, isNull);
-        expect(row.dealer!.rawMatchesDisplay, isTrue);
+        expect(row.dealer!.server.detail != null, isTrue);
         expect(row.dealer!.hasPending, isFalse);
       }
       await model.refresh();
       await controller.startIfReady();
-      expect(armoryCalls, hasLength(2));
+      expect(backendObservations, hasLength(2));
     },
   );
 
-  test(
-    'missing key restores member preferences but never consumes automatic inspection',
-    () async {
-      keyApi.token = null;
-      await key.reload();
-      await run();
-      expect(controller.consumed, isFalse);
-      expect(armoryCalls, isEmpty);
-      expect(model.sections.single.displayReady, isTrue);
-      expect(
-        model.sections.single.characters.every(
-          (r) => r.dealer?.rawMatchesDisplay == false,
-        ),
-        isTrue,
-      );
-    },
-  );
-
+  test('server analysis needs no personal key setup', () async {
+    await run();
+    expect(controller.consumed, isTrue);
+    expect(backendObservations, hasLength(2));
+    expect(model.sections.single.displayReady, isTrue);
+    expect(
+      model.sections.single.characters.every(
+        (r) => r.dealer?.server.detail != null,
+      ),
+      isTrue,
+    );
+  });
   test(
     'NiceGroup OFF preserves summaries, excludes full inspection and restores hidden preferences',
     () async {
@@ -1450,7 +1473,7 @@ void main() {
         ),
         isNotNull,
       );
-      expect(armoryCalls, isEmpty);
+      expect(backendObservations, isEmpty);
       expect(
         model.failure,
         isNull,
@@ -1464,9 +1487,8 @@ void main() {
   test(
     'preference commits locally before failed PUT and explicit retry keeps exact command',
     () async {
-      keyApi.token = null;
-      await key.reload();
       await run();
+      backendObservations.clear();
       final row = model.sections.single.characters.first;
       final reg = runtime.reference(registrationId);
       final entered = Completer<void>(), release = Completer<void>();
@@ -1507,15 +1529,13 @@ void main() {
         isFalse,
         reason: model.character(row.ref)!.preferences!.command?.errorCode,
       );
-      expect(armoryCalls, isEmpty);
+      expect(backendObservations, isEmpty);
     },
   );
 
   test(
     'logout clears private rows synchronously and rejects late profile completion',
     () async {
-      keyApi.token = null;
-      await key.reload();
       await run();
       final entered = Completer<void>(), release = Completer<void>();
       apiRespond = (r) async {
@@ -1539,13 +1559,12 @@ void main() {
   test(
     'profile failure leaves unresolved settings explicit instead of inventing defaults',
     () async {
-      keyApi.token = null;
-      await key.reload();
       apiRespond = (r) {
         if (r.path.endsWith('/personal-profile')) throw failure(r);
         return serve(r);
       };
       await run();
+      backendObservations.clear();
       final section = model.sections.single;
       expect(section.displayReady, isFalse);
       expect(
@@ -1554,35 +1573,15 @@ void main() {
         ),
         isTrue,
       );
-      expect(armoryCalls, isEmpty);
-    },
-  );
-
-  test(
-    'per-character upload resolution updates batch pending count without more Armory',
-    () async {
-      failPut = true;
-      await run();
-      expect(controller.pendingServerCount, 2);
-      final row = model.sections.single.characters.first;
-      failPut = false;
-      await model.resolveRole(
-        runtime.reference(registrationId),
-        row.ref,
-        CharacterBuildRole.dealer,
-      );
-      expect(model.character(row.ref)!.dealer!.hasPending, isFalse);
-      expect(controller.pendingServerCount, 1);
-      expect(armoryCalls, hasLength(2));
+      expect(backendObservations, isEmpty);
     },
   );
 
   test(
     'command gate invalidates a pending write ACK while retaining its durable command',
     () async {
-      keyApi.token = null;
-      await key.reload();
       await run();
+      backendObservations.clear();
       final row = model.sections.single.characters.first;
       final entered = Completer<void>(), release = Completer<void>();
       apiRespond = (r) async {
@@ -1610,7 +1609,7 @@ void main() {
       await lifecycle.model!.finishCommand();
       await model.refresh();
       expect(model.character(row.ref)!.preferences!.hasPending, isTrue);
-      expect(armoryCalls, isEmpty);
+      expect(backendObservations, isEmpty);
     },
   );
 
@@ -1650,7 +1649,7 @@ void main() {
         model.sections.single.registration.settings.activityIds,
         originalActivity,
       );
-      expect(armoryCalls, hasLength(2));
+      expect(backendObservations, hasLength(2));
     },
   );
 
@@ -1907,8 +1906,6 @@ void main() {
         }
         return result;
       };
-      keyApi.token = null;
-      await key.reload();
       await run();
       expect(
         model.failure,
@@ -2005,7 +2002,6 @@ void main() {
             weekly: weekly,
             automaticRefreshAvailable: false,
             onSettings: () {},
-            onKey: () {},
             onVerify: () {},
             onManage: () {},
             onHistory: () {},
@@ -2063,7 +2059,6 @@ void main() {
             model: model,
             settings: settingsModel,
             onSettings: () {},
-            onKey: () {},
             onVerify: () {},
             onManage: () {},
             onHistory: () {},
@@ -2114,7 +2109,6 @@ void main() {
                   model: model,
                   settings: settingsModel,
                   onSettings: () {},
-                  onKey: () {},
                   onVerify: () {},
                   onManage: () {},
                   onHistory: () {},
@@ -2192,7 +2186,6 @@ void main() {
           model: model,
           settings: settingsModel,
           onSettings: () {},
-          onKey: () {},
           onVerify: () {},
           onManage: () {},
           onHistory: () {},
@@ -2231,8 +2224,6 @@ void main() {
     'an open preference dialog cannot approve a different member session',
     (tester) async {
       await tester.runAsync(() async {
-        keyApi.token = null;
-        await key.reload();
         await run();
       });
       final row = model.sections.single.characters.first;
@@ -2268,7 +2259,7 @@ void main() {
   );
 
   testWidgets(
-    'disposing a member page leaves app runner alive and detail view reads only member raw',
+    'disposing a member page leaves app runner alive and detail view reads only saved server detail',
     (tester) async {
       await tester.runAsync(run);
       final row = model.sections.single.characters.first;
@@ -2292,7 +2283,7 @@ void main() {
         await controller.startIfReady();
       });
       expect(controller.consumed, isTrue);
-      expect(armoryCalls, hasLength(2));
+      expect(backendObservations, hasLength(2));
       expect(tester.takeException(), isNull);
     },
   );

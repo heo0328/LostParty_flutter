@@ -163,30 +163,19 @@ class ApplicationDisplayItem {
     );
     roleCheck(itemLevel.source != 'current_saved' || reason == null);
     if (comparison case final p?) {
-      roleCheck(
-        raidList(p['current_issues']).length <= 20 &&
-            raidList(p['success_issues']).length <= 20,
-      );
       final a = analysis;
       roleCheck(
         a == null
-            ? raidList(p['current_issues']).isEmpty
-            : a.wire['version'] == p['current_summary_version'] &&
+            ? raidList(p['issues']).isEmpty
+            : a.wire['version'] == p['summary_version'] &&
+                  a.wire['integrity_status'] == p['integrity_status'] &&
+                  a.wire['saved_at'] == p['saved_at'] &&
                   scheduleStable(a.wire['issues']) ==
-                      scheduleStable(p['current_issues']),
-      );
-      roleCheck(
-        p['actual'] == null
-            ? p['success_summary_version'] == null &&
-                  p['observed_at'] == null &&
-                  p['success_saved_at'] == null &&
-                  raidList(p['success_issues']).isEmpty
-            : p['success_summary_version'] != null &&
-                  p['observed_at'] != null &&
-                  p['success_saved_at'] != null,
+                      scheduleStable(p['issues']),
       );
     }
   }
+
   final Map<String, dynamic> wire;
   late final CycleOwnRow row;
   late final Map<String, dynamic>? comparison;
@@ -211,7 +200,7 @@ class ApplicationDisplayItem {
       if (errors > 0) '오류 $errors건',
       if (warnings > 0) '경고 $warnings건',
     ].join(' · ');
-    return '$label${codes.isEmpty ? '' : ' · $codes'}${comparison?['actual'] != null && a.wire['version'] != comparison?['success_summary_version'] ? '\n전투력은 마지막 성공 정보입니다.' : ''}';
+    return '$label${codes.isEmpty ? '' : ' · $codes'}';
   }
 
   bool get warning =>

@@ -1,8 +1,6 @@
 import '../../../shared/diagnostics/startup_timing.dart';
-import 'dart:convert';
 
 import '../domain/account_read_session.dart';
-import '../domain/entities/character_build_role.dart';
 import '../domain/role_summary.dart';
 import '../domain/scoped_cache_models.dart';
 import 'backend_account_read_api.dart';
@@ -57,53 +55,6 @@ class RoleSummaryClient {
     );
     roleCheck(
       value.characterId == ref.characterId && value.accountId == ref.accountId,
-    );
-    return value;
-  });
-
-  Future<RoleSummaryAck> put(
-    ScopedCharacterRef ref,
-    CharacterBuildRole role,
-    String key,
-    Map<String, dynamic> body,
-  ) => _decode(ref, () async {
-    roleShape(
-      body,
-      'expected_version expected_ownership_revision expected_lifecycle_revision summary',
-    );
-    final version = rolePositive(body['expected_version']);
-    final owner = rolePositive(body['expected_ownership_revision']);
-    final life = rolePositive(body['expected_lifecycle_revision']);
-    final summary = StartupTiming.sync(
-      StartupWork.dto,
-      () => RoleSummary.fromJson(roleMap(body['summary'])),
-    );
-    roleCheck(summary.lifecycleRevision == life);
-    roleCheck(
-      RegExp(
-        r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-      ).hasMatch(key),
-    );
-    roleCheck(utf8.encode(jsonEncode(body)).length <= 32768);
-    final json = (await api.request(
-      '/v2/me/characters/${ref.characterId}/role-summaries/${role.name}',
-      method: 'PUT',
-      body: body,
-      idempotencyKey: key,
-    ))!;
-    final value = StartupTiming.sync(
-      StartupWork.dto,
-      () => RoleSummaryAck.fromJson(json),
-    );
-    roleCheck(
-      value.characterId == ref.characterId &&
-          value.role == role &&
-          value.ownershipRevision == owner &&
-          value.lifecycleRevision == life &&
-          value.stored.summary!.same(summary),
-    );
-    roleCheck(
-      value.stored.version == version || value.stored.version == version + 1,
     );
     return value;
   });

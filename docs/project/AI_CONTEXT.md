@@ -1,8 +1,16 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
+## 현재 작업 — 서버 처리 연결 완료·dev 실연동 대기 (2026-11-16)
+
+Native N0~N3의 일반 앱 DI/Router 연결을 마쳤다. 웹/Android는 Backend b95cff51 / character-analysis-refresh-1의 분석 POST·서버 head/detail을 소비한다. 개발자 키·수집/분석·저장은 서버 전용이고 개인키 입력/restore·직접 provider·로컬 raw 분석/summary upload·구형 계정/모집 페이지는 제거했다. bootstrap 요약/저장 detail·현재 명령 journal·부분 결과/원요청 복구·기존 역할/소유/수명·설정/나이스단 정책을 연결했다.
+
+최신 모집/필터와 그룹 공개 검색/summary는 무토큰 allowlist로 탐색하며 개인 행동은 로그인/기존 권한을 요구한다. 내 계정은 공통 frame/카드/주간 표현을 쓰는 고정 예시를 첫 진입부터 표시하고 DB/API/가짜 세션·writer를 만들지 않는다. 기존 회원 화면 배치/명령 흐름을 유지했다.
+
+사용자가 누적 변경 커밋·푸시를 지시했다. 정확 검증/보관은 DEV_LOG·Git 및 [Issue55](https://github.com/heo0328/lostparty-backend/issues/55) 최종 인계로 확인한다. 실제 개발서버/DB0037·키/자료 준비와 dev 실연동·사용자 웹/Android 인수는 남아 있다. Backend 게시 코드 구현 완료를 현재 실행서버 반영으로 보지 않는다. [현재 실행 순서](NEXT_WORK.md)·[장기 계약25](../backend-migration/25-member-lostark-key-request.md#native-implementation-design)를 따른다. 앱 전체 오류 점검/선택 진단 전송·30일 삭제는 별도 후속이다. dev/main 병합·배포·DB/키 변경은 하지 않는다.
+
 ## 2.3.0+8 운영 공개 완료 (2026-11-15)
 
-Backend API/웹 운영반영·자료/환경보존 회신을수용하고Native v2.3.0/태그02326960·Actions43670183453 공개를완료했다. 공개5파일/승인본문·APK기존서명/버전/checksum·웹원manifest와운영health/index를검증했다. 기기인수미확인과BUG-038미해결은유지한다. 정확산출물은releases/v2.3.0-artifacts.json, 후속은NEXT_WORK다. Issue종료없음.
+Backend API/웹 운영반영·자료/환경보존 회신을수용하고Native v2.3.0/태그02326960·Actions43670183453 공개를완료했다. 공개5파일/승인본문·APK기존서명/버전/checksum·웹원manifest와운영health/index를검증했다. 기기인수미확인과BUG-038미해결은유지한다. 정확산출물은releases/v2.3.0-artifacts.json, 후속은NEXT_WORK다. Issue54는후행사용자지시로completed종료된최신원격본문을2026-11-16확인했다.
 
 ## 반응형 UI 공통 폭·정렬 개선 (2026-11-15)
 
@@ -43,7 +51,7 @@ Backend2.1.1/DB0036/config lightsail-web-2.1.0 실제반영·백업/PC사본/기
 
 #47·#48은 Backend가 사용자 지시로 completed 종료한 상태를 직접 확인했다. 추가 Native 미연결·Backend 계약/구현/지원 대기는 없으며 담당 근거/정책 확인은 각 Issue에 게시·재조회했다. #34·#38·#46의2026-11-08 completed 종료도 문서에 반영했다. #17은 기존 복구/dev 통합 완료와 누락 자료/기기 후속을 분리해 OPEN 유지한다. #15·#18·#19 추가 개발은 별도이며 이 통합에서 착수하지 않는다.
 
-다음 예약 제품 작업은 웹소켓 이전의 수동/화면 진입 갱신·모집 변경 레드닷이다. 캐시·revision·읽음·필요 범위 무효화를 먼저 설계하며 지금은 별도 착수 지시를 기다린다. 누락 캐릭터/부분 완료 자료 준비·실기기 후속, 카드 Penpot 디자인, 새 release 키 등 다른 후속은 NEXT_WORK/DETAIL_IMPROVEMENTS에서 구분한다.
+수동/화면 진입 갱신·모집 변경 레드닷은 현재 단일 키·공통 UI 작업 이후의 별도 예약이며 웹소켓보다 먼저 설계한다. 캐시·revision·읽음·필요 범위 무효화를 검토한다. 누락 캐릭터/부분 완료 자료 준비·실기기 후속과 기타 디자인·제품 개선은 NEXT_WORK/DETAIL_IMPROVEMENTS에서 구분한다. 이미 완료한 새 release 키 전환은 앞선 공개 이력을 따른다.
 
 기존 테스트 계정 막힘에 [Backend6742169727](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742169727)의 원무옵션 v3 현재409 거절→정확한 대상 GET→명시적 현재 정보로 화면갱신를 Native에 연결했다. 최종 전체2,856PASS·분석0이며 [결과6742522210](https://github.com/heo0328/lostparty-backend/issues/17#issuecomment-6742522210)으로 인계했다. 과거 전체 전송 이력 증명은 요구하지 않고 현재 근거를 메모리에서만 확인한다. 주차/서버 상태를 표시한 뒤 로컬 활성 대기를 정리하며 원문·ACK·서버 완료 기록을 바꾸지 않는다. 실제 계정 복구와 이번 완료 오류/안내 구간은 사용자 기기 인수를 통과했다. 상세는 NEXT_WORK·계약26을 따른다.
 

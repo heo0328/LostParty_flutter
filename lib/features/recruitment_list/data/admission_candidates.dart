@@ -100,28 +100,7 @@ class AdmissionPowerComparison {
   AdmissionPowerComparison(Map<String, dynamic> raw, String role)
     : wire = _snapshot(raw) {
     final p = wire;
-    roleShape(
-      p,
-      'selected_role requirement actual state source trust current_summary_version success_summary_version power_revision observed_at success_saved_at success_issues current_issues',
-    );
-    roleCheck(
-      _role(p['selected_role']) == role &&
-          p['source'] == 'flutter_analysis' &&
-          p['trust'] == 'client_submitted',
-    );
-    _int(p['current_summary_version']);
-    _int(p['power_revision']);
-    if (p['success_summary_version'] != null) {
-      _int(p['success_summary_version']);
-    }
-    for (final k in ['observed_at', 'success_saved_at']) {
-      if (p[k] != null) actionTime(p[k]);
-    }
-    for (final k in ['success_issues', 'current_issues']) {
-      for (final issue in raidList(p[k])) {
-        AnalysisIssue.fromJson(roleMap(issue));
-      }
-    }
+    validateServerPowerComparison(p, role);
     final requirement = _decimal(p['requirement'], 32),
         actual = _decimal(p['actual'], 32);
     final state = p['state'];

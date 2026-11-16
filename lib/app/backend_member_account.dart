@@ -3,13 +3,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import '../features/account/data/member_raid_client.dart';
+import '../features/account/data/character_analysis_client.dart';
 import '../features/account/data/member_weekly_store.dart';
 import '../features/account/presentation/viewmodels/member_weekly_view_model.dart';
 
-import '../features/account/data/datasources/lost_ark_character_remote_data_source.dart';
 import '../features/account/data/scoped_startup_refresh_source.dart';
 import '../features/account/presentation/viewmodels/member_account_view_model.dart';
-import '../features/account/presentation/viewmodels/member_lostark_key.dart';
 import '../features/account/presentation/viewmodels/member_settings_view_model.dart';
 import '../features/account/presentation/viewmodels/scoped_startup_refresh_controller.dart';
 import '../shared/game_catalog/domain/repositories/game_catalog_repository.dart';
@@ -27,19 +26,17 @@ class BackendMemberAccount {
     required BackendAccountLifecycle lifecycle,
     this.automaticRefreshEnabled = BackendAccountLifecycle.configuredEnabled,
     required MemberSettingsViewModel settings,
-    required MemberLostArkKey key,
-    required LostArkCharacterRemoteDataSource remote,
     required GameCatalogRepository catalog,
     required ApiCooldown cooldown,
+    CharacterAnalysisClient? analysisClient,
     MemberWeeklyStore? weeklyStore,
   }) {
     final gate = lifecycle.model!, runtime = lifecycle.runtime!;
-    final changes = Listenable.merge([settings, key, gate]);
+    final changes = Listenable.merge([settings, gate]);
     bool pending() => gate.commandInProgress || gate.loading;
     source = RuntimeStartupRefreshSource(
+      client: analysisClient,
       runtime: runtime,
-      remote: remote,
-      catalog: catalog,
       cooldown: cooldown,
       changes: changes,
       readAccess: () {
@@ -49,17 +46,9 @@ class BackendMemberAccount {
             !settings.busy &&
             !settings.hasPending &&
             settings.failure == null;
-        final keyReady =
-            key.signedIn &&
-            key.localReady &&
-            key.value?.configured == true &&
-            !key.busy &&
-            !key.hasPending &&
-            key.failure == null;
         return ScopedRefreshAccess(
           niceGroupEnabled: settingsReady ? settings.value!.enabled : null,
           settingsVersion: settingsReady ? settings.value!.version : null,
-          keyVersion: keyReady ? key.value!.version : null,
           accountChangesPending: pending() || runtime.characterSettingsBusy,
         );
       },

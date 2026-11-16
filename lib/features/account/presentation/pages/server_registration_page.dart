@@ -356,7 +356,7 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
   String _message(AccountReadException error) => switch (error.code) {
     'PREVIEW_EXPIRED' => '미리보기 유효 시간이 지났습니다. 캐릭터를 다시 검색해 주세요.',
     'INVALID_REQUEST' => '캐릭터명과 계정 표시명을 확인해 주세요.',
-    'UPSTREAM_UNAVAILABLE' => '게임 정보를 조회할 수 없습니다. 서버 API 키 준비와 연결 상태를 확인해 주세요.',
+    'UPSTREAM_UNAVAILABLE' => '현재 로스트아크 정보를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.',
     'REQUEST_IN_PROGRESS' => '서버에서 요청을 처리 중입니다. 잠시 후 같은 요청으로 확인해 주세요.',
     'IDEMPOTENCY_CONFLICT' ||
     'IDEMPOTENCY_EXPIRED' => '이 요청을 그대로 재시도할 수 없습니다. 먼저 서버 상태를 확인해 주세요.',

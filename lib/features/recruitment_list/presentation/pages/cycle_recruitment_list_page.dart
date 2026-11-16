@@ -204,7 +204,7 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
   void didUpdateWidget(covariant CycleRecruitmentListPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     final t = widget.selectedTarget;
-    if (t != null && t != m.target && m.cycles?.find(t) != null) {
+    if (t != null && t != m.target && m.cycleTargets?.find(t) != null) {
       if (m.target != null && _draft != null) _weekDrafts[m.target!] = _draft!;
       _draft = _weekDrafts[t];
       m.selectTarget(t);
@@ -563,7 +563,9 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
                       textStyle: Theme.of(context).textTheme.labelLarge
                           ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
                     ),
-                    onPressed: () => widget.onCreate(m.target),
+                    onPressed: () => m.session.isAuthenticated
+                        ? widget.onCreate(m.target)
+                        : widget.onLogin(),
                     icon: const Icon(Icons.add),
                     label: const Text('모집 만들기'),
                   ),
@@ -575,14 +577,14 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
             width: width,
             child: Column(
               children: [
-                if (m.cycles != null)
+                if (m.cycleTargets != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    child: RecruitmentWeekTabs(
-                      cycles: m.cycles!,
+                    child: RecruitmentWeekTabs.targets(
+                      targets: m.cycleTargets!,
                       value: m.target,
                       onChanged: (t) {
                         if (m.target != null && _draft != null) {
@@ -750,7 +752,11 @@ class _CycleRecruitmentListPageState extends State<CycleRecruitmentListPage>
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: room.canView ? () => widget.onRoom(room.id, m.target!) : null,
+          onTap: !m.session.isAuthenticated
+              ? widget.onLogin
+              : room.canView
+              ? () => widget.onRoom(room.id, m.target!)
+              : null,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(

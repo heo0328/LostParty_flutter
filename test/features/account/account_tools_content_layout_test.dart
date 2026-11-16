@@ -66,10 +66,6 @@ void main() {
 class _Tools extends StatelessWidget {
   const _Tools();
   @override
-  Widget build(BuildContext context) => AccountToolsGrid(
-    onVerify: () {},
-    onKey: () {},
-    onHistory: () {},
-    onRefresh: () {},
-  );
+  Widget build(BuildContext context) =>
+      AccountToolsGrid(onVerify: () {}, onHistory: () {}, onRefresh: () {});
 }

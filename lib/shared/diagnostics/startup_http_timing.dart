@@ -66,7 +66,7 @@ class StartupHttpTiming {
     if (path == '/v1/auth/refresh') return 'auth_refresh';
     if (path.startsWith('/v1/auth/')) return 'auth_other';
     if (path.contains('bootstrap')) return 'bootstrap';
-    if (path == '/v2/me/role-summary-batches') return 'role_batch';
+    if (path == '/v2/me/character-analysis/refresh') return 'analysis_batch';
     if (path == '/v2/me/characters/personal-profiles') return 'profile_batch';
     if (path.endsWith('/refresh')) return 'refresh';
     if (path.contains('weekly')) return 'weekly';

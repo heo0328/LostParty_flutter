@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../domain/account_read_session.dart';
 import '../viewmodels/server_account_read_view_model.dart';
@@ -20,27 +19,26 @@ String serverAccountActionLabel(String ownership, String configuration) => [
   serverConfigurationLabel(configuration),
 ].where((label) => label.isNotEmpty).join(' · ');
 
-String accountReadErrorMessage(AccountReadException failure) =>
-    switch (failure.code) {
-      'ALREADY_VERIFIED' => '이미 인증된 원정대입니다.',
-      'CURSOR_STALE' ||
-      'REVISION_CONFLICT' => '조회 중 계정 정보가 변경되었습니다. 다시 조회해 주세요.',
-      'OWNERSHIP_REQUIRED' => '이 계정의 현재 소유 권한이 필요합니다.',
-      'REGISTRATION_NOT_FOUND' => '등록된 계정을 찾을 수 없습니다. 계정 목록을 다시 조회해 주세요.',
-      'RATE_LIMITED' => '조회 한도를 초과했습니다. 잠시 후 다시 조회해 주세요.',
-      'UPSTREAM_RATE_LIMITED' => '로스트아크 호출 한도에 도달했습니다. 안내된 시간 후 다시 시도해 주세요.',
-      'LOSTARK_KEY_NOT_CONFIGURED' => '캐릭터 정보를 불러오려면 로스트아크 API 키를 등록해 주세요.',
-      'LOSTARK_KEY_REJECTED' => '등록된 키로 조회할 수 없습니다. 키를 확인하거나 교체해 주세요.',
-      'LOSTARK_KEY_CHANGED' => '다른 작업에서 키가 변경되었습니다. 현재 키를 다시 확인해 주세요.',
-      'LOSTARK_KEY_UNAVAILABLE' => '등록된 키를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-      'KEY_DEVICE_STORAGE_FAILED' =>
-        '계정에 키가 등록되어 있지만 이 기기에 저장하지 못했습니다. 키를 다시 불러와 주세요.',
-      'INVALID_KEY_FORMAT' => '발급받은 키 전체를 붙여 넣어 주세요. 앞뒤에 공백이 없는지 확인해 주세요.',
-      'INVALID_RESPONSE' => '계정 정보를 확인하지 못했습니다. 다시 조회해 주세요.',
-      'UPSTREAM_UNAVAILABLE' ||
-      'NETWORK_UNAVAILABLE' => '서버에 연결하지 못했습니다. 잠시 후 다시 조회해 주세요.',
-      _ => '계정 정보를 불러오지 못했습니다. 로그인 상태와 연결을 확인해 주세요.',
-    };
+String accountReadErrorMessage(
+  AccountReadException failure,
+) => switch (failure.code) {
+  'ALREADY_VERIFIED' => '이미 인증된 원정대입니다.',
+  'CURSOR_STALE' || 'REVISION_CONFLICT' => '조회 중 계정 정보가 변경되었습니다. 다시 조회해 주세요.',
+  'OWNERSHIP_REQUIRED' => '이 계정의 현재 소유 권한이 필요합니다.',
+  'REGISTRATION_NOT_FOUND' => '등록된 계정을 찾을 수 없습니다. 계정 목록을 다시 조회해 주세요.',
+  'RATE_LIMITED' => '조회 한도를 초과했습니다. 잠시 후 다시 조회해 주세요.',
+  'UPSTREAM_RATE_LIMITED' => '로스트아크 호출 한도에 도달했습니다. 안내된 시간 후 다시 시도해 주세요.',
+  'UPSTREAM_NOT_CONFIGURED' ||
+  'LOSTARK_KEY_NOT_CONFIGURED' ||
+  'LOSTARK_KEY_REJECTED' ||
+  'SERVER_KEY_CHANGED' ||
+  'LOSTARK_KEY_CHANGED' ||
+  'LOSTARK_KEY_UNAVAILABLE' => '현재 로스트아크 정보를 갱신할 수 없습니다. 저장된 정보는 계속 볼 수 있습니다.',
+  'INVALID_RESPONSE' => '계정 정보를 확인하지 못했습니다. 다시 조회해 주세요.',
+  'UPSTREAM_UNAVAILABLE' ||
+  'NETWORK_UNAVAILABLE' => '서버에 연결하지 못했습니다. 잠시 후 다시 조회해 주세요.',
+  _ => '계정 정보를 불러오지 못했습니다. 로그인 상태와 연결을 확인해 주세요.',
+};
 
 class AccountReadFailure extends StatelessWidget {
   const AccountReadFailure({required this.failure, super.key});
@@ -50,15 +48,6 @@ class AccountReadFailure extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(accountReadErrorMessage(failure)),
-      if ({
-        'LOSTARK_KEY_NOT_CONFIGURED',
-        'LOSTARK_KEY_REJECTED',
-        'LOSTARK_KEY_CHANGED',
-      }.contains(failure.code))
-        TextButton(
-          onPressed: () => context.push('/settings/api-token'),
-          child: const Text('API 키 관리'),
-        ),
       if (failure.retryAfter != null)
         Text('${failure.retryAfter!.inSeconds}초 후 다시 시도해 주세요.'),
     ],
@@ -105,7 +94,7 @@ class ServerAccountsPanel extends StatelessWidget {
             if (viewModel.canRead && onManage != null)
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton.icon(
+                child: OutlinedButton.icon(
                   onPressed: onManage,
                   icon: const Icon(Icons.manage_accounts_outlined),
                   label: const Text('원정대 등록·관리'),

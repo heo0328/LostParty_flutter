@@ -100,7 +100,7 @@ String groupSpecText(Object? value) {
     if (state == 'review') errors.add('분석 확인 필요');
     if (data['combat_power'] == null && analysis == null) continue;
     labels.add(
-      '${role == 'dealer' ? '딜러' : '서포터'} ${data['combat_power'] ?? '미확인'}${errors.isEmpty ? '' : ' · ${errors.join(' · ')}'}${data['combat_power'] != null && state != 'clean' ? ' (마지막 성공 수치)' : ''}',
+      '${role == 'dealer' ? '딜러' : '서포터'} ${data['combat_power'] ?? '미확인'}${errors.isEmpty ? '' : ' · ${errors.join(' · ')}'}',
     );
   }
   if (value['state'] == 'unavailable') labels.add('현재 스펙 확인 불가');

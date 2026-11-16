@@ -1,3 +1,4 @@
+// Role projection updated to Backend b95cff51; other profiles unchanged.
 // Original-request recovery only. Generated validation projection from Backend e4137073d80a754c6dea38d8207333eb8523f80b.
 // Group list/initial-link extensions pinned to Backend 6dac5ab2; existing DTOs retained.
 // Successful response/request DTOs; beta-recruitment-wire-2.
@@ -3482,38 +3483,19 @@ const betaOriginalWireSchemaJson = r'''
         },
         "source": {
           "type": "string",
-          "const": "flutter_analysis",
+          "const": "server_analysis",
           "title": "Source"
         },
         "trust": {
           "type": "string",
-          "const": "client_submitted",
+          "const": "server_computed",
           "title": "Trust"
         },
-        "current_summary_version": {
+        "summary_version": {
           "type": "integer",
           "maximum": 2147483647,
           "minimum": 1,
-          "title": "Current Summary Version"
-        },
-        "success_summary_version": {
-          "anyOf": [
-            {
-              "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Success Summary Version"
-        },
-        "power_revision": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
-          "title": "Power Revision"
+          "title": "Summary Version"
         },
         "observed_at": {
           "anyOf": [
@@ -3527,7 +3509,7 @@ const betaOriginalWireSchemaJson = r'''
           ],
           "title": "Observed At"
         },
-        "success_saved_at": {
+        "saved_at": {
           "anyOf": [
             {
               "type": "string",
@@ -3537,21 +3519,31 @@ const betaOriginalWireSchemaJson = r'''
               "type": "null"
             }
           ],
-          "title": "Success Saved At"
+          "title": "Saved At"
         },
-        "success_issues": {
+        "integrity_status": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "clean",
+                "review",
+                "error",
+                "unavailable"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Integrity Status"
+        },
+        "issues": {
           "items": {
             "$ref": "#/$defs/AnalysisIssue"
           },
           "type": "array",
-          "title": "Success Issues"
-        },
-        "current_issues": {
-          "items": {
-            "$ref": "#/$defs/AnalysisIssue"
-          },
-          "type": "array",
-          "title": "Current Issues"
+          "title": "Issues"
         }
       },
       "additionalProperties": false,
@@ -3563,13 +3555,11 @@ const betaOriginalWireSchemaJson = r'''
         "state",
         "source",
         "trust",
-        "current_summary_version",
-        "success_summary_version",
-        "power_revision",
+        "summary_version",
         "observed_at",
-        "success_saved_at",
-        "success_issues",
-        "current_issues"
+        "saved_at",
+        "integrity_status",
+        "issues"
       ],
       "title": "AdmissionCandidatePower"
     },
@@ -5989,13 +5979,19 @@ const betaOriginalWireSchemaJson = r'''
     "BPowerComparison": {
       "properties": {
         "selected_role": {
-          "$ref": "#/$defs/SelectedRole"
+          "type": "string",
+          "enum": [
+            "dealer",
+            "support"
+          ],
+          "title": "Selected Role"
         },
         "requirement": {
           "anyOf": [
             {
               "type": "string",
               "maxLength": 32,
+              "minLength": 1,
               "pattern": "^[0-9]+(?:\\.[0-9]+)?$"
             },
             {
@@ -6009,6 +6005,7 @@ const betaOriginalWireSchemaJson = r'''
             {
               "type": "string",
               "maxLength": 32,
+              "minLength": 1,
               "pattern": "^[0-9]+(?:\\.[0-9]+)?$"
             },
             {
@@ -6018,42 +6015,30 @@ const betaOriginalWireSchemaJson = r'''
           "title": "Actual"
         },
         "state": {
-          "$ref": "#/$defs/State8"
+          "type": "string",
+          "enum": [
+            "unrestricted",
+            "missing",
+            "below",
+            "meets"
+          ],
+          "title": "State"
         },
         "source": {
           "type": "string",
-          "const": "flutter_analysis",
+          "const": "server_analysis",
           "title": "Source"
         },
         "trust": {
           "type": "string",
-          "const": "client_submitted",
+          "const": "server_computed",
           "title": "Trust"
         },
-        "current_summary_version": {
+        "summary_version": {
           "type": "integer",
           "maximum": 2147483647,
           "minimum": 1,
-          "title": "Current Summary Version"
-        },
-        "success_summary_version": {
-          "anyOf": [
-            {
-              "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Success Summary Version"
-        },
-        "power_revision": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1,
-          "title": "Power Revision"
+          "title": "Summary Version"
         },
         "observed_at": {
           "anyOf": [
@@ -6067,7 +6052,7 @@ const betaOriginalWireSchemaJson = r'''
           ],
           "title": "Observed At"
         },
-        "success_saved_at": {
+        "saved_at": {
           "anyOf": [
             {
               "type": "string",
@@ -6077,21 +6062,31 @@ const betaOriginalWireSchemaJson = r'''
               "type": "null"
             }
           ],
-          "title": "Success Saved At"
+          "title": "Saved At"
         },
-        "success_issues": {
+        "integrity_status": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "clean",
+                "review",
+                "error",
+                "unavailable"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Integrity Status"
+        },
+        "issues": {
           "items": {
             "$ref": "#/$defs/BAnalysisIssue"
           },
           "type": "array",
-          "title": "Success Issues"
-        },
-        "current_issues": {
-          "items": {
-            "$ref": "#/$defs/BAnalysisIssue"
-          },
-          "type": "array",
-          "title": "Current Issues"
+          "title": "Issues"
         }
       },
       "additionalProperties": false,
@@ -6103,13 +6098,11 @@ const betaOriginalWireSchemaJson = r'''
         "state",
         "source",
         "trust",
-        "current_summary_version",
-        "success_summary_version",
-        "power_revision",
+        "summary_version",
         "observed_at",
-        "success_saved_at",
-        "success_issues",
-        "current_issues"
+        "saved_at",
+        "integrity_status",
+        "issues"
       ],
       "title": "BPowerComparison"
     },
@@ -10446,7 +10439,7 @@ const betaOriginalWireSchemaJson = r'''
         "source": {
           "type": "string",
           "enum": [
-            "stored_role_success",
+            "server_analysis",
             "unavailable",
             "not_disclosed"
           ],
@@ -10456,7 +10449,7 @@ const betaOriginalWireSchemaJson = r'''
           "anyOf": [
             {
               "type": "string",
-              "const": "client_submitted"
+              "const": "server_computed"
             },
             {
               "type": "null"
@@ -10488,7 +10481,7 @@ const betaOriginalWireSchemaJson = r'''
           ],
           "title": "Saved At"
         },
-        "power_revision": {
+        "summary_version": {
           "anyOf": [
             {
               "type": "integer",
@@ -10498,7 +10491,7 @@ const betaOriginalWireSchemaJson = r'''
               "type": "null"
             }
           ],
-          "title": "Power Revision"
+          "title": "Summary Version"
         },
         "integrity_status": {
           "anyOf": [
@@ -10516,6 +10509,13 @@ const betaOriginalWireSchemaJson = r'''
             }
           ],
           "title": "Integrity Status"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/AnalysisIssue"
+          },
+          "type": "array",
+          "title": "Issues"
         }
       },
       "additionalProperties": false,
@@ -10526,8 +10526,9 @@ const betaOriginalWireSchemaJson = r'''
         "trust",
         "observed_at",
         "saved_at",
-        "power_revision",
-        "integrity_status"
+        "summary_version",
+        "integrity_status",
+        "issues"
       ],
       "title": "CandidatePower"
     },
@@ -19810,8 +19811,8 @@ const betaOriginalWireSchemaJson = r'''
         },
         "directory_revision": {
           "type": "integer",
-          "maximum": 2147483647.0,
-          "minimum": 1.0,
+          "maximum": 2147483647,
+          "minimum": 1,
           "title": "Directory Revision"
         },
         "filter_scope_digest": {
@@ -19862,8 +19863,8 @@ const betaOriginalWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647.0,
-          "minimum": 1.0,
+          "maximum": 2147483647,
+          "minimum": 1,
           "title": "Revision"
         },
         "title": {
@@ -19903,8 +19904,8 @@ const betaOriginalWireSchemaJson = r'''
         },
         "app_member_count": {
           "type": "integer",
-          "maximum": 8.0,
-          "minimum": 0.0,
+          "maximum": 8,
+          "minimum": 0,
           "title": "App Member Count",
           "description": "Distinct target cycle members holding active assignment leases, including review-held slots, not persistent global member count or legacy choices."
         },
@@ -20106,8 +20107,8 @@ const betaOriginalWireSchemaJson = r'''
         },
         "applications_revision": {
           "type": "integer",
-          "maximum": 2147483647.0,
-          "minimum": 1.0,
+          "maximum": 2147483647,
+          "minimum": 1,
           "title": "Applications Revision"
         },
         "next_cursor": {
@@ -20151,8 +20152,8 @@ const betaOriginalWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647.0,
-          "minimum": 1.0,
+          "maximum": 2147483647,
+          "minimum": 1,
           "title": "Revision"
         },
         "state": {
@@ -20316,8 +20317,8 @@ const betaOriginalWireSchemaJson = r'''
         },
         "membership_head": {
           "type": "integer",
-          "maximum": 2147483647.0,
-          "minimum": 1.0,
+          "maximum": 2147483647,
+          "minimum": 1,
           "title": "Membership Head"
         },
         "next_cursor": {
@@ -20356,8 +20357,8 @@ const betaOriginalWireSchemaJson = r'''
         },
         "revision": {
           "type": "integer",
-          "maximum": 2147483647.0,
-          "minimum": 1.0,
+          "maximum": 2147483647,
+          "minimum": 1,
           "title": "Revision"
         },
         "room_id": {
@@ -20559,8 +20560,8 @@ const betaOriginalWireSchemaJson = r'''
         },
         "membership_head": {
           "type": "integer",
-          "maximum": 2147483647.0,
-          "minimum": 1.0,
+          "maximum": 2147483647,
+          "minimum": 1,
           "title": "Membership Head"
         },
         "next_cursor": {

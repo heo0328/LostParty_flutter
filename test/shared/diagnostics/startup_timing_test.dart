@@ -186,9 +186,9 @@ void main() {
   });
 
   test(
-    'unready key does not consume the run or declare a final model',
+    'unready settings do not consume the run or declare a final model',
     () async {
-      final source = fixture.FakeSource()..keyVersion = null;
+      final source = fixture.FakeSource()..settingsVersion = null;
       final controller = ScopedStartupRefreshController(source);
       controller.initialize();
       await controller.startIfReady();
@@ -199,7 +199,7 @@ void main() {
         lines.any((line) => line.contains('event=preparationBlocked')),
         isTrue,
       );
-      source.keyVersion = 1;
+      source.settingsVersion = 1;
       source.changed();
       await controller.startIfReady();
       expect(trace.runnerDone, isTrue);

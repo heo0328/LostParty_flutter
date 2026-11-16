@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/account/domain/account_read_session.dart';
+import 'package:lost_party/features/account/domain/member_raid_models.dart';
 import 'package:lost_party/features/recruitment_list/data/cycle_interaction_repository.dart';
 import 'package:lost_party/features/recruitment_list/domain/backend_recruitment.dart';
 import 'package:lost_party/features/recruitment_list/presentation/viewmodels/cycle_search_view_model.dart';
@@ -189,6 +190,24 @@ class TestGateway extends CycleInteractionRepository {
   ) => onAdmission == null
       ? super.admission(room, target, character, role, intent)
       : onAdmission!(target);
+}
+
+class GuestSearchGateway extends TestGateway {
+  GuestSearchGateway(super.transport, super.source);
+  int publicCycleCalls = 0;
+  @override
+  bool get supportsPublicSearch => true;
+  @override
+  Future<MemberRaidCycle> publicCycle() async {
+    publicCycleCalls++;
+    return MemberRaidCycle.fromJson({
+      'server_time': f2.nowStamp,
+      'cycle_key': c,
+      'starts_at': '2026-10-20T21:00:00Z',
+      'ends_at': '2026-10-27T21:00:00Z',
+      'timezone': 'Asia/Seoul',
+    });
+  }
 }
 
 void main() {
@@ -793,6 +812,36 @@ void main() {
     },
   );
   group('search state', () {
+    test(
+      'guest searches and applies filters with public cycle dates only',
+      () async {
+        session.change(authenticated: false);
+        final guest = GuestSearchGateway(api, source);
+        guest.onSearch = (t, f, cursor) async =>
+            CycleSearchPage(searchWire(t), t);
+        final view = CycleSearchViewModel(
+          gateway: guest,
+          session: session,
+          changes: changes,
+          scopeKey: scope,
+        );
+        addTearDown(view.dispose);
+        await view.load();
+        expect(view.failure, isNull);
+        expect(view.cycles, isNull); // no invented member permissions
+        expect(view.cycleTargets!.next.key, n);
+        expect(view.rows, hasLength(1));
+        final draft = view.draft();
+        addTearDown(draft.dispose);
+        draft.update(draft.filter.copy(remaining: {3}));
+        expect(view.applyDraft(draft), isTrue);
+        await f1.settled(() => !view.loading);
+        expect(view.filter.remaining, {3});
+        expect(guest.publicCycleCalls, 1);
+        expect(session.accessCalls, 0);
+        expect(api.requests, isEmpty);
+      },
+    );
     late CycleSearchViewModel model;
     setUp(
       () => model = CycleSearchViewModel(

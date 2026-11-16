@@ -53,15 +53,13 @@
                 "requirement": "100",
                 "actual": "100.0000000000000000000001",
                 "state": "meets",
-                "source": "flutter_analysis",
-                "trust": "client_submitted",
-                "current_summary_version": 2,
-                "success_summary_version": 2,
-                "power_revision": 2,
+                "source": "server_analysis",
+                "trust": "server_computed",
                 "observed_at": "2026-10-24T10:00:00Z",
-                "success_saved_at": "2026-10-24T10:01:00Z",
-                "success_issues": [],
-                "current_issues": []
+                "summary_version": 2,
+                "saved_at": "2026-10-24T10:01:00Z",
+                "issues": [],
+                "integrity_status": "clean"
               },
               "analysis": {
                 "version": 2,
@@ -131,20 +129,18 @@
                 "requirement": "100",
                 "actual": "100.0000000000000000000001",
                 "state": "meets",
-                "source": "flutter_analysis",
-                "trust": "client_submitted",
-                "current_summary_version": 3,
-                "success_summary_version": 2,
-                "power_revision": 2,
+                "source": "server_analysis",
+                "trust": "server_computed",
                 "observed_at": "2026-10-24T10:00:00Z",
-                "success_saved_at": "2026-10-24T10:01:00Z",
-                "success_issues": [],
-                "current_issues": [
+                "summary_version": 3,
+                "saved_at": "2026-10-24T11:00:00Z",
+                "issues": [
                   {
                     "code": "SYNTHETIC_ANALYSIS_ERROR",
                     "severity": "error"
                   }
-                ]
+                ],
+                "integrity_status": "error"
               },
               "analysis": {
                 "version": 3,
@@ -219,15 +215,13 @@
                 "requirement": "100",
                 "actual": null,
                 "state": "missing",
-                "source": "flutter_analysis",
-                "trust": "client_submitted",
-                "current_summary_version": 2,
-                "success_summary_version": null,
-                "power_revision": 1,
+                "source": "server_analysis",
+                "trust": "server_computed",
                 "observed_at": null,
-                "success_saved_at": null,
-                "success_issues": [],
-                "current_issues": []
+                "summary_version": 2,
+                "saved_at": "2026-10-24T10:01:00Z",
+                "issues": [],
+                "integrity_status": "unavailable"
               },
               "analysis": {
                 "version": 2,
@@ -297,15 +291,13 @@
                 "requirement": null,
                 "actual": null,
                 "state": "unrestricted",
-                "source": "flutter_analysis",
-                "trust": "client_submitted",
-                "current_summary_version": 2,
-                "success_summary_version": null,
-                "power_revision": 1,
+                "source": "server_analysis",
+                "trust": "server_computed",
                 "observed_at": null,
-                "success_saved_at": null,
-                "success_issues": [],
-                "current_issues": []
+                "summary_version": 2,
+                "saved_at": "2026-10-24T10:01:00Z",
+                "issues": [],
+                "integrity_status": "unavailable"
               },
               "analysis": {
                 "version": 2,
@@ -375,15 +367,13 @@
                 "requirement": "100",
                 "actual": null,
                 "state": "missing",
-                "source": "flutter_analysis",
-                "trust": "client_submitted",
-                "current_summary_version": 1,
-                "success_summary_version": null,
-                "power_revision": 1,
+                "source": "server_analysis",
+                "trust": "server_computed",
                 "observed_at": null,
-                "success_saved_at": null,
-                "success_issues": [],
-                "current_issues": []
+                "summary_version": 1,
+                "saved_at": null,
+                "issues": [],
+                "integrity_status": null
               },
               "analysis": null,
               "display_reason": null
@@ -595,15 +585,13 @@
                 "requirement": "100",
                 "actual": "99.9999999999999999999999",
                 "state": "below",
-                "source": "flutter_analysis",
-                "trust": "client_submitted",
-                "current_summary_version": 2,
-                "success_summary_version": 2,
-                "power_revision": 2,
+                "source": "server_analysis",
+                "trust": "server_computed",
                 "observed_at": "2026-10-24T10:00:00Z",
-                "success_saved_at": "2026-10-24T10:01:00Z",
-                "success_issues": [],
-                "current_issues": []
+                "summary_version": 2,
+                "saved_at": "2026-10-24T10:01:00Z",
+                "issues": [],
+                "integrity_status": "clean"
               },
               "analysis": {
                 "version": 2,

@@ -21,7 +21,7 @@ import '../widgets/representative_crown.dart';
 
 class CharacterManagementPage extends StatefulWidget {
   const CharacterManagementPage({
-    required this.accountRepository,
+    this.accountRepository,
     this.representativeSyncGateway,
     this.activityCharactersRepository,
     this.niceGroupSettingsRepository,
@@ -35,7 +35,7 @@ class CharacterManagementPage extends StatefulWidget {
     super.key,
   });
 
-  final AccountRepository accountRepository;
+  final AccountRepository? accountRepository;
   final CharacterManagementGateway? managementGateway;
   final Future<void> Function()? onSaved;
   final RepresentativeCharacterSyncGateway? representativeSyncGateway;

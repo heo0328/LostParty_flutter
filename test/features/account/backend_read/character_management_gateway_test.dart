@@ -41,6 +41,7 @@ void main() {
     'version': 1,
     'summary': null,
     'saved_at': null,
+    'detail': null,
   };
   Map<String, dynamic> serve(RequestOptions r) {
     if (failGet && r.method == 'GET') throw DioException(requestOptions: r);

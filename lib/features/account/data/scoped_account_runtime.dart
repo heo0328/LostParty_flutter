@@ -14,7 +14,6 @@ import 'local/scoped_account_cache_database.dart';
 import 'repositories/scoped_character_cache_repository.dart';
 import 'server_character_lifecycle_client.dart';
 import '../domain/entities/character_build_role.dart';
-import 'mappers/scoped_role_build_mapper.dart';
 import 'repositories/scoped_role_repository.dart';
 import 'role_summary_client.dart';
 import 'scoped_role_sync.dart';
@@ -596,33 +595,39 @@ class ScopedAccountRuntime {
     required void Function() guard,
   }) => _withRoles((roles) => roles.prepareBatch(refs, guard), guard: guard);
 
-  Future<Map<(String, CharacterBuildRole), RoleSyncResult>> syncRoleBuildBatch(
-    List<RoleUploadPlan> uploads, {
-    required void Function() guard,
-  }) => _withRoles((roles) => roles.syncBatch(uploads, guard), guard: guard);
-  Future<ScopedRoleState> saveRoleBuild(
-    ScopedRolePlan plan,
-    ScopedRoleBuildDraft draft, {
-    void Function()? guard,
-  }) => _withRoles(
-    (roles) => roles.save(plan, draft, guard: guard),
-    guard: guard,
-  );
   Future<ScopedRoleState> readRoleBuild(
     ScopedRolePlan plan,
     CharacterBuildRole role, {
     void Function()? guard,
   }) =>
       _withRoles((roles) => roles.read(plan, role, guard: guard), guard: guard);
-  Future<RoleSyncResult> syncRoleBuild(
-    ScopedRegistrationRef registration,
-    ScopedCharacterRef character,
-    CharacterBuildRole role, {
+  Future<void> applyAnalysis(
+    ScopedRolePlan plan,
+    CharacterBuildRole role,
+    Map<String, dynamic> head, {
     void Function()? guard,
-  }) => _withRoles(
-    (roles) => roles.sync(registration, character, role, guard: guard),
-    guard: guard,
-  );
+  }) => _withRoles((roles) async {
+    final latest = await roles.store.read(plan, role, guard: guard);
+    final incoming = StoredRoleSummary.fromJson(head);
+    if (latest.server.version > incoming.version) return;
+    final other = role == CharacterBuildRole.dealer
+        ? CharacterBuildRole.support
+        : CharacterBuildRole.dealer;
+    final opposite = await roles.store.read(plan, other, guard: guard);
+    final profile = PersonalProfile.fromJson({
+      ...plan.profile.toJson(),
+      role.name: head,
+      other.name: opposite.server.version > plan.profile.role(other).version
+          ? opposite.server.toJson()
+          : plan.profile.role(other).toJson(),
+    });
+    await roles.store.observe(
+      plan.registration,
+      plan.ref,
+      profile,
+      guard: guard,
+    );
+  }, guard: guard);
   Future<ScopedRoleState> useServerRoleBuild(
     ScopedRegistrationRef registration,
     ScopedCharacterRef character,

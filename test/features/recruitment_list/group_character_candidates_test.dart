@@ -32,14 +32,15 @@ Map<String, dynamic> contextWire({String? ref, String? membership}) => {
 Map<String, dynamic> power({String? value, bool hidden = false}) => {
   'value': value,
   'source': value != null
-      ? 'stored_role_success'
+      ? 'server_analysis'
       : hidden
       ? 'not_disclosed'
       : 'unavailable',
-  'trust': value == null ? null : 'client_submitted',
+  'trust': value == null ? null : 'server_computed',
   'observed_at': value == null ? null : f2.nowStamp,
   'saved_at': value == null ? null : f2.nowStamp,
-  'power_revision': value == null ? null : 1,
+  'issues': <Object>[],
+  'summary_version': value == null ? null : 1,
   'integrity_status': value == null ? null : 'clean',
 };
 Map<String, dynamic> character(String id, String? level) => {

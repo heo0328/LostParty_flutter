@@ -50,15 +50,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -124,15 +122,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -144,15 +140,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 }
               }
@@ -212,15 +206,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -232,15 +224,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 }
               }
@@ -638,25 +628,18 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 4,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [
-                      {
-                        "code": "SYNTHETIC_BUILD_WARNING",
-                        "severity": "warning"
-                      }
-                    ],
-                    "current_issues": [
+                    "summary_version": 4,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [
                       {
                         "code": "SYNTHETIC_HEAD_UNAVAILABLE",
                         "severity": "error"
                       }
-                    ]
+                    ],
+                    "integrity_status": "error"
                   }
                 },
                 "support": {
@@ -722,15 +705,13 @@
                     "requirement": null,
                     "actual": null,
                     "state": "unrestricted",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": null,
-                    "power_revision": 1,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": null,
-                    "success_saved_at": null,
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-16T00:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -796,15 +777,13 @@
                     "requirement": "100",
                     "actual": null,
                     "state": "missing",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": null,
-                    "power_revision": 1,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": null,
-                    "success_saved_at": null,
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-16T00:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -816,15 +795,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 }
               }
@@ -900,15 +877,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -990,15 +965,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -1010,15 +983,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 }
               }
@@ -1180,15 +1151,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -1254,15 +1223,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -1290,15 +1257,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {
@@ -1365,15 +1330,13 @@
                     "requirement": "100",
                     "actual": "120",
                     "state": "meets",
-                    "source": "flutter_analysis",
-                    "trust": "client_submitted",
-                    "current_summary_version": 2,
-                    "success_summary_version": 2,
-                    "power_revision": 2,
+                    "source": "server_analysis",
+                    "trust": "server_computed",
                     "observed_at": "2026-10-10T00:00:00Z",
-                    "success_saved_at": "2026-10-10T01:00:00Z",
-                    "success_issues": [],
-                    "current_issues": []
+                    "summary_version": 2,
+                    "saved_at": "2026-10-10T01:00:00Z",
+                    "issues": [],
+                    "integrity_status": "clean"
                   }
                 },
                 "support": {

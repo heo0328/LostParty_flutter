@@ -521,15 +521,13 @@
             "requirement": null,
             "actual": null,
             "state": "unrestricted",
-            "source": "flutter_analysis",
-            "trust": "client_submitted",
-            "current_summary_version": 1,
-            "success_summary_version": null,
-            "power_revision": 1,
+            "source": "server_analysis",
+            "trust": "server_computed",
             "observed_at": null,
-            "success_saved_at": null,
-            "success_issues": [],
-            "current_issues": []
+            "summary_version": 1,
+            "saved_at": null,
+            "issues": [],
+            "integrity_status": null
           },
           "permissions": {
             "change_character": {

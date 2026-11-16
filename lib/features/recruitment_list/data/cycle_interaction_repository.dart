@@ -16,6 +16,8 @@ import '../../account/domain/member_cycle_models.dart';
 import '../../account/domain/member_raid_models.dart';
 import '../../account/domain/role_summary.dart';
 import '../../account/domain/server_registration_api.dart';
+import '../../account/data/backend_account_read_api.dart';
+import '../../account/data/member_raid_client.dart';
 import '../../../shared/raid_catalog/domain/entities/raid_catalog.dart';
 import '../domain/backend_recruitment.dart';
 import 'cycle_read_repository.dart';
@@ -604,9 +606,15 @@ abstract interface class CycleInteractionGateway {
   });
 }
 
+abstract interface class PublicRecruitmentGateway {
+  bool get supportsPublicSearch;
+  Future<MemberRaidCycle> publicCycle();
+}
+
 class CycleInteractionRepository
     implements
         CycleInteractionGateway,
+        PublicRecruitmentGateway,
         CycleBatchCompletionGateway,
         CycleDepartureGateway,
         CycleRemovalGateway,
@@ -617,10 +625,14 @@ class CycleInteractionRepository
   CycleInteractionRepository({
     required this.api,
     required this.recruitment,
+    this.publicApi,
     this.includeGroupList = false,
     this.contractMode = RecruitmentContractMode.legacy,
   });
   final RecruitmentContractMode contractMode;
+  final DioBackendAccountReadApi? publicApi;
+  @override
+  bool get supportsPublicSearch => publicApi != null;
   @override
   bool get batchCompletionEnabled =>
       contractMode == RecruitmentContractMode.betaWire2;
@@ -905,6 +917,13 @@ class CycleInteractionRepository
   @override
   Future<MemberCycles> cycles() => recruitment.cycles();
   @override
+  Future<MemberRaidCycle> publicCycle() {
+    final client = publicApi;
+    if (client == null) throw const AccountReadException('AUTH_REQUIRED');
+    return MemberRaidClient(client).cycle();
+  }
+
+  @override
   Future<RaidCatalog> catalog() => recruitment.catalog();
   @override
   Future<List<RecruitmentGroupChoice>> groups() => recruitment.groups();
@@ -953,21 +972,42 @@ class CycleInteractionRepository
     String? cursor,
   }) => _decode(() async {
     final contract = BetaContract(mode: contractMode);
+    final anonymous = publicApi?.session.isAuthenticated == false;
+    if (anonymous) {
+      roleCheck(
+        filter.groupIds.isEmpty &&
+            filter.members.isEmpty &&
+            filter.token == null &&
+            filter.candidateToken == null &&
+            filter.admissionScope != 'group',
+      );
+    }
     final query = contract.query('POST', '/v2/raid-rooms/search', {
       'response_profile': 'discovery-1',
-      if (includeGroupList) 'include_group_state': 'true',
+      if (includeGroupList && !anonymous) 'include_group_state': 'true',
     });
     final body = filter.body(target, cursor: cursor);
     if (contractMode == RecruitmentContractMode.betaWire2) {
       contract.validateRequest('POST', '/v2/raid-rooms/search', query, body);
     }
-    final raw = (await api.request(
-      '/v2/raid-rooms/search',
-      method: 'POST',
-      query: query,
-      body: body,
-    ))!;
-    return CycleSearchPage.discovery(raw, target, groups: includeGroupList);
+    final raw = anonymous
+        ? (await publicApi!.requestPublic(
+            '/v2/raid-rooms/search',
+            method: 'POST',
+            query: query,
+            body: body,
+          ))!
+        : (await api.request(
+            '/v2/raid-rooms/search',
+            method: 'POST',
+            query: query,
+            body: body,
+          ))!;
+    return CycleSearchPage.discovery(
+      raw,
+      target,
+      groups: includeGroupList && !anonymous,
+    );
   });
   @override
   Future<CycleAdmissionPreview> admission(

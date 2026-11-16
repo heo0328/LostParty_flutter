@@ -1,3 +1,83 @@
+## 2026-11-16 — Native 서버 분석·저장 결과 연결 및 옛 개인키 경로 제거
+
+사용자 지시로 N1 계정 예시와 N2/N3를 일반 BackendApp→BackendMemberAccount→runner/VM 경로까지 연결했다. Backend 게시 `b95cff51`의 전체 OpenAPI를 고정해 분석/전투력 projection만 생성했고 기존 query/profile 선택은 유지했다. 새 `CharacterAnalysisClient`는 항목별 원ID/본문을 환경·회원별 별도 journal에 기록한 뒤 서버 수집·분석·저장을 요청한다. 앱은 저장된 head/detail을 읽고 표시하며 raw/summary를 재가공해 업로드하지 않는다.
+
+- 새로 가능한 흐름: 개인 API 키 없이 기존 자동/수동 갱신→서버 저장 결과→카드/상세 반영. bootstrap 요약과 full profile detail을 구분하고 같은 version 상세를 재사용한다. 낮은값/null/무결성error도 저장 성공으로 반영하며 실패는 이전값/관찰시각을 보존한다. 부분결과·미시도 예산 후속·진행/결과불명·원ID/본문 결과확인·공유 대기를 처리한다. 저장 ACK 후 journal/cache 실패는 서버 저장 실패로 바꾸지 않는다. 신규 수집 대기 중 저장 GET/공개 읽기는 가능하다.
+- 공통 UI/제거: 공통 계정 frame/카드/주간 부품의 고정 예시를 비로그인 첫 진입에 표시한다. 가능시간/예약은 명시적 고정 안내 예시이고 실제 회원의 편집/그래프 VM을 만들지 않는다. 최신 공개 모집/필터·그룹 탐색과 개인 행동 로그인 gate를 유지한다. 개인키 저장/설정·직접 LostArk client/remote·로컬 raw mapper/producer/summary writer와 옛 계정/모집 페이지·전용 도구를 제거했다. 가짜 회원/Repository·호환 writer는 추가하지 않았다. 기존 기기 DB/키를 일괄 삭제하거나 옛 pending을 변환하지 않는다.
+- 보존 확인: 회원/환경/세션·소유/수명·UUID/head version의 늦은응답 격리, 반대 역할 head와 표시 선호·나이스단/기존 갱신 시점, 등록/대표/활동/설정·주간/시간표 및 모집/신청/그룹 명령 경계를 회귀 검증했다. 분석기 자체를 Flutter에서 재계산하지 않는다. 최초 전송24시간 후 원요청 재전송은 중단하고 현재 상태 확인/명시 새 갱신을 요구한다.
+- 검증: 전체 Flutter test **2853 PASS**, 분석0, 웹 debug build(`BACKEND_BASE_URL=http://localhost:8000`) PASS, 변경 Dart 포맷·git diff --check PASS. 서버 명령 핵심경계16PASS(원본문/상관관계·응답유실·전송전 저장실패·ACK후 정리실패·만료·실패시 기존 head 보존·서버 대기/GET 허용·예산 후속 포함), OpenAPI 해시/191경로·211동작 audit와 생성물 재생성 동일성 PASS. 웹 빌드의 Wasm dry-run 안내는 오류가 아니며 JS debug 산출물 생성에 성공했다. 제거한 개인키/직접수집/옛 업로드 전용 시험과 무의미해진 구페이지 시험을 새 경계로 전환해 이전 시험 개수와 차이가 있다. 유지한 auth session 및 기존 제품 회귀 시험은 함께 통과했다.
+- 시험 수정 근거: full GET mock이 bootstrap 요약형을 반환하던4건은 full detail·정확한 Map 타입으로 수정했고, 과거 ‘마지막 성공’ 표시 기대2건은 최신 단일 head 계약으로 수정했다. DTO를 느슨하게 허용하지 않았다. 병렬 Flutter 실행은 피했다. 광범위 포맷이 건드린 무관6파일은 착수 상태/자체 formatter 로그·diff로 확인 후 복원했다(첫 자동승인 거절 뒤 근거 재검토 승인). 사용자 변경은 복원 대상으로 삼지 않았다.
+- 최종 검토: 공용 AccountReadFailure의 삭제된 API 키 관리 진입/개인키 요구 안내도 제거했다. 개인설정 저장 대기 안내는 기존 의미를 유지했다. 옛 writer 전용 시험 adapter를 제거하고 분석 명령의 진단 operation 이름을 갱신했다. 이 마지막 표현/시험 adapter 변경 뒤 계정 Backend read+진단 **716 PASS**, 분석0·diffcheck PASS를 확인했다. 앞선 최종 전체2853PASS와 웹 빌드 결과를 재사용하며 실제 기기 통과로 확대하지 않는다.
+- 미확인: 실제 dev DB0037·새 서버/provider 실행, 웹 URL/F5/뒤로가기·저장/인증 및 Android 설치/복귀·폰/폴드/큰글자 수동 인수. Backend의 DB/키/자료/실행 버전 준비는 별도 지시 범위이며 이번에 실행하지 않았다. 실연동 대기와 코드/합성 검증 완료를 구분한다. 앱 전체 오류 점검·선택 진단 전송/30일 삭제는 기존 별도 후속을 유지한다.
+- 보관/인계: 사용자 지시로 누적 코드/시험/도구/문서 전체를 `refactor/lostark-server-processing`에 커밋·푸시한다. 실제 SHA·원격 동일성 및 Backend Issue55 최종 회신은 Git/Issue를 따른다. dev/main 병합·브랜치 삭제·운영 배포/APK 게시·DB/키 변경은 없다. 실연동이 남아 목적 브랜치를 유지한다.
+
+## 2026-11-16 — Native 공개 모집·그룹 탐색 연결
+
+N1 중 공개 탐색을 일반 앱 DI/Router에 연결했다. 모집 guest의 구 RecruitmentListPage/PendingBackendPartyReadRepository 선택을 제거하고 CycleRecruitmentListPage/최신 필터를 공통 사용한다. 검색 전용 RecruitmentCycleTargets는 회원 metadata 또는 공개 raid-cycle의 서버 현재/7일 뒤 날짜만 투영하며 회원 permissions를 만들지 않는다. 공개 allowlist 요청은 토큰/세션 refresh/reject 없이 실행하고 회원/환경/세션 변경 때 늦은 응답을 폐기한다. 그룹은 공개 검색/summary만 열고 개인 상세·명령 journal을 읽지 않는다. 생성/참가/신청·개인 필터는 로그인/기존 권한을 유지한다.
+
+- 새로 가능한 흐름: 비로그인 모집의 실제 공개 목록·필터/정렬·현재/다음 주차와 그룹 검색/공개 summary를 최신 UI에서 탐색할 수 있는 앱 경로가 연결됐다. 내 계정은 아직 옛 경로이며 예시/서버 분석 연결 완료로 확대하지 않는다.
+- 보존 확인: 회원 모집/그룹의 기존 API·권한·원요청 복구·필터/페이지/cursor·세션 격리 회귀를 확인했다. 적용된 일반 필터만 인증 전환 후 유지하고 개인 조건/페이지 및 과거 미적용 초안은 폐기한다. 공용 API override 시그니처는 유지하고 공개 메서드는 따로 한정했다.
+- 검증: 최종 전체 flutter test **3040 PASS**, flutter analyze 0, 포맷·git diff --check PASS. 신규 경계는 public auth bypass 차단·token/refresh/reject0·늦은 응답, 실제 discovery 어댑터의 무토큰/group-state0, guest 주차/필터와 그룹 private/journal0이다. 초기 전체3037PASS/1FAIL에서 과거 초안의 필터 잔류를 발견해 원인을 수정했고 최종 전체를 재실행했다. 병렬 Flutter 실행의 sqlite DLL 생성 충돌은 작업을 순차화해 해소했고 생성물 삭제/검증 완화는 하지 않았다. 초기 컴파일의 추상 gateway 직접 필드 참조는 명시 public adapter 주입으로 수정했다.
+- 미확인/남음: 새 dev 서버 실연동·웹 URL/F5/뒤로가기/인증 복원과 Android/폰·폴드/큰 글자 수동 인수. 계정 예시·N2 서버 분석/DTO·N3 개인키/raw/옛 writer·구페이지 전용 코드 제거는 남아 있다. 이번은 대단원 전체 완료가 아니다.
+- 협업: [Native 공개 탐색 인계6915757079](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6915757079)를 게시하고 본문 일치를 재조회했다. Backend 추가 변경/재시험 요청 없이 실제 연결/검증과 남은 범위를 인계했다.
+- 보관: refactor/lostark-server-processing 유지·누적 코드/시험/문서 미커밋·dev/main 미반영·push/배포/DB·키 변경 없음. 실제 분석 API/환경 준비와 기기 확인을 자동 시험으로 대체하지 않는다.
+
+## 2026-11-16 — Native 구현 착수·전체 실행 명세 확보/참조 대조
+
+사용자 구현 지시로 N0를 시작했다. 기존 목적 브랜치/문서 변경을 유지하고 Issue55 최신 회신을 확인했다. GitHub connector의 대용량 본문 제한은 gh api의 고정 Git blob 읽기로 해소했다. 원본2,661,219byte·blob3f49f92ca2ea80bf05338d1a204d13606c83824b·SHA256431f943c6f7719c414aafd4bce46af6987afe67dd4bb276449aa60dd5c4a616b를 확보했다. gh 미지원 --output은 메모리 base64 디코딩/파일 기록으로 수정했다. 비밀값/Backend 환경은 변경하지 않았다.
+
+- 새로 가능한 흐름: `node tool/audit_server_processing_contract.mjs <고정 OpenAPI JSON> [보고서 경로]`로 해시/191경로·211동작·키/옛 summary writer 경로 제거·현재 내장3계약 operation/재귀 schema 참조를 대조할 수 있다. 모집 현재/원요청/그룹의 구조 변경 정의는 각각22/84/1개, 새로 도달한 정의는6/193/2개다. 이는 구조 비교이며 의미상 결함 수가 아니고 명세 완전 생성/앱 전환 통과가 아니다.
+- 보존 확인: lib/test/실제 앱·DB/키·서버 불변. 기존 동작을 신명세의 일부 필드 허용으로 우회하지 않았다. 실제 회귀 검증은 아직 미실행이다.
+- 검증: 전체 고정 원본 대상 audit PASS·node --check·git diff --check PASS. 생성물/DTO/query/profile 선택의 세부 전환과 N1/N2/N3·실연동/웹·Android 인수는 남아 있다. 기능 코드 불변으로 Flutter test/analyze는 실행하지 않았다.
+- 상태: 구현 진행 중, 목적 브랜치 유지·누적 미커밋·dev/main 미반영·push/배포 없음. 원본/상세 audit는 Git 제외 .dart_tool/backend-contract에 보관하며 전체2.66MB 원문을 저장소에 중복 추가하지 않는다.
+
+## 2026-11-16 — Native 구현 기획·설계 완료
+
+사용자의 네이티브 개발 기획·설계 지시로 Backend b95cff51의 분석 계약/Schema·관련 실제 Router와 현재 BackendApp DI·계정 캐시/상세·runner·공개 탐색/그룹 transport·명령 복구를 대조했다. 계약25에 최신 공통 UI/계정 예시·개인 행동 로그인·서버 분석 reader/producer·항목 상태/원요청 journal·오류/대기·옛 경로 제거·회귀 설계를 기록하고 NEXT_WORK를 N0→N1→N2→N3→I1 실행계획으로 교체했다. 구형 준비/미확정 문구도 현재 게시 상태로 정리했다.
+
+- 새로 가능한 흐름: 기능 변화 없음. 게시 계약에 따른 Native 구현 순서·대상/완료 조건을 바로 사용 가능하며 실제 dev 서버 준비는 I1 실연동의 선행 조건으로 분리했다. `/v2/raid-cycles`의 Principal 필수를 확인해 guest는 공개 `/v1/raid-cycle` 기반 탐색 대상만 투영하도록 설계했다. 기존 `/refresh` 공용 대기와 code-only 오류 축약의 영향도 포함했다.
+- 보존 확인: lib/test/tool·DB/키·실행 서버 불변. 현재 등록/소유/활동·대표/설정·주간/모집/그룹 명령 및 원요청 복구는 보호 범위다. 실제 회귀 시험 통과 보고는 아니다. 원자료/옛 pending 승계·가짜 회원/이중 reader·진단 전송은 추가하지 않는다.
+- 미확인: 2.66MB 전체 OpenAPI는 connector 본문/크기 제한으로 전체 추출 비교를 못 했으며 N0에서 고정 원본/해시를 확보해 대조한다. 실제 구현·자동 시험·새 dev 서버/DB0037·실 provider/웹·Android 기기 인수·운영은 남아 있다. Backend 분할 검증 보고를 Native 실연동으로 확대하지 않는다.
+- 협업: [Native 구현 설계 인계6915289408](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6915289408)를 게시하고 원격 본문 일치를 재조회했다. 문서 미커밋/미push·새 Native SHA 없음, Backend 추가 구현/시험 요청 없이 현재 수신/경계/다음 담당을 기록했다. Issue OPEN 유지.
+- 검증: 정적 설계·문서 내용/로컬 링크 검토·`git diff --check`. 코드 불변으로 Flutter test/analyze·빌드·기기 조작은 미실행. 브랜치 `refactor/lostark-server-processing` 유지·누적 문서 미커밋·dev/main 미반영·push/배포 없음.
+
+## 2026-11-16 — Backend55 B1/B2 구현 게시 회신 확인
+
+Backend6911910416의공식오류보완·6914853896의B1/B2완료·6914931822의b95cff51f6eaf74d341115b2cc7868cc625ce626 push인계를읽고고정구현문서접근을확인했다. 키공급/공유제한·분석/단일head/읽기·소비전환과옛writer제거,1,889항목분할검증/미해결0·도구87PASS·191경로/211동작명세비교는Backend보고다. Native재시험/수용검증완료로확대하지않는다. 게시전작성문서의미커밋문구와후행게시회신을구분했다. 실제DB0036/개발서버는구버전이며0037/키·자료준비·반영은별도지시다. 새로가능:게시된명세/코드로Native연결준비가능. 보존확인:Flutter기능코드/키/DB불변. 미확인:새명세전체대조/Native연결·실provider/기기/운영. 현재문서만갱신·diffcheck,Flutter시험반복없음. 누적미커밋·목적브랜치유지·dev/main미반영·push/배포없음.
+## 2026-11-16 — 앱 전체 오류 점검·진단 전송을 별도 후속으로 분리
+
+사용자는503이예시였음을명확히하고기존오류버튼/안내를함께점검하되현재API전환과범위를나누자는제안을승인해문서기록을지시했다. DETAIL_IMPROVEMENTS의app-error-review-and-diagnostic-reporting에앱전체/웹·Android대상·기존복구UI재사용조사·첫실패부터사용자선택전송·진단허용목록/비밀원문제외·회원귀속/익명접수·중복방지/접수번호·30일보관후자동삭제·담당/착수/완료조건을기록했다. NEXT_WORK·계약25에는경계와원본링크만두었다. 현재전환은영향받는오류안내/재시도·결과복구·대기/부분실패점검을포함하고새진단기능은완료선행조건이아니다. 후속의정확API/스키마/개발자조회는미확정이며별도Issue/구현은시작하지않았다.
+
+새로가능:현재/후속작업경계와확정된진단요구를다음착수에서찾을수있다. 보존확인:기능코드·기존복구명령·서버/DB·키불변. 미확인:후속기능/30일삭제구현·자동시험·기기인수. 검증:문서내용/링크·diffcheck만,Flutter시험/분석반복없음. 기존목적브랜치유지·누적미커밋·dev/main미반영·push/배포없음.
+
+## 2026-11-16 — 로아 공식 HTTP 오류 대응 대조·Backend B1 보완 요청
+
+사용자요청으로공식usage-guide API Errors/maintenance·getting-started Throttling을읽고고정cda4db3 provider·rosters.service/owned_refresh·rate_limits와후보를대조했다. 401/403·429별도,404anchor실제처리는있으나415·5xx별안내/503추가요청자제·전상태mock검증의완료근거는없다. 계약25에대응표를기록하고[Native6910971244](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6910971244)에기존오류재사용·안전진단·배치/worker추가수집억제/미시도자동후속반복방지·mock기준보완과필요delta회신을요청했다. Backend공동설계확정6910714179수신도현재상태에반영했다. 새로가능:실패처리누락을B1범위로추적가능. 보존확인:기능코드/키/DB불변. 미확인:실제오류별구현/합성시험·provider/기기. 검증:문서/소스정적대조·댓글원문·diffcheck,실한도/장애재현없음. 누적문서미커밋·현목적브랜치유지·dev/main미반영·push/배포없음.
+
+## 2026-11-16 — Backend55 후보1 exact wire 검수·Native 설계 수용
+
+사용자지시로Backend6910288469/수정수용6909928494를재조회하고댓글JSON Schema/합성examples·현Flutter고정302243fb의strict reader를대조했다. 입력양역할version/감지역할CAS·최신하락값/error/null저장·같은head요약/상세·singlehead모집비교·항목state/retry/미시도reserve0·현재명령복구와옛writer제거방향을수용했다. account role_summary 및모집admission_candidates/application_display·내장beta wire등실제source/trust/성공값이중필드변경영향을확인해[Native6910545522](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6910545522)에회신하고원문재조회일치를확인했다. 추가제품결정/계약재설계요청없이Backend수용확인·공동고정/구현인계대기다.
+
+검증: JSON codeblock파싱과사용키워드기반메모리구조대조23/23PASS(정상2/거절18/상관1/저수치error1/source-null1). Draft2020-12범용준수나Backend시험재현이아니다. cross-field·code/state/retry·fresh합류/CAS등은구현검증으로구분했다. 새로가능:Native계약수용을Backend가확인가능. 보존확인:lib/test·키/DB/실행불변. 미확인:실제명세/서버구현·분석golden·웹/Android/기기. 문서diff/링크검토만추가하며Flutter시험/분석반복없음. 목적브랜치유지·누적문서미커밋·dev/main미반영·push/배포/자료삭제없음.
+
+## 2026-11-16 — Native 설계 승인 반영·Backend55 대조 회신
+
+사용자가 Native 설계안 실행을 승인했다. Backend6909472129를 재조회해 회원 실제 경로와 대조하고 계약25를 현재 설계로 갱신했다. 사용자 추가확정은 기존 자동/수동갱신시점 유지와 수집·역할판정 성공이면 전투력하락·세팅error도 당시값/오류저장이다. 실패 때만 값/시각을 유지한다. 실제 회원 역할선택은 preferredRole 표시설정이므로 구형 미연결 상세의 명시역할/확인후재수집을 도입하지 않는다. 사용자 단일구조 방침으로 옛raw/pending승계·shim/이중writer/전환flag 요구를 교체하고 새 현재명령CAS/ACK와 실제자료삭제 별도결정을 구분했다.
+
+분석기/카탈로그 고정302243fb, 비민감4직업×양역할8행 정의와 합성builder, 요약/상세 최소필드, proposed 단건/배치의 양역할CAS·미시도/결과불명·최신수동관찰·상세version결합을 [Native6909842470](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6909842470)에 회신했다. 댓글 재조회 원문일치를 확인하고 Backend에 최종API/저장/제거영향표·고정게시명세를 요청했다. 개인실사용자raw/키를 인계하지 않았고 기존full raw fixture/live foreign 표본은 제외했다. 새합성golden생성/Python동등성시험·실행소스/DB검증은 미실행이다.
+
+새로 가능해진 흐름: Native의 분석규칙/필드·수용수정점을 Backend가 받아 최종명세를 작성할 수 있다. 앱기능 변화 없음. 보존확인: lib/test·기존기능/원정대·권한코드/키/DB 불변. 미확인: 최종명세·양측합의·새갱신/예시/공개UI 연결·웹/Android 인수. 검증: 정적코드·표본자료검토·댓글원문·문서링크/diffcheck. 기능코드불변이라 Flutter시험/분석/빌드·기기조작 반복없음. 현재목적브랜치 유지·누적문서미커밋·dev/main미반영·push/배포/자료삭제/초기화없음. 다음은 Backend최종계약수신/대조 뒤 확정범위의 공통UI·서버분석새요청·옛경로제거다.
+
+## 2026-11-16 — 개발자 단일 키·서버 처리 / 비로그인 공통 UI 조사·협업 착수
+
+사용자가 구현 전 Flutter·Backend 구조 조사/공동 설계 계획을 승인했다. clean dev302243fb에서 refactor/lostark-server-processing을 분기했다. 브랜치 종료는 서버 단일 키/처리·최신 공통 UI 연결·회귀 확인이며 이번은 첫 조사 파트다. 필수 진입 문서·현재 정책과 실제 DI/Router/호출·저장을 대조하고 계약25에 일반 실행/미연결 코드를 구분한 조사표·제거 후보·회귀/공동 질문을 정리했다. 기존 NEXT_WORK의 완료계획 반복은 기존 DEV_LOG/Git/원장 참조로 줄이고 현재 순서를 교체했다.
+
+확인: 회원 자동/단건 갱신은 Armory 직접 조회→Flutter 카탈로그/역할·무결성 분석→로컬 raw/summary 저장→서버 역할 summary 단건/배치 업로드다. guest 계정 검색은 siblings→기기 메인/부계정 저장/카드와 재진입 갱신, guest 모집은 구 페이지+실제HTTP없는 Pending reader다. 최신 모집 VM에도 인증 guard가 있어 분기만 변경해도 연결되지 않는다. 구 상세/장비 preview의 직접 호출은 일반 Router 연결 미확인으로 공유 분석기와 구분했다. 사용자 보고의 guest 빈 조회 화면의 정확한 원인은 미확정이며 수정됐다고 표시하지 않는다.
+
+Backend 원격 dev cda4db352c9ac922f269b9ec2794f0d888d4dca6에서 provider·credential·power·observations/owned refresh·cycle router와 관련 기능 문서를 읽었다. search(discovery-1)/기본card는OptionalPrincipal, detail/후보/본인filter는Principal임을 확인해 기존 공개 API 재사용을 먼저 요청했다. Backend 전체 조사/실제 실행을 대신하지 않는다. 기존 open 목록·완료Issue7/최신 댓글을 확인하고 [Issue55](https://github.com/heo0328/lostparty-backend/issues/55)에 현근거·확정제품목표·Backend6개 조사영역·담당/완료조건을 게시했으며 본문 재조회 원문일치를 확인했다. 회신은 아직 없으며 상대측이 받을 새 Flutter 구현/문서 SHA가 없음을 명시했다. 최신Issue54 본문의 사용자승인completed 종료도 현재지도에 반영했다.
+
+새로 가능해진 흐름: 앱 기능 변화 없음. 양측이 현재 실행 근거와 서버 처리/키·공개 UI의 합의 지점을 같은 Issue로 추적할 수 있다. 보존 확인: lib/test·DB/비밀값/원명령·정상기능 코드 불변. 미확인: Backend 전체 지도/새계약·분석이전 동등성·예시/guest공통UI·실제 연동과 웹/Android 인수 전부 후속. 실행 검증: 정적 호출/참조 대조·문서 링크/내용·diff 검토와 git diff --check. 코드불변이라 Flutter test/analyze·빌드·기기조작은 반복하지 않는다. 목적브랜치 문서미커밋·dev/main 미반영·push없음·브랜치유지, 운영/키등록·자료삭제/초기화·리전이전·Penpot·APK/태그변경없음. 다음은 Backend55 회신 대조와 공동 계약/양측 구현 순서 확정이다.
+
 ## 2026-11-15 — 2.3.0 운영 공개·공개 산출물 검증 완료
 
 Backend54 회신6887988908로API05daa424/image71e30188…34d9d·DB0036/118테이블보존·웹34자산동일을수용했다. Native main/dev/release02326960·태그v2.3.0와Actions43670183453성공, 공개5파일/승인본문일치를확인했다. 공개APK SHA256eb30f9d9…f8c20은준비APK와달라원장을분리했고기존서명8ef16c58…030/정식패키지/2.3.0+8·checksum을검증했다. 웹원3파일도공개첨부후재다운로드manifest검증통과. Native운영health/database ok·indexhash일치. 사용자기기업데이트/Google로그인전수인수는미수행이며BUG-038미해결유지다. 결과문서를release/dev/main에보관하되불변태그이동·Issue종료·키/DB변경없음.

@@ -36,7 +36,8 @@ Map<String, dynamic> invitePage({bool eligibility = true}) {
     'trust': null,
     'observed_at': null,
     'saved_at': null,
-    'power_revision': null,
+    'summary_version': null,
+    'issues': <Object>[],
     'analysis': null,
     'reason': 'ROLE_ANALYSIS_UNAVAILABLE',
   };
@@ -204,6 +205,66 @@ void main() {
     dio.close(force: true);
     changes.dispose();
     session.dispose();
+  });
+  test(
+    'guest reads public group summary without private detail or token',
+    () async {
+      session.change(authenticated: false);
+      final adapter = Adapter((options) async {
+        expect(options.path, '/v1/groups/$gid');
+        expect(options.headers['Authorization'], isNull);
+        return reply(summary());
+      });
+      dio.httpClientAdapter = adapter;
+      final view = BackendGroupViewModel(
+        repo(),
+        GroupPageKind.detail,
+        groupId: gid,
+      );
+      addTearDown(view.dispose);
+      await view.load();
+      expect(view.failure, isNull);
+      expect(view.summary!['group_id'], gid);
+      expect(view.detail, isNull);
+      expect(adapter.calls, 1);
+      expect(session.accessCalls, 0);
+      expect(journal.values, isEmpty);
+    },
+  );
+  test('guest group search never opens a member command journal', () async {
+    session.change(authenticated: false);
+    session.userId = null;
+    final adapter = Adapter((options) async {
+      expect(options.path, '/v1/groups');
+      expect(options.headers['Authorization'], isNull);
+      return reply({
+        'items': [summary()],
+        'directory_revision': 1,
+        'next_cursor': null,
+      });
+    });
+    dio.httpClientAdapter = adapter;
+    final view = BackendGroupViewModel(repo(), GroupPageKind.search)
+      ..query = '그룹';
+    addTearDown(view.dispose);
+    await view.load();
+    expect(view.failure, isNull);
+    expect(view.rows, hasLength(1));
+    expect(view.hasPendingRequest, isFalse);
+    expect(adapter.calls, 1);
+    expect(session.accessCalls, 0);
+    expect(journal.values, isEmpty);
+  });
+  test('guest group home does not request member records', () async {
+    session.change(authenticated: false);
+    final adapter = Adapter((_) async => throw StateError('private request'));
+    dio.httpClientAdapter = adapter;
+    final view = BackendGroupViewModel(repo(), GroupPageKind.home);
+    addTearDown(view.dispose);
+    await view.load();
+    expect(view.failure, isNull);
+    expect(adapter.calls, 0);
+    expect(session.accessCalls, 0);
   });
   test('local own names win over group evidence without HTTP', () async {
     final adapter = Adapter((_) async => reply(invitePage()));
@@ -920,7 +981,7 @@ void main() {
         'support': {'combat_power': null, 'analysis': null},
       });
       expect(text, contains('보석 오류'));
-      expect(text, contains('마지막 성공'));
+      expect(text, isNot(contains('마지막 성공')));
       expect(text, isNot(contains('/11')));
     },
   );

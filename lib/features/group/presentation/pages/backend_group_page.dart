@@ -115,7 +115,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
             ),
             content: text == null ? null : Text(text),
             actions: [
-              TextButton(
+              OutlinedButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text('취소'),
               ),
@@ -870,7 +870,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
       return [
         if (m.summary != null) summaryCard(m.summary!),
         if (!m.loading && m.failure == null && m.summary != null)
-          button('가입 신청', apply),
+          button('가입 신청', m.authenticated ? apply : widget.onLogin),
       ];
     }
     final permissions = m.management == null
@@ -979,6 +979,24 @@ class _BackendGroupPageState extends State<BackendGroupPage>
   List<Widget> content() {
     switch (widget.kind) {
       case GroupPageKind.home:
+        if (!m.authenticated) {
+          return [
+            card(
+              const Text(
+                '그룹에서 함께할 사람을 찾고 캐릭터와 레이드 일정을 관리할 수 있습니다. 그룹 검색은 로그인 없이 이용할 수 있습니다.',
+              ),
+            ),
+            button('그룹 검색', () => open('/groups/search')),
+            FilledButton(
+              onPressed: widget.onLogin,
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('로그인'),
+            ),
+          ];
+        }
         return [
           if (m.countsFailure case final error?)
             Text('요청 수 확인 불가 · ${groupFailure(error)}'),
@@ -1233,7 +1251,11 @@ class _BackendGroupPageState extends State<BackendGroupPage>
         child: Scaffold(
           floatingActionButton: widget.kind == GroupPageKind.home
               ? FloatingActionButton.extended(
-                  onPressed: m.busy ? null : () => open('/groups/create'),
+                  onPressed: m.busy
+                      ? null
+                      : () => m.authenticated
+                            ? open('/groups/create')
+                            : widget.onLogin(),
                   icon: const Icon(Icons.add),
                   label: const Text('그룹 만들기'),
                 )
@@ -1243,7 +1265,11 @@ class _BackendGroupPageState extends State<BackendGroupPage>
             actions: [
               if (widget.kind == GroupPageKind.home) ...[
                 IconButton(
-                  onPressed: m.busy ? null : () => open('/groups/join-by-code'),
+                  onPressed: m.busy
+                      ? null
+                      : () => m.authenticated
+                            ? open('/groups/join-by-code')
+                            : widget.onLogin(),
                   icon: const Icon(Icons.vpn_key_outlined),
                   tooltip: '초대코드로 가입',
                 ),
@@ -1280,7 +1306,13 @@ class _BackendGroupPageState extends State<BackendGroupPage>
                   )
                 : null,
           ),
-          body: !m.authenticated
+          body:
+              !m.authenticated &&
+                  !{
+                    GroupPageKind.home,
+                    GroupPageKind.search,
+                    GroupPageKind.detail,
+                  }.contains(widget.kind)
               ? Center(
                   child: FilledButton(
                     onPressed: widget.onLogin,
@@ -1311,7 +1343,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
                       ...content(),
                       const SizedBox(height: 16),
                       if (m.hasPendingRequest)
-                        TextButton(
+                        OutlinedButton(
                           onPressed: m.busy ? null : m.recover,
                           child: const Text('이전 요청 결과 확인'),
                         ),

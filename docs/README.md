@@ -20,7 +20,7 @@
 
 - [모집·일정 통합37](backend-migration/37-raid-scheduling-and-multi-raid-planning.md): 최신 두 주차/단일 기본 출발·조기조율·번호·신청메모 계약. [현재 구현·기기 인수표](backend-migration/37-raid-scheduling-and-multi-raid-planning.md#recruitment-status-20261027)에서 통과·남은 경계·베타 이후 개선을 구분한다.
 - [비활성 기능](project/INACTIVE_FEATURES.md): IF-001/002/003의 제품 제외·실제 차단 상태 구분
-- [계정/캐시/복원30](backend-migration/30-scoped-storage-write-contract.md), [등록19](backend-migration/19-account-registration-flutter-contract.md), [키25](backend-migration/25-member-lostark-key-request.md), [인증36](backend-migration/36-roster-ownership-dispute-flutter-design.md)
+- [계정/캐시/복원30](backend-migration/30-scoped-storage-write-contract.md), [등록19](backend-migration/19-account-registration-flutter-contract.md), [키·서버 처리 전환25](backend-migration/25-member-lostark-key-request.md#native-implementation-design)(개발자 단일 키·guest 공통 UI의 Native 구현·소비 계약 / 과거 개인 키 계약과 구분), [인증36](backend-migration/36-roster-ownership-dispute-flutter-design.md)
 - [한도34](backend-migration/34-member-limits-and-room-restrictions.md)·[통계35](backend-migration/35-weekly-member-and-group-statistics.md)·[분야별 요청32](backend-migration/32-backend-domain-prework-requests.md)
 - [계정 후속14](backend-migration/14-my-account-flutter-integration-plan.md)·[DB 검토24](backend-migration/24-database-design-review.md)·[백엔드 문서목록](backend-migration/00-overview.md)
 - Penpot03 작업 중/02 구현 운용 화면, 메인 보드·섹션별 하위 보드 수정과 사용자 별도 지시 시 동일 보드 이관은 [디자인 공통 지침](design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다. 과거 시안 식별자/운영 이력은 설계37 §37.65.

@@ -1,8 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lost_party/features/auth/data/auth_session_store.dart';
-import 'package:lost_party/shared/lost_ark_api/auth/api_token.dart';
-import 'package:lost_party/shared/lost_ark_api/auth/secure_api_token_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -28,14 +26,23 @@ void main() {
     expect(await next.read(), 'saved-session');
   });
 
-  test('backend session replacement leaves the Lost Ark key intact', () async {
-    final gameCredential = SecureApiTokenStore();
-    await gameCredential.write(ApiToken('separate-credential'));
-    final store = SecureAuthSessionStore(environment: 'http://10.0.2.2:8000');
-    await store.write('first-session');
-    await store.write('replacement-session');
-    expect(await store.read(), 'replacement-session');
-    await store.delete();
-    expect((await gameCredential.read())?.value, 'separate-credential');
-  });
+  test(
+    'backend session replacement leaves unrelated secure records intact',
+    () async {
+      const unrelated = FlutterSecureStorage();
+      await unrelated.write(
+        key: 'test-unrelated-record',
+        value: 'separate-value',
+      );
+      final store = SecureAuthSessionStore(environment: 'http://10.0.2.2:8000');
+      await store.write('first-session');
+      await store.write('replacement-session');
+      expect(await store.read(), 'replacement-session');
+      await store.delete();
+      expect(
+        await unrelated.read(key: 'test-unrelated-record'),
+        'separate-value',
+      );
+    },
+  );
 }

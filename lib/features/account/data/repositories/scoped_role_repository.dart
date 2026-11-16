@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:drift/drift.dart';
 
@@ -8,8 +7,6 @@ import '../../domain/entities/character_build_role.dart';
 import '../../domain/role_summary.dart';
 import '../../domain/scoped_cache_models.dart';
 import '../local/scoped_account_cache_database.dart';
-import '../local/scoped_command_key.dart';
-import '../mappers/scoped_role_build_mapper.dart';
 import 'scoped_character_cache_repository.dart';
 
 class ScopedRolePlan {
@@ -46,46 +43,17 @@ class ScopedRolePlan {
 }
 
 class ScopedRoleState {
-  ScopedRoleState._(this._data, this.command, {this.fromCache = false});
+  ScopedRoleState._(this._data, {this.fromCache = false});
   final bool fromCache;
   final Map<String, dynamic> _data;
-  final ScopedRoleCommand? command;
-  int get localRevision => _data['local_revision'] as int;
-  bool get hasPending =>
-      localRevision > (_data['acknowledged_revision'] as int);
-  RoleSummary? get localSummary => _data['summary'] == null
-      ? null
-      : RoleSummary.fromJson(roleMap(_data['summary']));
-  StoredRoleSummary get server =>
-      StoredRoleSummary.fromJson(roleMap(_data['server']));
-  RoleSummary? get displaySummary => hasPending ? localSummary : server.summary;
-  String? get rawJson => _data['raw'] as String?;
-  bool get rawMatchesDisplay =>
-      rawJson != null && localSummary?.same(displaySummary) == true;
-}
-
-class ScopedRoleCommand {
-  ScopedRoleCommand._(
-    this.scopeId,
-    this.id,
-    this.ref,
-    this.ownershipRevision,
-    this.role,
-    this.localRevision,
-    this._bodyJson,
-    this.firstSentAt,
-    this.retryAt,
-    this.state,
-    this.errorCode,
+  bool get hasPending => false;
+  StoredRoleSummary get server => StoredRoleSummary.fromJson(
+    roleMap(_data['server']),
+    summaryOnly: _data['summary_only'] as bool,
   );
-  final int scopeId, ownershipRevision, localRevision;
-  final String id, _bodyJson, state;
-  final String? errorCode;
-  final ScopedCharacterRef ref;
-  final CharacterBuildRole role;
-  final DateTime? firstSentAt, retryAt;
-  Map<String, dynamic> get body =>
-      jsonDecode(_bodyJson) as Map<String, dynamic>;
+  RoleSummary? get displaySummary => server.summary;
+  String? get detailJson =>
+      server.detail == null ? null : jsonEncode(server.detail);
 }
 
 /// Same DB as the canonical read cache; never touches legacy int-ID data.
@@ -142,45 +110,20 @@ class ScopedRoleRepository {
                 t.role.equals(role.name),
           ))
           .getSingleOrNull();
-  Future<ScopedRoleCommand?> _command(
-    ScopedRolePlan p,
-    CharacterBuildRole role,
-  ) async {
-    final row =
-        await (db.select(db.scopedRoleCommands)..where(
-              (t) =>
-                  t.scopeId.equals(p.scopeId) &
-                  t.characterId.equals(p.ref.characterId) &
-                  t.ownershipRevision.equals(p.profile.ownershipRevision) &
-                  t.role.equals(role.name),
-            ))
-            .getSingleOrNull();
-    if (row == null) return null;
-    final payload = jsonDecode(row.payload) as Map<String, dynamic>;
-    return ScopedRoleCommand._(
-      p.scopeId,
-      row.commandId,
-      p.ref,
-      row.ownershipRevision,
-      role,
-      payload['local_revision'] as int,
-      jsonEncode(payload['body']),
-      row.firstSentAt?.toUtc(),
-      row.retryAt?.toUtc(),
-      row.state,
-      row.errorCode,
+  Map<String, dynamic> _decode(ScopedRoleRecord row) {
+    final data = roleMap(jsonDecode(row.payload));
+    roleShape(data, 'server summary_only');
+    roleCheck(data['summary_only'] is bool);
+    StoredRoleSummary.fromJson(
+      roleMap(data['server']),
+      summaryOnly: data['summary_only'] as bool,
     );
+    return data;
   }
 
-  Map<String, dynamic> _decode(ScopedRoleRecord row) =>
-      jsonDecode(row.payload) as Map<String, dynamic>;
   Map<String, dynamic> _empty(StoredRoleSummary server) => {
-    'local_revision': 0,
-    'acknowledged_revision': 0,
-    'summary': null,
-    'raw': null,
-    'expected_version': server.version,
     'server': server.toJson(),
+    'summary_only': server.summaryOnly,
   };
 
   Future<void> _verify(ScopedRolePlan p, void Function()? guard) async {
@@ -287,34 +230,11 @@ class ScopedRoleRepository {
               .getSingleOrNull();
       current();
       if (row == null) return null;
-      final out =
-          await (db.select(db.scopedRoleCommands)..where(
-                (t) =>
-                    t.scopeId.equals(s.id) &
-                    t.characterId.equals(ref.characterId) &
-                    t.ownershipRevision.equals(reg!.ownershipRevision!) &
-                    t.role.equals(role.name),
-              ))
-              .getSingleOrNull();
-      ScopedRoleCommand? command;
-      if (out != null) {
-        final data = roleMap(jsonDecode(out.payload));
-        command = ScopedRoleCommand._(
-          s.id,
-          out.commandId,
-          ref,
-          out.ownershipRevision,
-          role,
-          data['local_revision'] as int,
-          jsonEncode(data['body']),
-          out.firstSentAt?.toUtc(),
-          out.retryAt?.toUtc(),
-          out.state,
-          out.errorCode,
-        );
+      try {
+        return ScopedRoleState._(_decode(row), fromCache: true);
+      } on FormatException {
+        return null;
       }
-      current();
-      return ScopedRoleState._(_decode(row), command, fromCache: true);
     });
   }
 
@@ -396,17 +316,34 @@ class ScopedRoleRepository {
       await _verify(p, guard);
       for (final role in CharacterBuildRole.values) {
         final old = await _row(p, role);
-        final data = old == null ? _empty(profile.role(role)) : _decode(old);
-        final known = StoredRoleSummary.fromJson(roleMap(data['server']));
-        final fresh = profile.role(role);
-        cacheRequire(fresh.version >= known.version, 'REVISION_REGRESSION');
-        if (fresh.version == known.version) {
-          cacheRequire(
-            jsonEncode(fresh.toJson()) == jsonEncode(known.toJson()),
-            'SNAPSHOT_MISMATCH',
-          );
+        var data = _empty(profile.role(role));
+        Map<String, dynamic>? previous;
+        if (old != null) {
+          try {
+            previous = _decode(old);
+          } on FormatException {
+            /* obsolete disposable cache */
+          }
         }
-        data['server'] = fresh.toJson();
+        final fresh = profile.role(role);
+        if (previous != null) {
+          final known = StoredRoleSummary.fromJson(
+            roleMap(previous['server']),
+            summaryOnly: previous['summary_only'] as bool,
+          );
+          if (known.summary?.lifecycleRevision ==
+              fresh.summary?.lifecycleRevision) {
+            cacheRequire(fresh.version >= known.version, 'REVISION_REGRESSION');
+            if (fresh.version == known.version) {
+              cacheRequire(
+                fresh.summary?.same(known.summary) == true ||
+                    fresh.summary == null && known.summary == null,
+                'SNAPSHOT_MISMATCH',
+              );
+              if (fresh.summaryOnly && !known.summaryOnly) data = previous;
+            }
+          }
+        }
         if (old == null || jsonEncode(data) != old.payload) {
           await _put(p, role, old, data);
         }
@@ -461,221 +398,9 @@ class ScopedRoleRepository {
     ScopedRolePlan p,
     CharacterBuildRole role, {
     void Function()? guard,
-  }) => _transaction(p, () async {
-    final row = await _row(p, role);
-    cacheRequire(row != null, 'ROLE_NOT_FOUND');
-    return ScopedRoleState._(_decode(row!), await _command(p, role));
-  }, guard);
-
-  Future<ScopedRoleState> save(
-    ScopedRolePlan p,
-    ScopedRoleBuildDraft draft, {
-    void Function()? guard,
-  }) => _transaction(p, () async {
-    cacheRequire(
-      p.profile.lifecycleState == 'active' &&
-          draft.summary.lifecycleRevision == p.profile.lifecycleRevision,
-      'CHARACTER_UNUSABLE',
-    );
-    final character = await cache.readCharacter(p.ref);
-    cacheRequire(
-      character?.usable == true && character?.blockedReason == null,
-      'CHARACTER_UNUSABLE',
-    );
-    cacheRequire(
-      character?.serverName == draft.serverName &&
-          character?.characterName == draft.characterName &&
-          jsonDecode(character!.profileJson)['class_name'] == draft.className,
-      'IDENTITY_CONFLICT',
-    );
-    final old = await _row(p, draft.role);
-    cacheRequire(
-      old != null && old.rowVersion == p.rowVersions[draft.role],
-      'CACHE_CONFLICT',
-    );
-    final data = _decode(old!);
-    data['local_revision'] = (data['local_revision'] as int) + 1;
-    data['summary'] = draft.summary.toJson();
-    data['raw'] = draft.rawJson;
-    data['expected_version'] = p.profile.role(draft.role).version;
-    await _put(p, draft.role, old, data);
-    final active = await _command(p, draft.role);
-    if (active != null && active.firstSentAt == null) {
-      await (db.delete(db.scopedRoleCommands)..where(
-            (t) => t.scopeId.equals(p.scopeId) & t.commandId.equals(active.id),
-          ))
-          .go();
-    }
-    // Snapshot and unsent command are committed together. A sent command stays
-    // immutable while the newer local draft waits separately in this role row.
-    final command = await materialize(p, draft.role, guard: guard);
-    return ScopedRoleState._(data, command);
-  }, guard);
-
-  Future<ScopedRoleCommand?> materialize(
-    ScopedRolePlan p,
-    CharacterBuildRole role, {
-    void Function()? guard,
-  }) => _transaction(p, () async {
-    final active = await _command(p, role);
-    if (active != null) return active;
-    final row = (await _row(p, role))!, data = _decode(row);
-    if ((data['local_revision'] as int) <=
-        (data['acknowledged_revision'] as int)) {
-      return null;
-    }
-    final summary = RoleSummary.fromJson(roleMap(data['summary']));
-    final current = p.profile.role(role);
-    final conflict = current.version != data['expected_version'];
-    final stale =
-        p.profile.lifecycleState != 'active' ||
-        summary.lifecycleRevision != p.profile.lifecycleRevision;
-    final body = {
-      'expected_version': data['expected_version'],
-      'expected_ownership_revision': p.profile.ownershipRevision,
-      'expected_lifecycle_revision': summary.lifecycleRevision,
-      'summary': summary.toJson(),
-    };
-    await db
-        .into(db.scopedRoleCommands)
-        .insert(
-          ScopedRoleCommandsCompanion.insert(
-            scopeId: p.scopeId,
-            commandId: newScopedCommandKey(),
-            characterId: p.ref.characterId,
-            ownershipRevision: p.profile.ownershipRevision,
-            role: role.name,
-            payload: jsonEncode({
-              'local_revision': data['local_revision'],
-              'body': body,
-            }),
-            state: stale
-                ? 'blocked'
-                : conflict
-                ? 'conflict'
-                : 'ready',
-            errorCode: Value(
-              stale
-                  ? 'STALE_WRITE'
-                  : conflict
-                  ? 'REVISION_CONFLICT'
-                  : null,
-            ),
-          ),
-        );
-    return _command(p, role);
-  }, guard);
-
-  Future<ScopedRoleCommand> markSent(
-    ScopedRolePlan p,
-    ScopedRoleCommand command,
-    DateTime now, {
-    void Function()? guard,
-  }) => _transaction(p, () async {
-    final active = await _command(p, command.role);
-    cacheRequire(
-      active?.id == command.id &&
-          (active!.state == 'ready' || active.state == 'retry'),
-      'STALE_COMMAND',
-    );
-    cacheRequire(
-      command.body['expected_lifecycle_revision'] ==
-              p.profile.lifecycleRevision &&
-          p.profile.lifecycleState == 'active',
-      'STALE_WRITE',
-    );
-    await (db.update(db.scopedRoleCommands)..where(
-          (t) => t.scopeId.equals(p.scopeId) & t.commandId.equals(command.id),
-        ))
-        .write(
-          ScopedRoleCommandsCompanion(
-            firstSentAt: Value(active!.firstSentAt ?? now),
-          ),
-        );
-    return (await _command(p, command.role))!;
-  }, guard);
-
-  Future<void> fail(
-    ScopedRolePlan p,
-    ScopedRoleCommand command,
-    String state,
-    String code, {
-    DateTime? retryAt,
-    void Function()? guard,
-  }) => _transaction(p, () async {
-    final active = await _command(p, command.role);
-    cacheRequire(active?.id == command.id, 'STALE_COMMAND');
-    final deadline =
-        active!.retryAt != null &&
-            (retryAt == null || active.retryAt!.isAfter(retryAt))
-        ? active.retryAt
-        : retryAt;
-    await (db.update(db.scopedRoleCommands)..where(
-          (t) => t.scopeId.equals(p.scopeId) & t.commandId.equals(command.id),
-        ))
-        .write(
-          ScopedRoleCommandsCompanion(
-            state: Value(state),
-            errorCode: Value(code),
-            retryAt: Value(deadline),
-          ),
-        );
-  }, guard);
-
-  Future<void> acknowledge(
-    ScopedRolePlan p,
-    ScopedRoleCommand command,
-    RoleSummaryAck ack, {
-    void Function()? guard,
-  }) => _transaction(p, () async {
-    final active = await _command(p, command.role);
-    cacheRequire(active?.id == command.id, 'STALE_COMMAND');
-    final old = (await _row(p, command.role))!, data = _decode(old);
-    data['acknowledged_revision'] = max(
-      data['acknowledged_revision'] as int,
-      command.localRevision,
-    );
-    final known = StoredRoleSummary.fromJson(roleMap(data['server']));
-    if (ack.stored.version > known.version) {
-      data['server'] = ack.stored.toJson();
-    }
-    if (ack.stored.version == known.version) {
-      cacheRequire(
-        jsonEncode(ack.stored.toJson()) == jsonEncode(known.toJson()),
-        'SNAPSHOT_MISMATCH',
-      );
-    }
-    await _put(p, command.role, old, data);
-    await (db.delete(db.scopedRoleCommands)..where(
-          (t) => t.scopeId.equals(p.scopeId) & t.commandId.equals(command.id),
-        ))
-        .go();
-  }, guard);
-
-  /// Explicit user reconciliation after a fresh P1 GET. Never an auto rebase.
-  Future<ScopedRoleState> useServer(
-    ScopedRolePlan p,
-    CharacterBuildRole role,
-    DateTime now, {
-    void Function()? guard,
-  }) => _transaction(p, () async {
-    final active = await _command(p, role);
-    cacheRequire(
-      active != null &&
-          {'conflict', 'review', 'blocked'}.contains(active.state),
-      'REVIEW_REQUIRED',
-    );
-    cacheRequire(
-      active!.retryAt == null || !now.isBefore(active.retryAt!),
-      'RETRY_WAIT',
-    );
-    final old = (await _row(p, role))!, data = _decode(old);
-    data['acknowledged_revision'] = data['local_revision'];
-    await _put(p, role, old, data);
-    await (db.delete(db.scopedRoleCommands)..where(
-          (t) => t.scopeId.equals(p.scopeId) & t.commandId.equals(active.id),
-        ))
-        .go();
-    return ScopedRoleState._(data, null);
-  }, guard);
+  }) => _transaction(
+    p,
+    () async => ScopedRoleState._(_decode((await _row(p, role))!)),
+    guard,
+  );
 }
