@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 const bytes = fs.readFileSync(process.argv[2]);
 assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),
-  '431f943c6f7719c414aafd4bce46af6987afe67dd4bb276449aa60dd5c4a616b');
+  '2f0ae34849e99618e194ad158383091f71967d3c41083d17dfee32a175fd9c9f');
 const api = JSON.parse(bytes), definitions = {};
 const names = new Set(['AnalysisRequest', 'AnalysisResponse', 'RoleAnalysis', 'AnalysisDetail', 'BPowerComparison', 'CandidatePower', 'GroupRolePower']);
 function refs(v) {
@@ -32,6 +32,16 @@ for (const file of [
   const key = wire.definitions ? 'definitions' : 'schemas';
   const defs = wire[key];
   const needed = new Set(Object.keys(defs).filter(n => /PowerComparison$|CandidatePower$|GroupRolePower$/.test(n)));
+  // Current detail envelopes carry the agreed group policy metadata as well.
+  // Persisted original-command schemas keep their historical selection.
+  if (file.endsWith('/beta_wire_schema.g.dart')) {
+    needed.add('BInterval');
+    for (const name of Object.keys(defs)) {
+      if (/(?:ApplicationDisplayDetailResponse|ApplicationDisplayPageResponse|GroupLinkedApplicationDetail)$/.test(name) || name === 'Successor') {
+        needed.add(name);
+      }
+    }
+  }
   const collect = v => {
     if (!v || typeof v !== 'object') return;
     if (v.$ref) needed.add(v.$ref.split('/').at(-1));
@@ -45,7 +55,10 @@ for (const file of [
     assert.ok(schema, name); collect(schema); defs[name] = rewrite(schema);
   }
   const prefix = original.slice(0, original.indexOf("r'''"))
-    .replace(/^\/\/ Role projection updated[^\n]*\n/, '');
-  fs.writeFileSync(file, '// Role projection updated to Backend b95cff51; other profiles unchanged.\n' +
+    .replace(/^\/\/ (?:Role|Runtime) projection updated[^\n]*\n/, '');
+  const provenance = file.endsWith('/beta_wire_schema.g.dart')
+    ? '// Runtime projection updated to Backend 5172c753; query/profile selections preserved.\n'
+    : '// Role projection updated to Backend b95cff51; other profiles unchanged.\n';
+  fs.writeFileSync(file, provenance +
     prefix + "r'''\n" + JSON.stringify(wire, null, 2) + "\n''';\n");
 }

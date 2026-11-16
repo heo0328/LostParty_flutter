@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import '../../../recruitment_list/data/membership_readers.dart';
 import '../../../account/domain/account_read_session.dart';
 import '../../data/backend/group_models.dart';
 import '../../data/backend/group_repository.dart';
@@ -987,6 +988,7 @@ class _BackendGroupPageState extends State<BackendGroupPage>
               ),
             ),
             button('그룹 검색', () => open('/groups/search')),
+            const SizedBox(height: 16),
             FilledButton(
               onPressed: widget.onLogin,
               style: FilledButton.styleFrom(
@@ -1213,8 +1215,12 @@ class _BackendGroupPageState extends State<BackendGroupPage>
                       ),
                       onTap: t['detail_available'] != true
                           ? null
-                          : () => open(
-                              '/recruitments/${room['room_id']}?target_cycle_key=${t['target_cycle_key']}',
+                          : () => context.go(
+                              recruitmentFromTab(
+                                '/recruitments/${room['room_id']}?target_cycle_key=${t['target_cycle_key']}',
+                                'groups',
+                                groupId: widget.groupId,
+                              ),
                             ),
                     ),
                 ],

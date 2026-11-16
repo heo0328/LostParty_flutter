@@ -1,3 +1,74 @@
+## 2026-11-17 — 사용자 분 단위 정상 확인·누적 변경 보관
+
+사용자가 개인 가능시간의 분 단위 지정 정상 작동을 확인하고 커밋·푸시를 지시했다. 실제 저장/제출·야간/다른 웹·Android 항목 전수를 확인했다는 의미로 확대하지 않는다. 기존 전체2863PASS·분석0을 재사용하고 최종 diffcheck/변경 검토 후 목적 브랜치의 추적 제외 파일 외 누적 코드·시험·명세 도구·문서 전체를 하나로 보관한다. dev/main 병합·배포·Issue 종료·브랜치 삭제는 제외한다. 실제 커밋 SHA/원격 일치와 인계는 Git 및 Issue55/56 회신을 따른다.
+
+## 2026-11-17 — Backend56 구현/dev지원 수신·현재 BInterval 재생성
+
+[전체3번째 댓글・Backend 구현/검증/게시·로컬지원](https://github.com/heo0328/lostparty-backend/issues/56#issuecomment-6924012652)을 수신했다. Backend5172c7535b556997e76b9d728dc4714a1988ab60 명세를 정확한 Git 객체로 읽어 SHA256 2f0ae34849e99618e194ad158383091f71967d3c41083d17dfee32a175fd9c9f를 확인했다. Interval/BInterval start/end4곳·설명 변경이며 API191경로/211동작 유지다. Backend는 고유122개 분할/추가검증·도구87PASS와 실제 dev API 교체/명세일치·DB0037/자료/키 보존을 보고했다. 사용자 개인표 PUT/기기 인수는 미실행이다. 이 결과를 Native 재실행이나 사용자 저장 성공으로 취급하지 않는다.
+
+Native 생성/audit 도구 pin을 새 명세로 갱신하고 현재 beta_wire_schema의 BInterval만 정확한 참조로 재생성했다. 과거 원명령 snapshot은 유지하고 기존 일정·진행시간·자동후보5분을 넓히지 않았다. 현재 모집 도달583정의 changed0을 audit로 확인했다. 실제 BetaInteractionApi→CycleScheduleReader context 시험에18:03~20:17 복사본을 넣어 원분 통과를 검증했고 개인표/일정 비교·원명령 복구82PASS·분석0·포맷/diffcheck를 확인했다. 새 명세는 Git 제외 .dart_tool/backend-contract/openapi-minute.json에 보관한다. 실제 웹/Android 저장/재조회·제출/복사/시간표는 사용자 확인 대기다. 서버·DB/키·운영을 다시 변경하지 않았으며 목적 브랜치·누적 미커밋/미push·dev/main 미반영을 유지한다.
+
+최종 전체 Flutter2863PASS·분석0·diffcheck PASS와 생성 재실행 동일성을 확인했다. Backend56에 고정 명세 수신·Native 소비/검증·미커밋/실기기 대기를 회신했다.
+
+## 2026-11-17 — 개인 가능시간1분 입력·개인표 전환 및 Backend56 요청
+
+사용자가 가능시간도 자유 정수분으로 확장하고 Backend 요청을 승인했다. PlayTimeRow의%5 및 HH:mm 패턴 끝자리 제한·picker 결과 사후 거절/5분 안내를 제거했다. 원분을 보존하고 한국시간/요일·같은날/다음날·양수/최대24h·초/소수초/24:00 거절은 유지한다. 기존 시계·개인표 저장/조회·원ID/본문 복구를 재사용하며 서버 쓰기/키·DB/자료 변경은 없다.
+
+- 협업/남음: 별도 [Issue56](https://github.com/heo0328/lostparty-backend/issues/56)을 만들고 게시 본문 일치를 재조회했다. Backend 개인표/제출 DTO Clock·명세·정규화/복사/summary/조율 후보/예약 영향·게시/dev지원 인계를 요청했다. 자동 탐색5분/진행시간 정책·기존 확정방 자동변경 없음은 유지한다. 현재 모집 내장 schema BInterval에도5분 패턴이 남아 있으므로 새 고정 명세 수신 후 생성·availability_copy/참가/복구 전체 소비 대조가 필요하다. 아직 게시되지 않은 Backend 명세나 과거 원명령을 임의로 바꾸지 않았다. Native 전체 연동/실서버 비5분 저장·웹/Android 인수 완료가 아니다.
+- 검증: 직접30PASS·분석0·포맷/diffcheck PASS. 18:03~20:07 원값 왕복·일23:57~다음날00:02 저장/재조회·통신 유실 뒤 원요청 동일 키/본문·정확24h/초과24h/초·소수초·잘못된시각 거절과 기존 시간표/시계/큰글자 회귀를 확인했다. 초기1FAIL은 기존601분을 거절하던 옛 기대를 새 허용 계약에 맞춘 뒤 전체 직접 묶음을 재검증했다.
+- 보관: 기존 목적 브랜치/누적 변경 유지·이번 수정 미커밋/미push·dev/main 미반영. Backend 준비 이후 계약 소비·실연동을 이어간다.
+
+## 2026-11-17 — 내 계정 가능시간을 공통 Flutter 시계로 전환
+
+사용자 요청으로 PlayAvailabilityCard의 Cupertino 휠/전용 picker를 제거하고 기존 한글 showRecruitmentTimePicker(Flutter 시계·숫자 입력 전환)를 재사용했다. 휠 안 같은날/다음날 선택은 종료시간 옆에 보존했다. 취소·편집 세대/회원 전환의 늦은 반환 무시·최대24시간/양수 구간 검증과 기존 저장/원요청 복구는 유지한다. 분을 임의 반올림하지 않으며 비5분 선택은 안내하고 적용하지 않는다.
+
+제약 조사: Backend app/raid_rooms/schemas/availability_schemas.py의 Clock은 [0-5][05] 패턴이고 Native PlayTimeRow도 %5/동일패턴을 요구한다. 개인표·제출 interval과 레이드 출발 정밀도는 별도다. 따라서 현재 API에서는 임의 분 저장이 불가능하며1분 자유 저장에는 Backend DTO/명세·소비/기존 제출/정규화/조율 영향 합의가 필요하다. 사용자 지시가 시계 변경/제약 확인이므로 임의 서버완화·전역 정밀도 변경은 하지 않았다.
+
+관련14PASS(가능시간/시계·비5분 무반올림 거절·야간/24h·저장/수명 포함), 포맷/diffcheck 확인. 실제 웹/Android 시계/숫자입력·종료일 선택/저장은 사용자 재확인 대기다. 목적 브랜치 유지·누적 미커밋/미push·dev/main 미반영, 서버/DB/키·배포는 변경하지 않았다.
+
+## 2026-11-17 — 그룹 레이드 교차탭 push의 Navigator 키 충돌 수정
+
+사용자가 ‘그룹 창→그룹 레이드 상세→모집 목록의 다른 상세 선택’ 재현 순서를 추가했다. StatefulShellRoute.indexedStack의 그룹 branch에서 같은 모집 shell로 push한 뒤 go하는 최소 재현에서 Duplicate GlobalKey/PopScope reparenting 오류를 확인했다. 단일 shell 시험은 재현 안 됐고 중첩 branch push가 빠진 조건이었다. 실제 그룹 레이드 버튼이 공용 open(context.push)을 사용했으며 계정/현황은 이미 동일 문제 때문에 recruitmentFromTab/go 계약을 사용하고 있었다. 그룹 진입도 같은 go 계약으로 맞추고 return_group_id canonical UUID를 검증해 원래 /groups/{id}/raids 복귀를 보존했다. 임의 반환 URL·레이아웃 재작성·post-frame 우회는 추가하지 않았다.
+
+- 새로 가능/보호: 그룹 레이드에서 상세→다른 모집 선택의 Navigator 중복을 차단하고 그룹 복귀·선택 주차, 기존 account/raid-status 반환·회원복원은 유지한다. 재현 실패→수정 후 관련12PASS·분석0·포맷/diffcheck PASS. 1600px→390px 변경/그룹 재진입도 최종 전체시험에 포함했다. 사용자 실제 웹/Android 같은 경로·뒤로가기/탭복귀는 남았다.
+- 상태: 앱 경로/테스트·문서만 수정, 서버/DB/키·provider·배포·기기 조작 없음. 목적 브랜치 유지·누적 미커밋/미push·dev/main 미반영이다. 이전 stack 요청은 더 이상 이 수정의 선행 조건이 아니다.
+- 최종 전체 Flutter2859PASS·분석0·diffcheck PASS로 누적 변경을 확인했다. 앞선 상세 계약 변경 뒤 발견한 옛 등록 버튼 selector 수정도 이 전체 검증에 포함됐다.
+
+## 2026-11-17 — 모집 상세 RenderOffstage/LayoutBuilder 충돌 조사
+
+사용자 화면에서 넓은 상세 패널 RenderOffstage mutation/layout assertion을 확인했다. 앞선 INVALID_RESPONSE와 다른 렌더 단계 오류다. 실제 explorer 이중 LayoutBuilder/Offstage·ShellRoute Navigator·detail 초기화/알림 경로를 읽고 동일 조합의 최소 목록→상세/다른 상세 widget 시험을 수행했으나 재현되지 않았다. 최소 시험은 실제 장애를 검증하지 못해 제품 회귀로 남기지 않고 제거했다. 앱 기능코드 변경/서버·DB·키·기기 조작은 하지 않았다. Console/실행 터미널의 첫 오류 stack trace를 요청해 실제 변경 주체 판별 대기다. 현재 장애 미해결이며 기존 자동시험 통과를 재현/복구로 주장하지 않는다. 문서 diffcheck만 확인하고 목적 브랜치/기존 누적 미커밋 변경을 유지한다.
+
+## 2026-11-17 — 모집 상세 응답의 그룹 정책 envelope 누락 보완
+
+사용자 제보는 모집 목록은 보이나 상세 INVALID_RESPONSE였다. 제보 방 공개 card GET은200이고 인증 상세GET은401로 접근 경계를 확인했다(회원 상세 원문/인증정보를 임의 추출하지 않음). 게시 b95cff51 명세와 내장 wire 대조에서 ApplicationDisplayDetailResponse/GroupLinked 계열18개 및 Successor에 합의된 group_policy 메타데이터 누락을 확인했다. 서버의 현재 metadata가 있으면 strict additionalProperties 검사로 거절되는 상태였다. 생성 도구가 현재 상세/신청 envelope 및 참조 정의를 게시 원본으로 재생성하도록 보완했고, 과거 원명령 schema·query/profile 선택은 유지했다. 현재 모집 wire 도달583정의의 게시 원본 대비 변경0을 audit로 확인했다. 검사를 느슨하게 하거나 응답 필드를 버리는 fallback은 추가하지 않았다.
+
+기존 application-display 실제 BetaResponse→semantic parser 시험에 정상 group_policy metadata를 넣어 회귀를 보강했다. 관련120PASS·분석0·포맷/diffcheck PASS. 사용자 웹/Android 해당 방 상세 재확인은 남았다. 전체시험 중 앞선 버튼 문구 변경의 옛 selector1건도 발견해 현재 ‘원정대 등록’으로 대조한다. 서버/DB/키·provider 호출·운영 변경은 없고 목적 브랜치 누적 미커밋/미push·dev/main 미반영이다.
+
+## 2026-11-17 — 원정대 등록 버튼 문구 변경
+
+사용자 요청으로 캐릭터명 검색 후 미리보기의 ‘조회 목록에 저장’을 ‘원정대 등록’으로 변경했다. 기존 register 명령·활성 조건·배치는 유지한다. 웹/Android 공통 문구 수정이며 diffcheck로 확인했다. 기존 누적 변경과 함께 미커밋/미push 상태로 유지한다.
+
+## 2026-11-17 — 인증 복귀 후1회·원정대별 전체 갱신 연결
+
+사용자가 인증 후 전투력이 없는 흐름을 제보하고 해당 원정대1회 자동 갱신 및 각 이름 옆 전체 갱신/30초 대기를 요청했다. 실제 Router의 onVerifiedRegistration은 소유 확인만 했고 완료 복귀 후 분석 호출이 없었다. 성공 callback에서 registration을 인계하고 복귀 뒤 VM이 기존 읽기/runner/쓰기가 끝나면 해당 원정대 명령을1회 실행하도록 연결했다. 일반 재조회/탭복귀로 재실행하지 않고 회원 전환에 예약 작업을 폐기한다. 수동 버튼과 같은 경로로 원정대 목록→active/usable/차단 없는 전체 캐릭터→기존 서버 분석 batch→head 캐시/화면을 반영한다. manual trigger는 사용자 인증/원정대 명령의 전체 범위이며 기존 최초 자동 대상/나이스단·개별 갱신은 유지한다. 로컬 분석/업로드·새 Backend API는 없다.
+
+- 새 흐름: 소유 원정대 헤더에 전체 갱신·진행·30초 카운트다운, 저장/실패/결과확인 건수. 다른 원정대는 수집하지 않는다. 부분 성공과 원ID/본문 결과복구는 기존 client를 재사용한다. 앱 회원 세션 내 원정대별30초 대기와 서버 공유 대기를 함께 적용하고 중복/다른 쓰기·단건/자동 실행 중 겹침을 차단한다.
+- 보호/검증: 전체 Flutter test2857PASS. 직접 계정47PASS 이후 없는 원정대 수집0을 더해 최종 전체에 포함했다. 중복 클릭 수집1회·30초 후 재활성·인증 복귀1회/일반 재조회 추가수집0과 기존 저장/실패·양역할·회원수명/대표/설정/모집/그룹 회귀를 확인했다. 포맷/diffcheck PASS, 실제 웹/Android 인증 복귀/버튼 배치·카운트다운/새 전투력 상세는 사용자 인수 대기다. 실제 provider 수집을 새로 실행하거나 서버/DB/키·운영을 변경하지 않았다.
+- 상태: 목적 브랜치 유지·이번 누적 코드/시험/문서 미커밋/미push·dev/main 미반영. 자동 인수나 새 배포/기기 조작은 하지 않는다.
+- 최종 분석0·[Backend 인계6921908867](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6921908867) 게시/본문 재조회 일치를 확인했다. Backend 신규 API/제한 변경 요청은 없다.
+
+## 2026-11-17 — 비로그인 웹 모집 인증 오류·그룹 버튼 간격 수정
+
+사용자 제보 ACCESS_INVALID를 실제 dev 공개 검색에서 재현했다. 같은 discovery-1 본문이 인증 헤더 없으면200, Authorization 문자열 null이면 ACCESS_INVALID다. Native requestPublic이 null값 헤더를 넣고 dio_web_adapter2.1.2가 v.toString()으로 보내는 것이 원인이다. IO adapter는 null을 생략해 실제 IO wire 시험은 수정 전에도 통과했으며 플랫폼 차이를 근거로 확인했다. access가 없으면 헤더 키 자체를 생략하고 기존 mock을 containsKey(false) 검사로 강화했다. 공개 allowlist·회원 인증/refresh/세션 격리는 유지한다. 그룹 비로그인 검색/로그인 사이16px 간격을 추가했다. 직접 관련 transport/모집/그룹56PASS·포맷/diffcheck PASS. 웹/Android 실제 화면 재확인은 사용자 대기다. 서버/DB/키·provider 변경/배포는 없다. 목적 브랜치 유지·누적 미커밋/미push·dev/main 미반영이다.
+
+## 2026-11-17 — Backend dev0037 전환 완료 회신 수신
+
+[Issue55 전체15번째 댓글・Backend 로컬 개발 전환 완료](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6921019988)를 확인했다. 사용자 별도 초기화 승인 후 로컬 lostparty DB만 초기화/0037_server_analysis·게시 b95cff5 후보 image c2b4a320…a2dc/healthy로 전환됐고 token0600/컨테이너 읽기·형식 검사 PASS를 보고했다. 생성 명세 전체 일치·회원0·health/public groups200 및 보호GET401은 Backend 실행 검증이며 Native가 재실행한 결과가 아니다. 기존 개발 세션·원정대/그룹/모집 자료가 초기화되어 새 로그인/원정대 재등록이 필요하다. 새로 가능해진 단계는 실제 dev에서 합의된 분석/공통 UI 통합 확인이며 외부 API 인증/캐릭터 분석·웹/Android 기기 성공은 아직 미확인이다. 운영/기존 환경·키·볼륨/역할 보존은 Backend 보고다. Native는 기능코드/서버/DB/키를 변경하지 않고 준비 대기를 현재 문서에서 해소했다. 문서 내용/diffcheck만 확인하고 기존 Flutter 시험을 반복하지 않았다. 목적 브랜치 유지·이번 누적 문서 미커밋/미push·dev/main 미반영이다.
+
+## 2026-11-16 — 개발서버 반영 지시·초기화/키 공급 전제 확인
+
+사용자 dev 반영 지시로 실제 WSL/localhost:8000 health200과 Backend checkout e3ada171·미커밋 준비 문서를 읽었다. 준비 기록상 후보 이미지 빌드/명세 전체 비교 완료·DB0036 보존·0037 비호환 자료/로컬 lostparty DB 전체 초기화 제안(준비 시117업무표/1,562행)·서버 token 미공급이다. 후보 빌드/기존 시험을 반복하지 않았고 Backend 미커밋 자료를 수정하지 않았다. 개발서버 반영과 전체 DB 삭제 승인을 구분해 구체 대상/손실 영향의 확인을 요청한다. 실제 API 중지/교체·DB초기화/migration·키/환경 변경은 없다. 운영/Firebase/기기 자료도 불변이다. 첫 WSL 읽기의 sandbox 접근거절은 승인된 읽기 권한으로 해소됐으며 파괴 작업 거절이나 데이터 변경이 아니다. 새로 확인한 것은 dev 준비 전제이며 실제 수집/연동·기기 인수는 미확인이다. Native 기능코드 불변으로 기존 시험 결과를 재사용하고 문서 diffcheck만 수행한다. 목적 브랜치 유지·이번 문서 미커밋/미push·dev/main 미반영이다.
+
 ## 2026-11-16 — Native 서버 분석·저장 결과 연결 및 옛 개인키 경로 제거
 
 사용자 지시로 N1 계정 예시와 N2/N3를 일반 BackendApp→BackendMemberAccount→runner/VM 경로까지 연결했다. Backend 게시 `b95cff51`의 전체 OpenAPI를 고정해 분석/전투력 projection만 생성했고 기존 query/profile 선택은 유지했다. 새 `CharacterAnalysisClient`는 항목별 원ID/본문을 환경·회원별 별도 journal에 기록한 뒤 서버 수집·분석·저장을 요청한다. 앱은 저장된 head/detail을 읽고 표시하며 raw/summary를 재가공해 업로드하지 않는다.

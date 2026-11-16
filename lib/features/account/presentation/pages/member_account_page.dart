@@ -523,6 +523,21 @@ class MemberAccountPage extends StatelessWidget {
             ],
             RosterAccountHeader(
               label: _label(section),
+              refreshAction: section.registration.ownershipStatus != 'owned'
+                  ? null
+                  : OutlinedButton.icon(
+                      onPressed: model.canRefreshRoster(reg.registrationId)
+                          ? () => model.refreshRoster(reg.registrationId)
+                          : null,
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: Text(
+                        model.busy('refresh:roster:${reg.registrationId}')
+                            ? '갱신 중'
+                            : model.rosterRefreshSeconds(reg.registrationId) > 0
+                            ? '${model.rosterRefreshSeconds(reg.registrationId)}초 후 갱신'
+                            : '전체 갱신',
+                      ),
+                    ),
               showEdit: onEdit != null,
               showCharacters:
                   onCharacters != null &&
@@ -546,6 +561,9 @@ class MemberAccountPage extends StatelessWidget {
                         : onVerify(),
             ),
             if (section.cached) const Text('이전 확인 정보'),
+            if (model.rosterRefreshResults[reg.registrationId]
+                case final result?)
+              Text(result),
             if (serverAccountActionLabel(
               section.registration.ownershipStatus,
               section.registration.settings.state,

@@ -718,6 +718,58 @@ void main() {
     },
   );
 
+  test('unknown roster does not collect other registered rosters', () async {
+    await run();
+    final before = backendObservations.length;
+    await model.refreshRoster('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    expect(backendObservations.length, before);
+  });
+
+  test(
+    'roster refresh collects its roster once and enforces 30 seconds',
+    () async {
+      await run();
+      final before = backendObservations.length;
+      final count = model.sections.single.characters.length;
+      final first = model.refreshRoster(registrationId);
+      await model.refreshRoster(registrationId);
+      await first;
+      expect(model.failure, isNull);
+      expect(backendObservations.length - before, count);
+      expect(model.rosterRefreshSeconds(registrationId), 30);
+      expect(model.canRefreshRoster(registrationId), isFalse);
+      clock = clock.add(const Duration(seconds: 30));
+      expect(model.canRefreshRoster(registrationId), isTrue);
+      expect(
+        model.rosterRefreshResults[registrationId],
+        contains('저장 $count명'),
+      );
+    },
+  );
+
+  test(
+    'verified roster refresh waits for read readiness and runs once',
+    () async {
+      await run();
+      final before = backendObservations.length;
+      await model.refreshAfterVerification(registrationId);
+      await until(
+        () =>
+            model.rosterRefreshResults.containsKey(registrationId) &&
+            !model.characterRefreshing,
+      );
+      expect(
+        backendObservations.length - before,
+        model.sections.single.characters.length,
+      );
+      await model.refresh();
+      expect(
+        backendObservations.length - before,
+        model.sections.single.characters.length,
+      );
+    },
+  );
+
   test(
     'explicit character refresh fetches only selected UUID and deduplicates taps',
     () async {

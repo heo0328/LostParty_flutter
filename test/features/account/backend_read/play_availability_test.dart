@@ -64,6 +64,24 @@ class Api implements BackendRegistrationApi {
 Future<void> settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
+  test(
+    'personal availability round trips arbitrary minute boundaries without rounding',
+    () {
+      const arbitrary = PlayTimeRow(weekday: 3, start: 1083, end: 1207);
+      expect(arbitrary.valid, isTrue);
+      expect(arbitrary.toJson()['start'], '18:03');
+      expect(arbitrary.toJson()['end'], '20:07');
+      final restored = PlayTimeRow.fromJson(arbitrary.toJson());
+      expect(restored.start, arbitrary.start);
+      expect(restored.end, arbitrary.end);
+      expect(arbitrary.start, 1083);
+      expect(arbitrary.end, 1207);
+      expect(
+        const PlayTimeRow(weekday: 3, start: 1085, end: 1210).valid,
+        isTrue,
+      );
+    },
+  );
   late ReadSessionFake session;
   late Access access;
   late Api api;
@@ -84,6 +102,69 @@ void main() {
     access.dispose();
     session.dispose();
   });
+
+  test('minute precision survives save, reload and immutable retry', () async {
+    api.current = response(version: 2);
+    model.initialize();
+    await settle();
+    model.toggle();
+    model.selectDay(7);
+    const overnight = PlayTimeRow(
+      weekday: 7,
+      start: 1437,
+      end: 2,
+      endDayOffset: 1,
+    );
+    model.replaceRow(model.draft.single, overnight);
+    expect(model.canSave, isTrue);
+    api.onWrite = () async =>
+        throw const AccountReadException('NETWORK_UNAVAILABLE');
+    await model.save();
+    expect(api.writes.single.body['intervals'], [overnight.toJson()]);
+    expect(model.hasPending, isTrue);
+    api.onWrite = null;
+    await model.retry();
+    expect(api.writes[1].key, api.writes[0].key);
+    expect(api.writes[1].body, api.writes[0].body);
+    await model.reload();
+    expect(model.value!.intervals.single.start, 1437);
+    expect(model.value!.intervals.single.end, 2);
+  });
+
+  test(
+    'minute precision retains maximum24h and rejects seconds and invalid clocks',
+    () {
+      expect(
+        const PlayTimeRow(
+          weekday: 3,
+          start: 1083,
+          end: 1083,
+          endDayOffset: 1,
+        ).valid,
+        isTrue,
+      );
+      expect(
+        const PlayTimeRow(
+          weekday: 3,
+          start: 1083,
+          end: 1084,
+          endDayOffset: 1,
+        ).valid,
+        isFalse,
+      );
+      for (final clock in ['24:00', '18:60', '18:03:00', '18:03.5']) {
+        expect(
+          () => PlayTimeRow.fromJson({
+            'weekday': 3,
+            'start': clock,
+            'end': '20:17',
+            'end_day_offset': 0,
+          }),
+          throwsFormatException,
+        );
+      }
+    },
+  );
 
   test(
     'zero/negative/over24h rejected; exactly24h and Sunday overnight preserved',
@@ -117,7 +198,7 @@ void main() {
         ).valid,
         true,
       );
-      expect(const PlayTimeRow(weekday: 3, start: 601, end: 610).valid, false);
+      expect(const PlayTimeRow(weekday: 3, start: 601, end: 610).valid, true);
       expect(row.valid, true);
       expect(row.toJson(), {
         'weekday': 7,
@@ -146,7 +227,7 @@ void main() {
           'intervals': [
             {
               'weekday': 7,
-              'start': '23:01',
+              'start': '23:01:00',
               'end': '03:30',
               'end_day_offset': 1,
             },

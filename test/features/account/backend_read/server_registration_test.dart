@@ -144,8 +144,8 @@ void main() {
       await tester.enterText(find.byType(TextField).first, 'sample');
       await tester.tap(find.text('원정대 미리보기'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('조회 목록에 저장'));
-      await tester.tap(find.text('조회 목록에 저장'));
+      await tester.ensureVisible(find.text('원정대 등록'));
+      await tester.tap(find.text('원정대 등록'));
       await tester.pumpAndSettle();
       expect(model.notice, '인증된 원정대를 등록했습니다.');
       expect(model.failure, isNull);

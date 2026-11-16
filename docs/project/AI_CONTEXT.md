@@ -1,12 +1,16 @@
 # AI CONTEXT — 현재 개발 상태와 기준 문서
 
-## 현재 작업 — 서버 처리 연결 완료·dev 실연동 대기 (2026-11-16)
+## 현재 작업 — 서버 처리 연결·dev 반영 완료 / 실제 분석·인수 대기 (2026-11-17)
+
+개인 가능시간1분 입력은 Native 구현에 이어 [Backend5172c753 구현·게시/dev지원](https://github.com/heo0328/lostparty-backend/issues/56#issuecomment-6924012652)을 수신했다. 고정 명세 해시 확인 후 현재 모집 BInterval을 재생성하고 비5분 복사 context·개인표/원요청 복구82PASS·분석0을 확인했다. 과거 원명령·기존 일정/자동탐색5분은 유지한다. 사용자 실제 개인표 저장/제출·웹/Android 인수는 남았다. 현재 순서는 NEXT_WORK다.
 
 Native N0~N3의 일반 앱 DI/Router 연결을 마쳤다. 웹/Android는 Backend b95cff51 / character-analysis-refresh-1의 분석 POST·서버 head/detail을 소비한다. 개발자 키·수집/분석·저장은 서버 전용이고 개인키 입력/restore·직접 provider·로컬 raw 분석/summary upload·구형 계정/모집 페이지는 제거했다. bootstrap 요약/저장 detail·현재 명령 journal·부분 결과/원요청 복구·기존 역할/소유/수명·설정/나이스단 정책을 연결했다.
 
+인수 후속으로 인증 성공한 원정대의 계정 복귀 후1회 갱신과 각 소유 원정대 이름 옆 전체 갱신/30초 조작 대기를 연결했다. 해당 원정대의 조회 가능한 전체 캐릭터를 기존 서버 명령으로 갱신하며 다른 원정대를 함께 수집하지 않는다. 일반 계정 재진입은 추가 실행하지 않는다. 자동/단건 정책과 원요청 복구는 유지하고 실제 웹/Android 인수는 NEXT_WORK에서 구분한다.
+
 최신 모집/필터와 그룹 공개 검색/summary는 무토큰 allowlist로 탐색하며 개인 행동은 로그인/기존 권한을 요구한다. 내 계정은 공통 frame/카드/주간 표현을 쓰는 고정 예시를 첫 진입부터 표시하고 DB/API/가짜 세션·writer를 만들지 않는다. 기존 회원 화면 배치/명령 흐름을 유지했다.
 
-사용자가 누적 변경 커밋·푸시를 지시했다. 정확 검증/보관은 DEV_LOG·Git 및 [Issue55](https://github.com/heo0328/lostparty-backend/issues/55) 최종 인계로 확인한다. 실제 개발서버/DB0037·키/자료 준비와 dev 실연동·사용자 웹/Android 인수는 남아 있다. Backend 게시 코드 구현 완료를 현재 실행서버 반영으로 보지 않는다. [현재 실행 순서](NEXT_WORK.md)·[장기 계약25](../backend-migration/25-member-lostark-key-request.md#native-implementation-design)를 따른다. 앱 전체 오류 점검/선택 진단 전송·30일 삭제는 별도 후속이다. dev/main 병합·배포·DB/키 변경은 하지 않는다.
+Native 구현910c0648은 목적 브랜치에 push됐다. 2026-11-17 [Backend 전체15번째 dev 반영 회신](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6921019988)에서 사용자 별도 승인 후 로컬 DB 초기화/0037·b95cff5 후보 API 교체/healthy·token 공급/읽기/형식 검사와 명세/공개·미인증 HTTP 검증 완료를 보고했다. 준비 대기는 해소됐고 새 로그인·원정대 재등록 후 실제 수집/분석·웹/Android 인수를 진행할 수 있다. 실제 외부 API 인증·캐릭터 분석 성공은 아직 미검증이며 Backend 보고와 Native 직접 검증을 구분한다. [현재 실행 순서](NEXT_WORK.md)·[장기 계약25](../backend-migration/25-member-lostark-key-request.md#native-implementation-design)를 따른다. 진단 전송은 별도 후속이다. 운영/release·dev/main Git 병합은 변경하지 않았으며 서버 전환을 반복하지 않는다.
 
 ## 2.3.0+8 운영 공개 완료 (2026-11-15)
 

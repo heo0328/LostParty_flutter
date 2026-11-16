@@ -197,6 +197,125 @@ class MemberAccountViewModel extends ChangeNotifier {
   int _epoch = 0;
   Future<void>? _flight;
   final Map<String, Future<void>> _writes = {};
+  final Map<String, DateTime> _rosterRefreshUntil = {};
+  final Map<String, String> rosterRefreshResults = {};
+  final Set<String> _verifiedRefresh = {};
+  Timer? _rosterRefreshTimer;
+  bool _drainingVerified = false;
+
+  int rosterRefreshSeconds(String id) {
+    final until = _rosterRefreshUntil[id];
+    return until == null
+        ? 0
+        : (until.difference(runner.source.cooldown.now()).inMilliseconds / 1000)
+              .ceil()
+              .clamp(0, 30);
+  }
+
+  bool canRefreshRoster(String id) =>
+      canEdit &&
+      !managementBlocked &&
+      rosterRefreshSeconds(id) == 0 &&
+      runner.source is ScopedRosterRefreshSource &&
+      sections.any(
+        (s) =>
+            s.registration.registrationId == id &&
+            !s.cached &&
+            s.registration.ownershipStatus == 'owned',
+      );
+
+  Future<void> refreshAfterVerification(String id) async {
+    if (!signedIn || rosterRefreshSeconds(id) > 0) return;
+    _verifiedRefresh.add(id);
+    await refresh();
+    _drainVerifiedRefresh();
+  }
+
+  void _drainVerifiedRefresh() {
+    if (_disposed || _drainingVerified || _verifiedRefresh.isEmpty) return;
+    final ready = _verifiedRefresh.where(canRefreshRoster).firstOrNull;
+    if (ready == null) return;
+    _verifiedRefresh.remove(ready);
+    _drainingVerified = true;
+    unawaited(
+      refreshRoster(ready).whenComplete(() {
+        _drainingVerified = false;
+        if (!_disposed) _drainVerifiedRefresh();
+      }),
+    );
+  }
+
+  Future<void> refreshRoster(String id) async {
+    if (!canRefreshRoster(id)) return;
+    final section = sections.firstWhere(
+      (s) => s.registration.registrationId == id,
+    );
+    final reg = ScopedRegistrationRef(runtime.scope, id);
+    _rosterRefreshUntil[id] = runner.source.cooldown.now().add(
+      const Duration(seconds: 30),
+    );
+    rosterRefreshResults.remove(id);
+    _rosterRefreshTimer ??= Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_disposed) {
+        timer.cancel();
+        return;
+      }
+      _emit();
+      if (_rosterRefreshUntil.keys.every(
+        (id) => rosterRefreshSeconds(id) == 0,
+      )) {
+        timer.cancel();
+        _rosterRefreshTimer = null;
+      }
+    });
+    await _write('refresh:roster:$id', (guard) async {
+      final saved = <ScopedRefreshItem>[];
+      try {
+        final results = await (runner.source as ScopedRosterRefreshSource)
+            .refreshRoster(reg, guard, saved.add);
+        guard();
+        final failures = results
+            .where((r) => r.status == ScopedRefreshStatus.failed)
+            .length;
+        final pending = results.where((r) => r.serverPending).length;
+        rosterRefreshResults[id] = results.isEmpty
+            ? '갱신할 캐릭터가 없습니다.'
+            : '저장 ${results.where((r) => r.status == ScopedRefreshStatus.saved).length}명 · 실패 $failures명 · 결과 확인 $pending명';
+      } catch (_) {
+        guard();
+        rosterRefreshResults[id] =
+            '갱신하지 못한 항목이 있습니다. 다시 갱신하면 이전 요청 결과를 먼저 확인합니다.';
+        rethrow;
+      } finally {
+        for (final result in saved) {
+          guard();
+          final role = result.role!;
+          final local = await runtime.readCachedRoleBuild(
+            reg,
+            result.target.ref,
+            role,
+            guard: guard,
+          );
+          guard();
+          final row = character(result.target.ref);
+          if (row != null) {
+            _setCharacter(result.target.ref, row.withRole(role, local));
+          }
+        }
+      }
+    });
+    // Include newly discovered roster rows through the existing read path.
+    if (!_disposed &&
+        section.registration.accountId ==
+            sections
+                .where((s) => s.registration.registrationId == id)
+                .firstOrNull
+                ?.registration
+                .accountId) {
+      await refresh();
+    }
+  }
+
   final Map<String, ScopedCharacterManagementGateway> _initializers = {};
   final Map<String, RepresentativeState> _representatives = {};
   final Map<String, RepresentativeCommand> _representativePending = {};
@@ -329,6 +448,7 @@ class MemberAccountViewModel extends ChangeNotifier {
   int diagnosticModelGeneration = 0;
   void _emit() {
     if (_disposed) return;
+    if (_verifiedRefresh.isNotEmpty) scheduleMicrotask(_drainVerifiedRefresh);
     diagnosticModelGeneration =
         StartupTiming.active?.publishModel(ready: _initialDisplayReady) ?? 0;
     LoadTiming.listeners(notifyListeners);
@@ -355,6 +475,11 @@ class MemberAccountViewModel extends ChangeNotifier {
     restoring = false;
     _flight = null;
     _writes.clear();
+    _verifiedRefresh.clear();
+    _rosterRefreshUntil.clear();
+    rosterRefreshResults.clear();
+    _rosterRefreshTimer?.cancel();
+    _rosterRefreshTimer = null;
     _representatives.clear();
     _representativePending.clear();
     _representativeRetryAt.clear();
@@ -1495,6 +1620,7 @@ class MemberAccountViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _rosterRefreshTimer?.cancel();
     for (final gateway in _initializers.values) {
       gateway.dispose();
     }

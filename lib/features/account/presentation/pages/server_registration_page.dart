@@ -252,7 +252,7 @@ class _ServerRegistrationPageState extends State<ServerRegistrationPage> {
                             () => writes.register(_label.text, _main),
                           )
                         : null,
-                    child: const Text('조회 목록에 저장'),
+                    child: const Text('원정대 등록'),
                   ),
                   const SizedBox(height: 12),
                   Text('미리보기 캐릭터 ${preview.characters.length}명 · 미인증'),

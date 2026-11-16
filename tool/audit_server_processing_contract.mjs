@@ -4,10 +4,10 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 
-const source = 'b95cff51f6eaf74d341115b2cc7868cc625ce626';
+const source = '5172c7535b556997e76b9d728dc4714a1988ab60';
 const raw = fs.readFileSync(process.argv[2]);
 assert.equal(crypto.createHash('sha256').update(raw).digest('hex'),
-  '431f943c6f7719c414aafd4bce46af6987afe67dd4bb276449aa60dd5c4a616b',
+  '2f0ae34849e99618e194ad158383091f71967d3c41083d17dfee32a175fd9c9f',
   'Unexpected Backend contract; review the handoff before changing the pin.');
 const api = JSON.parse(raw);
 const schemas = api.components.schemas;

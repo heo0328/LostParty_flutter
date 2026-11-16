@@ -24,6 +24,7 @@ class RuntimeStartupRefreshSource
         ScopedStartupRefreshSource,
         RosterRefreshingSource,
         ScopedCharacterRefreshSource,
+        ScopedRosterRefreshSource,
         ScopedBatchRefreshSource {
   RuntimeStartupRefreshSource({
     required this.runtime,
@@ -271,6 +272,37 @@ class RuntimeStartupRefreshSource
         onFailure(t, e);
       }
     }
+  }
+
+  @override
+  Future<List<ScopedRefreshItem>> refreshRoster(
+    ScopedRegistrationRef registration,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onSaved,
+  ) async {
+    final roster = await runtime.refreshRoster(registration, guard: guard);
+    guard();
+    cacheRequire(
+      roster.registration.ownershipStatus == 'owned',
+      'OWNERSHIP_REQUIRED',
+    );
+    final targets = [
+      for (final c in roster.characters)
+        if (c.lifecycleState == 'active' &&
+            c.usable == true &&
+            c.blockedReason == null)
+          ScopedRefreshTarget(
+            roster.registration,
+            ScopedCharacterRef(
+              registration.scope,
+              accountId: c.accountId,
+              characterId: c.characterId,
+            ),
+            c,
+          ),
+    ];
+    if (targets.isEmpty) return [];
+    return _execute(targets, 'manual', guard, onSaved);
   }
 
   @override

@@ -22,10 +22,7 @@ class PlayTimeRow {
       weekday >= 1 &&
       weekday <= 7 &&
       (endDayOffset == 0 || endDayOffset == 1) &&
-      [
-        start,
-        end,
-      ].every((n) => n != null && n >= 0 && n < 1440 && n % 5 == 0) &&
+      [start, end].every((n) => n != null && n >= 0 && n < 1440) &&
       duration! > 0 &&
       duration! <= 1440;
 
@@ -54,7 +51,7 @@ class PlayTimeRow {
     _shape(json, const {'weekday', 'start', 'end', 'end_day_offset'});
     int clock(Object? raw) {
       if (raw is! String ||
-          !RegExp(r'^(?:[01][0-9]|2[0-3]):[0-5][05]$').hasMatch(raw)) {
+          !RegExp(r'^(?:[01][0-9]|2[0-3]):[0-5][0-9]$').hasMatch(raw)) {
         throw const FormatException('Invalid play clock');
       }
       return int.parse(raw.substring(0, 2)) * 60 + int.parse(raw.substring(3));

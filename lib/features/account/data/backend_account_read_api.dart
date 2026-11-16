@@ -159,7 +159,7 @@ class DioBackendAccountReadApi
                   ? const Duration(seconds: 30)
                   : null,
               headers: {
-                'Authorization': access == null ? null : 'Bearer $access',
+                if (access != null) 'Authorization': 'Bearer $access',
                 'Idempotency-Key': ?idempotencyKey,
               },
             ),

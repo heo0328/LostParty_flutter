@@ -108,6 +108,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
   ServerCombatPowerViewModel? _serverPowers;
   MemberSettingsViewModel? _memberSettings;
   ServerVerificationViewModel? _verification;
+  String? _verifiedRegistrationToRefresh;
   OwnershipDisputeController? _ownership;
   BackendAccountLifecycle? _accountLifecycle;
   BackendMemberAccount? _memberAccount;
@@ -1115,10 +1116,17 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                 onRegister: () => manageServerAccounts(context),
                 onCompleted: () {
                   if (!context.mounted) return;
+                  final verified = _verifiedRegistrationToRefresh;
+                  _verifiedRegistrationToRefresh = null;
                   if (context.canPop()) {
                     context.pop();
                   } else {
                     context.go('/account');
+                  }
+                  if (verified != null) {
+                    unawaited(
+                      _memberAccount?.model.refreshAfterVerification(verified),
+                    );
                   }
                 },
                 initialRegistrationId:
@@ -1141,6 +1149,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
                             'OWNERSHIP_REQUIRED',
                           );
                         }
+                        _verifiedRegistrationToRefresh = id;
                       }
                     : null,
               ),

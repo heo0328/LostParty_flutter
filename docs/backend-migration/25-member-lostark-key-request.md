@@ -2,7 +2,7 @@
 
 ## 개발자 단일 키·공통 UI 전환 설계 (2026-11-16)
 
-상태: **공동설계/Backend B1·B2 구현 게시 완료 / Native 일반 앱 연결 완료·실제 개발서버 준비/실연동 대기**. Backend 소비 소스는 작업브랜치 `b95cff51f6eaf74d341115b2cc7868cc625ce626`의 [구현기록](https://github.com/heo0328/lostparty-backend/blob/b95cff51f6eaf74d341115b2cc7868cc625ce626/docs/features/rosters/power-and-profiles/server-processing-implementation.md)·[OpenAPI](https://github.com/heo0328/lostparty-backend/blob/b95cff51f6eaf74d341115b2cc7868cc625ce626/openapi/openapi.yaml)이며 [게시회신6914931822](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6914931822)를 확인했다. 합의 후 wire delta 없음. 고정 구현기록 안의 미커밋 문구는 게시 전 작성시점이며 후행 게시회신이 현재 Git 상태다. 실제 개발 DB0036/실행 API는 이전 버전,0037 적용·키/자료준비·실연동/기기·운영은 미완료다. Native 코드 연결/합성 검증 결과는 NEXT_WORK·DEV_LOG를 따른다. 이전 cda4db3/Flutter302243fb는 조사 기준이다. 아래 개인키 계약은 전환 전 근거다.
+상태: **공동설계/Backend B1·B2 구현 게시 완료 / Native 일반 앱 연결·로컬 dev0037 반영 완료 / 실제 분석·기기 인수 대기**. Backend 소비 소스는 작업브랜치 `b95cff51f6eaf74d341115b2cc7868cc625ce626`의 [구현기록](https://github.com/heo0328/lostparty-backend/blob/b95cff51f6eaf74d341115b2cc7868cc625ce626/docs/features/rosters/power-and-profiles/server-processing-implementation.md)·[OpenAPI](https://github.com/heo0328/lostparty-backend/blob/b95cff51f6eaf74d341115b2cc7868cc625ce626/openapi/openapi.yaml)이며 [게시회신6914931822](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6914931822)를 확인했다. 합의 후 wire delta 없음. 고정 구현기록 안의 미커밋 문구는 게시 전 작성시점이며 후행 게시회신이 현재 Git 상태다. 2026-11-17 [Backend dev 전환 회신](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6921019988)으로 사용자 별도 승인 후 로컬 DB 초기화/0037·새 API/서버 token 준비 완료를 확인했다. 실제 외부 인증·수집/분석·기기 인수는 미검증이고 운영은 이전 상태다. Native 코드 연결/합성 검증 결과는 NEXT_WORK·DEV_LOG를 따른다. 이전 cda4db3/Flutter302243fb는 조사 기준이다. 아래 개인키 계약은 전환 전 근거다.
 
 <a id="native-implementation-design"></a>
 
@@ -44,6 +44,8 @@
 로그인/로그아웃·회원/환경/세션 전환 때 이전 개인 자료·후보·권한 토큰·cursor/페이지와 진행 결과 적용을 무효화한다. 공개 레이드/난도/시간/정렬 같은 일반 필터만 유지해 현재 권한으로 다시 조회한다. 진행 중 HTTP 취소 여부와 별개로 늦은 응답은 적용하지 않는다. 새 로그인에 이전 쓰기를 자동 재생하지 않는다. 일반 GET·카드 펼치기·필터/참가 조작에는 로아 수집을 추가하지 않는다.
 
 #### 3. 서버 분석 요청·부분 결과와 복구
+
+2026-11-17 사용자 확정: 원정대 인증 성공 후 계정 복귀 시 성공한 원정대만1회 갱신한다. 각 소유 원정대 이름 옆 ‘전체 갱신’은 해당 원정대의 active·usable·차단 없는 캐릭터 전체를 기존 서버 분석 batch로 수집/저장한다. 활동선택·나이스단 자동 제외와 별개인 사용자 원정대 단위 명령으로 manual trigger를 사용하며 다른 원정대 수집은 하지 않는다. 앱 회원 세션 내 원정대별30초 대기를 적용하고 서버 공유 대기가 더 길면 존중한다. 진행·저장/실패/결과확인 건수를 표시하고 원요청 복구를 재사용한다. 성공 복귀 작업은 기존 runner/read/write가 끝난 뒤 실행하고 일반 계정 재진입/새로고침으로 재실행하지 않는다. 최초 자동 갱신과 개별 캐릭터 갱신 정책은 유지한다. 서버 전역 rate limit/운영 환경 변경은 아니다.
 
 기존 자동 갱신 시점과 원정대 목록 갱신 후 대상 선정, 수동 단건 갱신을 유지한다. `RuntimeStartupRefreshSource`와 기존 runner를 새 서버 명령 실행에 맞춰 교체한다. 자동 대상은 현재 usable/활동/소유·수명이 맞는 캐릭터이며 나이스단 기준·설정은 기존 정책을 재사용하고 서버가 최종 검증한다. 한 캐릭터의 중복 실행을 막고 자동/수동이 겹쳐도 별도 원본 분석을 만들지 않는다.
 
