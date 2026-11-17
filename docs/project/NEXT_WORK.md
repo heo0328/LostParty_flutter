@@ -5,9 +5,11 @@
 ## 실행 순서와 현재 대기
 
 1. 버전/안내문 고정·diff 검토. 기존2.1.0 이후 같은 Android 서명키와2026-11-11 백업/접근 확인을 재사용한다.
-2. clean 커밋/게시된 release 소스에서 기존 manual-only Actions로 APK·웹 bundle 준비. source/run/artifact ID·hash·실제 만료/manifest를 원장에 기록한다. 고정소스84565024를 release/2.4.0에 커밋/push하고 웹44087982844·APK44087977727 모두 성공했다. 다운로드 후 웹 내부manifest/hash/경계·APK hash/서명/패키지/2.4.0+9를 확인했다. [산출물 원장](../releases/v2.4.0-artifacts.json)에 source/run/ID/만료와 실제파일hash를 기록했다. Backend 수령/준비 회신 대기이며 공개태그/Release는 없다.
+2. clean 커밋/게시된 release 소스에서 기존 manual-only Actions로 APK·웹 bundle 준비. source/run/artifact ID·hash·실제 만료/manifest를 원장에 기록한다. 고정소스84565024를 release/2.4.0에 커밋/push하고 웹44087982844·APK44087977727 모두 성공했다. 다운로드 후 웹 내부manifest/hash/경계·APK hash/서명/패키지/2.4.0+9를 확인했다. [산출물 원장](../releases/v2.4.0-artifacts.json)에 source/run/ID/만료와 실제파일hash를 기록했다. Backend B4 독립수령검증 완료이며 운영전환준비 회신은 별도대기다. 공개태그/Release는 없다.
 3. [Backend 준비 요청 #59](https://github.com/heo0328/lostparty-backend/issues/59): 운영 source/image·OpenAPI/DB0038·서버용 키 준비·구APK호환·자료보존/직전백업/복귀와 운영 반영 필요 범위를 확인한다. [B1 회신](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6948295635)을 수신했다. Backend 기능기준18e6bb66·릴리즈 미커밋/미push, 명세해시 동일/DB목표0038이며 최종이미지/full검증/운영키 준비는 미완료다. 운영0036→0038은 기존 일반배포/0035→0036 maintenance로 진행할 수 없다. [B2](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6948402246)에서 운영 앱DB 전체(회원/세션·원정대·그룹·모집/참가·주간/분석/명령) 초기화 확정. 기존세션 무효/재로그인·원정대 재등록이 필요하며 실제 삭제 없음. 역할/볼륨·키/환경·인증서·웹/배포산출물·개발DB·기기자료는 삭제대상에서 제외한다. 최신DB+대응키/환경/활성웹 백업·복귀/새유지보수 절차·서버키 공급 확인을 Backend가 준비한다. 도구68PASS는 full릴리즈 검증 성공이 아니다.
-4. 고정 웹 인계·Backend 수령 검증 뒤 공동 공개 시점을 조정한다. 사용자 기기 설치/조작은 대행하지 않는다. 준비 중에는 태그/Release/운영 활성화를 실행하지 않는다.
+현재 [Backend B14](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6954624570): 사용자별도운영전환승인으로최종정지dump/독립PC사본확인후회원/세션포함운영앱DB전체초기화·0038과Backend v2.4.0/source970b2f430138b95d837305ffc576eb9cbc605cb0/image sha256:3e7dcdc5dd8ad954a1f6ca00b098a1d246144c9d0664a7d5224d467d074adb07를적용했다. 역할/볼륨·키/환경·인증서는보존했고빈회원/세션/계정·APIhealth/계약401·고정Native웹2.4.0+9/34자산/index일치검증후candidate_ready다. public_open=false/유지보수503유지·최종공개/APK게시전이다. B13의고정Release/이미지게시성공은정적/수용근거검사이며새전체회귀는없다. Native고정웹/APK서명/버전/hash·개발인수는재사용한다. 남은Native는최신문서보관/dev-main통합·공개태그/승인본문/검증파일게시준비, 이후Android다운로드검증과Backend공동승인유지보수해제·운영최소확인이다. 이회신만으로공개를실행하지않는다.
+
+4. 고정 웹 인계·Backend 수령 검증 뒤 공동 공개 시점을 조정한다. 사용자 기기 설치/조작은 대행하지 않는다. Backend후보적용은완료됐고최종Native게시/공동공개는사용자지시범위에서진행한다.
 
 검증: 기능의 전체2873PASS·후행49/58PASS·분석0 및 사용자10항목/실패결과/도화가/모집현황 정상확인은 재사용한다. 이번 버전·문서는 diffcheck/내용 검토, 산출물은 CI package/version/certificate/hash/manifest 검사로 확인한다. 실제 추가/삭제·소멸 사례는 운영 피드백 후속, API100회 초과 등 오류 대응 전체시험과 상세개선·진단전송은 별도 후속이며 완료로 표기하지 않는다. BUG-038 등 기존 미확인도 유지한다.
 
