@@ -59,5 +59,21 @@
     "prepared_files_reused": true,
     "hosted_files_sha256_verified": true,
     "approved_notes_verified": true
+  },
+  "operational_acceptance": {
+    "status": "joint_publication_and_user_confirmation_complete",
+    "backend_source": "970b2f430138b95d837305ffc576eb9cbc605cb0",
+    "backend_image": "sha256:3e7dcdc5dd8ad954a1f6ca00b098a1d246144c9d0664a7d5224d467d074adb07",
+    "database_revision": "0038_analysis_candidates",
+    "public_open": true,
+    "backend_publication_comment": "https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6955079646",
+    "backend_user_confirmation_comment": "https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6955590949",
+    "user_confirmation_date": "2026-11-18",
+    "user_reported_flows": [
+      "로그인",
+      "원정대 인증",
+      "레이드 생성"
+    ],
+    "scope": "사용자 보고 범위의 운영 정상 확인. 모든 기종/장애 경계 전수 확인은 아님."
   }
 }

@@ -1,54 +1,21 @@
-# 현재 작업 — 2.4.0+9 공동 운영 게시 준비 (2026-11-17)
+# 현재 상태 — 2.4.0+9 운영 공개·사용자 확인 완료 (2026-11-18)
 
-사용자가 안내문을 승인하고 기존 버전에서0.1.0 증가·운영 게시 준비 시작을 지시했다. release/2.4.0은 dev/main/origin 동일91497108에서 분기했으며 버전2.4.0+9와 [승인 안내문](../releases/v2.4.0.md)을 준비한다. 종료 조건은 동일 고정 소스의 웹·서명 APK 산출물 검증/인계와 Backend 준비 상태 확인이다. 최종 운영 활성화·공개 태그/Release 실행은 준비와 구분한다. 새 키·공개 파일 덮어쓰기는 제외한다. Backend B2에서 사용자가 운영 lostparty 앱DB 전체 저장자료 초기화를 확정했음을 수신했다. 회원/세션 포함이며 범위 재질문은 하지 않는다. 실제 실행은 Backend 전환·최신백업/복귀 준비 이후이며 Native가 삭제를 수행하지 않는다.
+Native [v2.4.0 Release](https://github.com/heo0328/LostParty_flutter/releases/tag/v2.4.0)와 Backend API·웹 공동 공개를 완료했다. [B15](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6955079646)의 public_open=true/journal succeeded·외부 웹/health200 및 [B16](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6955590949)의 사용자 운영 정상 확인을 수신했다. 사용자가 이번 대화에서 운영 로그인·원정대 인증·레이드 생성 등 정상 동작을 추가 확인했다. 공동 공개/운영 확인 대기는 해소됐고 같은 기능시험을 반복 요청하지 않는다. 확인되지 않은 모든 기종·오류 경계까지 전수 통과로 확대하지 않는다.
 
-## 실행 순서와 현재 대기
+## 공개 기준·검증 근거
 
-1. 버전/안내문 고정·diff 검토. 기존2.1.0 이후 같은 Android 서명키와2026-11-11 백업/접근 확인을 재사용한다.
-2. clean 커밋/게시된 release 소스에서 기존 manual-only Actions로 APK·웹 bundle 준비. source/run/artifact ID·hash·실제 만료/manifest를 원장에 기록한다. 고정소스84565024를 release/2.4.0에 커밋/push하고 웹44087982844·APK44087977727 모두 성공했다. 다운로드 후 웹 내부manifest/hash/경계·APK hash/서명/패키지/2.4.0+9를 확인했다. [산출물 원장](../releases/v2.4.0-artifacts.json)에 source/run/ID/만료와 실제파일hash를 기록했다. Backend B4 독립수령검증 완료이며 운영전환준비 회신은 별도대기다. 공개태그/Release는 없다.
-3. [Backend 준비 요청 #59](https://github.com/heo0328/lostparty-backend/issues/59): 운영 source/image·OpenAPI/DB0038·서버용 키 준비·구APK호환·자료보존/직전백업/복귀와 운영 반영 필요 범위를 확인한다. [B1 회신](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6948295635)을 수신했다. Backend 기능기준18e6bb66·릴리즈 미커밋/미push, 명세해시 동일/DB목표0038이며 최종이미지/full검증/운영키 준비는 미완료다. 운영0036→0038은 기존 일반배포/0035→0036 maintenance로 진행할 수 없다. [B2](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6948402246)에서 운영 앱DB 전체(회원/세션·원정대·그룹·모집/참가·주간/분석/명령) 초기화 확정. 기존세션 무효/재로그인·원정대 재등록이 필요하며 실제 삭제 없음. 역할/볼륨·키/환경·인증서·웹/배포산출물·개발DB·기기자료는 삭제대상에서 제외한다. 최신DB+대응키/환경/활성웹 백업·복귀/새유지보수 절차·서버키 공급 확인을 Backend가 준비한다. 도구68PASS는 full릴리즈 검증 성공이 아니다.
-현재 [Backend B14](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6954624570): 사용자별도운영전환승인으로최종정지dump/독립PC사본확인후회원/세션포함운영앱DB전체초기화·0038과Backend v2.4.0/source970b2f430138b95d837305ffc576eb9cbc605cb0/image sha256:3e7dcdc5dd8ad954a1f6ca00b098a1d246144c9d0664a7d5224d467d074adb07를적용했다. 역할/볼륨·키/환경·인증서는보존했고빈회원/세션/계정·APIhealth/계약401·고정Native웹2.4.0+9/34자산/index일치검증후candidate_ready다. public_open=false/유지보수503유지·최종공개/APK게시전이다. B13의고정Release/이미지게시성공은정적/수용근거검사이며새전체회귀는없다. Native고정웹/APK서명/버전/hash·개발인수는재사용한다. 남은Native는최신문서보관/dev-main통합·공개태그/승인본문/검증파일게시준비, 이후Android다운로드검증과Backend공동승인유지보수해제·운영최소확인이다. 이회신만으로공개를실행하지않는다.
+- Native 빌드 source84565024, 태그source e777da4a, 공개 후 기록 통합 dev/main4ee09de0. 준비된 원본5파일을 그대로 게시했고 다운로드hash·서명/패키지/2.4.0+9·승인본문을 확인했다. [원장](../releases/v2.4.0-artifacts.json)을 따른다. 불변태그를 후행문서로 이동하지 않는다.
+- Backend v2.4.0/source970b2f430138b95d837305ffc576eb9cbc605cb0·image sha256:3e7dcdc5dd8ad954a1f6ca00b098a1d246144c9d0664a7d5224d467d074adb07·DB0038_analysis_candidates. Native 웹2.4.0+9/bundle d878a995…19aa6/34자산으로 공개됐다. 승인된 전체앱DB 초기화와 정지백업/PC사본·키/환경 보존은 B14, 유지보수해제는 B15 근거다.
+- 기능의 전체2873PASS·후행49/58PASS·분석0, 개발DB초기화 후 사용자 전체기능 인수와 운영 보고를 재사용한다. Backend 원CI failure/후행cancelled와 사용자 기존근거 수용·reuse 게시 성공은 구분한다. 새 전체회귀/재빌드는 없다.
+- 운영키는 기존 개발 서버용 키를 사용하며 개발용 별도 키는 사용자가 차후 등록한다. 기존 Android 서명키/백업 확인을 재사용했다. 추가 재배포·자료초기화·키변경·Issue종료는 실행하지 않는다.
 
-4. 고정 웹 인계·Backend 수령 검증 뒤 공동 공개 시점을 조정한다. 사용자 기기 설치/조작은 대행하지 않는다. 사용자최종진행승인으로Native dev/main e777da4a통합/push·v2.4.0 Release를2026-11-18 01:53:42KST 공개했다. 준비5파일재사용/hosted해시·승인본문일치확인·태그자동화복구완료. [공동공개요청](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6954801040)을전달했고Backend maintenance해제/edge결과회신대기다. 현재Native게시완료와Backend최종공개를구분한다.
+## 지금 처리할 범위와 다음 작업
 
-검증: 기능의 전체2873PASS·후행49/58PASS·분석0 및 사용자10항목/실패결과/도화가/모집현황 정상확인은 재사용한다. 이번 버전·문서는 diffcheck/내용 검토, 산출물은 CI package/version/certificate/hash/manifest 검사로 확인한다. 실제 추가/삭제·소멸 사례는 운영 피드백 후속, API100회 초과 등 오류 대응 전체시험과 상세개선·진단전송은 별도 후속이며 완료로 표기하지 않는다. BUG-038 등 기존 미확인도 유지한다.
+사용자 지시로 새 브랜치를 만들지 않고 현재 dev에서 배포 완료 문서·운영 확인 및 후속 제보만 정리해 커밋/push한다. 이는 이번 문서 마감에 한정한 dev 직접 작업 지시다. 코드 수정·재현 조사·성능 측정·재배포는 포함하지 않는다. main/공개태그는 변경하지 않는다.
 
-## 구2.3.0 호환 대조·승인 안내 반영 완료
+웹 캐릭터 순서변경 후2~4초 조작정지는 [후속 원본](../product/DETAIL_IMPROVEMENTS.md#web-character-order-delay)에 기록만 했다. 즉시 착수하지 않으며 기존 후속 순서를 바꾸지 않는다. 다음 승인된 개발 후보는 기존 API100회 초과 등 오류코드 대응 테스트이며 아직 미착수다. 상세 기본펼침/스킬·룬·보석 통합, 앱전체 오류·명시진단전송도 별도 후속이다. 운영 공개에 관한 추가 Native 기능수정·Backend 대기·반복 인수는 없다. Issue59 종료는 별도 지시 범위다.
 
-v2.3.0 태그 코드의 member_lostark_key.dart는 /v1/me/lostark-api-key를 사용하고 role_batch_client.dart는 /v2/me/role-summary-batches POST를 사용한다. Backend가 제거 보고한6동작과 겹쳐 구APK 전체호환을 보장하지 않는다. 일부 CLIENT_UPGRADE_REQUIRED 안내는 있으나 제거 API의404를 강제업데이트로 바꾸는 전역 동작은 확인하지 않았으며 새 기능을 추가하지 않는다. 사용자 진행 승인으로2.4.0 업데이트·앱DB자료소실·재로그인/원정대 재등록 문구를 안내문에 추가했다. 기존세션/로컬pending 코드 대조 결과: 인증 API401→session.reject→AuthSessionController._invalidate가 사용자/토큰/refresh pending과 저장로그인을 지우고 guest로 전환한다. MemberAccountViewModel._sessionChanged는 회원ID/세대/인증변경 때 epoch·화면/갱신 결과/선택 상태를 초기화한다. 분석/소유인증/관리 journal과 모집 command store는 환경+회원ID로 분리하며 requireCurrent/requireAccountReadScope는 세대가 다른 응답을 차단한다. 초기화 뒤 새회원ID의 저장공간에서 이전회원 pending을 읽지 않는 구조다. 이전기록 자체는 일괄삭제하지 않는다. 사용자가 현재 버전으로 개발DB를 초기화하고 재로그인/재등록을 포함한 전체 기능 정상 동작을 이미 확인했다고 재확인했다. 이 기능 인수는 완료이며 같은 정상흐름을 추가 시험/Backend 증명의 선행조건으로 요구하지 않는다. 운영 게시 후 접속·로그인·조회 최소 확인만 별개다.
-
-## 완료 기능 기준
-
-91497108에 누적 구현을 통합하고 사용자 후속 지시로 dev/main/각origin을 같은 SHA로 push했다. 후보opt-in/원본문복구/설정CAS·자동 선택+신규1700/인증 성공원정대1회/수동 선택만·공통결과카드·확인필요파랑/오류빨강 구현과 사용자 확인을 마쳤다. 장기 계약은 [설계25](../backend-migration/25-member-lostark-key-request.md#roster-refresh-ux-design), 구현 협업은 Issue58, 이번 게시 준비는 Issue59다.
-
-## 0038 모집·현황 회귀 — 복구·사용자 확인 완료
-
-Backend B6의0038지원3곳복원·개발API반영후사용자가모집목록/레이드현황오류화면이정상적으로사라졌음을확인했다. 이회귀의화면확인대기는해소하며같은기기시험을반복요청하지않는다. 실제검색데이터전수·기록전체경계까지확대하지않는다. 원인/수정·Backend검증은DEV_LOG와Issue58 B5/B6를따른다. [Backend B7](https://github.com/heo0328/lostparty-backend/issues/58#issuecomment-6947695749)에서 복구08212c3·문서b6105ef와 후보 구현을 dev 2e78854ef9644a02fd7a00b4c247c79f89e25f25에 통합·push했다고 확인했다. 추가 Backend 수정/동일 시험 대기는 없다. Native 우회 수정 및 Issue 종료/삭제는 하지 않는다.
-
-## 구현·보존
-
-- 기본 앱 DI에서 후보 opt-in을 활성화하고 기존 bootstrap에 presence와 함께 조회한다. 후보/소유/설정 scope를 검증한다. 앱 실행은 선택+서버 신규1700후보를 UUID로 중복제거, 인증후는 성공원정대만 같은정책, 수동원정대는선택만/선택저레벨유지다. 신규역할/수준판정을 Flutter에서 복제하거나 Activity를 자동등록하지 않는다.
-- 실패신규후보는자동수집0·실패표시/명시retry, 원ID/본문/후보context·만료reconcile/다른owner명령복구를 연결했다. 후보이미완료는재분석하지 않는다. 과거pending필드추가/본문변경없음, 기존소유/lifecycle·양역할 head/더긴서버대기 보존. 관리V2 새명령에정책CAS/반복저장후최신projection을사용하며 과거원명령은그대로복구한다.
-- 자동/원정대 결과는 같은 RefreshResultCard를 쓴다. 원정대 최신실행별항목·실패명/서버/원정대·사유·부분결과를보관하며 닫기/재열기수집0·실패만retry/결과불명확인을분리했다. 진행중허위전체건수표시없음. 새자동실행이최신카드로전환되고 타실행결과는재열수있다. 로그아웃/회원·소유세대변경의이전결과표시를차단했다.30초새갱신대기·중복차단유지.
-- 앱시작목록갱신은 기존 siblings 경로, 원정대수동선택분석은 기존 서버목록GET을재사용해 불필요한 provider목록수집을추가하지 않는다. 전체오류코드대응시험·진단전송·활동자동추가18은별도다.
-
-## 검증·계약
-
-고정 Backend OpenAPI SHA256 12634daa64a8c4cbdfecfdb53bc7c1aca3bdb721c5ea555d098aea51544b9665 및 합성예시를소비했다. 생성도구 --analysis-only로현재분석schema만갱신하며 과거명령schema/다른feature를일괄변경하지않는다. 서버0038/dev지원은 B2/B3에서 확인했고 후보 구현 게시와 복구의 최종 dev 통합은 아래 B7 회신을 따른다.
-
-전체 flutter test2873PASS, 마지막카드/소유표시보완후직접계정통합49PASS, 전체 flutter analyze0·포맷/diffcheck. 이후 상태색 3파일 분석0·카드/계정통합58PASS를 확인했다. 이번 문서·Git 보관에서는 코드 변경 없이 기존 시험 근거를 재사용하고 diffcheck/내용 검토를 수행한다. 로컬devhealth200/비로그인candidate+presence bootstrap401직접확인. 이마지막HTTP는회원실제분석저장/화면인수가아니다. 초기시험실패(합성버전필드/시험import·생성자인수)수정뒤통과했고실패를PASS에합산하지않는다.
-
-## 사용자 인수·상태색 보완
-
-사용자는 안내한10개 테스트와 실패 발생 시 갱신 결과 표시가 정상임을 확인했다. 동일 정상 테스트를 다시 요구하지 않는다. 실제 캐릭터 추가/삭제·소멸/신규 발견 사례는 만들 수 없어 미확인이고, 사용자 결정으로 운영 중 실제 피드백 확인 후속으로 이관한다. 이를 이번 작업의 미완료 선행조건으로 두거나 테스트를 위해 캐릭터삭제/자료조작을 요구하지 않는다. 다른 미보고 경계까지 전수 통과로 확대하지 않는다.
-
-이번 추가수정은 카드 상태색만이다. review/확인필요는 AppColors.info(파랑)+infoContainer(파스텔배경용) 공통토큰, error/세팅오류는 기존테마빨강을사용한다. 카드보석/스킬확인안내도동일원칙이다. unknown/unavailable/미조회는중립색이며판정/데이터/서버동작은바꾸지않는다. 색상보완후검증결과는DEV_LOG를따른다. 실제색상인상은아직사용자확인전이다.
-
-현재 Backend 후보 구현8f29271d와 0038 복구 소스는 B7의 게시된 dev 2e78854e에서 함께 확인할 수 있다. 계약 해시는 동일하며 서버 재교체는 필요하지 않다. Native 구현은91497108로 dev/main 및 각origin에 게시됐으며, 현재 release/2.4.0 준비 변경은 별도 미커밋이다.
-
-게시 준비 이후 별도 후속은 기록된API100회초과등오류코드대응테스트다. 캐릭터상세기본펼침과스킬/룬/보석통합은사용자가별도상세개선으로분리했으며[후속원본](../product/DETAIL_IMPROVEMENTS.md#character-detail-improvement)에기록했다. 지금상세페이지를변경하지않는다. Issue58은 구현·사용자 확인의 근거이며 현재 게시 준비/산출물 인계는 Issue59에서 이어간다. Issue 종료/삭제는 수행하지 않는다.
-
-## 직전 공개와 유지할 미확인
+## 이전 공개 이력과 유지할 미확인
 
 2.3.0+8의 2026-11-15 공개 완료 기록은 [산출물 원장](../releases/v2.3.0-artifacts.json)·[안내문](../releases/v2.3.0.md)·DEV_LOG를 따른다. Backend Issue54는 최신 원격 본문상 사용자 지시 completed 종료 상태다. 이 조사에서 재배포·태그 이동은 없다. 종전 완료 계획의 반복은 제거하고 기존 DEV_LOG/Git 근거로 조회한다.
 
@@ -65,4 +32,4 @@ BUG-038(생성 대신 이전 상세)은 미해결·현재 미재현이다. 재�
 
 ## 유지하는 운영·자료 정책
 
-개발 기본은 dev 로컬, release 기본은 AWS HTTPS이며 명시override/profile 주소명시 정책 유지. 현재운영자료는 보존했다. 정식베타 직전초기화는 대상/시점을 정한 별도 지시가 필요하다. 구탭무중단/미전송자동이전·반응형개편·4초로딩개선·리전이전·전체복원리허설/백업자동화는 이번완료범위에서 제외했다. 후속 개발자료준비를 운영자료 삭제나 보존형이중운영으로 대체하지 않는다. 현재 지시는2.4.0 게시 준비이며 실제 운영 활성화/공개 실행은 준비 결과와 구분한다.
+개발 기본은 dev 로컬, release 기본은 AWS HTTPS이며 명시override/profile 주소명시 정책 유지. 현재운영자료는 보존했다. 정식베타 직전초기화는 대상/시점을 정한 별도 지시가 필요하다. 구탭무중단/미전송자동이전·반응형개편·4초로딩개선·리전이전·전체복원리허설/백업자동화는 이번완료범위에서 제외했다. 후속 개발자료준비를 운영자료 삭제나 보존형이중운영으로 대체하지 않는다. 2.4.0 운영 공개는 완료됐으며 추가 운영변경은 별도 지시 범위다. 이번은 문서 마감만 수행한다.
