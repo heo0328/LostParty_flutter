@@ -219,6 +219,7 @@ class _BackendAppState extends State<BackendApp> with WidgetsBindingObserver {
       enabled: true,
       allowHttp: kDebugMode,
       rosterPresenceEnabled: true,
+      analysisCandidatesEnabled: true,
       bootstrapEnabled: const bool.fromEnvironment(
         'BACKEND_ACCOUNT_BOOTSTRAP_ENABLED',
         defaultValue: true,

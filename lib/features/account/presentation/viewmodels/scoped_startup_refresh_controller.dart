@@ -270,7 +270,7 @@ class ScopedStartupRefreshController extends ChangeNotifier {
           : <String, ScopedRefreshItem>{};
       final fresh = {for (final t in prepared.targets) t.ref.characterId: t};
       for (final id in selected) {
-        final target = fresh[id];
+        final target = retry ? fresh[id]?.retryTarget() : fresh[id];
         if (target == null) {
           result[id] = ScopedRefreshItem(
             previous!.items[id]!.target,

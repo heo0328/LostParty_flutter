@@ -313,6 +313,40 @@ void main() {
         );
       },
     );
+    test('enabled runtime requests candidate opt-in without writes', () async {
+      final candidateDb = ScopedAccountCacheDatabase(NativeDatabase.memory());
+      final candidateRuntime = ScopedAccountRuntime(
+        api: api,
+        registrations: ServerAccountReadRepository(api, session),
+        databaseFactory: () => candidateDb,
+        enabled: true,
+        bootstrapEnabled: true,
+        analysisCandidatesEnabled: true,
+        rosterPresenceEnabled: false,
+      );
+      addTearDown(candidateRuntime.close);
+      respond = (r) {
+        expect(r.queryParameters['include_analysis_candidates'], 'true');
+        final json = example();
+        final row = registration(json);
+        final reg = row['registration'];
+        row['analysis_candidates'] = {
+          'policy_version': 'analysis-candidates-1',
+          'policy_revision': 1,
+          'baseline': 'legacy',
+          'registration_id': reg['registration_id'],
+          'game_account_id': reg['game_account_id'],
+          'ownership_revision': reg['ownership_revision'],
+          'settings_version': reg['settings']['settings_version'],
+          'complete': true,
+          'candidates': <dynamic>[],
+        };
+        return json;
+      };
+      final value = await candidateRuntime.restoreBootstrap();
+      expect(value.data.registrations.single.candidates!.policyRevision, 1);
+      expect(calls.every((r) => r.method == 'GET'), isTrue);
+    });
 
     test(
       'member change and generation invalidation discard delayed response before cache import',

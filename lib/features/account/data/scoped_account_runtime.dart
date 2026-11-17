@@ -62,6 +62,7 @@ class ScopedAccountRuntime {
     this.allowHttp = false,
     this.ownsDatabase = true,
     this.bootstrapEnabled = false,
+    this.analysisCandidatesEnabled = false,
     this.rosterPresenceEnabled = false,
   }) : baseUrl = api.dio.options.baseUrl {
     _validateEnvironment();
@@ -76,6 +77,7 @@ class ScopedAccountRuntime {
   final String baseUrl;
   final bool enabled, allowHttp, ownsDatabase;
   final bool bootstrapEnabled;
+  final bool analysisCandidatesEnabled;
   final bool rosterPresenceEnabled;
   AppliedAccountBootstrap? _bootstrap;
   AppliedAccountBootstrap? get bootstrap {
@@ -283,9 +285,11 @@ class ScopedAccountRuntime {
         current();
         final json = await api.request(
           '/v2/me/account-bootstrap',
-          query: rosterPresenceEnabled
-              ? {'include_roster_presence': 'true'}
-              : null,
+          query: {
+            if (rosterPresenceEnabled) 'include_roster_presence': 'true',
+            if (analysisCandidatesEnabled)
+              'include_analysis_candidates': 'true',
+          },
         );
         current();
         final receivedAt = DateTime.now().toUtc();
@@ -296,6 +300,7 @@ class ScopedAccountRuntime {
             () => AccountBootstrap.fromJson(
               json!,
               includePresence: rosterPresenceEnabled,
+              includeCandidates: analysisCandidatesEnabled,
             ),
           );
         } on FormatException {

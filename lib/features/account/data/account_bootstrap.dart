@@ -1,3 +1,4 @@
+import '../domain/analysis_candidates.dart';
 import '../domain/member_raid_models.dart';
 import '../domain/personal_settings.dart';
 import '../domain/role_summary.dart';
@@ -11,6 +12,7 @@ class AccountBootstrap {
   AccountBootstrap.fromJson(
     Map<String, dynamic> json, {
     bool includePresence = false,
+    bool includeCandidates = false,
   }) {
     roleShape(json, 'server_now complete registrations weekly_states');
     serverNow = roleUtc(json['server_now']);
@@ -19,8 +21,11 @@ class AccountBootstrap {
     roleCheck(values.length <= 20);
     registrations = List.unmodifiable(
       values.map(
-        (v) =>
-            BootstrapRegistration(roleMap(v), includePresence: includePresence),
+        (v) => BootstrapRegistration(
+          roleMap(v),
+          includePresence: includePresence,
+          includeCandidates: includeCandidates,
+        ),
       ),
     );
     roleCheck(
@@ -63,11 +68,15 @@ class BootstrapRegistration {
   BootstrapRegistration(
     Map<String, dynamic> json, {
     bool includePresence = false,
+    bool includeCandidates = false,
   }) {
     roleShape(
       json,
-      'registration characters representative presentation personal_profiles unavailable_characters',
+      'registration characters representative presentation personal_profiles unavailable_characters${includeCandidates ? ' analysis_candidates' : ''}',
     );
+    candidates = includeCandidates && json['analysis_candidates'] != null
+        ? AnalysisCandidates(roleMap(json['analysis_candidates']))
+        : null;
     final raw = roleMap(json['registration']);
     registration = ServerAccountRegistration.fromJson(raw);
     characters = LifecycleCharacterPage.fromJson(
@@ -120,7 +129,8 @@ class BootstrapRegistration {
         : AccountPresentation.fromJson(roleMap(json['presentation']));
     if (snapshot.ownershipStatus != 'owned') {
       roleCheck(
-        representative == null &&
+        candidates == null &&
+            representative == null &&
             presentation == null &&
             profiles.isEmpty &&
             unavailable.isEmpty,
@@ -136,6 +146,14 @@ class BootstrapRegistration {
           presentation!.ownershipRevision == snapshot.ownershipRevision &&
           presentation!.registrationVersion == snapshot.version,
     );
+    if (candidates case final p?) {
+      roleCheck(
+        p.registrationId == snapshot.registrationId &&
+            p.accountId == snapshot.accountId &&
+            p.ownershipRevision == snapshot.ownershipRevision &&
+            p.settingsVersion == snapshot.settings.version,
+      );
+    }
     final expected = snapshot.settings.activityIds.toSet();
     for (final p in profiles) {
       final c = characters.items
@@ -158,6 +176,7 @@ class BootstrapRegistration {
     }
     roleCheck(expected.isEmpty);
   }
+  late final AnalysisCandidates? candidates;
   late final ServerAccountRegistration registration;
   late final LifecycleCharacterPage characters;
   late final CacheRegistrationSnapshot snapshot;

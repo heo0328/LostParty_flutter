@@ -3,9 +3,9 @@ import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 const bytes = fs.readFileSync(process.argv[2]);
 assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),
-  '2f0ae34849e99618e194ad158383091f71967d3c41083d17dfee32a175fd9c9f');
+  '12634daa64a8c4cbdfecfdb53bc7c1aca3bdb721c5ea555d098aea51544b9665');
 const api = JSON.parse(bytes), definitions = {};
-const names = new Set(['AnalysisRequest', 'AnalysisResponse', 'RoleAnalysis', 'AnalysisDetail', 'BPowerComparison', 'CandidatePower', 'GroupRolePower']);
+const names = new Set(['CandidateProjection', 'AnalysisRequest', 'AnalysisResponse', 'RoleAnalysis', 'AnalysisDetail', 'BPowerComparison', 'CandidatePower', 'GroupRolePower']);
 function refs(v) {
   if (!v || typeof v !== 'object') return;
   if (v.$ref) names.add(v.$ref.split('/').at(-1));
@@ -17,8 +17,10 @@ for (const name of names) {
 }
 fs.mkdirSync('lib/shared/backend', {recursive: true});
 fs.writeFileSync('lib/shared/backend/server_analysis_schema.g.dart',
-  '// Backend b95cff51; regenerate with tool/project_server_analysis_contract.mjs.\n' +
+  '// Backend analysis-candidates-1 (local OpenAPI 12634daa); regenerate with tool/project_server_analysis_contract.mjs.\n' +
   "const serverAnalysisSchemaJson = r'''\n" + JSON.stringify(definitions, null, 2) + "\n''';\n");
+
+if (process.argv.includes('--analysis-only')) process.exit(0);
 
 // Keep existing query/profile selections; replace the role projections with the
 // published contract and include only their referenced definitions.

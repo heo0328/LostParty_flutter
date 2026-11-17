@@ -4,6 +4,96 @@
 
 상태: **공동설계/Backend B1·B2 구현 게시 완료 / Native 일반 앱 연결·로컬 dev0037 반영 완료 / 사용자 전체 정상 동작 확인(2026-11-17)**. 서버 처리 최초 게시 소스는 작업브랜치 `b95cff51f6eaf74d341115b2cc7868cc625ce626`의 [구현기록](https://github.com/heo0328/lostparty-backend/blob/b95cff51f6eaf74d341115b2cc7868cc625ce626/docs/features/rosters/power-and-profiles/server-processing-implementation.md)·[OpenAPI](https://github.com/heo0328/lostparty-backend/blob/b95cff51f6eaf74d341115b2cc7868cc625ce626/openapi/openapi.yaml)이며 [게시회신6914931822](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6914931822)를 확인했다. 합의 후 wire delta 없음. 고정 구현기록 안의 미커밋 문구는 게시 전 작성시점이며 후행 게시회신이 현재 Git 상태다. 2026-11-17 [Backend dev 전환 회신](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6921019988)으로 사용자 별도 승인 후 로컬 DB 초기화/0037·새 API/서버 token 준비 완료를 확인했다. 현재 명세 소비 기준은 Backend5172c753이며 개인 가능시간1분 확장을 포함한다. 사용자가 이번 작업 전체 정상 동작을 확인했다. 모든 기종/외부 장애 주입 검증으로 확대하지 않으며 운영배포는 이전 상태다. Native 코드 연결/합성 검증 결과는 NEXT_WORK·DEV_LOG를 따른다. 이전 cda4db3/Flutter302243fb는 조사 기준이다. 아래 개인키 계약은 전환 전 근거다.
 
+<a id="roster-refresh-ux-design"></a>
+## 원정대 갱신 UX·선택 및 신규1700 대상 설계 (2026-11-17)
+
+**상태: 정책/기술계약 확정·Backend dev지원 및 Native 일반연결/자동검증 완료 / 사용자10개테스트·실패결과표시정상확인.** 기존 구현과 아래 변경안을 구분한다. 브랜치 feature/roster-refresh-ux, 기준 dev d3e700ed. API100회 초과 등 오류코드 대응 테스트 전체·진단 전송·활동 자동추가 Issue18은 별도 후속이다.
+
+### 제품 목적과 확정 범위
+
+원정대 전체 목록은 유지하되 상세 수집을 줄이고, 갱신 중/완료/실패 대상을 한 공통 카드로 이해하도록 한다. 사용자 수용 방향은 앱 실행 갱신에서 **사용 선택 캐릭터 ∪ 신규 발견/첫1700 도달 캐릭터**다. 목록1회로 이름/아이템 레벨을 확인하고 합집합을 UUID로 중복 제거해 대상만 서버 상세 분석·저장한다. 사용 선택/대표/참가 자격을 자동 변경하지 않는다. 원정대 카드 수동 버튼은 앞선 사용자 확정대로 해당 원정대 사용 선택 캐릭터만 분석한다.
+
+### 대상과 진입 경로
+
+| 진입 | 목록 확인 | 상세 분석 대상 | 정책 경계 |
+|---|---|---|---|
+| 앱 실행1회 | 소유 원정대별 siblings 요약 갱신 | 기존 선택 + 서버가 판별한 신규/첫1700 후보 | 같은 UUID1회, 신규에도 나이스단OFF 자동 제외 적용 |
+| 인증 후 계정 복귀1회 | 인증 과정의 유효 관찰 재사용 가능 여부를 Backend와 확인 | 인증 성공 원정대의 같은 합집합 적용 | 전체 상세 대신 첫1700 후보 포함 |
+| 원정대 카드 수동 전체 갱신 | 기존 서버 목록GET 재사용(추가provider조회없음) | 해당 원정대 사용 선택만 | 선택0명은 상세0회, 신규 후보는 안내/별도 확인 대상으로 보존 |
+| 캐릭터 개별 갱신 | 기존 소유/사용 가능 확인 | 사용자가 요청한1캐릭터 |1700 조건 새 강제 없음 |
+| 미완료 재시도/결과 확인 | 기존 실행 snapshot/원명령부터 확인 | 실패/미완료만 | 성공 재수집0, 결과불명은 동일ID/본문 복구 |
+
+사용자 확정: 신규도1700 이상만 상세 분석하며 신규 저레벨은 목록만 저장한다. 기존 사용 선택은1700 미만도 유지한다. null/파싱불가 레벨은0/적격으로 추정하지 않는다. 최초 등록·인증 원정대의1700 이상은 최초 후보로1회 분석한다. 과거 미선택 캐릭터는 일괄 부활시키지 않고 현재 의도를 보존하는 기준선을 Backend와 설계한다. 자료 이전/복원 리허설·DB초기화를 선행하지 않는다.
+
+실패한 신규 후보는 결과 카드에서 명시 재시도한다. 앱 재실행/같은 목록 재조회로 새 상세 명령을 반복 발급하지 않고 실패 후보/안내를 보존한다. 결과불명은 기존 원ID/본문 복구, saved 경고는 저장 성공으로 소비한다. 기존 선택 캐릭터의 앱 실행1회 갱신은 유지한다. 신규에도 나이스단OFF 자동 제외를 적용하고 실패로 집계하지 않으며 개별 수동 갱신은 가능하다. 이 네 항목은 사용자 수용으로 확정됐다.
+
+### 서버 관찰·명령·결과 소유
+
+- 목록/아이템 레벨과 canonical UUID·소유/lifecycle 세대는 서버 원본이다. Native 캐시·캐릭터명 비교만으로 신규/첫도달을 확정하지 않는다. 정상 owned 목록 적용 트랜잭션에서 최초 관찰/첫1700·분석 필요 근거를 최소 영속 상태로 보관하고, 매 GET/앱 재실행 때 신규를 재생성하지 않는다. 회원 변경·소유 이전 시 타인 후보를 승계하지 않는다. 같은 UUID의 개명은 신규가 아니며 이름 재사용은 UUID로 구분한다.
+- 새 후보 여부와 분석 실행 완료는 별개다. 정상 목록이 왔다는 이유로 상세 저장 완료로 소비하지 않는다. 분석 saved 확정 시 후보 상세수집 완료를 반영하며 integrity warning/error도 ‘저장 성공+경고’이지 끝없는 재수집 조건이 아니다. definitive 실패는 실패로 보관하고 결과 카드의 사용자 명시 재시도로 처리한다. 결과불명은 기존 명령을 먼저 복구한다. 실패 신규 후보에 다음 실행의 새 자동 상세 명령을 반복 발급하지 않는다.
+- 기존 분석 batch와 UUID/expected ownership·lifecycle·양역할 version/원ID·원본문·24시간 복구를 재사용한다. 현재 automatic은 Activity만 허용하므로 미선택 신규 후보용 최소 서버 검증 확장이 필요하다. manual로 위장하거나 활동을 먼저 등록하는 우회는 하지 않는다. 구체 profile/필드·선정 응답·원자 소비 방식은 Backend 계약 회신 후 고정한다. 서버가 현재 후보/소유/사용 자격을 다시 검증하며 클라이언트 supplied 신규/level 값만 신뢰하지 않는다.
+- 사용 선택과 신규 분석은 별개다. 과거 Issue18의 활동 자동추가/명시 제외 영속정책을 이번에 자동 구현하지 않는다. 현재 미선택만으로 ‘사용자가 직접 제외’인지 알 수 없으므로 기존 관찰 기준선·신규 후보·분석 완료를 구분한다. 명시 제외가 별도 필요한 경우 최소 계약을 협의하며 설정 UI/별도 관리단계를 선제 추가하지 않는다.
+- 시작 시 사용 선택/설정·후보/목록 revision을 고정한다. 도중 명시 선택/해제·소유 변경은 서버 최신 검증이 우선이며 전체 오래된 snapshot으로 설정을 덮지 않는다. 관찰 실패/누락을 새 후보 소비·소멸/퇴역 근거로 사용하지 않는다. 선택되지 않은 캐릭터의 목록·기존 저장 빌드도 삭제하지 않는다.
+- 외부 호출 일반량은 소유 원정대당 siblings1+선정 armory N이다. 최초 인증 장비 조회·404 anchor 대체최대3·현재 명령 복구/실패 등 예외는 구분한다. 앱↔서버 GET 수를 외부 provider 호출 수와 혼동하지 않는다. 목록 성공/상세 일부 실패는 각각 표시한다.
+
+### 하나의 진행·결과 카드 재사용
+
+기존 _progress의 표현을 최소 공통 컴포넌트로 분리하고 자동 controller/원정대 수동 실행 상태를 전달한다. 같은 화면/runner를 복제하거나 앱 실행1회 제한을 초기화해 수동 갱신을 실행하지 않는다. 실행별 source(자동/인증/원정대 수동), 원정대 라벨·UUID, stage, targets/items, 대기/오류·허용 행동을 보존한다. 수동 결과의 건수 문자열 축약은 항목 결과 보관으로 교체한다.
+
+- 버튼은 원정대 안에 유지한다. 진행 중 ‘갱신 중’, 새 전체 명령은30초 대기와 더 긴 서버대기·중복 방지를 존중한다. 재시도/결과확인에도 서버 명령 규칙과 중복 방지를 적용하며30초 의미를 새 전체 갱신과 구분한다.
+- 상단 카드 제목은 ‘자동 갱신’/‘원정대명 갱신’으로 대상 범위를 명확히 한다. 목록 확인→대상 준비→분석→완료를 표시한다. batch 응답 전 모르는 세부 진행률은 만들지 않고 ‘N명 갱신 중’으로 표현한다. 실제 항목 결과가 왔을 때만 처리 수를 올린다.
+- 완료는 저장/경고/실패/결과확인 대기/정책제외를 구분한다. 캐릭터명+서버/원정대+사유를 표시하며 같은 이름도 UUID/원정대로 식별한다. 저레벨 미대상은 실패로 집계하지 않는다. 선택 없음/대상 없음/목록 확인 실패도 성공0과 구분한다. 신규 후보는 ‘신규1700 확인’으로 별도 식별하되 자동 사용 등록을 암시하지 않는다.
+- 추천안: 완료 후 ‘닫기’는 표시만 접는다. 해당 원정대 ‘갱신 결과 보기’에서 API호출 없이 다시 연다. 상단은 최신 시작 실행을 표시하고 다른 자동/원정대 결과는 각 진입으로 재열 수 있게 보관한다. 진행 중에는 강제 취소/동작 변경을 추가하지 않으며 현재 완료 후 닫기 정책을 유지한다.
+- 실패 다시 시도는 실패/미완료 대상만, ‘갱신 결과 확인’은 pending 원요청 복구다. 성공 항목/원정대 전체를 다시 분석하지 않는다. 새 작업이 조용히 과거 자동 결과를 삭제하지 않도록 표시 선택과 실제 실행 상태를 분리한다. UI 결과는 기존 앱/회원 세션 수명, 서버 후보/명령 근거는 영속이다. 로그아웃/회원·환경 전환/소유 세대 변경시 이전 개인 결과를 표시하지 않는다. 전체 결과 이력 DB/새 조회 화면은 추가하지 않는다.
+
+### Backend B1 설계 회신 대조 (2026-11-17)
+
+[Issue18 B1 6942884206](https://github.com/heo0328/lostparty-backend/issues/18#issuecomment-6942884206) 수신. 확정4개 정책은 모두 수용됐으며 다시 제품 질문으로 돌리지 않는다. Backend는 dev4c2cff0 정적 대조/문서검증만 수행했고 feat/roster-refresh-policy·설계 미커밋/미push, 코드/DDL/OpenAPI/dev실행 변경 없음이다.
+
+- 수용 가능한 기술 방향: 기존 Activity/summary·AnalysisFetch·24h ACK만으로 후보 이력을 대체할 수 없다. 정상 owned 목록 반영 트랜잭션에서 소유세대/UUID별 기준선·신규/첫1700 후보를 최소 영속 보관한다. 활동 자동추가 상태와 분석 후보는 구분한다. 임대/실행 fencing과 원명령을 연결하고, 저장 summary+후보 성공+ACK를 한 transaction으로 처리하는 방향이다. 두기기 동시/선택경로·후보중복/개별manual성공도1회 완료로 합친다.
+- Native 소비 방향: 기존 분석 POST·50개/20초/동시2를 재사용한다. 새 후보 명령만 candidate_id/generation·expected_policy_version 등 합의된 검증 근거를 넣으며 기존 pending은 원본문 그대로 복구한다. 기존 bootstrap의 opt-in projection 또는 범위 profile 중1개로 후보/blocked·미해결 command를 조회하는 안을 Backend와 최종 고정한다. GET은 읽기 전용/no-store이고 현재 후보 상태와 과거 ACK를 구분한다. DTO·상한/페이지·profile명은 아직 미확정이다.
+- 복구: terminal 실패 신규후보는 blocked 보관·명시 재시도. unknown/in_progress는 원ID/본문 복구, 원ACK 정리 이후에는 성공 후보의 현재 저장정보를 읽고 상세를 재호출하지 않는다. 미해결은 서버 실행세대/임대 대조 후 재개하며 임의 새ID로 우회하지 않는다. 기존 원장 완료ACK24h/미완료48h 수명을 후보 영속 성공/실패 수명과 혼동하지 않는다.
+- 제품 추가2개 사용자 확정: 앞으로 사용자가 명시 해제한 캐릭터는 신규/첫1700 자동 분석도 제외하되 개별 수동은 허용한다. 과거 미선택만으로 명시해제를 소급 추정하지 않는다. 같은회원·동일account·소유세대 삭제/재등록은 제외/후보완료를 재사용하고 소유자가 바뀌면 승계하지 않는다. 실제 삭제/재등록 명령의 자료 수명은 이 확정 경계 안에서 구체화한다.
+- 추가 질문 중 첫 인증/미설정: 사용설정 unconfigured에서도 정상 소유인증·사용자격을 통과한1700 최초후보 분석은 이미 확정된 첫등록/인증1회 정책에 맞춰 허용하는 안이다. 대표/configured를 자동 생성하지 않는다. needs_reconfiguration은 그 상태만으로 일괄 허용하지 않고 해당 캐릭터의 서버 소유/usable·설정변경 충돌을 검증한다.
+- null→1700: 정책 도입 후 신규/정상관찰 캐릭터의 첫 유효1700이면 최초 후보, 도입 전부터 미선택/관찰불명인 자료는 기존 기준선 보존 제안이다. null을0으로 취급하거나 모든legacy1700을 신규로 발급하지 않는다.
+- 상세분석 후보는 활동자동추가와 완료 조건이 달라 구현 계약 고정 시 별도 Issue로 분리하고 #18은 공통 관찰/제외 설계 출처로 연결하는 제안을 수용할 수 있다. 사용자 추가2경계 수용·진행 지시로 [Issue58](https://github.com/heo0328/lostparty-backend/issues/58)을 분리했다. 기존 분석명령 재사용·최소 후보읽기profile/DTO·manual명시retry·제외delta/삭제재등록 수명 계약 고정과 구현 인계를 요청했다. 기술계약 회신 전 guessed DTO/권한 우회 구현은 하지 않는다.
+
+### Issue58 B1 기술계약 소비 대조 (2026-11-17)
+
+[Backend B1 6943318871](https://github.com/heo0328/lostparty-backend/issues/58#issuecomment-6943318871) 수신. 실행 API 지원완료가 아닌 구체 계약안이며 Backend 미커밋/미push·코드/명세/dev 변경 전이다. 제품정책 차이는 확인되지 않았다.
+
+- 후보 읽기는 GET /v2/me/account-bootstrap?include_analysis_candidates=true, include_roster_presence와 병용. 기본false는 새키생략, true는 registrations[].analysis_candidates(현재소유 아닌 경우null). scope/policy/baseline·candidate id/generation/reason/state/eligibility·대기/last_error/미해결원본문/완료근거를 제공한다. 원정대당 최대200 전체·페이지없음/정렬candidate_id이며 초과409는 빈목록으로 숨기지 않는다.
+- 기존 POST /v2/me/character-analysis/refresh item에 후보 신규명령만 candidate_context(id/expected_generation/expected_policy_revision/expected_settings_version/purpose). purpose automatic_candidate 또는 manual_retry는 trigger와 일치해야 한다. blocked명시retry만 generation CAS/+1, 같은ID replay는 원ACK. 기존pending 원본문은 새필드를 끼우지 않는다.
+- 기존 설정 PUT management-2에 새명령 expected_analysis_policy_revision을 추가하고 과거body 생략허용. 서버 실제A-B만 명시제외, B-A 재선택시해제, 둘다미선택은제외추정금지. 같은소유세대 보존/타소유승계금지. Native 실제gateway writer와 기존V1 경로의 동일delta/CAS까지 구현시 대조한다.
+- automatic Activity선택과 검증후보를 함께 허용하며 나이스단OFF/명시제외·blocked자동재개금지를 서버에서도 검증한다. 저장/후보성공/ACK 원자성·두기기임대/fencing·선택중복/단건manual성공소모를 유지한다.
+- 추가기술확인2개: recovery=reconcile_required의 정확 복구POST/ID/본문·원장정리 뒤 응답 예시, 새코드별 state/status/retry enum 및 다른명령임대복구·정책제외blocked의 명시manual_retry 허용 예시. Native _parse는 현재 skipped를 AUTOMATIC_TARGET_EXCLUDED만허용하므로 신명세 strict/버튼동작을 같이 확장해야 한다. 계약문의는 제품결정 재요청이 아니다.
+
+확정된 나머지 계약은 수용하고 Backend에 예시/명세 보완과 구현·표적검증·게시 인계를 요청했다. 실제소스/OpenAPI가 게시되기 전 추측DTO를 작성하지 않는다. 사용자인수/서버반영은 아직 미실행이다.
+
+### Issue58 B2/B3 고정 계약·dev 지원 수신 (2026-11-17)
+
+[B2 6944474148](https://github.com/heo0328/lostparty-backend/issues/58#issuecomment-6944474148)·[B3 6944629650](https://github.com/heo0328/lostparty-backend/issues/58#issuecomment-6944629650)을 수신했다. 앞선 기술확인2개는 해소됐다. WSL 로컬 OpenAPI SHA256 12634daa64a8c4cbdfecfdb53bc7c1aca3bdb721c5ea555d098aea51544b9665를 직접 대조했다. Backend feat/roster-refresh-policy는 기준4c2cff08 위 미커밋/미push이므로 이SHA를 구현게시SHA로 취급하지 않는다. 현재 로컬 명세·합성예시를 고정해 소비할 수 있으며 원격게시와 구분한다.
+
+- reconcile_required: 별도 endpoint 없이 기존 분석 POST에 items=[unresolved_command.command] 원ID/원본문 그대로 전달. 현재세션/소유/usable/ownership→저장원본문→원장/후보실행세대→복구 순서. 만료된 원장/ACK24h/미완료48h·정리후 미해결은 외부호출 없이 blocked로 정리하고 ANALYSIS_CANDIDATE_RECONCILED/failed409/new_command. projection 재조회 후 사용자 manual_retry 새ID만 허용한다. 정리에 한해 옛 lifecycle/policy/settings를 허용하며 새 수집을 하지 않는다. 원ACK유효는 replay, 실행중은 REQUEST_IN_PROGRESS, 성공후보는 COMPLETED skipped/저장읽기. 소유자격 상실은 원권한오류.
+- 코드 확정: NOT_FOUND=failed404/none, CANDIDATE_IN_PROGRESS=failed409/none(거절ID반복 금지·projection의 owner원명령복구), RETRY_REQUIRED/COMPLETED=skipped200/none, RECONCILED/REVISION_CONFLICT=failed409/new_command. new_command는 자동루프 허용이 아니다. blocked+나이스단OFF/명시제외도 현재소유/usable의 개별manual_retry는 허용하며 새ID/최신context로 실행한다.
+- policy_revision은 명시선택/제외 CAS이며 후보state변경마다 증가하지 않는다. 같은원정대 독립후보는 generation/command/lease로 경합 검증한다. 기존 pending 본문은 변조하지 않는다.
+- Backend 검증 보고: current131PASS/하위13, bootstrap/management86PASS, 최종후보/예시/migration17PASS, 격리이미지OpenAPI191경로일치·JSON Schema/DTO·문서diff PASS. 마지막 복구/48h보완은 최종17검증에 포함되며 앞선회귀를 최종후 반복한 것으로 확대하지 않는다.
+- 사용자 별도 승인 후 실제 dev0037→0038 migration/API healthy·전체명세 일치, 실행image9740bd51…f8ea018. 기존114테이블/794행 지문·키5개/환경 보존은 Backend 보고다. legacy정책3/fact47 기준선, 미선택후보부활없음. 실제미로그인bootstrap401/서비스읽기opt-in·roster_presence병용/GET무쓰기 확인은 보고이며 회원 실제HTTP분석저장/Native·기기인수는 아니다. 운영/provider/자료초기화/삭제 없음.
+
+Native 소비 결과: 고정 OpenAPI/예시로 strict DTO/context·후보조회/원본문복구·선택delta·결과카드 일반연결/자동검증을 마쳤고 사용자10항목/실패 결과 표시를 확인했다. 기존 기술확인2개를 다시 요청하거나 migration/서버교체를 반복하지 않는다. 신규/삭제 실제 사례와 전체 오류 대응 시험은 아래 후속으로 구분한다.
+
+현재 게시 근거: [Backend B7](https://github.com/heo0328/lostparty-backend/issues/58#issuecomment-6947695749)의 dev 2e78854ef9644a02fd7a00b4c247c79f89e25f25에 후보 구현8f29271d와 0038 모집/현황 복구08212c3·문서b6105ef가 통합·push됐다. 기존 계약 해시/실행dev0038은 유지하며 사용자가 오류화면 해소를 확인했다. 앞선미게시표현은B2/B3수신당시이력이다. 사용자정상인수이후확인필요카드문구는공통정보파랑·명백한오류는기존테마빨강으로보완한다.
+
+### 작업 순서·역할·완료 조건
+
+1. Native 조사 근거·사용자 수용/미결정을 이 설계에 기록. Backend는 기존 Issue18과 자동 후보 권한/영속모델 재사용 가능성만 협의하며 아직 구현하지 않는다.
+2. 확정 제품 경계(신규1700·첫등록/인증·실패 명시 재시도·나이스단OFF)에 Backend DTO/권한·원자성·회신을 대조해 기술 계약을 확정한다. 범위를 임의 확대하지 않는다.
+3. Backend 후보 판정/최소 명세 확장·직접 경계 검증/게시·dev 준비 → Native strict 소비/대상 snapshot·공유 결과 카드/원정대 runner 연결. 기존 자동·수동 공통 executor/명령 journal 재사용.
+4. 경계 자동검증:1699→1700/신규1700·신규저레벨·null·사용선택저레벨, 과거 미선택·재실행/두기기 중복/동시 선택해제·UUID/소유 변경,0대상·부분성공/경고·원요청 복구/24시간·대기/중복·완료닫기 비수집·실패만재시도. 기존 자동/인증1회·설정/대표/나이스단·카드/주간/그룹 소비를 보호한다. 상태 로직이 같으면 인원별 시험을 복제하지 않는다.
+5. 웹/Android 일반 DI→원정대 버튼/자동→서버 저장→카드/상세 재조회 연결 후 사용자에게 실제 갱신·실패명·닫기/재열기·선택/신규 발견 확인을 안내한다. 합성 시험은 실서버/실기기 인수를 대신하지 않는다. 포맷/diffcheck·변경 분석, 공용/명세/DI 영향에 따라 최종 전체 Flutter검증을 판단한다.
+
+완료는 제품 합의·서버 게시/dev·Native 일반 연결·자동검증·사용자 확인을 각각 기록한다. Native는 후보opt-in/strict스키마·원본문복구/관리CAS·원정대선택대상/인증후합집합·공통결과카드를일반앱에연결했다. 전체2873PASS·최종직접49PASS/분석0이며 사용자가안내10개테스트/실패결과표시를통과확인했다. 신규/삭제실제사례는운영피드백으로이관하고인수조건으로반복요구하지않는다. 색상보완/검증은NEXT_WORK·DEV_LOG를따른다. 사용자 지시로 Native 누적 구현·문서를 커밋하고 로컬 dev에 통합한다. 원격 push/main/서버/DB/키/배포 추가 변경은 없다. 최신 보관 결과는 Git/Issue58 인계를 따른다.
+
 <a id="native-implementation-design"></a>
 
 ### Native 구현 기획·설계 (2026-11-16)

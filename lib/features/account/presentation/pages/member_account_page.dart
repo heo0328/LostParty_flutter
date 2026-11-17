@@ -1,3 +1,4 @@
+import '../widgets/refresh_result_card.dart';
 import '../widgets/account_overview_frame.dart';
 import '../widgets/bounded_card_text.dart';
 import '../widgets/account_tools_grid.dart';
@@ -41,6 +42,13 @@ import '../widgets/server_accounts_panel.dart';
 import '../../domain/policies/account_label_policy.dart';
 
 String memberAccountFailure(String? code) => switch (code) {
+  'CANDIDATES_NOT_READY' => '갱신 대상을 확인하지 못했습니다. 저장 정보를 다시 확인해 주세요.',
+  'ANALYSIS_CANDIDATE_RETRY_REQUIRED' => '이전 분석에 실패했습니다. 다시 시도를 눌러 갱신해 주세요.',
+  'ANALYSIS_CANDIDATE_RECONCILED' => '이전 요청을 정리했습니다. 다시 시도를 눌러 갱신해 주세요.',
+  'ANALYSIS_CANDIDATE_IN_PROGRESS' => '다른 요청이 진행 중입니다. 갱신 결과를 확인해 주세요.',
+  'ANALYSIS_CANDIDATE_COMPLETED' => '이미 갱신됐습니다. 저장 정보를 확인해 주세요.',
+  'AUTOMATIC_TARGET_EXCLUDED' => '자동 갱신 대상에서 제외',
+  'ANALYSIS_FAILED' => '갱신하지 못했습니다. 저장 정보를 다시 확인해 주세요.',
   'SERVER_RESULT_REFRESH_REQUIRED' => '서버에 갱신되었습니다. 표시 정보를 다시 불러와 주세요.',
   'SETTINGS_NOT_READY' => '회원 설정을 확인해 주세요.',
   'UPSTREAM_NOT_CONFIGURED' ||
@@ -351,6 +359,49 @@ class MemberAccountPage extends StatelessWidget {
   );
   Widget _progress(BuildContext context) {
     final r = model.runner, cooldown = r.source.cooldown;
+    final id = model.selectedRosterResult;
+    final manual = model.rosterRuns[id];
+    if (manual != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          OutlinedButton(
+            onPressed: model.showAutomaticResult,
+            child: const Text('자동 갱신 결과 보기'),
+          ),
+          if (model.rosterResultClosed)
+            OutlinedButton(
+              onPressed: () => model.showRosterResult(id!),
+              child: Text('${manual.label} 갱신 결과 보기'),
+            )
+          else
+            RefreshResultCard(
+              title: '${manual.label} ${manual.busy ? '갱신 중' : '갱신 결과'}',
+              busy: manual.busy,
+              items: manual.items,
+              failureMessage: memberAccountFailure,
+              message: manual.failure != null
+                  ? memberAccountFailure(manual.failure)
+                  : cooldown.active
+                  ? '약 ${cooldown.seconds}초 후 다시 시도할 수 있습니다.'
+                  : '',
+              onClose: manual.busy ? null : model.closeRosterResult,
+              onRetry:
+                  model.canRetryRosterResult &&
+                      !manual.busy &&
+                      manual.items.any((i) => i.incomplete && !i.serverPending)
+                  ? () => model.retryRosterResult(id!, recover: false)
+                  : null,
+              onRecover:
+                  model.canRetryRosterResult &&
+                      !manual.busy &&
+                      manual.items.any((i) => i.serverPending)
+                  ? () => model.retryRosterResult(id!, recover: true)
+                  : null,
+            ),
+        ],
+      );
+    }
     if (model.automaticRefreshResultHidden) {
       return Align(
         alignment: Alignment.centerLeft,
@@ -362,95 +413,43 @@ class MemberAccountPage extends StatelessWidget {
         ),
       );
     }
-    final title = switch (r.phase) {
-      ScopedRefreshPhase.preparing => '자동 갱신 준비 중',
-      ScopedRefreshPhase.running => '캐릭터 자동 갱신 중',
-      ScopedRefreshPhase.completed => '자동 갱신 결과',
-      ScopedRefreshPhase.blocked => '자동 갱신 준비 확인 필요',
-      _ => '자동 갱신 준비',
-    };
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                if (model.canDismissAutomaticRefreshResult)
-                  IconButton(
-                    key: const ValueKey('dismiss-automatic-refresh-result'),
-                    onPressed: model.dismissAutomaticRefreshResult,
-                    icon: const Icon(Icons.close),
-                    tooltip: '결과 닫기',
-                  ),
-              ],
-            ),
-            if (r.isBusy) const LinearProgressIndicator(),
-            if (r.rosterProgress.isNotEmpty) ...[
-              Text(
-                '원정대 목록 갱신 ${r.rosterProgress.where((p) => p.phase == RosterRefreshPhase.updated).length}/${r.rosterProgress.length}',
-              ),
-              for (final p in r.rosterProgress)
-                Text(
-                  '${p.label} · ${switch (p.phase) {
-                    RosterRefreshPhase.queued => '목록 갱신 대기',
-                    RosterRefreshPhase.refreshing => '목록 갱신 중',
-                    RosterRefreshPhase.updated => '목록 반영 완료 · 신규 ${p.added}명 · 확인 필요 ${p.suspect}명',
-                    RosterRefreshPhase.failed => '목록 갱신 미완료 · ${memberAccountFailure(p.code)}',
-                  }}',
-                ),
-            ],
-            if (r.consumed)
-              Text(
-                '처리 ${r.processedCount}/${r.totalCount} · 저장 ${r.savedCount} · 경고 ${r.warningCount}\n미완료 ${r.incompleteCount} · 정책 제외 ${r.excludedCount} · 갱신 결과 확인 대기 ${r.pendingServerCount}',
-              ),
-            if (r.failure != null) Text(memberAccountFailure(r.failure)),
-            if (cooldown.active)
-              Text('약 ${cooldown.seconds}초 후 다시 시도할 수 있습니다.'),
-            if (r.settingsChanged)
-              const Text('설정 변경은 다음 갱신부터 적용됩니다. 현재 작업은 시작 당시 설정을 사용합니다.'),
-            Wrap(
-              spacing: 8,
-              children: [
-                if (!r.consumed)
-                  OutlinedButton(
-                    onPressed: r.isBusy || cooldown.active
-                        ? null
-                        : () async {
-                            await settings.reload();
-                            await model.refresh();
-                            await r.startIfReady();
-                          },
-                    child: const Text('준비 상태 다시 확인'),
-                  ),
-                if (r.incompleteCount > 0)
-                  OutlinedButton(
-                    onPressed: r.canRetry ? r.retryIncomplete : null,
-                    child: const Text('미완료 캐릭터 다시 시도'),
-                  ),
-                if (r.pendingServerCount > 0)
-                  OutlinedButton(
-                    onPressed: r.canRetryServer ? r.retryServerSaved : null,
-                    child: const Text('갱신 결과 확인'),
-                  ),
-              ],
-            ),
-            for (final item in r.items.where(
-              (i) => i.status != ScopedRefreshStatus.saved || i.serverPending,
-            ))
-              Text(
-                '${item.target.character.characterName} · ${item.serverPending ? '갱신 결과 확인 대기' : memberAccountFailure(item.code)}',
-              ),
-          ],
-        ),
-      ),
+    return RefreshResultCard(
+      title: switch (r.phase) {
+        ScopedRefreshPhase.preparing => '자동 갱신 준비 중',
+        ScopedRefreshPhase.running => '캐릭터 자동 갱신 중',
+        ScopedRefreshPhase.completed => '자동 갱신 결과',
+        ScopedRefreshPhase.blocked => '자동 갱신 준비 확인 필요',
+        _ => '자동 갱신 준비',
+      },
+      busy: r.isBusy,
+      items: r.items.where(model.mayDisplayRefreshItem).toList(),
+      failureMessage: memberAccountFailure,
+      message: [
+        if (r.failure != null) memberAccountFailure(r.failure),
+        if (cooldown.active) '약 ${cooldown.seconds}초 후 다시 시도할 수 있습니다.',
+        if (r.settingsChanged) '설정 변경은 다음 갱신부터 적용됩니다. 현재 작업은 시작 당시 설정을 사용합니다.',
+      ].join('\n'),
+      progress: [
+        for (final p in r.rosterProgress)
+          '${p.label} · ${switch (p.phase) {
+            RosterRefreshPhase.queued => '목록 갱신 대기',
+            RosterRefreshPhase.refreshing => '목록 갱신 중',
+            RosterRefreshPhase.updated => '목록 반영 완료 · 신규 ${p.added}명 · 확인 필요 ${p.suspect}명',
+            RosterRefreshPhase.failed => '목록 갱신 미완료 · ${memberAccountFailure(p.code)}',
+          }}',
+      ],
+      onClose: model.canDismissAutomaticRefreshResult
+          ? model.dismissAutomaticRefreshResult
+          : null,
+      onPrepare: !r.consumed && !r.isBusy && !cooldown.active
+          ? () async {
+              await settings.reload();
+              await model.refresh();
+              await r.startIfReady();
+            }
+          : null,
+      onRetry: r.canRetry ? r.retryIncomplete : null,
+      onRecover: r.canRetryServer ? r.retryServerSaved : null,
     );
   }
 
@@ -563,9 +562,11 @@ class MemberAccountPage extends StatelessWidget {
                         : onVerify(),
             ),
             if (section.cached) const Text('이전 확인 정보'),
-            if (model.rosterRefreshResults[reg.registrationId]
-                case final result?)
-              Text(result),
+            if (model.rosterRuns.containsKey(reg.registrationId))
+              OutlinedButton(
+                onPressed: () => model.showRosterResult(reg.registrationId),
+                child: const Text('갱신 결과 보기'),
+              ),
             if (serverAccountActionLabel(
               section.registration.ownershipStatus,
               section.registration.settings.state,
@@ -728,7 +729,13 @@ class MemberAccountPage extends StatelessWidget {
       roleLabel: preferred == null && summary == null ? null : roleLabel(role),
       status: BoundedCardText(
         '${summary == null ? '상세 조회 필요' : integrityLabel(summary)}${row.cached ? ' · 이전 확인 정보' : ''}${row.preferences == null ? ' · 표시 설정 확인 필요' : ''}${row.observation.lifecycleState != 'active' ? ' · 기존 캐릭터 확인 필요' : ''}',
-        style: Theme.of(context).textTheme.bodySmall,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: switch (summary?.integrity.name) {
+            'review' => AppColors.info,
+            'error' => Theme.of(context).colorScheme.error,
+            _ => Theme.of(context).colorScheme.onSurfaceVariant,
+          },
+        ),
       ),
       weeklyRaids:
           weekly?.items(

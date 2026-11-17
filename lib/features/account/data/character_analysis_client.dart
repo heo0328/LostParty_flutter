@@ -49,8 +49,10 @@ class CharacterAnalysisClient {
   Future<List<CharacterAnalysisResult>> execute(
     List<ScopedRolePlan> plans,
     String trigger,
-    void Function() guard,
-  ) async {
+    void Function() guard, {
+    Map<String, Map<String, dynamic>> candidateContexts = const {},
+    Map<String, Map<String, dynamic>> originalCommands = const {},
+  }) async {
     roleCheck(
       plans.isNotEmpty &&
           plans.length <= 50 &&
@@ -91,7 +93,17 @@ class CharacterAnalysisClient {
       final commands = <Map<String, dynamic>>[];
       for (final p in plans) {
         final id = p.ref.characterId;
-        final old = pending[id];
+        final supplied = originalCommands[id];
+        final old =
+            pending[id] ??
+            (supplied == null
+                ? null
+                : {
+                    'body': supplied,
+                    'sent_at': now().toUtc().toIso8601String(),
+                    'retry_at': null,
+                  });
+        if (pending[id] == null && old != null) pending[id] = old;
         Map<String, dynamic> body;
         if (old != null) {
           final record = roleMap(old);
@@ -100,12 +112,16 @@ class CharacterAnalysisClient {
           roleCheck(body['character_id'] == id);
           if (body['expected_ownership_revision'] !=
                   p.profile.ownershipRevision ||
-              body['expected_lifecycle_revision'] !=
-                  p.profile.lifecycleRevision) {
+              (supplied == null &&
+                  !body.containsKey('candidate_context') &&
+                  body['expected_lifecycle_revision'] !=
+                      p.profile.lifecycleRevision)) {
             throw const AccountReadException('REVISION_CONFLICT');
           }
           final sent = roleUtc(record['sent_at']);
-          if (now().toUtc().difference(sent) >= const Duration(hours: 24)) {
+          if (supplied == null &&
+              !body.containsKey('candidate_context') &&
+              now().toUtc().difference(sent) >= const Duration(hours: 24)) {
             pending.remove(id);
             await persist();
             throw const AccountReadException('IDEMPOTENCY_EXPIRED');
@@ -133,7 +149,13 @@ class CharacterAnalysisClient {
               'dealer': p.profile.dealer.version,
               'support': p.profile.support.version,
             },
-            'trigger': trigger,
+            'trigger': switch (candidateContexts[id]?['purpose']) {
+              'manual_retry' => 'manual',
+              'automatic_candidate' => 'automatic',
+              _ => trigger,
+            },
+            if (candidateContexts[id] != null)
+              'candidate_context': candidateContexts[id],
           };
           pending[id] = {
             'body': body,
@@ -249,7 +271,8 @@ class CharacterAnalysisClient {
         result['character_id'] == plan.ref.characterId &&
             result['game_account_id'] == plan.ref.accountId &&
             result['ownership_revision'] == plan.profile.ownershipRevision &&
-            result['lifecycle_revision'] == plan.profile.lifecycleRevision &&
+            result['lifecycle_revision'] ==
+                command['expected_lifecycle_revision'] &&
             item['detected_role'] == role.name,
       );
       final head = StoredRoleSummary.fromJson(roleMap(result['analysis']));
@@ -260,7 +283,8 @@ class CharacterAnalysisClient {
                 (roleMap(command['expected_summary_versions'])[role.name]
                         as int) +
                     1 &&
-            head.summary!.lifecycleRevision == plan.profile.lifecycleRevision,
+            head.summary!.lifecycleRevision ==
+                command['expected_lifecycle_revision'],
       );
       final detection = roleMap(head.detail!['detection']);
       roleCheck(
@@ -275,7 +299,13 @@ class CharacterAnalysisClient {
     final code = error['code'] as String;
     roleCheck(switch (state) {
       'skipped' =>
-        status == 200 && retry == 'none' && code == 'AUTOMATIC_TARGET_EXCLUDED',
+        status == 200 &&
+            retry == 'none' &&
+            {
+              'AUTOMATIC_TARGET_EXCLUDED',
+              'ANALYSIS_CANDIDATE_COMPLETED',
+              'ANALYSIS_CANDIDATE_RETRY_REQUIRED',
+            }.contains(code),
       'failed' =>
         {400, 401, 403, 404, 409, 429, 503}.contains(status) &&
             {'none', 'new_command'}.contains(retry),
