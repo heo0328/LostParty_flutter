@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'analysis_candidates.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../shared/lost_ark_api/client/api_cooldown.dart';
@@ -40,11 +41,23 @@ class ScopedRefreshTarget {
     this.ref,
     this.character, {
     this.exclusion,
+    this.candidate,
+    this.explicitRetry = false,
   });
   final CacheRegistrationSnapshot registration;
   final ScopedCharacterRef ref;
   final CacheCharacterObservation character;
   final String? exclusion;
+  final AnalysisCandidate? candidate;
+  final bool explicitRetry;
+  ScopedRefreshTarget retryTarget() => ScopedRefreshTarget(
+    registration,
+    ref,
+    character,
+    exclusion: exclusion,
+    candidate: candidate,
+    explicitRetry: true,
+  );
   ScopedRegistrationRef get registrationRef =>
       ScopedRegistrationRef(ref.scope, registration.registrationId);
 }
@@ -213,4 +226,75 @@ abstract interface class ScopedBatchRefreshSource {
     void Function() guard,
     void Function(ScopedRefreshItem) onResult,
   );
+}
+
+abstract interface class ScopedCandidateRefreshSource {
+  Future<List<ScopedRefreshItem>> refreshVerifiedRoster(
+    ScopedRegistrationRef registration,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onSaved,
+  );
+  Future<List<ScopedRefreshItem>> retryItems(
+    List<ScopedRefreshItem> items,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onSaved,
+  );
+}
+
+/// Merge server-discovered work without changing the user activity selection.
+List<ScopedRefreshTarget> mergeAnalysisCandidateTargets(
+  StorageScope storage,
+  List<CacheRosterSnapshot> rosters,
+  List<ScopedRefreshTarget> selected,
+  Iterable<AnalysisCandidates> projections,
+) {
+  final result = <String, ScopedRefreshTarget>{
+    for (final t in selected) t.ref.characterId: t,
+  };
+  for (final projection in projections) {
+    final roster = rosters
+        .where(
+          (r) => r.registration.registrationId == projection.registrationId,
+        )
+        .firstOrNull;
+    if (roster == null ||
+        roster.registration.accountId != projection.accountId ||
+        roster.registration.ownershipRevision != projection.ownershipRevision ||
+        roster.registration.settings.version != projection.settingsVersion) {
+      throw const AccountReadException('STALE_READ');
+    }
+    for (final candidate in projection.items) {
+      if (candidate.state == 'succeeded') continue;
+      final old = result[candidate.characterId];
+      if (old != null && candidate.state == 'blocked') {
+        continue; // Activity retains its normal startup right.
+      }
+      final c = roster.characters
+          .where((c) => c.characterId == candidate.characterId)
+          .firstOrNull;
+      if (c == null) {
+        continue; // Retired candidate history is not an active target.
+      }
+      final exclusion =
+          old?.exclusion ??
+          switch (candidate.eligibility) {
+            'nice_group_disabled' => 'NICE_GROUP_OFF',
+            'explicitly_excluded' => 'AUTOMATIC_TARGET_EXCLUDED',
+            'character_unusable' => 'CHARACTER_UNUSABLE',
+            _ => null,
+          };
+      result[c.characterId] = ScopedRefreshTarget(
+        roster.registration,
+        ScopedCharacterRef(
+          storage,
+          accountId: c.accountId,
+          characterId: c.characterId,
+        ),
+        c,
+        exclusion: exclusion,
+        candidate: candidate,
+      );
+    }
+  }
+  return result.values.toList();
 }

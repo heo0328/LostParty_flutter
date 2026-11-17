@@ -15,6 +15,7 @@ import 'package:lost_party/features/account/data/mappers/server_analysis_detail_
 import 'package:lost_party/features/account/domain/account_read_session.dart';
 import 'package:lost_party/features/account/domain/entities/character_build_role.dart';
 import 'package:lost_party/features/account/domain/role_summary.dart';
+import 'package:lost_party/features/account/domain/analysis_candidates.dart';
 import 'package:lost_party/features/account/domain/scoped_cache_models.dart';
 import 'package:lost_party/features/account/domain/server_account_read_repository.dart';
 import '../../../support/server_account_read_fakes.dart';
@@ -205,6 +206,97 @@ void main() {
     );
     expect(posts, isEmpty);
   });
+  Map<String, dynamic> candidateContext(String purpose) => {
+    'candidate_id': '33333333-3333-4333-8333-333333333333',
+    'expected_generation': 1,
+    'expected_policy_revision': 2,
+    'expected_settings_version': 1,
+    'purpose': purpose,
+  };
+  test(
+    'candidate manual retry uses fresh context and manual trigger',
+    () async {
+      final result = await client.execute(
+        [plan],
+        'automatic',
+        guard,
+        candidateContexts: {characterId: candidateContext('manual_retry')},
+      );
+      final sent = (posts.single.data as Map)['items'][0];
+      expect(sent['trigger'], 'manual');
+      expect(sent['candidate_context'], candidateContext('manual_retry'));
+      expect(result.single.state, 'saved');
+    },
+  );
+  test(
+    'candidate recovery keeps server original despite newer local snapshot',
+    () async {
+      final original = {
+        'command_id': '11111111-1111-4111-8111-111111111111',
+        'character_id': characterId,
+        'expected_ownership_revision': 1,
+        'expected_lifecycle_revision': 1,
+        'expected_summary_versions': {
+          'dealer': plan.profile.dealer.version,
+          'support': plan.profile.support.version,
+        },
+        'trigger': 'automatic',
+        'candidate_context': candidateContext('automatic_candidate'),
+      };
+      await client.execute(
+        [plan],
+        'manual',
+        guard,
+        candidateContexts: {characterId: candidateContext('manual_retry')},
+        originalCommands: {characterId: original},
+      );
+      expect((posts.single.data as Map)['items'][0], original);
+    },
+  );
+  test(
+    'new candidate skipped outcomes are terminal without pending replay',
+    () async {
+      for (final code in [
+        'ANALYSIS_CANDIDATE_COMPLETED',
+        'ANALYSIS_CANDIDATE_RETRY_REQUIRED',
+      ]) {
+        analysis = (body) {
+          final command = (body['items'] as List).single;
+          return {
+            'evaluated_at': analysisStamp,
+            'items': [
+              {
+                'command_id': command['command_id'],
+                'character_id': characterId,
+                'state': 'skipped',
+                'status': 200,
+                'retry': 'none',
+                'detected_role': null,
+                'result': null,
+                'error': {
+                  'code': code,
+                  'message': code,
+                  'request_id': 'candidate',
+                  'retry_after_seconds': null,
+                  'retry_at': null,
+                },
+              },
+            ],
+          };
+        };
+        final result = await client.execute(
+          [plan],
+          'automatic',
+          guard,
+          candidateContexts: {
+            characterId: candidateContext('automatic_candidate'),
+          },
+        );
+        expect(result.single.failure!.code, code);
+        expect(jsonDecode((await journal.read(runtime.scope))!), isEmpty);
+      }
+    },
+  );
   test(
     'acknowledged save remains successful when journal cleanup fails',
     () async {
@@ -500,4 +592,72 @@ void main() {
     expect(() => StoredRoleSummary.fromJson(head), throwsFormatException);
     expect(StoredRoleSummary.fromJson(head, summaryOnly: true).detail, isNull);
   });
+  test(
+    'blocked discovery is shown as failure without an automatic analysis call',
+    () async {
+      final projection = AnalysisCandidates({
+        'policy_version': 'analysis-candidates-1',
+        'policy_revision': 1,
+        'baseline': 'observed',
+        'game_account_id': account,
+        'registration_id': registrationId,
+        'ownership_revision': 1,
+        'settings_version': 1,
+        'complete': true,
+        'candidates': [
+          {
+            'candidate_id': '33333333-3333-4333-8333-333333333333',
+            'character_id': characterId,
+            'generation': 1,
+            'reason': 'first_threshold',
+            'state': 'blocked',
+            'eligibility': 'eligible',
+            'next_attempt_at': null,
+            'last_error': null,
+            'unresolved_command': null,
+            'completed_at': null,
+            'completed_command_id': null,
+          },
+        ],
+      });
+      final roster = (await runtime.loadMemberRoster()).rosters.single;
+      final target = ScopedRefreshTarget(
+        roster.registration,
+        plan.ref,
+        roster.characters.first,
+        candidate: projection.items.single,
+      );
+      final source = RuntimeStartupRefreshSource(
+        runtime: runtime,
+        readAccess: () => const ScopedRefreshAccess(
+          niceGroupEnabled: true,
+          settingsVersion: 1,
+        ),
+        changes: ChangeNotifier(),
+        cooldown: cooldown,
+        client: client,
+      );
+      addTearDown(source.dispose);
+      final failures = <String>[];
+      await source.refreshBatch(
+        ScopedRefreshBatch(
+          scope: runtime.scope,
+          session: accountReadScope(session),
+          settingsVersion: 1,
+          niceGroupEnabled: true,
+          observationGeneration: runtime.readGeneration,
+          targets: [target],
+        ),
+        [target],
+        guard,
+        (_) => fail('unexpected saved result'),
+        (_, error) {
+          failures.add((error as AccountReadException).code);
+          return false;
+        },
+      );
+      expect(failures, ['ANALYSIS_CANDIDATE_RETRY_REQUIRED']);
+      expect(posts, isEmpty);
+    },
+  );
 }

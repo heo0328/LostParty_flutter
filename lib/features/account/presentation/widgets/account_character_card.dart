@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_colors.dart';
 
 import '../../../../shared/formatters/display_number_formatter.dart';
 
@@ -177,7 +178,7 @@ class AccountCharacterCard extends StatelessWidget {
                               size: 14,
                               color: item.isError
                                   ? theme.colorScheme.error
-                                  : theme.colorScheme.onSurfaceVariant,
+                                  : AppColors.info,
                             ),
                             const SizedBox(width: 4),
                             Expanded(
@@ -191,7 +192,7 @@ class AccountCharacterCard extends StatelessWidget {
                                   fontSize: readable ? 14 : null,
                                   color: item.isError
                                       ? theme.colorScheme.error
-                                      : theme.colorScheme.onSurfaceVariant,
+                                      : AppColors.info,
                                 ),
                               ),
                             ),

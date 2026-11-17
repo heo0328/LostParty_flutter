@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'account_bootstrap.dart';
 import 'package:flutter/foundation.dart';
 import '../domain/account_read_session.dart';
 import '../domain/character_management_context.dart';
@@ -47,6 +48,7 @@ class V2CharacterManagementGateway extends ChangeNotifier
   void allowMissingSelectionRemoval() =>
       _allowedResidueRemoval = _context?.residueIds.toSet() ?? {};
   int _epoch = 0;
+  int? _analysisPolicyRevision;
   bool _isMainRegistration = false;
 
   String get _path => '/v2/me/game-accounts/$registrationId/character-settings';
@@ -89,6 +91,42 @@ class V2CharacterManagementGateway extends ChangeNotifier
           _context != null && value.accountId != _context!.accountId) {
         throw const FormatException('Management scope mismatch');
       }
+      if (runtime.analysisCandidatesEnabled) {
+        var projection = runtime.bootstrap?.data.registrations
+            .where((r) => r.snapshot.registrationId == registrationId)
+            .firstOrNull
+            ?.candidates;
+        if (projection == null ||
+            projection.settingsVersion != value.settingsVersion ||
+            projection.ownershipRevision != value.ownershipRevision ||
+            projection.accountId != value.accountId) {
+          final raw = await runtime.api.request(
+            '/v2/me/account-bootstrap',
+            query: {
+              'include_analysis_candidates': 'true',
+              if (runtime.rosterPresenceEnabled)
+                'include_roster_presence': 'true',
+            },
+          );
+          guard();
+          projection =
+              AccountBootstrap.fromJson(
+                    raw!,
+                    includeCandidates: true,
+                    includePresence: runtime.rosterPresenceEnabled,
+                  ).registrations
+                  .where((r) => r.snapshot.registrationId == registrationId)
+                  .firstOrNull
+                  ?.candidates;
+        }
+        if (projection == null ||
+            projection.accountId != value.accountId ||
+            projection.settingsVersion != value.settingsVersion ||
+            projection.ownershipRevision != value.ownershipRevision) {
+          throw const AccountReadException('REVISION_CONFLICT');
+        }
+        _analysisPolicyRevision = projection.policyRevision;
+      }
       return value;
     } on FormatException {
       throw const AccountReadException('INVALID_RESPONSE');
@@ -128,7 +166,8 @@ class V2CharacterManagementGateway extends ChangeNotifier
             (k) =>
                 !expected.contains(k) &&
                 k != 'ordered_character_ids' &&
-                k != 'policy_version',
+                k != 'policy_version' &&
+                k != 'expected_analysis_policy_revision',
           )) {
         throw const FormatException('Invalid journal body');
       }
@@ -295,6 +334,12 @@ class V2CharacterManagementGateway extends ChangeNotifier
                     .toList()
               : null,
         );
+        if (runtime.analysisCandidatesEnabled) {
+          if (_analysisPolicyRevision == null) {
+            throw const AccountReadException('CANDIDATES_NOT_READY');
+          }
+          body['expected_analysis_policy_revision'] = _analysisPolicyRevision;
+        }
         final command = {
           'schema': 1,
           'registration_id': registrationId,

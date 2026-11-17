@@ -14,9 +14,13 @@ class CharacterManagementContext {
             (k) =>
                 keys.contains(k) ||
                 k == 'ordered_character_ids' ||
-                (policy2 && k == 'policy_version'),
+                (policy2 && k == 'policy_version') ||
+                k == 'expected_analysis_policy_revision',
           ),
     );
+    if (body.containsKey('expected_analysis_policy_revision')) {
+      _integer(body['expected_analysis_policy_revision'], 1);
+    }
     final selected = _ids(body['activity_character_ids'], 200);
     _require(
       selected.isNotEmpty &&
@@ -129,6 +133,9 @@ class CharacterManagementContext {
   late final String? representativeId;
   late final List<ManagementCharacter> characters;
   String get state => (_json['data'] as Map)['configuration_state'] as String;
+  int get settingsVersion => (_json['scope'] as Map)['settings_version'] as int;
+  int get ownershipRevision =>
+      (_json['scope'] as Map)['ownership_revision'] as int;
   Map<String, dynamic> toJson() =>
       jsonDecode(jsonEncode(_json)) as Map<String, dynamic>;
   List<String> get residueIds =>

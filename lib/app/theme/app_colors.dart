@@ -14,6 +14,9 @@ abstract final class AppColors {
   static const textDisabled = Color(0xFFA8A4AD);
   static const success = Color(0xFF477A68);
   static const successContainer = Color(0xFFE1F0EA);
+  // Informational review state: blue foreground with a pastel companion surface.
+  static const info = Color(0xFF4C6F9A);
+  static const infoContainer = Color(0xFFE5EFFB);
   static const warning = Color(0xFF8A6725);
   static const warningContainer = Color(0xFFF7ECD2);
   static const error = Color(0xFFBA1A1A);

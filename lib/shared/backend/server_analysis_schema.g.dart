@@ -1,6 +1,79 @@
-// Backend b95cff51; regenerate with tool/project_server_analysis_contract.mjs.
+// Backend analysis-candidates-1 (local OpenAPI 12634daa); regenerate with tool/project_server_analysis_contract.mjs.
 const serverAnalysisSchemaJson = r'''
 {
+  "CandidateProjection": {
+    "properties": {
+      "policy_version": {
+        "type": "string",
+        "const": "analysis-candidates-1",
+        "title": "Policy Version"
+      },
+      "policy_revision": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Policy Revision"
+      },
+      "baseline": {
+        "type": "string",
+        "enum": [
+          "legacy",
+          "observed",
+          "not_initialized"
+        ],
+        "title": "Baseline"
+      },
+      "game_account_id": {
+        "type": "string",
+        "format": "uuid",
+        "title": "Game Account Id"
+      },
+      "registration_id": {
+        "type": "string",
+        "format": "uuid",
+        "title": "Registration Id"
+      },
+      "ownership_revision": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Ownership Revision"
+      },
+      "settings_version": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Settings Version"
+      },
+      "complete": {
+        "type": "boolean",
+        "const": true,
+        "title": "Complete"
+      },
+      "candidates": {
+        "items": {
+          "$ref": "#/components/schemas/CandidateOut"
+        },
+        "type": "array",
+        "maxItems": 200,
+        "title": "Candidates"
+      }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+      "policy_version",
+      "policy_revision",
+      "baseline",
+      "game_account_id",
+      "registration_id",
+      "ownership_revision",
+      "settings_version",
+      "complete",
+      "candidates"
+    ],
+    "title": "CandidateProjection"
+  },
   "AnalysisRequest": {
     "properties": {
       "items": {
@@ -537,6 +610,128 @@ const serverAnalysisSchemaJson = r'''
     ],
     "title": "GroupRolePower"
   },
+  "CandidateOut": {
+    "properties": {
+      "candidate_id": {
+        "type": "string",
+        "format": "uuid",
+        "title": "Candidate Id"
+      },
+      "character_id": {
+        "type": "string",
+        "format": "uuid",
+        "title": "Character Id"
+      },
+      "generation": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Generation"
+      },
+      "reason": {
+        "type": "string",
+        "enum": [
+          "new_at_threshold",
+          "first_threshold",
+          "initial_verification"
+        ],
+        "title": "Reason"
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "blocked"
+        ],
+        "title": "State"
+      },
+      "eligibility": {
+        "type": "string",
+        "enum": [
+          "eligible",
+          "nice_group_disabled",
+          "explicitly_excluded",
+          "character_unusable",
+          "command_unresolved"
+        ],
+        "title": "Eligibility"
+      },
+      "next_attempt_at": {
+        "anyOf": [
+          {
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Next Attempt At"
+      },
+      "last_error": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/AnalysisError"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "unresolved_command": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/UnresolvedCommand"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "completed_at": {
+        "anyOf": [
+          {
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Completed At"
+      },
+      "completed_command_id": {
+        "anyOf": [
+          {
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Completed Command Id"
+      }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+      "candidate_id",
+      "character_id",
+      "generation",
+      "reason",
+      "state",
+      "eligibility",
+      "next_attempt_at",
+      "last_error",
+      "unresolved_command",
+      "completed_at",
+      "completed_command_id"
+    ],
+    "title": "CandidateOut"
+  },
   "AnalysisCommand": {
     "properties": {
       "command_id": {
@@ -572,6 +767,9 @@ const serverAnalysisSchemaJson = r'''
           "manual"
         ],
         "title": "Trigger"
+      },
+      "candidate_context": {
+        "$ref": "#/components/schemas/CandidateContext"
       }
     },
     "additionalProperties": false,
@@ -1195,77 +1393,6 @@ const serverAnalysisSchemaJson = r'''
     ],
     "title": "GroupAnalysis"
   },
-  "ExpectedVersions": {
-    "properties": {
-      "dealer": {
-        "type": "integer",
-        "maximum": 2147483647,
-        "minimum": 1,
-        "title": "Dealer"
-      },
-      "support": {
-        "type": "integer",
-        "maximum": 2147483647,
-        "minimum": 1,
-        "title": "Support"
-      }
-    },
-    "additionalProperties": false,
-    "type": "object",
-    "required": [
-      "dealer",
-      "support"
-    ],
-    "title": "ExpectedVersions"
-  },
-  "AnalysisResult": {
-    "properties": {
-      "character_id": {
-        "type": "string",
-        "format": "uuid",
-        "title": "Character Id"
-      },
-      "game_account_id": {
-        "type": "string",
-        "format": "uuid",
-        "title": "Game Account Id"
-      },
-      "ownership_revision": {
-        "type": "integer",
-        "maximum": 2147483647,
-        "minimum": 1,
-        "title": "Ownership Revision"
-      },
-      "lifecycle_revision": {
-        "type": "integer",
-        "maximum": 2147483647,
-        "minimum": 1,
-        "title": "Lifecycle Revision"
-      },
-      "role": {
-        "type": "string",
-        "enum": [
-          "dealer",
-          "support"
-        ],
-        "title": "Role"
-      },
-      "analysis": {
-        "$ref": "#/components/schemas/RoleAnalysis"
-      }
-    },
-    "additionalProperties": false,
-    "type": "object",
-    "required": [
-      "character_id",
-      "game_account_id",
-      "ownership_revision",
-      "lifecycle_revision",
-      "role",
-      "analysis"
-    ],
-    "title": "AnalysisResult"
-  },
   "AnalysisError": {
     "properties": {
       "code": {
@@ -1315,6 +1442,144 @@ const serverAnalysisSchemaJson = r'''
       "retry_at"
     ],
     "title": "AnalysisError"
+  },
+  "UnresolvedCommand": {
+    "properties": {
+      "command": {
+        "$ref": "#/components/schemas/AnalysisCommand"
+      },
+      "recovery": {
+        "type": "string",
+        "enum": [
+          "same_command",
+          "reconcile_required"
+        ],
+        "title": "Recovery"
+      }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+      "command",
+      "recovery"
+    ],
+    "title": "UnresolvedCommand"
+  },
+  "ExpectedVersions": {
+    "properties": {
+      "dealer": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Dealer"
+      },
+      "support": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Support"
+      }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+      "dealer",
+      "support"
+    ],
+    "title": "ExpectedVersions"
+  },
+  "CandidateContext": {
+    "properties": {
+      "candidate_id": {
+        "type": "string",
+        "format": "uuid",
+        "title": "Candidate Id"
+      },
+      "expected_generation": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Expected Generation"
+      },
+      "expected_policy_revision": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Expected Policy Revision"
+      },
+      "expected_settings_version": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Expected Settings Version"
+      },
+      "purpose": {
+        "type": "string",
+        "enum": [
+          "automatic_candidate",
+          "manual_retry"
+        ],
+        "title": "Purpose"
+      }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+      "candidate_id",
+      "expected_generation",
+      "expected_policy_revision",
+      "expected_settings_version",
+      "purpose"
+    ],
+    "title": "CandidateContext"
+  },
+  "AnalysisResult": {
+    "properties": {
+      "character_id": {
+        "type": "string",
+        "format": "uuid",
+        "title": "Character Id"
+      },
+      "game_account_id": {
+        "type": "string",
+        "format": "uuid",
+        "title": "Game Account Id"
+      },
+      "ownership_revision": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Ownership Revision"
+      },
+      "lifecycle_revision": {
+        "type": "integer",
+        "maximum": 2147483647,
+        "minimum": 1,
+        "title": "Lifecycle Revision"
+      },
+      "role": {
+        "type": "string",
+        "enum": [
+          "dealer",
+          "support"
+        ],
+        "title": "Role"
+      },
+      "analysis": {
+        "$ref": "#/components/schemas/RoleAnalysis"
+      }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+      "character_id",
+      "game_account_id",
+      "ownership_revision",
+      "lifecycle_revision",
+      "role",
+      "analysis"
+    ],
+    "title": "AnalysisResult"
   },
   "Severity": {
     "type": "string",

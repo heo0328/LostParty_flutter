@@ -1,34 +1,33 @@
-# 현재 상태 — 서버 처리 전환·후속 UX 사용자 정상 확인 (2026-11-17)
+# 현재 상태 — 원정대 갱신 UX 완료·로컬 dev 통합 / 다음은 API 오류 대응 시험 (2026-11-17)
 
-사용자가 이번 작업 전체 정상 동작을 확인하고 문서 최신화·dev 병합/커밋/푸시·main 동일 시점 반영/푸시를 지시했다. 구현은 refactor/lostark-server-processing의 910c0648·901de262다. 정확한 문서/통합 SHA와 원격 일치는 Git 및 Backend Issue55/56 최종 인계로 확인한다. 운영배포·APK/태그·DB/키 변경·Issue 종료·브랜치 삭제는 포함하지 않는다.
+feature/roster-refresh-ux(dev d3e700ed 기준). 사용자 승인 계획을 일반 BackendApp→Lifecycle/Runtime→자동/인증·원정대/단건→분석명령·서버저장결과→계정/공유카드 경로에 연결했다. 사용자 지시로 문서를 최신화하고 누적 변경 전체를 커밋해 로컬 dev에 통합한다. 이번 보관 범위는 로컬 커밋·병합이며 push/main/배포는 제외한다. 정확한 커밋·병합 SHA는 Git 및 Issue58 인계를 따른다. 장기 계약은 [설계25](../backend-migration/25-member-lostark-key-request.md#roster-refresh-ux-design), 협업은 Issue58이다.
 
-## 완료 범위와 보존한 흐름
+## 0038 모집·현황 회귀 — 복구·사용자 확인 완료
 
-- 개발자 키·로스트아크 수집/분석/저장은 서버 전용이다. Native 일반 DI/Router에서 서버 명령과 저장 결과를 소비한다. 개인키 입력/복원·직접 provider 호출·로컬 raw 분석/summary 업로드·구형 계정/모집 페이지를 제거했다.
-- 비로그인 계정 예시·공개 모집 필터/그룹 검색과 실제 개인 관리·생성/참가의 로그인 gate를 연결했다. 웹 null 인증 헤더 전송과 그룹 검색/로그인 버튼 간격을 수정했다.
-- 인증 성공한 원정대는 계정 복귀 후1회 갱신한다. 각 소유 원정대 전체 갱신과 회원 세션 내30초 조작 대기를 제공하며 더 긴 서버 대기도 적용한다. 일반 재진입·다른 원정대에는 추가 수집하지 않는다. 등록 버튼명은 ‘원정대 등록’이다.
-- 모집 상세 group_policy 명세 누락과 그룹→모집 상세→다른 모집의 Navigator 충돌을 수정했다. 기존 공유 상세/권한·strict 검증·원 그룹 복귀 URL allowlist를 유지한다.
-- 개인 가능시간은 공통 Flutter 시계와1분 입력을 사용한다. 반올림 없이 HH:mm을 보존하며 한국시간·요일·같은 날/다음 날·양수/최대24시간을 유지한다. 자동 후보 탐색5분·기존 일정/진행시간·과거 원명령 schema는 유지한다.
-- 항목 UUID/소유·수명·양역할 version, 서버 saved의 낮은값/null/error 최신 반영과 반대 역할 보존, 실패시 기존 head/시각 보존을 유지한다. 현재 명령 journal의 원ID/원본문·부분 결과·결과불명/원요청 복구·첫 전송24시간 이후 자동 재전송 금지를 유지한다. 읽기에는 provider 호출을 추가하지 않는다.
+Backend B6의0038지원3곳복원·개발API반영후사용자가모집목록/레이드현황오류화면이정상적으로사라졌음을확인했다. 이회귀의화면확인대기는해소하며같은기기시험을반복요청하지않는다. 실제검색데이터전수·기록전체경계까지확대하지않는다. 원인/수정·Backend검증은DEV_LOG와Issue58 B5/B6를따른다. [Backend B7](https://github.com/heo0328/lostparty-backend/issues/58#issuecomment-6947695749)에서 복구08212c3·문서b6105ef와 후보 구현을 dev 2e78854ef9644a02fd7a00b4c247c79f89e25f25에 통합·push했다고 확인했다. 추가 Backend 수정/동일 시험 대기는 없다. Native 우회 수정 및 Issue 종료/삭제는 하지 않는다.
 
-## 계약·검증·인수
+## 구현·보존
 
-현재 소비 Backend5172c7535b556997e76b9d728dc4714a1988ab60·character-analysis-refresh-1, OpenAPI191경로/211동작·SHA256 2f0ae34849e99618e194ad158383091f71967d3c41083d17dfee32a175fd9c9f다. 현재 모집 도달583정의의 게시 원본 대비 변경0을 확인했다. [계약25](../backend-migration/25-member-lostark-key-request.md#native-implementation-design)·[Backend56 회신](https://github.com/heo0328/lostparty-backend/issues/56#issuecomment-6924012652)을 따른다. 로컬 dev0037/키 공급·기동 대기는 해소됐으며 다시 실행하지 않는다.
+- 기본 앱 DI에서 후보 opt-in을 활성화하고 기존 bootstrap에 presence와 함께 조회한다. 후보/소유/설정 scope를 검증한다. 앱 실행은 선택+서버 신규1700후보를 UUID로 중복제거, 인증후는 성공원정대만 같은정책, 수동원정대는선택만/선택저레벨유지다. 신규역할/수준판정을 Flutter에서 복제하거나 Activity를 자동등록하지 않는다.
+- 실패신규후보는자동수집0·실패표시/명시retry, 원ID/본문/후보context·만료reconcile/다른owner명령복구를 연결했다. 후보이미완료는재분석하지 않는다. 과거pending필드추가/본문변경없음, 기존소유/lifecycle·양역할 head/더긴서버대기 보존. 관리V2 새명령에정책CAS/반복저장후최신projection을사용하며 과거원명령은그대로복구한다.
+- 자동/원정대 결과는 같은 RefreshResultCard를 쓴다. 원정대 최신실행별항목·실패명/서버/원정대·사유·부분결과를보관하며 닫기/재열기수집0·실패만retry/결과불명확인을분리했다. 진행중허위전체건수표시없음. 새자동실행이최신카드로전환되고 타실행결과는재열수있다. 로그아웃/회원·소유세대변경의이전결과표시를차단했다.30초새갱신대기·중복차단유지.
+- 앱시작목록갱신은 기존 siblings 경로, 원정대수동선택분석은 기존 서버목록GET을재사용해 불필요한 provider목록수집을추가하지 않는다. 전체오류코드대응시험·진단전송·활동자동추가18은별도다.
 
-최종 구현 전체 flutter test2863PASS·flutter analyze0·포맷 결과를 재사용한다. 이번은 문서/Git 통합이며 기능 코드를 바꾸지 않는다. 사용자 전체 정상 회신을 이번 작업의 인수로 기록한다. 개별 웹/Android 기종·폴드/큰 글자 전수나 실제 한도 소진/외부 장애 주입까지 확인했다는 뜻은 아니다. 별도 장애를 임의 유발하거나 같은 정상 흐름을 반복 요청하지 않는다.
+## 검증·계약
 
-## 바로 다음 작업 — 원정대 갱신 UX 협의·API 오류 대응 테스트
+고정 Backend OpenAPI SHA256 12634daa64a8c4cbdfecfdb53bc7c1aca3bdb721c5ea555d098aea51544b9665 및 합성예시를소비했다. 생성도구 --analysis-only로현재분석schema만갱신하며 과거명령schema/다른feature를일괄변경하지않는다. 서버0038/dev지원은 B2/B3에서 확인했고 후보 구현 게시와 복구의 최종 dev 통합은 아래 B7 회신을 따른다.
 
-직전 작업은 dev/main/origin/dev/origin/main의 d8e91a4951d6baa6095a47326394563e9af44c83으로 통합·푸시를 완료했다. [Issue55 인계](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6924852294)·[Issue56 인계](https://github.com/heo0328/lostparty-backend/issues/56#issuecomment-6924853807)를 따른다.
+전체 flutter test2873PASS, 마지막카드/소유표시보완후직접계정통합49PASS, 전체 flutter analyze0·포맷/diffcheck. 이후 상태색 3파일 분석0·카드/계정통합58PASS를 확인했다. 이번 문서·Git 보관에서는 코드 변경 없이 기존 시험 근거를 재사용하고 diffcheck/내용 검토를 수행한다. 로컬devhealth200/비로그인candidate+presence bootstrap401직접확인. 이마지막HTTP는회원실제분석저장/화면인수가아니다. 초기시험실패(합성버전필드/시험import·생성자인수)수정뒤통과했고실패를PASS에합산하지않는다.
 
-2026-11-17 사용자 지시로 다음 두 항목을 기존 예약 후속보다 먼저 둔다. **현재는 기록만 완료·실제 협의/테스트 미착수**다.
+## 사용자 인수·상태색 보완
 
-1. 원정대별 갱신 버튼, 갱신 중 표시, 결과 확인 카드의 UX를 함께 확인하고 협의한다.
-2. 로스트아크 API100회 초과 등 오류코드의 Backend 응답과 Native 안내·재시도/대기·결과복구 대응을 테스트한다. 최신 공식 문서/실제 계약을 먼저 확인하고 dev 모의 응답을 우선한다.
+사용자는 안내한10개 테스트와 실패 발생 시 갱신 결과 표시가 정상임을 확인했다. 동일 정상 테스트를 다시 요구하지 않는다. 실제 캐릭터 추가/삭제·소멸/신규 발견 사례는 만들 수 없어 미확인이고, 사용자 결정으로 운영 중 실제 피드백 확인 후속으로 이관한다. 이를 이번 작업의 미완료 선행조건으로 두거나 테스트를 위해 캐릭터삭제/자료조작을 요구하지 않는다. 다른 미보고 경계까지 전수 통과로 확대하지 않는다.
 
-[BUG-039](BUG_REPORTS.md)의 도화가 역할 판별은 Backend 수정/dev 반영·사용자 정상 확인을 마쳤다. Native 안내 수정48PASS/분석0은 이번 사용자 지시로 누적 문서와 함께 커밋·푸시한다. 정확한 보관 SHA는 Git을 따른다. 티아서버용 body_shape 및 실패 대상 식별/결과 카드 UX는 별도로 유지한다. 완료 Issue57은 사용자 지시에 따라 삭제 완료(HTTP410 확인)했으며 근거는 BUG-039/DEV_LOG에 보존한다.
+이번 추가수정은 카드 상태색만이다. review/확인필요는 AppColors.info(파랑)+infoContainer(파스텔배경용) 공통토큰, error/세팅오류는 기존테마빨강을사용한다. 카드보석/스킬확인안내도동일원칙이다. unknown/unavailable/미조회는중립색이며판정/데이터/서버동작은바꾸지않는다. 색상보완후검증결과는DEV_LOG를따른다. 실제색상인상은아직사용자확인전이다.
 
-범위·보존할 흐름·담당·완료 조건은 [후속 원본](../product/DETAIL_IMPROVEMENTS.md#roster-refresh-ux-and-provider-error-tests)을 따른다. 앱 전체 오류/진단 전송은 별도 후속으로 유지한다. 구현·테스트 실행·실제 API 한도 소진·배포는 이번 기록 지시에 포함하지 않는다.
+현재 Backend 후보 구현8f29271d와 0038 복구 소스는 B7의 게시된 dev 2e78854e에서 함께 확인할 수 있다. 계약 해시는 동일하며 서버 재교체는 필요하지 않다. Native는 이번 사용자 지시로 누적 구현·문서를 로컬 dev에 보관하고 원격 push는 수행하지 않는다.
+
+다음작업은기록된API100회초과등오류코드대응테스트다. 캐릭터상세기본펼침과스킬/룬/보석통합은사용자가별도상세개선으로분리했으며[후속원본](../product/DETAIL_IMPROVEMENTS.md#character-detail-improvement)에기록했다. 지금상세페이지를변경하지않는다. Issue58에 로컬 보관·dev 병합 결과와 미push 상태를 인계한다. Issue 종료/삭제·main 변경·배포는 하지 않는다.
 
 ## 직전 공개와 유지할 미확인
 

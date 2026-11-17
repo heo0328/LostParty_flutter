@@ -1,4 +1,5 @@
 import '../../../support/server_analysis_fixtures.dart';
+import 'package:lost_party/features/account/domain/scoped_startup_refresh.dart';
 import 'package:lost_party/features/account/data/character_analysis_client.dart';
 import 'account_bootstrap_test.dart' as bootstrap_fixture show example;
 import '../../../support/startup_batch_fakes.dart';
@@ -82,11 +83,13 @@ void main() {
   String selectedRepresentative = characterId;
   String className = '버서커';
   bool failRoster = false, failPut = false;
+  List<String>? activityOverride;
   Map<String, dynamic> settings() => {
     ...settingsJson(),
     'settings_version': selectionVersion,
     'representative_character_id': selectedRepresentative,
-    'activity_character_ids': [characterId, secondCharacterId],
+    'activity_character_ids':
+        activityOverride ?? [characterId, secondCharacterId],
   };
   Map<String, dynamic> empty() => {
     'version': 1,
@@ -373,6 +376,7 @@ void main() {
       role: Map<String, dynamic>.from(p[role] as Map)..remove('detail'),
   };
   setUp(() {
+    activityOverride = null;
     clock = DateTime.utc(2026, 10, 16);
     registrationVersion = selectionVersion = 1;
     rosterRevision = 2;
@@ -724,6 +728,31 @@ void main() {
     await model.refreshRoster('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
     expect(backendObservations.length, before);
   });
+  test(
+    'manual roster refresh collects selected low-level only and result reopening collects nothing',
+    () async {
+      await run();
+      activityOverride = [characterId];
+      selectionVersion++;
+      await model.refresh();
+      final before = backendObservations.length;
+      await model.refreshRoster(registrationId);
+      expect(model.failure, isNull);
+      expect(backendObservations.skip(before), hasLength(1));
+      expect(
+        model.rosterRuns[registrationId]!.items.single.target.ref.characterId,
+        characterId,
+      );
+      final count = apiCalls.length;
+      model.closeRosterResult();
+      expect(model.rosterResultClosed, isTrue);
+      model.showRosterResult(registrationId);
+      model.showAutomaticResult();
+      model.showRosterResult(registrationId);
+      expect(apiCalls.length, count);
+      activityOverride = null;
+    },
+  );
 
   test(
     'roster refresh collects its roster once and enforces 30 seconds',
@@ -741,8 +770,10 @@ void main() {
       clock = clock.add(const Duration(seconds: 30));
       expect(model.canRefreshRoster(registrationId), isTrue);
       expect(
-        model.rosterRefreshResults[registrationId],
-        contains('저장 $count명'),
+        model.rosterRuns[registrationId]!.items.where(
+          (i) => i.status == ScopedRefreshStatus.saved,
+        ),
+        hasLength(count),
       );
     },
   );
@@ -755,7 +786,7 @@ void main() {
       await model.refreshAfterVerification(registrationId);
       await until(
         () =>
-            model.rosterRefreshResults.containsKey(registrationId) &&
+            model.rosterRuns[registrationId]?.busy == false &&
             !model.characterRefreshing,
       );
       expect(

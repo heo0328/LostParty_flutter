@@ -25,7 +25,8 @@ class RuntimeStartupRefreshSource
         RosterRefreshingSource,
         ScopedCharacterRefreshSource,
         ScopedRosterRefreshSource,
-        ScopedBatchRefreshSource {
+        ScopedBatchRefreshSource,
+        ScopedCandidateRefreshSource {
   RuntimeStartupRefreshSource({
     required this.runtime,
     required this.readAccess,
@@ -99,6 +100,10 @@ class RuntimeStartupRefreshSource
       },
     );
     guard();
+    if (runtime.analysisCandidatesEnabled) {
+      await runtime.restoreBootstrap(guard: guard);
+      guard();
+    }
     final snapshot = await runtime.loadMemberRoster(guard: guard);
     guard();
     return ScopedRefreshBatch(
@@ -107,11 +112,38 @@ class RuntimeStartupRefreshSource
       settingsVersion: access.settingsVersion!,
       niceGroupEnabled: access.niceGroupEnabled!,
       observationGeneration: observationGeneration,
-      targets: projectScopedRefreshTargets(
-        storage,
-        snapshot.rosters,
-        niceGroupEnabled: access.niceGroupEnabled!,
-      ),
+      targets: _targets(storage, snapshot.rosters, access.niceGroupEnabled!),
+    );
+  }
+
+  List<ScopedRefreshTarget> _targets(
+    StorageScope storage,
+    List<CacheRosterSnapshot> rosters,
+    bool nice,
+  ) {
+    final selected = projectScopedRefreshTargets(
+      storage,
+      rosters,
+      niceGroupEnabled: nice,
+    );
+    if (!runtime.analysisCandidatesEnabled) return selected;
+    final bootstrap = runtime.bootstrap;
+    if (bootstrap == null) {
+      throw const AccountReadException('CANDIDATES_NOT_READY');
+    }
+    final projections = bootstrap.data.registrations
+        .where((r) => r.snapshot.ownershipStatus == 'owned')
+        .map((r) {
+          if (r.candidates == null) {
+            throw const AccountReadException('CANDIDATES_NOT_READY');
+          }
+          return r.candidates!;
+        });
+    return mergeAnalysisCandidateTargets(
+      storage,
+      rosters,
+      selected,
+      projections,
     );
   }
 
@@ -129,8 +161,31 @@ class RuntimeStartupRefreshSource
     final results = <ScopedRefreshItem>[];
     final ready = <ScopedRefreshTarget>[], plans = <ScopedRolePlan>[];
     for (final target in targets) {
+      if (target.candidate?.state == 'succeeded') {
+        results.add(
+          ScopedRefreshItem(
+            target,
+            ScopedRefreshStatus.excluded,
+            code: 'ANALYSIS_CANDIDATE_COMPLETED',
+          ),
+        );
+        continue;
+      }
       final entry = prepared[target.ref.characterId]!;
       final plan = entry.plan;
+      if (target.candidate?.state == 'blocked' &&
+          !target.explicitRetry &&
+          trigger == 'automatic') {
+        results.add(
+          ScopedRefreshItem(
+            target,
+            ScopedRefreshStatus.failed,
+            code:
+                target.candidate!.error ?? 'ANALYSIS_CANDIDATE_RETRY_REQUIRED',
+          ),
+        );
+        continue;
+      }
       if (plan == null ||
           plan.profile.ownershipRevision !=
               target.registration.ownershipRevision ||
@@ -160,6 +215,23 @@ class RuntimeStartupRefreshSource
           indices.map((i) => part[i]).toList(),
           trigger,
           guard,
+          candidateContexts: {
+            for (final i in indices)
+              if (selected[i].candidate != null &&
+                  selected[i].candidate!.original == null &&
+                  (selected[i].candidate!.state == 'pending' ||
+                      selected[i].explicitRetry))
+                selected[i].ref.characterId: selected[i].candidate!.context(
+                  manualRetry:
+                      selected[i].explicitRetry &&
+                      selected[i].candidate!.state == 'blocked',
+                ),
+          },
+          originalCommands: {
+            for (final i in indices)
+              if (selected[i].candidate?.original != null)
+                selected[i].ref.characterId: selected[i].candidate!.original!,
+          },
         );
         guard();
         final unstarted = <int>[];
@@ -201,6 +273,21 @@ class RuntimeStartupRefreshSource
             );
             onSaved(item);
             progressed = true;
+          } else if (r.failure?.code == 'ANALYSIS_CANDIDATE_RETRY_REQUIRED') {
+            item = ScopedRefreshItem(
+              target,
+              ScopedRefreshStatus.failed,
+              code: r.failure!.code,
+              failure: r.failure,
+            );
+          } else if (r.failure?.code == 'ANALYSIS_CANDIDATE_IN_PROGRESS') {
+            item = ScopedRefreshItem(
+              target,
+              ScopedRefreshStatus.interrupted,
+              serverPending: true,
+              code: r.failure!.code,
+              failure: r.failure,
+            );
           } else if (r.state == 'skipped') {
             item = ScopedRefreshItem(
               target,
@@ -275,6 +362,85 @@ class RuntimeStartupRefreshSource
   }
 
   @override
+  Future<List<ScopedRefreshItem>> refreshVerifiedRoster(
+    ScopedRegistrationRef registration,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onSaved,
+  ) async {
+    if (!runtime.analysisCandidatesEnabled) {
+      return refreshRoster(registration, guard, onSaved);
+    }
+    await runtime.refreshRoster(registration, guard: guard);
+    guard();
+    await runtime.restoreBootstrap(guard: guard);
+    final roster = await runtime.loadMemberRoster(guard: guard);
+    guard();
+    final targets =
+        _targets(
+              registration.scope,
+              roster.rosters,
+              readAccess().niceGroupEnabled ?? false,
+            )
+            .where(
+              (t) =>
+                  t.registration.registrationId ==
+                      registration.registrationId &&
+                  t.exclusion == null,
+            )
+            .toList();
+    if (targets.isEmpty) return [];
+    return _execute(targets, 'automatic', guard, onSaved);
+  }
+
+  @override
+  Future<List<ScopedRefreshItem>> retryItems(
+    List<ScopedRefreshItem> items,
+    void Function() guard,
+    void Function(ScopedRefreshItem) onSaved,
+  ) async {
+    if (items.isEmpty) return [];
+    if (runtime.analysisCandidatesEnabled) {
+      await runtime.restoreBootstrap(guard: guard);
+    }
+    final targets = <ScopedRefreshTarget>[];
+    for (final item in items) {
+      guard();
+      final old = item.target;
+      final roster = await runtime.readRoster(
+        old.registrationRef,
+        guard: guard,
+      );
+      final c = roster?.characters
+          .where((c) => c.characterId == old.ref.characterId)
+          .firstOrNull;
+      if (roster == null ||
+          c?.usable != true ||
+          c!.lifecycleState != 'active') {
+        throw const AccountReadException('CHARACTER_UNUSABLE');
+      }
+      final candidate = runtime.bootstrap?.data.registrations
+          .where(
+            (r) => r.snapshot.registrationId == old.registration.registrationId,
+          )
+          .firstOrNull
+          ?.candidates
+          ?.items
+          .where((p) => p.characterId == c.characterId)
+          .firstOrNull;
+      targets.add(
+        ScopedRefreshTarget(
+          roster.registration,
+          old.ref,
+          c,
+          candidate: candidate,
+          explicitRetry: !item.serverPending,
+        ),
+      );
+    }
+    return _execute(targets, 'manual', guard, onSaved);
+  }
+
+  @override
   Future<List<ScopedRefreshItem>> refreshRoster(
     ScopedRegistrationRef registration,
     void Function() guard,
@@ -290,7 +456,8 @@ class RuntimeStartupRefreshSource
       for (final c in roster.characters)
         if (c.lifecycleState == 'active' &&
             c.usable == true &&
-            c.blockedReason == null)
+            c.blockedReason == null &&
+            roster.registration.settings.activityIds.contains(c.characterId))
           ScopedRefreshTarget(
             roster.registration,
             ScopedCharacterRef(
@@ -358,12 +525,7 @@ class RuntimeStartupRefreshSource
     void Function() guard,
     void Function(ScopedRefreshItem) onResult,
   ) async {
-    final results = await _execute(
-      items.map((i) => i.target).toList(),
-      'manual',
-      guard,
-      onResult,
-    );
+    final results = await retryItems(items, guard, onResult);
     for (final r in results) {
       onResult(r);
     }
