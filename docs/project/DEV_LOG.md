@@ -1,3 +1,7 @@
+## 2026-11-18 — Native2.4.0 공개·공동점검해제 요청
+
+사용자최종진행승인으로70deed32기록보관·dev/main e777da4a통합/push·v2.4.0태그고정·기존검증5파일을그대로Release공개했다(01:53:42KST). hosted다운로드모든hash/승인본문/첨부수 일치·빌드source대비기능/workflow/버전tree동일을확인했다. 중복태그빌드를막기위해자동화일시disable후finallyenable/active를확인했다. 첫미존재조회는PowerShell stderr처리로실행전중단됐고공개재시도/덮어쓰기없다. 기능시험/재빌드없고기존서명/기능인수근거를재사용한다. Issue59에Native게시증거와사용자공동공개승인/Backend maintenance해제요청을전달했다. Backend실제해제/운영edge결과와사용자로그인확인은아직대기이며성공으로표시하지않는다. 불변태그이동없이후행문서를보관한다.
+
 ## 2026-11-18 — Issue59 B13/B14 운영후보적용 수신
 
 Backend공개v2.4.0/source970b2f43·image3e7dcdc5…adb07게시와사용자별도승인에따른최종정지dump/PC사본·전체앱DB초기화0038/신API·고정웹34자산적용완료를수신했다. 후보health/계약401·index바이트/키환경보존확인후candidate_ready/public_open=false·503유지다. 기존개발인수를운영실기기인수로확대하지않고Native고정파일재사용·최종게시/Android다운로드검증→공동승인유지보수해제순서를회신한다. 새시험/재빌드/공개/커밋/푸시는실행하지않고문서diffcheck만수행했다.
