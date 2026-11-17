@@ -790,21 +790,39 @@ void main() {
     },
   );
 
-  test(
+  testWidgets(
     'provider failure preserves both saved roles and releases refresh state',
-    () async {
-      await run();
+    (tester) async {
+      await tester.runAsync(run);
       final row = model.sections.single.characters.first;
       final original = row.dealer;
       backendCollect = (r) => throw failure(r);
-      await model.refreshCharacter(
-        ScopedRegistrationRef(row.ref.scope, registrationId),
-        row.ref,
+      await tester.runAsync(
+        () => model.refreshCharacter(
+          ScopedRegistrationRef(row.ref.scope, registrationId),
+          row.ref,
+        ),
       );
       expect(model.failure, isNotNull);
       expect(model.character(row.ref)!.dealer, same(original));
       expect(model.character(row.ref)!.support, same(row.support));
       expect(model.characterRefreshing, isFalse);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MemberCharacterPage(
+            model: model,
+            registration: ScopedRegistrationRef(row.ref.scope, registrationId),
+            ref: row.ref,
+          ),
+        ),
+      );
+      expect(find.text(memberAccountFailure(model.failure)), findsOneWidget);
+      expect(find.text('저장 정보 다시 확인'), findsOneWidget);
+      expect(
+        find.text('현재 소유와 캐릭터 사용 자격을 확인한 후 상세 정보를 볼 수 있습니다.'),
+        findsNothing,
+      );
+      expect(model.detailsAvailable(row.ref), isFalse);
     },
   );
 

@@ -48,6 +48,8 @@ String memberAccountFailure(String? code) => switch (code) {
   'SERVER_KEY_CHANGED' => '현재 로스트아크 정보를 갱신할 수 없습니다. 저장된 정보는 계속 볼 수 있습니다.',
   'UPSTREAM_UNAVAILABLE' ||
   'UPSTREAM_BUSY' => '로스트아크 정보 제공이 일시적으로 원활하지 않습니다. 잠시 후 다시 시도해 주세요.',
+  'ROLE_DETECTION_UNAVAILABLE' => '현재 아크패시브에서 딜러·서포터 역할을 판별하지 못했습니다.',
+  'ANALYSIS_UNAVAILABLE' => '캐릭터 정보를 분석하지 못했습니다. 저장된 정보를 다시 확인해 주세요.',
   'ANALYSIS_RESULT_UNKNOWN' ||
   'REQUEST_IN_PROGRESS' ||
   'SERVICE_UNAVAILABLE' => '이전 갱신의 처리 결과를 확인해야 합니다. 다시 확인해 주세요.',
@@ -1132,8 +1134,27 @@ class MemberCharacterPage extends StatelessWidget {
           ),
         ),
         body: row == null || !model.detailsAvailable(ref)
-            ? const Center(
-                child: Text('현재 소유와 캐릭터 사용 자격을 확인한 후 상세 정보를 볼 수 있습니다.'),
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        model.failure != null
+                            ? memberAccountFailure(model.failure)
+                            : '현재 소유와 캐릭터 사용 자격을 확인한 후 상세 정보를 볼 수 있습니다.',
+                      ),
+                      if (model.failure != null) ...[
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: model.canRefresh ? model.refresh : null,
+                          child: const Text('저장 정보 다시 확인'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               )
             : ListView(
                 padding: const EdgeInsets.all(16),
