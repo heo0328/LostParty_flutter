@@ -17,9 +17,18 @@
 
 최종 구현 전체 flutter test2863PASS·flutter analyze0·포맷 결과를 재사용한다. 이번은 문서/Git 통합이며 기능 코드를 바꾸지 않는다. 사용자 전체 정상 회신을 이번 작업의 인수로 기록한다. 개별 웹/Android 기종·폴드/큰 글자 전수나 실제 한도 소진/외부 장애 주입까지 확인했다는 뜻은 아니다. 별도 장애를 임의 유발하거나 같은 정상 흐름을 반복 요청하지 않는다.
 
-## 통합과 다음 행동
+## 바로 다음 작업 — 원정대 갱신 UX 협의·API 오류 대응 테스트
 
-현재 목적 브랜치에서 문서를 커밋하고 최신 origin/dev와 대조해 dev에 병합·푸시한 뒤 main을 동일 dev 커밋으로 fast-forward·푸시한다. dev/main/origin/dev/origin/main 동일 SHA·깨끗한 작업트리로 완료를 확인하고 Issue55/56에 회신한다. 작업 브랜치는 보존한다. 아래 후속은 별도 착수 지시를 기다린다.
+직전 작업은 dev/main/origin/dev/origin/main의 d8e91a4951d6baa6095a47326394563e9af44c83으로 통합·푸시를 완료했다. [Issue55 인계](https://github.com/heo0328/lostparty-backend/issues/55#issuecomment-6924852294)·[Issue56 인계](https://github.com/heo0328/lostparty-backend/issues/56#issuecomment-6924853807)를 따른다.
+
+2026-11-17 사용자 지시로 다음 두 항목을 기존 예약 후속보다 먼저 둔다. **현재는 기록만 완료·실제 협의/테스트 미착수**다.
+
+1. 원정대별 갱신 버튼, 갱신 중 표시, 결과 확인 카드의 UX를 함께 확인하고 협의한다.
+2. 로스트아크 API100회 초과 등 오류코드의 Backend 응답과 Native 안내·재시도/대기·결과복구 대응을 테스트한다. 최신 공식 문서/실제 계약을 먼저 확인하고 dev 모의 응답을 우선한다.
+
+[BUG-039](BUG_REPORTS.md)의 도화가 역할 판별은 Backend 수정/dev 반영·사용자 정상 확인을 마쳤다. Native 안내 수정48PASS/분석0은 이번 사용자 지시로 누적 문서와 함께 커밋·푸시한다. 정확한 보관 SHA는 Git을 따른다. 티아서버용 body_shape 및 실패 대상 식별/결과 카드 UX는 별도로 유지한다. 완료 Issue57은 사용자 지시에 따라 삭제 완료(HTTP410 확인)했으며 근거는 BUG-039/DEV_LOG에 보존한다.
+
+범위·보존할 흐름·담당·완료 조건은 [후속 원본](../product/DETAIL_IMPROVEMENTS.md#roster-refresh-ux-and-provider-error-tests)을 따른다. 앱 전체 오류/진단 전송은 별도 후속으로 유지한다. 구현·테스트 실행·실제 API 한도 소진·배포는 이번 기록 지시에 포함하지 않는다.
 
 ## 직전 공개와 유지할 미확인
 
