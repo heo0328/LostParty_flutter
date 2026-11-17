@@ -5,13 +5,13 @@
 ## 실행 순서와 현재 대기
 
 1. 버전/안내문 고정·diff 검토. 기존2.1.0 이후 같은 Android 서명키와2026-11-11 백업/접근 확인을 재사용한다.
-2. clean 커밋/게시된 release 소스에서 기존 manual-only Actions로 APK·웹 bundle 준비. source/run/artifact ID·hash·실제 만료/manifest를 원장에 기록한다. 사용자 진행 지시에 따라 승인 버전/문서 전체를 release/2.4.0에 고정 커밋·push한 뒤 게시 없는 웹/APK Actions를 실행한다. 산출물 식별자는 실제 완료 후 기록한다.
+2. clean 커밋/게시된 release 소스에서 기존 manual-only Actions로 APK·웹 bundle 준비. source/run/artifact ID·hash·실제 만료/manifest를 원장에 기록한다. 고정소스84565024를 release/2.4.0에 커밋/push하고 웹44087982844·APK44087977727 모두 성공했다. 다운로드 후 웹 내부manifest/hash/경계·APK hash/서명/패키지/2.4.0+9를 확인했다. [산출물 원장](../releases/v2.4.0-artifacts.json)에 source/run/ID/만료와 실제파일hash를 기록했다. Backend 수령/준비 회신 대기이며 공개태그/Release는 없다.
 3. [Backend 준비 요청 #59](https://github.com/heo0328/lostparty-backend/issues/59): 운영 source/image·OpenAPI/DB0038·서버용 키 준비·구APK호환·자료보존/직전백업/복귀와 운영 반영 필요 범위를 확인한다. [B1 회신](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6948295635)을 수신했다. Backend 기능기준18e6bb66·릴리즈 미커밋/미push, 명세해시 동일/DB목표0038이며 최종이미지/full검증/운영키 준비는 미완료다. 운영0036→0038은 기존 일반배포/0035→0036 maintenance로 진행할 수 없다. [B2](https://github.com/heo0328/lostparty-backend/issues/59#issuecomment-6948402246)에서 운영 앱DB 전체(회원/세션·원정대·그룹·모집/참가·주간/분석/명령) 초기화 확정. 기존세션 무효/재로그인·원정대 재등록이 필요하며 실제 삭제 없음. 역할/볼륨·키/환경·인증서·웹/배포산출물·개발DB·기기자료는 삭제대상에서 제외한다. 최신DB+대응키/환경/활성웹 백업·복귀/새유지보수 절차·서버키 공급 확인을 Backend가 준비한다. 도구68PASS는 full릴리즈 검증 성공이 아니다.
 4. 고정 웹 인계·Backend 수령 검증 뒤 공동 공개 시점을 조정한다. 사용자 기기 설치/조작은 대행하지 않는다. 준비 중에는 태그/Release/운영 활성화를 실행하지 않는다.
 
 검증: 기능의 전체2873PASS·후행49/58PASS·분석0 및 사용자10항목/실패결과/도화가/모집현황 정상확인은 재사용한다. 이번 버전·문서는 diffcheck/내용 검토, 산출물은 CI package/version/certificate/hash/manifest 검사로 확인한다. 실제 추가/삭제·소멸 사례는 운영 피드백 후속, API100회 초과 등 오류 대응 전체시험과 상세개선·진단전송은 별도 후속이며 완료로 표기하지 않는다. BUG-038 등 기존 미확인도 유지한다.
 
-## 구2.3.0 호환 대조·안내 추가 대기
+## 구2.3.0 호환 대조·승인 안내 반영 완료
 
 v2.3.0 태그 코드의 member_lostark_key.dart는 /v1/me/lostark-api-key를 사용하고 role_batch_client.dart는 /v2/me/role-summary-batches POST를 사용한다. Backend가 제거 보고한6동작과 겹쳐 구APK 전체호환을 보장하지 않는다. 일부 CLIENT_UPGRADE_REQUIRED 안내는 있으나 제거 API의404를 강제업데이트로 바꾸는 전역 동작은 확인하지 않았으며 새 기능을 추가하지 않는다. 사용자 진행 승인으로2.4.0 업데이트·앱DB자료소실·재로그인/원정대 재등록 문구를 안내문에 추가했다. 기존세션/로컬pending 코드 대조 결과: 인증 API401→session.reject→AuthSessionController._invalidate가 사용자/토큰/refresh pending과 저장로그인을 지우고 guest로 전환한다. MemberAccountViewModel._sessionChanged는 회원ID/세대/인증변경 때 epoch·화면/갱신 결과/선택 상태를 초기화한다. 분석/소유인증/관리 journal과 모집 command store는 환경+회원ID로 분리하며 requireCurrent/requireAccountReadScope는 세대가 다른 응답을 차단한다. 초기화 뒤 새회원ID의 저장공간에서 이전회원 pending을 읽지 않는 구조다. 이전기록 자체는 일괄삭제하지 않는다. 사용자가 현재 버전으로 개발DB를 초기화하고 재로그인/재등록을 포함한 전체 기능 정상 동작을 이미 확인했다고 재확인했다. 이 기능 인수는 완료이며 같은 정상흐름을 추가 시험/Backend 증명의 선행조건으로 요구하지 않는다. 운영 게시 후 접속·로그인·조회 최소 확인만 별개다.
 

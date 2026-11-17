@@ -6,7 +6,7 @@
 
 ## 현재 구현 — 원정대 갱신 UX·상세 대상 절감 / 사용자 인수 완료
 
-feature/roster-refresh-ux에서 후보bootstrap/명령context·원본문복구/설정CAS와 선택+신규1700 대상, 인증후성공원정대1회·수동선택만, 공통결과카드/실패명·닫기/재열기/명시retry를일반앱에연결했다. 전체2873PASS·최종직접49PASS/analyze0, devhealth200/미인증후보조회401확인. 사용자가10개테스트·실패결과표시정상을확인했다. 추가/삭제실제사례는운영피드백후속이며현재인수를막지않는다. Backend0038/dev계약12634daa…9665를고정로컬소비했고Backend구현8f29271d·문서a30db12f게시회신을수신했다. 후속 사용자 지시로 dev/main/각origin을91497108로 일치시켜 push했다. 현재는 release/2.4.0에서2.4.0+9/승인 안내문과 고정 산출물·Backend 운영 준비를 진행한다. 준비 버전/안내문을 사용자 진행 지시에 따라 release 소스에 고정해 게시 없는 빌드를 진행하며 실제 운영 게시 전이다. 카드확인필요파랑/오류기존빨강색상을보완해 직접58PASS·변경3파일분석0을 확인했고상세기본펼침/스킬룬보석통합은별도후속이다. 현재실행/확인은[NEXT_WORK](NEXT_WORK.md)·[설계25](../backend-migration/25-member-lostark-key-request.md#roster-refresh-ux-design), 활동자동추가/진단전송/전체오류대응시험은별도다.
+feature/roster-refresh-ux에서 후보bootstrap/명령context·원본문복구/설정CAS와 선택+신규1700 대상, 인증후성공원정대1회·수동선택만, 공통결과카드/실패명·닫기/재열기/명시retry를일반앱에연결했다. 전체2873PASS·최종직접49PASS/analyze0, devhealth200/미인증후보조회401확인. 사용자가10개테스트·실패결과표시정상을확인했다. 추가/삭제실제사례는운영피드백후속이며현재인수를막지않는다. Backend0038/dev계약12634daa…9665를고정로컬소비했고Backend구현8f29271d·문서a30db12f게시회신을수신했다. 후속 사용자 지시로 dev/main/각origin을91497108로 일치시켜 push했다. 현재는 release/2.4.0에서2.4.0+9/승인 안내문과 고정 산출물·Backend 운영 준비를 진행한다. 준비 버전/안내문은84565024에 고정·push했고 웹44087982844/APK44087977727 빌드성공 및 파일검증을 마쳤다. 산출물 원장은 releases/v2.4.0-artifacts.json이며 Backend 준비/수령 대기·실제 운영 게시 전이다. 카드확인필요파랑/오류기존빨강색상을보완해 직접58PASS·변경3파일분석0을 확인했고상세기본펼침/스킬룬보석통합은별도후속이다. 현재실행/확인은[NEXT_WORK](NEXT_WORK.md)·[설계25](../backend-migration/25-member-lostark-key-request.md#roster-refresh-ux-design), 활동자동추가/진단전송/전체오류대응시험은별도다.
 
 ## 현재 상태 — 서버 처리 전환·후속 UX 사용자 정상 확인 (2026-11-17)
 
