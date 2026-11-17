@@ -1,7 +1,7 @@
 {
   "version": "2.4.0+9",
   "source_commit": "84565024a28dd67d043b09f90da5d77f0fc6aa0a",
-  "status": "artifacts_verified_not_published",
+  "status": "published_verified",
   "notes_sha256": "2360019b469b20f618bec06767336466094cd54ccbbfb5da9c8740a5774c8ef2",
   "collaboration_issue": "https://github.com/heo0328/lostparty-backend/issues/59",
   "android": {
@@ -50,5 +50,14 @@
       "bytes": 6033,
       "sha256": "045519483d0494af288cb5ad55a72731c6b151d1ce99283c4b67e3ac4d147e11"
     }
-  ]
+  ],
+  "public_release": {
+    "url": "https://github.com/heo0328/LostParty_flutter/releases/tag/v2.4.0",
+    "tag": "v2.4.0",
+    "tag_source": "e777da4acdb9f5e1b4ecb938467876345087036c",
+    "published_at": "2026-11-17T16:53:42Z",
+    "prepared_files_reused": true,
+    "hosted_files_sha256_verified": true,
+    "approved_notes_verified": true
+  }
 }
