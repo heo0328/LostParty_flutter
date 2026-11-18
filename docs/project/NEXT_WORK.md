@@ -11,7 +11,7 @@ Native [v2.4.0 Release](https://github.com/heo0328/LostParty_flutter/releases/ta
 
 ## 지금 처리할 범위와 다음 작업
 
-2026-11-18 사용자 지시의 디자인 문서 최신화는 완료했다. [공통 지침](../design/DESIGN_SYSTEM_AND_PENPOT_GUIDELINES.md)에 실제 구현·원본 자산 재현과 Markdown 수정 범위를 통합하고, [화면 대응표](../design/PENPOT_IMPLEMENTED_SCREEN_MAP.md#현재-대응-상태-2026-11-18)에02·03의 기준일·차이·미확인을 정리했다. 옛 제안은 history로 분리하고 관련 참조를 갱신했다. 문서 검증·변경 범위 확인은 DEV_LOG를 따른다. 현재 `docs/penpot02-feature-boards`에서 미커밋·미push이며 이번 정비의 dev/main 반영은 없다. 이전 dev 직접 문서 마감·commit/push 지시를 이번 작업의 권한으로 재사용하지 않는다.
+2026-11-18 사용자 지시의 디자인 문서 최신화는 완료했다. [공통 지침](../design/DESIGN_SYSTEM_AND_PENPOT_GUIDELINES.md)에 실제 구현·원본 자산 재현과 Markdown 수정 범위를 통합하고, [화면 대응표](../design/PENPOT_IMPLEMENTED_SCREEN_MAP.md#현재-대응-상태-2026-11-18)에02·03의 기준일·차이·미확인을 정리했다. 옛 제안은 history로 분리하고 관련 참조를 갱신했다. 문서 검증·변경 범위 확인은 DEV_LOG를 따른다. 사용자 후속 지시로 문서 정리 전체를 `f0511f47`에 커밋하고 dev에 일반 병합 `7e568339`·origin/dev 푸시를 완료했다. 현재 checkout은 dev이며 작업 브랜치는 병합 완료/보존한다. 이 완료 상태 갱신도 같은 dev에 보관·푸시하며 최종 SHA는 Git 결과를 따른다. main·배포·Penpot 변경은 없다.
 
 다음 디자인 작업 후보는03 기존 내 계정 메인·5섹션을 현재 코드와 실제 자산에 맞춰 현행화하는 것이다. 이번 문서 정비에서는 Penpot 수정·02 이관을 실행하지 않았다. 다음 착수 지시 후 코드/객체 재조회→화면·자산 대응→기존 섹션 수정→PNG/실행 화면 대조 가능 범위 확인→대응표·결과 기록 순서로 진행한다. 미확인·불일치를 완료로 표시하지 않고02 이관은 별도 지시를 따른다. 개발 후속과 병행 권한으로 확대하지 않는다.
 

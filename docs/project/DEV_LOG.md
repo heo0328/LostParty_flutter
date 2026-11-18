@@ -1,3 +1,9 @@
+## 2026-11-18 — 디자인 문서 정비 커밋·dev 통합/푸시
+
+사용자 지시로 최신 문서 정리14경로 전체를 `f0511f47`에 보관했다. 최신 origin/dev91d0fe9d를 fetch로 확인하고 dev에 일반 병합 `7e568339` 후 origin/dev 푸시 성공을 확인했다. NEXT_WORK·AI_CONTEXT의 미커밋/미반영 현재 상태를 완료로 교체하며 이 후행 기록도 dev에 커밋·푸시한다. 이전 정비 기록의 미커밋 상태는 당시 사실로 보존한다.
+
+새 앱 흐름은 없으며 기존 코드·테스트·자산·설정과 Penpot은 변경하지 않았다. 문서 차이·변경 경로·git diff --check를 확인하고 기존 링크/앵커 검사 결과를 재사용했다. Flutter 시험·빌드·실기기 조작·main 반영·운영 배포·Penpot 수정/02 이관은 수행하지 않았다. 현재 checkout dev, 작업 브랜치 docs/penpot02-feature-boards는 병합 완료/삭제 후보이나 별도 삭제 지시 없어 유지한다. 최종 동기화 SHA·작업 트리 상태는 Git 결과를 따른다.
+
 ## 2026-11-18 — 디자인·Penpot 지침 최신화와 참조 정비
 
 사용자가 승인한 문서 정비 계획을 실행했다. 기존 `docs/design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md`를 [디자인 시스템·Penpot 작업 지침](../design/DESIGN_SYSTEM_AND_PENPOT_GUIDELINES.md)으로 개명·재구성하고 실제 구현의 픽셀 수준 재현·원본 이미지/아이콘 글리프 재사용·Flutter 코드/자산 수정 금지·관련 Markdown 결과 기록을 통합했다. 신규 제안과 구현 재현을 구분하고 기존03/02 보드 재사용·별도 지시 시 이관·시각 검수/미확인 구분을 보존했다. 파티 구성판 계약은 유지했다.
