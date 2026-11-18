@@ -23,7 +23,7 @@
 - [계정/캐시/복원30](backend-migration/30-scoped-storage-write-contract.md), [등록19](backend-migration/19-account-registration-flutter-contract.md), [키·서버 처리 전환25](backend-migration/25-member-lostark-key-request.md#native-implementation-design)(개발자 단일 키·guest 공통 UI의 Native 구현·소비 계약 / 과거 개인 키 계약과 구분), [인증36](backend-migration/36-roster-ownership-dispute-flutter-design.md)
 - [한도34](backend-migration/34-member-limits-and-room-restrictions.md)·[통계35](backend-migration/35-weekly-member-and-group-statistics.md)·[분야별 요청32](backend-migration/32-backend-domain-prework-requests.md)
 - [계정 후속14](backend-migration/14-my-account-flutter-integration-plan.md)·[DB 검토24](backend-migration/24-database-design-review.md)·[백엔드 문서목록](backend-migration/00-overview.md)
-- Penpot03 작업 중/02 구현 운용 화면, 메인 보드·섹션별 하위 보드 수정과 사용자 별도 지시 시 동일 보드 이관은 [디자인 공통 지침](design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md#penpot-작업완료-화면-관리-공통-지침)을 따른다. 과거 시안 식별자/운영 이력은 설계37 §37.65.
+- Penpot03 작업 중/02 구현 운용 화면, 메인 보드·섹션별 하위 보드 수정과 사용자 별도 지시 시 동일 보드 이관은 [디자인 공통 지침](design/DESIGN_SYSTEM_AND_PENPOT_GUIDELINES.md#penpot-작업완료-화면-관리-공통-지침)을 따른다. 과거 시안 식별자/운영 이력은 설계37 §37.65.
 
 완료/검증 이력은 [DEV_LOG](project/DEV_LOG.md), 버그는 [BUG_REPORTS](project/BUG_REPORTS.md), 지시문 감사는 [보고서](project/INSTRUCTION_AUDIT_2026-10-25.md). 과거 Firebase 기술/배포 자료는 [레거시 지도](../legacy/firebase/README.md)에 보관하며 신규 실행 지시로 재사용하지 않는다.
 
@@ -87,11 +87,13 @@
 
 ## Design
 
-UI 방향, 디자인 시스템과 시각적 적용 기준을 관리한다.
+UI 방향, 디자인 시스템과 시각적 적용 기준을 관리한다. 구현 재현에서는 실제 코드와 원본 자산이 기준이며 Flutter 코드·자산은 변경하지 않는다. 현재 상태는 대응표에서 갱신하고 날짜별 완료 결과는 DEV_LOG에 보존한다.
 
-- [`design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md`](design/LOSTPARTY_DESIGN_SYSTEM_V1_REQUEST.md): Soft Lavender 기반 Design System v1 설계 요청과 단계적 적용 기준
-- [`design/PENPOT_IMPLEMENTED_SCREEN_MAP.md`](design/PENPOT_IMPLEMENTED_SCREEN_MAP.md):02 기능별 보드·기존 화면 소속·현행 대조·검수 및 미확인 범위
+- [`design/DESIGN_SYSTEM_AND_PENPOT_GUIDELINES.md`](design/DESIGN_SYSTEM_AND_PENPOT_GUIDELINES.md): 디자인 시스템·구현 재현/실제 자산·Penpot 운영·문서 갱신의 공통 지침
+- [`design/PENPOT_IMPLEMENTED_SCREEN_MAP.md`](design/PENPOT_IMPLEMENTED_SCREEN_MAP.md): 02·03의 구현 화면·코드/실제 자산·객체 대응, 대조 기준일·검수·미확인 범위
 - [`design/PARTY_COMPOSITION_RESPONSIVE_LAYOUT.md`](design/PARTY_COMPOSITION_RESPONSIVE_LAYOUT.md): 바형 스마트폰·폴드·태블릿의 파티 구성판 반응형 배치 계약
+
+- [디자인 지침 정비 전 판단 근거](project/history/design-system-and-penpot-before-normalization-2026-11-18.md): 과거 후보·계정 시안 준비의 출처. 현재 작업 지시와 구분한다.
 
 ## 관리 원칙
 
